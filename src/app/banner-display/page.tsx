@@ -78,7 +78,7 @@ export default function BannerDisplayPage() {
       setCurrentImageIndex((prev) => (prev + 1) % bannerImages.length);
     }, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [bannerImages.length]);
 
   useEffect(() => {
     const handleScroll = () => {
