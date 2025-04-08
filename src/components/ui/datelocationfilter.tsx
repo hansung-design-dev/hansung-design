@@ -40,7 +40,7 @@ const DateLocationFilter = ({
                 setShowEndCalendar(false);
               }}
               readOnly
-              className="lg:w-[6rem]  border border-gray-200 rounded-lg px-[1.5rem] py-[1.1rem] pr-10 cursor-pointer"
+              className="border-solid shadow-none lg:w-[6rem]  border border-gray-200 rounded-lg px-[1.5rem] py-[1.1rem] pr-10 cursor-pointer"
               placeholder="YYYY.MM.DD"
             />
             <button
@@ -75,7 +75,7 @@ const DateLocationFilter = ({
                 setShowStartCalendar(false);
               }}
               readOnly
-              className="lg:w-[6rem] border border-gray-200 rounded-lg px-[1.5rem] py-[1.1rem] pr-10 cursor-pointer"
+              className="border-solid shadow-none lg:w-[6rem] border border-gray-200 rounded-lg px-[1.5rem] py-[1.1rem] pr-10 cursor-pointer"
               placeholder="YYYY.MM.DD"
             />
             <button
@@ -109,7 +109,7 @@ const DateLocationFilter = ({
             type="text"
             value={searchLocation}
             onChange={(e) => setSearchLocation(e.target.value)}
-            className="border border-gray-200 rounded-lg w-[16rem] px-[1.5rem] py-[1.1rem]"
+            className=" border border-solid shadow-none border-gray-200 rounded-lg w-[16rem] px-[1.5rem] py-[1.1rem]"
             placeholder="위치를 입력해보세요. ex.송파구"
           />
           <button className="w-[5.75rem] px-[1.5rem] py-[1rem] bg-black text-white rounded-lg hover:bg-gray-800">
