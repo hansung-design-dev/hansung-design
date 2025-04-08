@@ -51,12 +51,12 @@ export default function OrdersPage() {
 
             {/* Main Content */}
             <div className="flex-1">
-              <h2 className="text-2xl font-bold mb-6">주문내역</h2>
+              <h2 className="text-2xl font-bold mb-3">주문내역</h2>
 
-              <p className="text-sm text-gray-500 mb-6">
+              <div className="text-sm text-gray-500 mb-6">
                 *송출이 시작된 주문은 취소/파일 교체가 불가하며, 신청후 3일 이후
                 상태에서는 변경이 불가합니다.
-              </p>
+              </div>
 
               {/* Filter Row */}
               <div className="flex flex-col gap-2 items-center mb-6">
@@ -97,53 +97,86 @@ export default function OrdersPage() {
 
               {/* Example Order Detail */}
               <div className="border rounded-lg overflow-hidden">
-                <div className="bg-gray-100 p-4 flex justify-between items-center">
+                <div className="bg-white p-4 flex justify-between items-center">
                   <div className="text-sm">
                     올림픽대교 남단사거리 앞 (남단 유수지앞)
                   </div>
-                  <div className="flex gap-2 items-center">
-                    <span className="text-sm text-gray-600">방이동</span>
-                    <span className="text-sm text-blue-600 font-semibold">
-                      진행중
-                    </span>
+                  <div className="flex gap-5 justify-center items-center text-1.25 text-black ">
+                    <span className="">방이동</span>
+                    <span className="">진행중</span>
                     <Button size="sm" variant="outline">
                       신청 취소
                     </Button>
                   </div>
                 </div>
 
-                <div className="border border-1 rounded-lg border-[#E0E0E0] bg-white">
+                <div className="border border-1  border-black bg-white flex flex-col gap-4 items-center justify-center border-l-[1px] border-r-[1px] border-b-[1px]">
                   <div className="w-[57rem] h-[6.125rem] bg-black text-white py-2 flex items-center text-1.5 font-700 gap-6 px-[2rem]">
                     <div>주문번호</div>
                     <div>01019293485</div>
                   </div>
-
-                  <div className="flex flex-col ">
-                    <div className="text-1.25 font-500">파일이름</div>
-                    <div className="text-1.75 font-700 mb-4">
-                      한성 메인 광고
-                    </div>
-                  </div>
-
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="828"
-                    height="2"
-                    viewBox="0 0 828 2"
-                    fill="none"
-                  >
-                    <path d="M828 1L2.00272e-05 1" stroke="#E0E0E0" />
-                  </svg>
-
-                  <div className="flex flex-col gap-4 text-1.25 font-500 mb-4">
-                    <div className="flex flex-col gap-4 text-sm mb-4">
-                      <div className="flex gap-4">
-                        <div className="text-gray-500">접수자명</div>
-                        <div>홍길동</div>
+                  <div className="px-[2rem] flex flex-col gap-4 items-start justify-center">
+                    <div className="flex flex-col text-start gap-2 pt-4">
+                      <div className="text-1.25 font-500">파일이름</div>
+                      <div className="text-1.75 font-700 mb-4">
+                        한성 메인 광고
                       </div>
-                      <div className="flex gap-4">
-                        <div className="text-gray-500">연락처</div>
-                        <div>010.0000.0000</div>
+                    </div>
+
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="828"
+                      height="2"
+                      viewBox="0 0 828 2"
+                      fill="none"
+                    >
+                      <path d="M828 1L2.00272e-05 1" stroke="#E0E0E0" />
+                    </svg>
+
+                    <div className="flex flex-col gap-4 text-1.25 font-500 mb-4">
+                      <div className="flex flex-col gap-4 text-sm mb-4">
+                        <div className="flex gap-4">
+                          <div>접수자명</div>
+                          <div className="font-700">홍길동</div>
+                        </div>
+                        <div className="flex gap-4">
+                          <div>연락처</div>
+                          <div className="font-700">010.0000.0000</div>
+                        </div>
+
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="828"
+                          height="2"
+                          viewBox="0 0 828 2"
+                          fill="none"
+                        >
+                          <path d="M828 1L2.00272e-05 1" stroke="#E0E0E0" />
+                        </svg>
+
+                        <div className="flex gap-4">
+                          <div>품명</div>
+                          <div className="font-700">현수막</div>
+                        </div>
+                        <div className="flex gap-4">
+                          <div>위치</div>
+                          <div className="font-700">
+                            올림픽대교 남단사거리 앞 (남단 유수지앞)
+                          </div>
+                        </div>
+                        <div className="flex gap-4">
+                          <div>파일</div>
+                          <div className="font-700">
+                            이메일로 제출하겠습니다.
+                          </div>
+                        </div>
+                        <div className="flex gap-4">
+                          <div>메모</div>
+                          <div className="font-700">
+                            메모가 있다면 <br /> 최대 <br />
+                            3줄까지 가능합니다.
+                          </div>
+                        </div>
                       </div>
 
                       <svg
@@ -156,88 +189,58 @@ export default function OrdersPage() {
                         <path d="M828 1L2.00272e-05 1" stroke="#E0E0E0" />
                       </svg>
 
-                      <div className="flex gap-4">
-                        <div className="text-gray-500">품명</div>
-                        <div>현수막</div>
-                      </div>
-                      <div className="flex gap-4">
-                        <div className="text-gray-500">위치</div>
-                        <div>올림픽대교 남단사거리 앞 (남단 유수지앞)</div>
-                      </div>
-                      <div className="flex gap-4">
-                        <div className="text-gray-500">파일</div>
-                        <div>이메일로 제출하겠습니다.</div>
-                      </div>
-                      <div className="flex gap-4">
-                        <div className="text-gray-500">메모</div>
-                        <div>
-                          메모가 있다면 <br /> 최대 <br />
-                          3줄까지 가능합니다.
+                      <div className="border-t pt-4 text-sm">
+                        <div className="flex gap-4">
+                          <div>상품가</div>
+                          <div>300,000</div>
+                        </div>
+                        <div className="flex gap-4">
+                          <div>부가세</div>
+                          <div>33,000</div>
+                        </div>
+                        <div className="flex gap-4">
+                          <div>디자인비</div>
+                          <div>120,000</div>
+                        </div>
+                        <div className="flex gap-4">
+                          <div>추가금</div>
+                          <div>0</div>
+                        </div>
+                        <div className="flex gap-4 font-bold mt-2">
+                          <div className="w-[ 8.75rem]">총액</div>
+                          <span className="font-700">453,000원</span>
                         </div>
                       </div>
-                    </div>
 
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="828"
-                      height="2"
-                      viewBox="0 0 828 2"
-                      fill="none"
-                    >
-                      <path d="M828 1L2.00272e-05 1" stroke="#E0E0E0" />
-                    </svg>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="828"
+                        height="2"
+                        viewBox="0 0 828 2"
+                        fill="none"
+                      >
+                        <path d="M828 1L2.00272e-05 1" stroke="#E0E0E0" />
+                      </svg>
 
-                    <div className="border-t pt-4 text-sm">
-                      <div className="flex gap-4">
-                        <div>상품가</div>
-                        <div>300,000</div>
-                      </div>
-                      <div className="flex gap-4">
-                        <div>부가세</div>
-                        <div>33,000</div>
-                      </div>
-                      <div className="flex gap-4">
-                        <div>디자인비</div>
-                        <div>120,000</div>
-                      </div>
-                      <div className="flex gap-4">
-                        <div>추가금</div>
-                        <div>0</div>
-                      </div>
-                      <div className="flex gap-4 font-bold mt-2">
-                        <div>총액</div>
-                        <span>453,000원</span>
+                      <div className="mt-4 text-sm">
+                        <div className="text-gray-500">무통장입금</div>
+                        <div>입금자명 홍길동</div>
                       </div>
                     </div>
-
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="828"
-                      height="2"
-                      viewBox="0 0 828 2"
-                      fill="none"
-                    >
-                      <path d="M828 1L2.00272e-05 1" stroke="#E0E0E0" />
-                    </svg>
-
-                    <div className="mt-4 text-sm">
-                      <div className="text-gray-500">무통장입금</div>
-                      <div>입금자명 홍길동</div>
+                    <div className="flex gap-2 mt-6">
+                      <Button variant="outline" size="sm">
+                        신청 취소
+                      </Button>
+                      <Button variant="outline" size="sm">
+                        파일재전송
+                      </Button>
+                      <Button variant="outline" size="sm">
+                        영수증
+                      </Button>
+                      <Button variant="outline" size="sm">
+                        목록
+                      </Button>
                     </div>
-                  </div>
-                  <div className="flex gap-2 mt-6">
-                    <Button variant="outline" size="sm">
-                      신청 취소
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      파일재전송
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      영수증
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      목록
-                    </Button>
                   </div>
                 </div>
               </div>

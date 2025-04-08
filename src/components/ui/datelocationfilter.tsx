@@ -48,7 +48,7 @@ const DateLocationFilter = ({
                 setShowStartCalendar(true);
                 setShowEndCalendar(false);
               }}
-              className="absolute right-5 top-1/2 -translate-y-1/2"
+              className="absolute right-5 top-1/2 -translate-y-1/2 border-none"
             >
               <Image
                 src="/svg/calendar.svg"
@@ -83,7 +83,7 @@ const DateLocationFilter = ({
                 setShowEndCalendar(true);
                 setShowStartCalendar(false);
               }}
-              className="absolute right-6 top-1/2 -translate-y-1/2"
+              className="absolute right-6 top-1/2 -translate-y-1/2  border-none"
             >
               <Image
                 src="/svg/calendar.svg"

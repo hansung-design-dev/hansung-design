@@ -16,8 +16,10 @@ export function Button({
     'inline-flex items-center justify-center font-medium rounded transition';
   const variants = {
     default: 'bg-black text-white hover:bg-gray-800',
-    outline: 'border border-gray-300 text-gray-800 hover:bg-gray-100',
-    ghost: 'text-gray-600 hover:bg-gray-100',
+    outline:
+      'w-[7.5rem] py-[0.3125rem] px-[1rem] border border-[#000] text-gray-800 rounded-full border-[0.1q]',
+    ghost:
+      'border-[#B8B8B8] rounded-[0.625rem] border border-[0.1rem] border-solid text-[#7D7D7D] shadow-none',
   };
   const sizes = {
     sm: 'px-3 py-1 text-sm',

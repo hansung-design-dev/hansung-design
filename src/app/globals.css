@@ -38,6 +38,6 @@ a:active {
 /* 버튼 & SVG 아이콘의 기본 스타일 제거 */
 button {
   background: transparent;
-  border: none;
+  border: solid;
   padding: 0;
 }

@@ -26,7 +26,7 @@ const CategoryFilter = ({
         <button
           key={category}
           onClick={() => setSelectedCategory(category as Category)}
-          className={`px-4 py-2 rounded-full border ${
+          className={`px-4 py-2 rounded-full border  shadow-none ${
             selectedCategory === category
               ? 'bg-black text-white border-black w-[7.5rem] py-[1rem]'
               : 'border-gray-200 text-gray-600 hover:border-gray-400 w-[7.5rem] py-[1rem] border-[0.1rem]'
