@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 
 const bannerImages = [
-  '/images/landing-1.png',
-  '/images/landing-1.png',
-  '/images/landing-1.png',
+  '/images/landing-1.jepg',
+  '/images/landing-1.jepg',
+  '/images/landing-1.jepg',
 ];
 
 export default function RollingBanner() {

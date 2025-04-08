@@ -8,13 +8,13 @@ import { ProjectItem } from '../../components/ProjectRow';
 // Define the project items for the first row
 const firstRowProjects: ProjectItem[] = [
   {
-    imageSrc: '/images/public-design-image2.png',
+    imageSrc: '/images/public-design-image2.jpeg',
     title: '브랜드 아이템',
     subtitle: '간판개선사업',
     description: '도시의 새로운 경험을 만드는 브랜드',
   },
   {
-    imageSrc: '/images/public-design-image2.png',
+    imageSrc: '/images/public-design-image2.jpeg',
     title: '공공디자인',
     subtitle: '서브타이틀',
     description: '도시 경관을 아름답게 만드는 디자인',
@@ -24,19 +24,19 @@ const firstRowProjects: ProjectItem[] = [
 // Define the project items for the second row
 const secondRowProjects: ProjectItem[] = [
   {
-    imageSrc: '/images/public-design-image2.png',
+    imageSrc: '/images/public-design-image2.jpeg',
     title: '공공시설물',
     subtitle: '서브타이틀',
     description: '도시의 기능을 높이는 시설물',
   },
   {
-    imageSrc: '/images/public-design-image2.png',
+    imageSrc: '/images/public-design-image2.jpeg',
     title: '스마트 시티',
     subtitle: '서브타이틀',
     description: '미래 도시의 새로운 가능성',
   },
   {
-    imageSrc: '/images/public-design-image2.png',
+    imageSrc: '/images/public-design-image2.jpeg',
     title: '도시 경관',
     subtitle: '서브타이틀',
     description: '도시 환경을 개선하는 디자인',

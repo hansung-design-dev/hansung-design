@@ -69,8 +69,8 @@ export default function BannerDisplayPage() {
   const [showDistricts, setShowDistricts] = useState(false);
   const [bannerHeight, setBannerHeight] = useState(400);
   const bannerImages = [
-    '/images/banner-image1.png',
-    '/images/banner-image1.png',
+    '/images/banner-image1.jpeg',
+    '/images/banner-image1.jpeg',
   ];
 
   useEffect(() => {

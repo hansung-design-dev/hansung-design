@@ -33,7 +33,7 @@ const districtItems: DistrictItem[] = Array(12)
     id: index + 1,
     title: '울림픽대교 남단사거리 앞',
     subtitle: '(남단 유수지앞)',
-    image: '/images/led-display.png',
+    image: '/images/led-display.jpeg',
     tags: ['LED전자게시대', '방이동'],
     location: '방이동',
     status: '진행중',

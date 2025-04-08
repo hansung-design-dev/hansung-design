@@ -16,7 +16,7 @@ export default function Home() {
           }
           subtitle="전자게시대"
           description="한 번의 광고, 수천 번의 노출"
-          imageSrc="/images/landing-1.png"
+          imageSrc="/images/landing-1.jpeg"
           imageAlt="Screen section image"
           buttonText="더 알아보기"
           list={[
@@ -35,7 +35,7 @@ export default function Home() {
         }
         subtitle="현수막게시대"
         description="지역상권 활성화, 합리적인 광고"
-        imageSrc="/images/landing-2.png"
+        imageSrc="/images/landing-2.jpeg"
         imageAlt="Banner section image"
         reverse={true}
         buttonText="더 알아보기"
@@ -54,7 +54,7 @@ export default function Home() {
         }
         subtitle="공공디자인"
         description="도시의 일상에서 만나는 시간과 공간의 경험 디자인"
-        imageSrc="/images/landing-3.png"
+        imageSrc="/images/landing-3.jpeg"
         imageAlt="City section image"
         buttonText="더 알아보기"
         list={[
@@ -72,7 +72,7 @@ export default function Home() {
         }
         subtitle="디지털사이니지"
         description="광고를 혁신하다, 공간을 스마트하게"
-        imageSrc="/images/landing-4.png"
+        imageSrc="/images/landing-4.jpeg"
         imageAlt="Future section image"
         reverse={true}
         buttonText="더 알아보기"

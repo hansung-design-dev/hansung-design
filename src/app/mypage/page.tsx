@@ -23,7 +23,7 @@ const recommendedProducts = Array(4)
     id: index + 1,
     title: '청심환운동장 앞',
     subtitle: '(청심환운동장 앞)',
-    image: '/images/public-design.png',
+    image: '/images/public-design.jpeg',
     price: 140800,
   }));
 

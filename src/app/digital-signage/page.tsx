@@ -9,35 +9,35 @@ import RollingGallery from '../../components/RollingGallery';
 const galleryImages = [
   {
     id: 1,
-    src: '/images/digital-signage-main.png',
+    src: '/images/digital-signage-majpeg',
     mainKeyword: '메인키워드',
     title: '상품이름1',
     subtitle: '서브타이틀',
   },
   {
     id: 2,
-    src: '/images/landing-2.png',
+    src: '/images/landing-2.jpeg',
     mainKeyword: '메인키워드',
     title: '상품이름2',
     subtitle: '서브타이틀',
   },
   {
     id: 3,
-    src: '/images/landing-1.png',
+    src: '/images/landing-1.jpeg',
     mainKeyword: '메인키워드',
     title: '상품이름3',
     subtitle: '서브타이틀',
   },
   {
     id: 4,
-    src: '/images/landing-2.png',
+    src: '/images/landing-2.jpeg',
     mainKeyword: '메인키워드',
     title: '상품이름4',
     subtitle: '서브타이틀',
   },
   {
     id: 5,
-    src: '/images/landing-1.png',
+    src: '/images/landing-1.jpeg',
     mainKeyword: '메인키워드',
     title: '상품이름5',
     subtitle: '서브타이틀',
@@ -56,7 +56,7 @@ const signageItems = Array(12).fill({
   title: '상품 타이틀',
   category: '카테고리',
   description: '설명',
-  image: '/images/digital-signage-grid-example.png',
+  image: '/images/digital-signage-grid-example.jpeg',
 });
 
 export default function DigitalSignagePage() {
