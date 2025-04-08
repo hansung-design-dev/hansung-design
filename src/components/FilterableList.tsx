@@ -45,13 +45,13 @@ const FilterableList = ({
     '디지털사이니지',
   ];
 
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedItems(items.map((item) => item.id));
-    } else {
-      setSelectedItems([]);
-    }
-  };
+  // const handleSelectAll = (checked: boolean) => {
+  //   if (checked) {
+  //     setSelectedItems(items.map((item) => item.id));
+  //   } else {
+  //     setSelectedItems([]);
+  //   }
+  // };
 
   const handleSelectItem = (id: number, checked: boolean) => {
     if (checked) {
@@ -66,15 +66,17 @@ const FilterableList = ({
   }
 
   return (
-    <div className="w-full">
-      <h2 className="text-lg font-medium mb-2">주문내역</h2>
-      <p className="text-gray-600 text-sm mb-6">
-        *생산이 시작된 주문은 취소/파일 교체가 불가하며, 제품 발송 - 출고완료
-        상태에서는 배송 방법 변경이 불가합니다.
-      </p>
+    <div className="w-full bg-gray-[#F5F5F5] rounded-lg flex flex-col px-[3rem]">
+      <div>
+        <h2 className="text-1.25 font-500 mb-2">주문내역</h2>
+        <p className="text-gray-600 text-1.125 font-300 mb-6">
+          *생산이 시작된 주문은 취소/파일 교체가 불가하며, 제품 발송 - 출고완료
+          상태에서는 배송 방법 변경이 불가합니다.
+        </p>
+      </div>
 
       {/* Date and Location Filters */}
-      <div className="bg-gray-50 p-8 rounded-lg mb-6">
+      <div className="bg-[#F5F5F5] p-8 rounded-lg mb-6 w-[65.5rem] h-[6rem]">
         <div className="flex flex-wrap gap-8">
           <div className="">
             <div className="text-gray-600 mb-2">주문일</div>
@@ -88,7 +90,7 @@ const FilterableList = ({
                     setShowEndCalendar(false);
                   }}
                   readOnly
-                  className="w-1/2 border border-gray-200 rounded-lg px-4 py-2 pr-10 cursor-pointer"
+                  className="w-1/2 border border-gray-200 rounded-lg px-[1.5rem] py-[1rem] pr-10 cursor-pointer"
                   placeholder="YYYY.MM.DD"
                 />
                 <button
@@ -124,7 +126,7 @@ const FilterableList = ({
                     setShowStartCalendar(false);
                   }}
                   readOnly
-                  className="w-1/2  border border-gray-200 rounded-lg px-4 py-2 pr-10 cursor-pointer"
+                  className=" border border-gray-200 rounded-lg px-[1.5rem] py-[1rem] pr-10 cursor-pointer"
                   placeholder="YYYY.MM.DD"
                 />
                 <button
@@ -159,10 +161,10 @@ const FilterableList = ({
                 type="text"
                 value={searchLocation}
                 onChange={(e) => setSearchLocation(e.target.value)}
-                className="flex-1 border border-gray-200 rounded-lg px-4 py-2"
+                className="flex-1 border border-gray-200 rounded-lg w-[21.5rem]  px-[1.5rem]"
                 placeholder="위치를 입력해보세요. ex.송파구"
               />
-              <button className="px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-800">
+              <button className="w-[5.75rem] px-[1.5rem] py-[1rem] bg-black text-white rounded-lg hover:bg-gray-800">
                 조회
               </button>
             </div>
@@ -191,20 +193,6 @@ const FilterableList = ({
 
       {/* List */}
       <div className="border-t border-gray-200">
-        <div className="grid grid-cols-12 py-4 px-6 bg-gray-50 text-gray-600">
-          <div className="col-span-1">
-            <input
-              type="checkbox"
-              checked={selectedItems.length === items.length}
-              onChange={(e) => handleSelectAll(e.target.checked)}
-              className="rounded border-gray-300"
-            />
-          </div>
-          <div className="col-span-5">제목</div>
-          <div className="col-span-2 text-center">상태</div>
-          <div className="col-span-2 text-center">위치</div>
-          <div className="col-span-2 text-center">날짜</div>
-        </div>
         {items.map((item) => (
           <div
             key={item.id}
