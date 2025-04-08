@@ -24,7 +24,7 @@ interface FilterableListProps {
 
 const FilterableList = ({
   items,
-  onItemSelect,
+  // onItemSelect,
   // showDateFilter = true,
   // showLocationFilter = true,
   showCategoryFilter = true,
@@ -33,7 +33,7 @@ const FilterableList = ({
   const [endDate, setEndDate] = useState('2025.03.06');
   const [searchLocation, setSearchLocation] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('전체');
-  const [selectedItems, setSelectedItems] = useState<number[]>([]);
+  //const [selectedItems, setSelectedItems] = useState<number[]>([]);
   const [showStartCalendar, setShowStartCalendar] = useState(false);
   const [showEndCalendar, setShowEndCalendar] = useState(false);
 
@@ -53,17 +53,17 @@ const FilterableList = ({
   //   }
   // };
 
-  const handleSelectItem = (id: number, checked: boolean) => {
-    if (checked) {
-      setSelectedItems([...selectedItems, id]);
-    } else {
-      setSelectedItems(selectedItems.filter((itemId) => itemId !== id));
-    }
-  };
+  // const handleSelectItem = (id: number, checked: boolean) => {
+  //   if (checked) {
+  //     setSelectedItems([...selectedItems, id]);
+  //   } else {
+  //     setSelectedItems(selectedItems.filter((itemId) => itemId !== id));
+  //   }
+  // };
 
-  if (onItemSelect) {
-    onItemSelect(selectedItems);
-  }
+  // if (onItemSelect) {
+  //   onItemSelect(selectedItems);
+  // }
 
   return (
     <div className="w-full rounded-lg flex flex-col px-[3rem]">
