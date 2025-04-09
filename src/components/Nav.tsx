@@ -26,8 +26,6 @@ interface NavProps {
   variant?: 'default' | 'photo' | 'mixed';
 }
 
-const iconSize = 'w-6 h-6';
-
 const menuItems: MenuItem[] = [
   { name: '공공디자인', href: '/public-design' },
   { name: 'LED전자게시대', href: '/led-display' },
@@ -45,43 +43,39 @@ const IconButton = ({
   <Link href={href}>
     <button
       onClick={onClick}
-      className={`p-2 hover:bg-gray-100 rounded-full transition-colors hover:cursor-pointer ${
-        TextInvert && 'invert'
-      }`}
+      className={`border-none p-2 hover:bg-gray-100 rounded-full transition-colors hover:cursor-pointer`}
       aria-label={label}
     >
-      <svg
-        className={iconSize}
-        viewBox="0 0 24 24"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path d={iconPath} fill="currentColor" />
-      </svg>
+      <Image
+        src={iconPath}
+        alt={label}
+        width={30}
+        height={30}
+        className={`w-7 h-7 ${TextInvert && 'invert'}`}
+      />
     </button>
   </Link>
 );
 
 const IconList = ({ TextInvert }: { TextInvert?: boolean }) => (
-  <div className="flex items-center gap-2">
+  <div className="flex items-center gap-3">
     <IconButton
-      iconPath="M4 16V4H2V2h3a1 1 0 0 1 1 1v12h12.438l2-8H8V5h13.72a1 1 0 0 1 .97 1.243l-2.5 10a1 1 0 0 1-.97.757H5a1 1 0 0 1-1-1zm2 7a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm12 0a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"
+      iconPath="/svg/shopping-cart.svg"
       label="장바구니"
+      href="/card"
       TextInvert={TextInvert}
-      href="/cart"
     />
     <IconButton
-      iconPath="M4 22a8 8 0 1 1 16 0h-2a6 6 0 1 0-12 0H4zm8-9c-3.315 0-6-2.685-6-6s2.685-6 6-6 6 2.685 6 6-2.685 6-6 6zm0-2c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z"
+      iconPath="/svg/user.svg"
       label="마이페이지"
-      TextInvert={TextInvert}
       href="/mypage"
+      TextInvert={TextInvert}
     />
-    <Image
-      src="/svg/headphones.svg"
-      alt="한성기업 로고"
-      width={30}
-      height={30}
-      className={`w-7 h-7 ${TextInvert && 'invert'}`}
+    <IconButton
+      iconPath="/svg/headphones.svg"
+      label="고객센터"
+      href="/support"
+      TextInvert={TextInvert}
     />
   </div>
 );
@@ -138,7 +132,7 @@ const Nav = ({
         <div className="flex justify-between items-center h-[5.5rem]">
           <Link href="/" className="flex items-center">
             <Image
-              src="svg/logo.svg"
+              src="/svg/logo.svg"
               alt="한성기업 로고"
               width={150}
               height={40}
@@ -172,11 +166,10 @@ const Nav = ({
           <div className="md:hidden flex items-center gap-4">
             <IconButton
               onClick={() => setIsOpen(!isOpen)}
-              iconPath={
-                isOpen ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h16'
-              }
-              label="Menu"
+              iconPath={isOpen ? '/svg/x-mark.svg' : '/svg/menu.svg'}
+              label={isOpen ? 'Close Menu' : 'Open Menu'}
               href="#"
+              TextInvert={TextInvert && !isScrolled}
             />
             <IconList TextInvert={TextInvert && !isScrolled} />
           </div>

@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
+//import Link from 'next/link';
 import Nav from '../../components/Nav';
 import FilterableList from '../../components/FilterableList';
+import MypageNav from '@/src/components/mypageNav';
 
 const sampleItems = Array(5)
   .fill(null)
@@ -46,24 +47,11 @@ export default function MyPage() {
         <div className="container px-4 pt-[7rem] pb-[10rem] max-w-[1200px]">
           <div className="flex gap-8">
             {/* Left Navigation */}
-            <div className="w-[16rem] flex-shrink-0">
-              <div className="flex flex-col gap-2">
-                {tabs.map((tab) => (
-                  <Link
-                    key={tab.name}
-                    href={tab.href}
-                    onClick={() => setActiveTab(tab.name)}
-                    className={`px-4 py-3 rounded text-sm font-medium ${
-                      activeTab === tab.name
-                        ? 'bg-black text-white'
-                        : 'text-gray-600 hover:bg-gray-100'
-                    }`}
-                  >
-                    {tab.name}
-                  </Link>
-                ))}
-              </div>
-            </div>
+            <MypageNav
+              tabs={tabs}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+            />
 
             {/* Main Content */}
             <div className="flex-1 bg-white rounded-lg">

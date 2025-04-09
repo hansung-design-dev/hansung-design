@@ -5,11 +5,13 @@ const Footer = () => {
     <footer className="text-gray py-[10rem] bg-gray-1">
       <div className="container mx-auto px-4 flex flex-col gap-[4.5rem]">
         <div className="flex flex-col items-start gap-[2.5rem] text-1.125 font-weight-700 text-gray lg:flex-row">
-          <button className="text-1.125 text-gray font-weight-700">
+          <button className="text-1.125 text-gray font-weight-700 border-none">
             CONTACT US
           </button>
-          <button className="text-1.125 text-gray font-weight-700">FAQ</button>
-          <button className="text-1.125 text-gray font-weight-700">
+          <button className="text-1.125 text-gray font-weight-700 border-none">
+            FAQ
+          </button>
+          <button className="text-1.125 text-gray font-weight-700 border-none">
             개인정보 처리방침
           </button>
         </div>
