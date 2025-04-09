@@ -117,14 +117,14 @@ export default function ConsultationPage() {
               <div className="flex justify-between items-start gap-4 pt-[3rem]">
                 {/* 자주 묻는 질문 */}
                 <div className="flex flex-col gap-8 flex-1 w-[28rem] border rounded-lg flex-shrink-0 mr-4">
-                  <div className="text-1.375 font-semibold pb-4 px-[2rem] py-[1.5rem]">
+                  <div className="text-1.375 font-semibold  px-[2rem] ">
                     자주 묻는 질문
                   </div>
                   <ul className="space-y-2 text-0.875 text-gray-700">
                     {Array.from({ length: 7 }).map((_, idx) => (
                       <li
                         key={idx}
-                        className="flex justify-between border border-b-solid border-[#E0E0E0] pb-2 last:border-none last:pb-0"
+                        className="flex justify-between border border-b-solid border-[#E0E0E0] pb-[1rem] last:border-none last:pb-0 text-0.875 font-500"
                       >
                         <span>게시글</span>
                         <span className="text-[#939393]">2024-01-01</span>
@@ -143,7 +143,7 @@ export default function ConsultationPage() {
                       {Array.from({ length: 5 }).map((_, idx) => (
                         <div
                           key={idx}
-                          className="bg-[#F9F9F9] p-4 rounded-[0.25rem] font-0.75 min-w-[12rem]"
+                          className="bg-[#F9F9F9] p-4 rounded-[0.25rem] font-0.75 min-w-[12rem] h-[3.5rem]"
                         >
                           <div className="w-full">
                             <div className="flex justify-between">
