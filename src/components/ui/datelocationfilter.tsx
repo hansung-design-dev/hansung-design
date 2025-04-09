@@ -26,8 +26,8 @@ const DateLocationFilter = ({
   showEndCalendar,
   setShowEndCalendar,
 }: DateLocationFilterProps) => (
-  <div className="bg-[#F5F5F5] p-4 md:p-8 rounded-lg mb-6 lg:w-full md:w-[35rem]">
-    <div className="flex flex-col md:flex-row flex-wrap gap-6 md:gap-16 justify-between">
+  <div className="bg-[#F5F5F5] p-4 md:p-6 rounded-lg mb-6 w-full">
+    <div className="flex flex-col md:flex-row flex-wrap gap-6 md:gap-8 justify-between">
       {/* 날짜 필터 */}
       <div className="w-full md:w-auto">
         <div className="text-gray-600 mb-2">주문일</div>
@@ -41,7 +41,7 @@ const DateLocationFilter = ({
                 setShowEndCalendar(false);
               }}
               readOnly
-              className="border-solid shadow-none lg:w-[6rem]  border border-gray-200 rounded-lg px-[1.5rem] py-[1.1rem] pr-10 cursor-pointer"
+              className="border-solid shadow-none w-[6rem] border border-gray-200 rounded-lg px-4 py-3 pr-10 cursor-pointer"
               placeholder="YYYY.MM.DD"
             />
             <button
@@ -49,7 +49,7 @@ const DateLocationFilter = ({
                 setShowStartCalendar(true);
                 setShowEndCalendar(false);
               }}
-              className="absolute right-5 top-1/2 -translate-y-1/2 border-none"
+              className="absolute right-3 top-1/2 -translate-y-1/2 border-none"
             >
               <Image
                 src="/svg/calendar.svg"
@@ -66,7 +66,7 @@ const DateLocationFilter = ({
               />
             )}
           </div>
-          <div className="text-1.25 font-500 px-[2rem]">~</div>
+          <div className="text-1.25 font-500 px-4">~</div>
           <div className="relative">
             <input
               type="text"
@@ -76,7 +76,7 @@ const DateLocationFilter = ({
                 setShowStartCalendar(false);
               }}
               readOnly
-              className="border-solid shadow-none lg:w-[6rem] border border-gray-200 rounded-lg px-[1.5rem] py-[1.1rem] pr-10 cursor-pointer"
+              className="border-solid shadow-none w-[6rem] border border-gray-200 rounded-lg px-4 py-3 pr-10 cursor-pointer"
               placeholder="YYYY.MM.DD"
             />
             <button
@@ -84,7 +84,7 @@ const DateLocationFilter = ({
                 setShowEndCalendar(true);
                 setShowStartCalendar(false);
               }}
-              className="absolute right-6 top-1/2 -translate-y-1/2  border-none"
+              className="absolute right-3 top-1/2 -translate-y-1/2 border-none"
             >
               <Image
                 src="/svg/calendar.svg"
@@ -103,17 +103,17 @@ const DateLocationFilter = ({
           </div>
         </div>
       </div>
-      <div className="lg:w-full md:w-auto">
+      <div className="w-full md:w-auto">
         <div className="text-gray-600 mb-2">광고위치</div>
         <div className="flex flex-wrap gap-2">
           <input
             type="text"
             value={searchLocation}
             onChange={(e) => setSearchLocation(e.target.value)}
-            className=" border border-solid shadow-none border-gray-200 rounded-lg w-[16rem] px-[1.5rem] py-[1.1rem]"
+            className="border border-solid shadow-none border-gray-200 rounded-lg w-full md:w-[16rem] px-4 py-3"
             placeholder="위치를 입력해보세요. ex.송파구"
           />
-          <button className="w-[5.75rem] px-[1.5rem] py-[1rem] bg-black text-white rounded-lg hover:bg-gray-800">
+          <button className="w-full md:w-[5.75rem] px-4 py-3 bg-black text-white rounded-lg hover:bg-gray-800">
             조회
           </button>
         </div>

@@ -60,7 +60,7 @@ export default function UserInfoPage() {
   return (
     <main className="min-h-screen flex flex-col bg-white">
       <Nav variant="default" className="bg-white" />
-      <div className="bg-[#F1F1F1]">
+      <div className="items-center flex justify-center bg-[#F1F1F1]">
         <div className="container px-4 pt-[7rem] pb-[10rem] max-w-[1200px]">
           <div className="flex gap-8">
             <MypageNav

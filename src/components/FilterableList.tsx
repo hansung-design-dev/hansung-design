@@ -43,10 +43,10 @@ const FilterableList = ({
   const [showEndCalendar, setShowEndCalendar] = useState(false);
 
   return (
-    <div className="w-full rounded-lg flex flex-col px-4 md:px-[1rem] ">
+    <div className="w-full rounded-lg flex flex-col px-4 md:px-6">
       <div>
-        <h2 className="text-1.25 font-500 mb-2">주문내역</h2>
-        <p className="text-gray-600 text-1.125 font-300 mb-6">
+        <h2 className="lg:text-1.25 lg:font-500 mb-2">주문내역</h2>
+        <p className="text-gray-600 lg:text-1.125 lg:font-300 mb-6">
           *생산이 시작된 주문은 취소/파일 교체가 불가하며, 제품 발송 - 출고완료
           상태에서는 배송 방법 변경이 불가합니다.
         </p>
