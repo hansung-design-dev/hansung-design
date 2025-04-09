@@ -41,9 +41,9 @@ export default function CustomerServicePage() {
     <main className="min-h-screen flex flex-col bg-white">
       <Nav variant="default" className="bg-white" />
 
-      <div className="bg-[#F1F1F1]">
+      <div className="flex justify-center bg-[#F1F1F1] ">
         <div className="container px-4 pt-[7rem] pb-[10rem] max-w-[1200px]">
-          <div className="flex gap-8">
+          <div className="flex flex-col md:flex-row gap-6 md:gap-8">
             <MypageNav
               tabs={tabs}
               activeTab={activeTab}
@@ -51,8 +51,8 @@ export default function CustomerServicePage() {
             />
 
             {/* Main Content */}
-            <div className="flex-1 bg-white p-8">
-              <div className="flex items-center justify-between gap-8">
+            <div className="flex-1 bg-white p-8 rounded-lg w-full">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 md:gap-8">
                 <div className="text-2.25 font-500">1:1 상담</div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex items-center">
@@ -76,81 +76,74 @@ export default function CustomerServicePage() {
 
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                width="1088"
+                width="100%"
                 height="2"
                 viewBox="0 0 1088 2"
                 fill="none"
+                className="my-4"
               >
                 <path d="M1088 1L1.33514e-05 1" stroke="#E0E0E0" />
               </svg>
 
               {/* 유저 질문 리스트 */}
-              <div className="mt-12">
-                <table className="w-full pb-[2rem]">
-                  <tbody></tbody>
+              <div className="mt-12 w-full overflow-x-auto">
+                <table className="w-full min-w-[800px] pb-[2rem]">
+                  <tbody>
+                    {currentItems.map((item) => (
+                      <tr
+                        key={item.id}
+                        className="last:border-none border-black border-b-[3px] text-1.25 font-500"
+                      >
+                        <td className="px-[2rem] py-4 text-center border-b-solid border-gray-3">
+                          {item.id}
+                        </td>
+                        <td className="px-0 py-8 border-b-solid border-gray-3">
+                          {item.text}
+                        </td>
+                        <td className="px-2 py-4 text-center border-b-solid border-gray-3">
+                          {item.date}
+                        </td>
+                        <td className="pr-[4rem] py-4 text-end font-semibold border-b-solid border-gray-3">
+                          {item.status}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
                 </table>
 
                 {/* 페이지네이션 */}
-                {/* 유저 질문 리스트 */}
-                <div className="mt-12">
-                  <table className="w-full pb-[2rem]">
-                    <tbody>
-                      {currentItems.map((item) => (
-                        <tr
-                          key={item.id}
-                          className="last:border-none border-black border-b-[3px] text-1.25 font-500"
-                        >
-                          <td className="px-[2rem] py-4 text-center border-b-solid border-gray-3">
-                            {item.id}
-                          </td>
-                          <td className="px-0 py-8 border-b-solid border-gray-3">
-                            {item.text}
-                          </td>
-                          <td className="px-2 py-4 text-center border-b-solid border-gray-3">
-                            {item.date}
-                          </td>
-                          <td className="pr-[4rem] py-4 text-end font-semibold border-b-solid border-gray-3">
-                            {item.status}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-
-                  {/* 페이지네이션 */}
-                  <div className="flex justify-center items-center mt-4 gap-4 pb-[2rem]">
-                    {Array.from({ length: totalPages }, (_, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => handlePageChange(idx + 1)}
-                        className={`px-2 py-1 text-1.25 font-500 border-none ${
-                          currentPage === idx + 1
-                            ? 'text-black'
-                            : 'text-gray-400 hover:text-black'
-                        }`}
-                      >
-                        {idx + 1}
-                      </button>
-                    ))}
-                    {currentPage < totalPages && (
-                      <Image
-                        src="/svg/arrow-right.svg"
-                        width={13}
-                        height={13}
-                        alt="arrow-right"
-                        className="cursor-pointer"
-                        onClick={() => handlePageChange(currentPage + 1)}
-                      />
-                    )}
-                  </div>
+                <div className="flex justify-center items-center mt-4 gap-4 pb-[2rem]">
+                  {Array.from({ length: totalPages }, (_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handlePageChange(idx + 1)}
+                      className={`px-2 py-1 text-1.25 font-500 border-none ${
+                        currentPage === idx + 1
+                          ? 'text-black'
+                          : 'text-gray-400 hover:text-black'
+                      }`}
+                    >
+                      {idx + 1}
+                    </button>
+                  ))}
+                  {currentPage < totalPages && (
+                    <Image
+                      src="/svg/arrow-right.svg"
+                      width={13}
+                      height={13}
+                      alt="arrow-right"
+                      className="cursor-pointer"
+                      onClick={() => handlePageChange(currentPage + 1)}
+                    />
+                  )}
                 </div>
               </div>
 
               {/* 하단 정보 */}
-              <div className="flex justify-between items-start gap-4 pt-[3rem]">
+              <div className="flex flex-col md:flex-row justify-between items-start gap-4 pt-[3rem]">
                 {/* 자주 묻는 질문 */}
-                <div className="flex flex-col gap-8 flex-1 w-[28rem] border rounded-lg flex-shrink-0 mr-4">
-                  <div className="text-1.375 font-semibold  px-[2rem] ">
+                <div className="flex flex-col gap-8 w-full md:w-[28rem] border rounded-lg flex-shrink-0 md:mr-4">
+                  <div className="text-1.375 font-semibold px-[2rem]">
                     자주 묻는 질문
                   </div>
                   <ul className="space-y-2 text-0.875 text-gray-700">
@@ -166,13 +159,13 @@ export default function CustomerServicePage() {
                   </ul>
                 </div>
 
-                <div className="flex flex-col gap-8 flex-1">
+                <div className="flex flex-col gap-8 w-full md:flex-1">
                   {/* 전화번호 */}
                   <div className="border p-6 rounded-lg">
                     <div className="text-1.375 font-semibold mb-4">
                       전화번호
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-4">
                       {Array.from({ length: 5 }).map((_, idx) => (
                         <div
                           key={idx}
@@ -202,7 +195,7 @@ export default function CustomerServicePage() {
                     <div className="text-1.375 font-semibold mb-4">
                       계좌번호
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-4">
                       {Array.from({ length: 5 }).map((_, idx) => (
                         <div
                           key={idx}

@@ -29,26 +29,26 @@ const ItemList = ({ items }: { items: ListItem[] }) => (
       <Link
         href={`/mypage/orders/${item.id}`}
         key={item.id}
-        className="grid grid-cols-10 py-4 px-6 border-b border-gray-200 items-center"
+        className="grid grid-cols-9 py-4 px-6 border-b border-gray-200 items-center"
       >
-        <div className="col-span-4">
-          <div className="flex gap-3 font-500 text-1.25 text-black">
-            <div>{item.title}</div>
+        <div className="col-span-5">
+          <div className="flex lg:font-500 lg:text-1.25 lg:font-500 text-black">
+            <div>{item.title}&nbsp;</div>
             {item.subtitle && <div>{item.subtitle}</div>}
           </div>
         </div>
-        <div className="col-span-2 text-center font-500 text-1.25 text-black">
+        <div className="col-span-1 text-center font-500 text-1.25 text-black">
           {item.location}
         </div>
         <div
-          className={`col-span-2 text-center font-500 text-1.25 ${getStatusClass(
+          className={`col-span-1 text-center font-500 text-1.25 ${getStatusClass(
             item.status
           )}`}
         >
           {item.status}
         </div>
         <div className="col-span-2 text-center">
-          <button className="border border-solid border-black w-[7.5rem] py-2 text-sm font-medium text-black rounded-full">
+          <button className="border border-solid border-black border-[1px] w-[7.5rem] py-2 text-sm font-medium text-black rounded-full">
             신청 취소
           </button>
         </div>

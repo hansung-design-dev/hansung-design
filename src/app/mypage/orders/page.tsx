@@ -95,7 +95,7 @@ export default function OrdersPage() {
     <main className="min-h-screen flex flex-col bg-white">
       <Nav variant="default" className="bg-white" />
 
-      <div className="bg-[#F1F1F1]">
+      <div className="flex justify-center bg-[#F1F1F1] ">
         <div className="container px-4 pt-[7rem] pb-[10rem] max-w-[1200px]">
           <div className="flex gap-8">
             {/* Left Navigation */}
@@ -106,8 +106,8 @@ export default function OrdersPage() {
             />
 
             {/* Main Content */}
-            <div className="flex-1 bg-white p-8">
-              <h2 className="text-2xl font-bold mb-3">주문내역</h2>
+            <div className="flex-1 bg-white p-8 rounded-lg">
+              <h2 className="text-2.25 font-500 pt-3">주문내역</h2>
 
               <div className="text-sm text-gray-500 mb-6">
                 *송출이 시작된 주문은 취소/파일 교체가 불가하며, 신청후 3일 이후
