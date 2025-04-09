@@ -11,6 +11,18 @@ interface ListItem {
   price?: number;
 }
 
+const statusColorMap: Record<string, string> = {
+  추가결제: 'text-[#D61919]',
+  파일오류: 'text-[#D61919]',
+  송출중: 'text-[#109251]',
+  진행중: 'text-[#000000]',
+  마감: 'text-[#7D7D7D]',
+};
+
+const getStatusClass = (status: string) => {
+  return statusColorMap[status] || 'text-black';
+};
+
 const ItemList = ({ items }: { items: ListItem[] }) => (
   <div className="border-t border-gray-200 py-[2rem]">
     {items.map((item) => (
@@ -28,7 +40,11 @@ const ItemList = ({ items }: { items: ListItem[] }) => (
         <div className="col-span-2 text-center font-500 text-1.25 text-black">
           {item.location}
         </div>
-        <div className="col-span-2 text-center font-500 text-1.25 text-black">
+        <div
+          className={`col-span-2 text-center font-500 text-1.25 ${getStatusClass(
+            item.status
+          )}`}
+        >
           {item.status}
         </div>
         <div className="col-span-2 text-center">

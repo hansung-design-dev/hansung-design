@@ -1,27 +1,82 @@
 'use client';
 
 import { useState } from 'react';
-//import Link from 'next/link';
+
 import Nav from '../../../components/Nav';
 import { Button } from '@/src/components/ui/button';
-//import { Input } from '@/src/components/ui/input';
-//import FilterableList from '@/src/components/FilterableList';
-//import { format } from 'date-fns';
 import CategoryFilter from '@/src/components/ui/categoryFilter';
 import DateLocationFilter from '@/src/components/ui/datelocationfilter';
 import MypageNav from '@/src/components/mypageNav';
 import ItemList from '@/src/components/ui/itemlist';
 
-const sampleItems = Array(10)
-  .fill(null)
-  .map((_, index) => ({
-    id: index + 1,
-    title: '울림픽대교 남단사거리 앞',
-    subtitle: '(남단 유수지앞)',
+const mockOrders = [
+  {
+    id: 1,
+    title: '올림픽대교 남단사거리 앞 (남단 유수지앞)',
+    location: '방이동 ',
+    status: '진행중',
+  },
+  {
+    id: 2,
+    title: '올림픽대교 남단사거리 앞 (남단 유수지앞)',
     location: '방이동',
-    status: index < 3 ? '진행중' : '완료',
-    date: '2024.03.06',
-  }));
+    status: '송출중',
+  },
+  {
+    id: 3,
+    title: '올림픽대교 남단사거리 앞 (남단 유수지앞)',
+    location: '방이동',
+    status: '파일오류',
+  },
+  {
+    id: 4,
+    title: '올림픽대교 남단사거리 앞 (남단 유수지앞)',
+    location: '온라인',
+    status: '추가결제',
+  },
+  {
+    id: 5,
+    title: '올림픽대교 남단사거리 앞 (남단 유수지앞)',
+    location: '방이동',
+    status: '진행중',
+  },
+  {
+    id: 6,
+    title: '올림픽대교 남단사거리 앞 (남단 유수지앞)',
+    location: '방이동 ',
+    status: '진행중',
+  },
+  {
+    id: 7,
+    title: '올림픽대교 남단사거리 앞 (남단 유수지앞)',
+    location: '방이동 ',
+    status: '진행중',
+  },
+  {
+    id: 8,
+    title: '올림픽대교 남단사거리 앞 (남단 유수지앞)',
+    location: '방이동 ',
+    status: '진행중',
+  },
+  {
+    id: 9,
+    title: '올림픽대교 남단사거리 앞 (남단 유수지앞)',
+    location: '방이동',
+    status: '마감',
+  },
+  {
+    id: 10,
+    title: '올림픽대교 남단사거리 앞 (남단 유수지앞)',
+    location: '방이동',
+    status: '마감',
+  },
+  {
+    id: 11,
+    title: '올림픽대교 남단사거리 앞 (남단 유수지앞)',
+    location: '방이동',
+    status: '마감',
+  },
+];
 
 export default function OrdersPage() {
   const [activeTab, setActiveTab] = useState('주문내역');
@@ -82,6 +137,7 @@ export default function OrdersPage() {
               {/* Tag Filters */}
               <div className="flex flex-wrap gap-2 mb-4">
                 {[
+                  '전체',
                   '공공디자인',
                   'LED전자게시대',
                   '현수막',
@@ -96,7 +152,7 @@ export default function OrdersPage() {
                 </Button>
               </div>
 
-              <ItemList items={sampleItems} />
+              <ItemList items={mockOrders} />
             </div>
           </div>
         </div>

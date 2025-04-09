@@ -15,6 +15,28 @@ export default function CustomerServicePage() {
     { name: '간편정보관리', href: '/mypage/info' },
   ];
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
+  const inquiries = Array.from({ length: 13 }, (_, idx) => ({
+    id: idx + 1,
+    text: `올림픽대교 남단사거리 앞 (남단 유수지앞)`,
+    date: '2025-03-01',
+    status: idx % 2 === 0 ? '답변완료' : '답변준비중',
+  }));
+
+  const totalPages = Math.ceil(inquiries.length / itemsPerPage);
+  const currentItems = inquiries.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
   return (
     <main className="min-h-screen flex flex-col bg-white">
       <Nav variant="default" className="bg-white" />
@@ -65,51 +87,62 @@ export default function CustomerServicePage() {
               {/* 유저 질문 리스트 */}
               <div className="mt-12">
                 <table className="w-full pb-[2rem]">
-                  <tbody>
-                    {[
-                      {
-                        id: 1,
-                        text: '올림픽대교 남단사거리 앞 (남단 유수지앞)',
-                        date: '2025-03-01',
-                        status: '답변완료',
-                      },
-                      {
-                        id: 2,
-                        text: '올림픽대교 남단사거리 앞 (남단 유수지앞)',
-                        date: '2025-03-01',
-                        status: '답변준비중',
-                      },
-                      {
-                        id: 3,
-                        text: '올림픽대교 남단사거리 앞 (남단 유수지앞)',
-                        date: '2025-03-01',
-                        status: '답변준비중',
-                      },
-                    ].map((item) => (
-                      <tr
-                        key={item.id}
-                        className="border border-solid  last:border-none border-black border-b-[3px] text-1.25 font-500"
-                      >
-                        <td className="px-[2rem] py-4 text-center">
-                          {item.id}
-                        </td>
-                        <td className="px-0 py-4">{item.text}</td>
-                        <td className="px-2 py-4 text-center">{item.date}</td>
-                        <td className="pr-[4rem] py-4 text-end font-semibold">
-                          {item.status}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
+                  <tbody></tbody>
                 </table>
 
                 {/* 페이지네이션 */}
-                <div className="flex justify-center mt-4 gap-2 text-sm pb-[2rem]">
-                  <button className="px-2 py-1 border text-black">1</button>
-                  <button className="px-2 py-1 text-gray-400 cursor-not-allowed">
-                    2
-                  </button>
-                  <span className="text-gray-400">▶</span>
+                {/* 유저 질문 리스트 */}
+                <div className="mt-12">
+                  <table className="w-full pb-[2rem]">
+                    <tbody>
+                      {currentItems.map((item) => (
+                        <tr
+                          key={item.id}
+                          className="last:border-none border-black border-b-[3px] text-1.25 font-500"
+                        >
+                          <td className="px-[2rem] py-4 text-center border-b-solid border-gray-3">
+                            {item.id}
+                          </td>
+                          <td className="px-0 py-8 border-b-solid border-gray-3">
+                            {item.text}
+                          </td>
+                          <td className="px-2 py-4 text-center border-b-solid border-gray-3">
+                            {item.date}
+                          </td>
+                          <td className="pr-[4rem] py-4 text-end font-semibold border-b-solid border-gray-3">
+                            {item.status}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  {/* 페이지네이션 */}
+                  <div className="flex justify-center items-center mt-4 gap-4 pb-[2rem]">
+                    {Array.from({ length: totalPages }, (_, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handlePageChange(idx + 1)}
+                        className={`px-2 py-1 text-1.25 font-500 border-none ${
+                          currentPage === idx + 1
+                            ? 'text-black'
+                            : 'text-gray-400 hover:text-black'
+                        }`}
+                      >
+                        {idx + 1}
+                      </button>
+                    ))}
+                    {currentPage < totalPages && (
+                      <Image
+                        src="/svg/arrow-right.svg"
+                        width={13}
+                        height={13}
+                        alt="arrow-right"
+                        className="cursor-pointer"
+                        onClick={() => handlePageChange(currentPage + 1)}
+                      />
+                    )}
+                  </div>
                 </div>
               </div>
 
