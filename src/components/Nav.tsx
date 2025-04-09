@@ -62,7 +62,7 @@ const IconList = ({ TextInvert }: { TextInvert?: boolean }) => (
     <IconButton
       iconPath="/svg/shopping-cart.svg"
       label="장바구니"
-      href="/card"
+      href="/cart"
       TextInvert={TextInvert}
     />
     <IconButton

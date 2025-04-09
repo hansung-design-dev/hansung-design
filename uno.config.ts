@@ -28,6 +28,7 @@ export default defineConfig({
       '2.375': '2.375rem',
       '2.25': '2.25rem',
       '2.5': '2.5rem',
+      '1.875': '1.875rem',
       '1.75': '1.75rem',
       '1.7': '1.7rem',
       '1.5': '1.5rem',
@@ -63,6 +64,9 @@ export default defineConfig({
         4: '#F6F6F6',
         5: '#676767',
         6: '#9E9E9E',
+        7: '#848484',
+        8: '#D9D9D9',
+        9: '#D8D8D8',
       },
     },
     breakpoints: {
