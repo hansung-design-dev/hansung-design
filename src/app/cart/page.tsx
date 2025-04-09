@@ -2,6 +2,8 @@
 import { Button } from '@/src/components/ui/button';
 import { motion } from 'framer-motion';
 import Nav from '@/src/components/Nav';
+import Link from 'next/link';
+
 const fadeInUp = {
   initial: { y: 60, opacity: 0 },
   animate: {
@@ -118,8 +120,10 @@ export default function Cart() {
               </ul>
             </div>
 
-            <button className="w-full bg-black text-white py-4 rounded-lg hover:bg-gray-800 transition-colors">
-              결제하기
+            <button className="w-full bg-black text-white py-6 rounded-lg hover:bg-gray-800 transition-colors">
+              <Link href="/payment" className="text-white">
+                결제하기
+              </Link>
             </button>
           </div>
         </div>
