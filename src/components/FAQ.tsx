@@ -71,7 +71,7 @@ const FAQ = () => {
   } | null>(faqData[1].questions[0]);
 
   return (
-    <section className="py-[5rem] md:py-[10rem] bg-gray-100">
+    <section className="py-[5rem] md:py-[10rem] bg-[#F5F5F5]">
       <div className="container mx-auto px-4">
         <h1 className="text-2.25 font-bold mb-8 sm:text-1.7 text-center md:text-left">
           자주 묻는 질문
@@ -92,7 +92,7 @@ const FAQ = () => {
                       openCategory === item.category ? null : item.category
                     )
                   }
-                  className={`w-full text-left p-[1rem] md:p-[1.5rem] flex justify-between items-center border rounded-lg shadow bg-white ${
+                  className={`w-full text-left p-[1rem] md:p-[1.5rem] flex justify-between items-center border-none rounded-lg shadow bg-white ${
                     openCategory === item.category &&
                     'shadow-none rounded-b-none'
                   } flex flex-col`}
@@ -137,7 +137,7 @@ const FAQ = () => {
                   </div>
 
                   {openCategory === item.category && (
-                    <div className="w-full flex justify-center mt-[1rem]">
+                    <div className="w-full flex justify-center mt-[1rem] ">
                       <svg
                         className="w-5/6"
                         xmlns="http://www.w3.org/2000/svg"
@@ -157,7 +157,7 @@ const FAQ = () => {
                       <button
                         key={q.question}
                         onClick={() => setSelectedQuestion(q)}
-                        className={`block w-full text-left p-[0.75rem] md:p-[1rem] text-0.875 md:text-1 ${
+                        className={`block w-full text-left p-[0.75rem] md:p-[1rem] text-0.875 md:text-1 border-none ${
                           selectedQuestion?.question === q.question
                             ? 'font-bold text-black'
                             : 'text-gray-600'

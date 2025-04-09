@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 interface ListItem {
   id: number;
   title: string;
@@ -10,9 +12,10 @@ interface ListItem {
 }
 
 const ItemList = ({ items }: { items: ListItem[] }) => (
-  <div className="border-t border-gray-200">
+  <div className="border-t border-gray-200 py-[2rem]">
     {items.map((item) => (
-      <div
+      <Link
+        href={`/mypage/orders/${item.id}`}
         key={item.id}
         className="grid grid-cols-10 py-4 px-6 border-b border-gray-200 items-center"
       >
@@ -33,7 +36,7 @@ const ItemList = ({ items }: { items: ListItem[] }) => (
             신청 취소
           </button>
         </div>
-      </div>
+      </Link>
     ))}
   </div>
 );
