@@ -6,7 +6,7 @@ import MypageNav from '@/src/components/mypageNav';
 
 export default function ConsultationPage() {
   const [activeTab, setActiveTab] = useState('1:1상담');
-  const [inquiry, setInquiry] = useState('');
+  // const [inquiry, setInquiry] = useState('');
 
   const tabs = [
     { name: '마이페이지', href: '/mypage' },
@@ -14,12 +14,6 @@ export default function ConsultationPage() {
     { name: '1:1상담', href: '/mypage/consultation' },
     { name: '간편정보관리', href: '/mypage/info' },
   ];
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Handle form submission
-    console.log('Inquiry submitted:', inquiry);
-  };
 
   return (
     <main className="min-h-screen flex flex-col bg-white">
@@ -55,26 +49,59 @@ export default function ConsultationPage() {
               </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  문의 내용
-                </label>
-                <textarea
-                  value={inquiry}
-                  onChange={(e) => setInquiry(e.target.value)}
-                  rows={6}
-                  className="w-full border border-gray-300 rounded-lg p-4 focus:outline-none focus:ring-2 focus:ring-black"
-                  placeholder="문의하실 내용을 입력해주세요."
-                />
+            {/* 유저 질문 리스트 */}
+            <div className="mt-12 p-2">
+              <table className="w-full table-fixed text-sm">
+                <thead>
+                  <tr className="text-left border-b">
+                    <th className="w-10 px-2 py-2">번호</th>
+                    <th className="px-2 py-2">내용</th>
+                    <th className="w-32 px-2 py-2">날짜</th>
+                    <th className="w-24 px-2 py-2">답변 상태</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    {
+                      id: 1,
+                      text: '올림픽대교 남단사거리 앞 (남단 유수지앞)',
+                      date: '2025-03-01',
+                      status: '답변완료',
+                    },
+                    {
+                      id: 2,
+                      text: '올림픽대교 남단사거리 앞 (남단 유수지앞)',
+                      date: '2025-03-01',
+                      status: '답변준비중',
+                    },
+                    {
+                      id: 3,
+                      text: '올림픽대교 남단사거리 앞 (남단 유수지앞)',
+                      date: '2025-03-01',
+                      status: '답변준비중',
+                    },
+                  ].map((item) => (
+                    <tr key={item.id} className="border-b last:border-none">
+                      <td className="px-2 py-4 text-center">{item.id}</td>
+                      <td className="px-2 py-4">{item.text}</td>
+                      <td className="px-2 py-4 text-center">{item.date}</td>
+                      <td className="px-2 py-4 text-center font-semibold">
+                        {item.status}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* 페이지네이션 */}
+              <div className="flex justify-center mt-4 gap-2 text-sm">
+                <button className="px-2 py-1 border  text-black">1</button>
+                <button className="px-2 py-1 text-gray-400 cursor-not-allowed">
+                  2
+                </button>
+                <span className="text-gray-400">▶</span>
               </div>
-              <button
-                type="submit"
-                className="w-full bg-black text-white py-4 rounded-lg hover:bg-gray-800 transition-colors"
-              >
-                문의하기
-              </button>
-            </form>
+            </div>
 
             {/* 하단 정보 */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-16">
@@ -85,7 +112,7 @@ export default function ConsultationPage() {
                   {Array.from({ length: 7 }).map((_, idx) => (
                     <li
                       key={idx}
-                      className="flex justify-between border-b border-[#E0E0E0] border pb-2 last:border-none last:pb-0"
+                      className="flex justify-between border border-b-solid border-[#E0E0E0] pb-2 last:border-none last:pb-0"
                     >
                       <span>게시글</span>
                       <span className="text-gray-400">2024-01-01</span>
