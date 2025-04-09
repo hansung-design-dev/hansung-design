@@ -2,10 +2,23 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/src/components/ui/button';
+//import { motion } from 'framer-motion';
+import Nav from '@/src/components/Nav';
+
+// const fadeInUp = {
+//   initial: { y: 60, opacity: 0 },
+//   animate: {
+//     y: 0,
+//     opacity: 1,
+//     transition: { duration: 0.6, ease: 'easeOut' },
+//   },
+// };
 
 export default function PaymentPage() {
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-white pt-[5.5rem] bg-gray-100 min-h-screen">
+      <Nav variant="default" className="bg-white" />
+
       <div className="container mx-auto px-4 sm:px-1 py-8 grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-8">
         {/* 좌측 - 현수막 게시대 카드 2개 */}
         <div className="space-y-8 border border-solid border-gray-3 rounded-[0.375rem] p-[2.5rem] sm:p-[1.5rem]">
