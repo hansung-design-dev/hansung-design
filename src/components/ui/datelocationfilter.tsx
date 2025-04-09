@@ -26,11 +26,12 @@ const DateLocationFilter = ({
   showEndCalendar,
   setShowEndCalendar,
 }: DateLocationFilterProps) => (
-  <div className="bg-[#F5F5F5] p-8 rounded-lg mb-6 w-[65.5rem] h-[6rem]">
-    <div className="flex flex-wrap gap-16 justify-between">
-      <div>
+  <div className="bg-[#F5F5F5] p-4 md:p-8 rounded-lg mb-6 lg:w-full md:w-[35rem]">
+    <div className="flex flex-col md:flex-row flex-wrap gap-6 md:gap-16 justify-between">
+      {/* 날짜 필터 */}
+      <div className="w-full md:w-auto">
         <div className="text-gray-600 mb-2">주문일</div>
-        <div className="flex items-center justify-around gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="relative">
             <input
               type="text"
@@ -102,9 +103,9 @@ const DateLocationFilter = ({
           </div>
         </div>
       </div>
-      <div>
+      <div className="lg:w-full md:w-auto">
         <div className="text-gray-600 mb-2">광고위치</div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <input
             type="text"
             value={searchLocation}

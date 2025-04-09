@@ -43,7 +43,7 @@ const FilterableList = ({
   const [showEndCalendar, setShowEndCalendar] = useState(false);
 
   return (
-    <div className="w-full rounded-lg flex flex-col px-[3rem]">
+    <div className="w-full rounded-lg flex flex-col px-4 md:px-[1rem] ">
       <div>
         <h2 className="text-1.25 font-500 mb-2">주문내역</h2>
         <p className="text-gray-600 text-1.125 font-300 mb-6">
