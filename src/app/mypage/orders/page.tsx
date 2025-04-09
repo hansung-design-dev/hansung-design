@@ -3,7 +3,6 @@
 import { useState } from 'react';
 
 import Nav from '../../../components/Nav';
-import { Button } from '@/src/components/ui/button';
 import CategoryFilter from '@/src/components/ui/categoryFilter';
 import DateLocationFilter from '@/src/components/ui/datelocationfilter';
 import MypageNav from '@/src/components/mypageNav';
@@ -116,10 +115,6 @@ export default function OrdersPage() {
 
               {/* Filter Row */}
               <div className="flex flex-col gap-2 items-center mb-6">
-                <CategoryFilter
-                  selectedCategory="전체"
-                  setSelectedCategory={() => {}}
-                />
                 <DateLocationFilter
                   startDate="2025.02.06"
                   endDate="2025.03.06"
@@ -132,24 +127,10 @@ export default function OrdersPage() {
                   showEndCalendar={false}
                   setShowEndCalendar={() => {}}
                 />
-              </div>
-
-              {/* Tag Filters */}
-              <div className="flex flex-wrap gap-2 mb-4">
-                {[
-                  '전체',
-                  '공공디자인',
-                  'LED전자게시대',
-                  '현수막',
-                  '디지털사이니지',
-                ].map((tag) => (
-                  <Button variant="outlineGray" size="sm" key={tag}>
-                    {tag}
-                  </Button>
-                ))}
-                <Button variant="ghost" className="ml-auto" Isborder={true}>
-                  전체보기 ▼
-                </Button>
+                <CategoryFilter
+                  selectedCategory="전체"
+                  setSelectedCategory={() => {}}
+                />
               </div>
 
               <ItemList items={mockOrders} />
