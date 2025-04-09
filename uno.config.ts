@@ -69,7 +69,7 @@ export default defineConfig({
         9: '#D8D8D8',
         10: '#AEAEAE',
         11: '#EFEFEF',
-        12: '',
+        12: '#A4A4A4',
       },
     },
     breakpoints: {
