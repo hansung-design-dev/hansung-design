@@ -16,7 +16,7 @@ import Nav from '@/src/components/Nav';
 
 export default function PaymentPage() {
   return (
-    <main className="min-h-screen bg-white pt-[5.5rem] bg-gray-100 min-h-screen">
+    <main className="min-h-screen bg-white pt-[5.5rem] bg-gray-100 min-h-screen lg:px-[10rem]">
       <Nav variant="default" className="bg-white" />
 
       <div className="container mx-auto px-4 sm:px-1 py-8 grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-8">

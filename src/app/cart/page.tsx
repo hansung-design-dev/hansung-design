@@ -15,7 +15,7 @@ const fadeInUp = {
 
 export default function Cart() {
   return (
-    <main className="pt-[5.5rem] bg-gray-100 min-h-screen">
+    <main className="pt-[5.5rem] bg-gray-100 min-h-screen lg:px-[10rem]">
       <motion.div
         initial="initial"
         animate="animate"
@@ -121,7 +121,7 @@ export default function Cart() {
             </div>
 
             <button className="w-full bg-black text-white py-6 rounded-lg hover:bg-gray-800 transition-colors">
-              <Link href="/payment" className="text-white">
+              <Link href="/payment" className="text-white text-1.25 sm:text-1">
                 결제하기
               </Link>
             </button>
