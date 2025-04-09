@@ -17,10 +17,8 @@ const MypageNav = ({
             key={tab.name}
             href={tab.href}
             onClick={() => setActiveTab(tab.name)}
-            className={`px-4 py-3 rounded text-sm font-medium ${
-              activeTab === tab.name
-                ? 'bg-black text-white'
-                : 'text-gray-600 hover:bg-gray-100'
+            className={`px-4 py-3 rounded text-1.25 font-500 ${
+              activeTab === tab.name ? 'text-black' : 'text-gray-5 '
             }`}
           >
             {tab.name}

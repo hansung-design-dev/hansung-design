@@ -5,13 +5,13 @@ import Nav from '../../../components/Nav';
 import MypageNav from '@/src/components/mypageNav';
 import Image from 'next/image';
 
-export default function ConsultationPage() {
+export default function CustomerServicePage() {
   const [activeTab, setActiveTab] = useState('1:1상담');
 
   const tabs = [
     { name: '마이페이지', href: '/mypage' },
     { name: '주문내역', href: '/mypage/orders' },
-    { name: '1:1상담', href: '/mypage/consultation' },
+    { name: '1:1상담', href: '/mypage/customer-service' },
     { name: '간편정보관리', href: '/mypage/info' },
   ];
 
@@ -124,7 +124,7 @@ export default function ConsultationPage() {
                     {Array.from({ length: 7 }).map((_, idx) => (
                       <li
                         key={idx}
-                        className="flex justify-between border border-b-solid border-[#E0E0E0] pb-[1rem] last:border-none last:pb-0 text-0.875 font-500"
+                        className="flex justify-between border border-b-solid border-gray-3 pb-[1rem] last:border-none last:pb-0 text-0.875 font-500"
                       >
                         <span>게시글</span>
                         <span className="text-[#939393]">2024-01-01</span>

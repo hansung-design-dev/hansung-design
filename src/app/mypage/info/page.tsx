@@ -1,17 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import Nav from '../../../components/Nav';
-
+import MypageNav from '@/src/components/mypageNav';
+import { Button } from '@/src/components/ui/button';
+import Image from 'next/image';
 export default function UserInfoPage() {
   const [activeTab, setActiveTab] = useState('간편정보관리');
-  const [userInfo, setUserInfo] = useState({
-    name: '홍길동',
-    email: 'user@example.com',
-    phone: '010-1234-5678',
-    company: '한성기업',
-  });
 
   const tabs = [
     { name: '마이페이지', href: '/mypage' },
@@ -20,102 +15,176 @@ export default function UserInfoPage() {
     { name: '간편정보관리', href: '/mypage/info' },
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Handle form submission
-    console.log('User info updated:', userInfo);
-  };
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 3;
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setUserInfo((prev) => ({ ...prev, [name]: value }));
+  // 예시 데이터
+  const simpleInfos = [
+    {
+      title: '타이틀1',
+      name: '고객A',
+      phone: '010-1234-5678',
+      email: 'a@example.com',
+    },
+    {
+      title: '타이틀2',
+      name: '고객B',
+      phone: '010-2345-6789',
+      email: 'b@example.com',
+    },
+    {
+      title: '타이틀3',
+      name: '고객C',
+      phone: '010-3456-7890',
+      email: 'c@example.com',
+    },
+    {
+      title: '타이틀4',
+      name: '고객D',
+      phone: '010-4567-8901',
+      email: 'd@example.com',
+    },
+    // ...더 추가 가능
+  ];
+
+  const totalPages = Math.ceil(simpleInfos.length / itemsPerPage);
+  const currentItems = simpleInfos.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
   };
 
   return (
     <main className="min-h-screen flex flex-col bg-white">
-      <Nav variant="default" />
+      <Nav variant="default" className="bg-white" />
+      <div className="bg-[#F1F1F1]">
+        <div className="container px-4 pt-[7rem] pb-[10rem] max-w-[1200px]">
+          <div className="flex gap-8">
+            <MypageNav
+              tabs={tabs}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+            />
+            {/* Main Content */}
+            <div className="flex-1 bg-white p-10 items-center justify-center flex flex-col">
+              <h2 className="text-2.25 font-500 mb-8 border-b-solid border-gray-3 pb-8 w-full ">
+                간편정보관리
+              </h2>
+              <div className="space-y-6 max-w-2xl w-full">
+                <div className="flex flex-col gap-[1.25rem] bg-white p-6 rounded-lg">
+                  <div className="">
+                    <div className="text-0.875 text-gray-500 mb-2 border border-b-solid border-gray-3 pb-2 ">
+                      닉네임
+                    </div>
+                    <div className="flex items-center ">
+                      <p className="text-1 font-500 w-[16rem]">닉네임</p>
+                      <Button variant="ghost" className="bg-gray-4">
+                        수정
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="">
+                    <div className="text-0.875 text-gray-500 mb-2 border border-b-solid border-gray-3 pb-2">
+                      이메일정보
+                    </div>
+                    <p className="text-1 font-500">00@naver.com</p>
+                  </div>
+                  <div>
+                    <p className="text-0.875 text-gray-500 mb-2 border border-b-solid border-gray-3 pb-2">
+                      사업자정보
+                    </p>
+                    <div className="flex items-center ">
+                      <div className="text-1 font-500 text-[#636363] underline underline-offset-4 cursor-pointer">
+                        <div className="w-[16rem]">첨부파일이름</div>
+                      </div>
+                      <Button variant="ghost" className="bg-gray-4">
+                        수정
+                      </Button>
+                    </div>
+                  </div>
+                </div>
 
-      <div className="container mx-auto px-4 pt-[7rem] pb-[10rem]">
-        <div className="flex gap-8">
-          {/* Left Navigation */}
-          <div className="w-[16rem] flex-shrink-0">
-            <div className="flex flex-col gap-2">
-              {tabs.map((tab) => (
-                <Link
-                  key={tab.name}
-                  href={tab.href}
-                  onClick={() => setActiveTab(tab.name)}
-                  className={`px-4 py-3 rounded ${
-                    activeTab === tab.name
-                      ? 'bg-black text-white'
-                      : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  {tab.name}
-                </Link>
-              ))}
+                <div className="bg-white p-6 rounded-lg ">
+                  <button
+                    className=" flex flex-col gap-2 items-center justify-center w-full mb-6 text-1 font-500 text-black py-3 border border-solid border-gray-3 rounded-lg"
+                    onClick={() => console.log('간편정보추가')}
+                  >
+                    <div>+</div>
+                    <div>간편정보 추가하기</div>
+                  </button>
+                  {currentItems.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="border border-solid border-gray-3 rounded-lg px-4 py-8 mb-4 flex justify-between items-start"
+                    >
+                      <div className="font-500 text-gray-2 flex flex-col gap-2">
+                        <div className="text-1.25 mb-1">{item.title}</div>
+                        <div className="text-1">{item.name}</div>
+                        <div className="text-1">{item.phone}</div>
+                        <div className="text-1">{item.email}</div>
+                      </div>
+                      <Button variant="ghost" className="bg-gray-4">
+                        수정
+                      </Button>
+                    </div>
+                  ))}
+
+                  <div className="flex justify-center items-center gap-4 text-gray-500 mt-4 ">
+                    <div className="flex gap-4 text-1.25 items-center justify-center">
+                      {Array.from({ length: totalPages }, (_, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => handlePageChange(idx + 1)}
+                          className={` border-none text-1.25 font-500 ${
+                            currentPage === idx + 1
+                              ? 'text-black  '
+                              : 'text-gray-5'
+                          }`}
+                        >
+                          {idx + 1}
+                        </button>
+                      ))}
+                    </div>
+                    {currentPage < totalPages && (
+                      <Image
+                        src="/svg/arrow-right.svg"
+                        alt="arrow-right"
+                        width={13}
+                        height={13}
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        className="cursor-pointer"
+                      />
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex gap-4 justify-center">
+                  <Button
+                    variant="outlineGray"
+                    size="lg"
+                    onClick={() => console.log('비번변경')}
+                  >
+                    비밀번호 변경하기
+                  </Button>
+                  <Button
+                    variant="outlineGray"
+                    size="lg"
+                    onClick={() => console.log('로그아웃')}
+                  >
+                    로그아웃
+                  </Button>
+                </div>
+
+                <div className="text-center mt-6">
+                  <button className="text-1 text-gray-500 border-none">
+                    탈퇴하기
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
-
-          {/* Main Content */}
-          <div className="flex-1">
-            <h2 className="text-2xl font-bold mb-8">간편정보관리</h2>
-            <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  이름
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={userInfo.name}
-                  onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg p-4 focus:outline-none focus:ring-2 focus:ring-black"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  이메일
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={userInfo.email}
-                  onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg p-4 focus:outline-none focus:ring-2 focus:ring-black"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  전화번호
-                </label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={userInfo.phone}
-                  onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg p-4 focus:outline-none focus:ring-2 focus:ring-black"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  회사명
-                </label>
-                <input
-                  type="text"
-                  name="company"
-                  value={userInfo.company}
-                  onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg p-4 focus:outline-none focus:ring-2 focus:ring-black"
-                />
-              </div>
-              <button
-                type="submit"
-                className="w-full bg-black text-white py-4 rounded-lg hover:bg-gray-800 transition-colors"
-              >
-                정보 수정
-              </button>
-            </form>
           </div>
         </div>
       </div>
