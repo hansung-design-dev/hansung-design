@@ -31,7 +31,7 @@ export default function OrdersPage() {
   const tabs = [
     { name: '마이페이지', href: '/mypage' },
     { name: '주문내역', href: '/mypage/orders' },
-    { name: '1:1상담', href: '/mypage/consultation' },
+    { name: '1:1상담', href: '/mypage/customer-service' },
     { name: '간편정보관리', href: '/mypage/info' },
   ];
 
@@ -90,7 +90,7 @@ export default function OrdersPage() {
                     {tag}
                   </Button>
                 ))}
-                <Button variant="ghost" className="ml-auto">
+                <Button variant="ghost" className="ml-auto" Isborder={true}>
                   전체보기 ▼
                 </Button>
               </div>
@@ -111,7 +111,7 @@ export default function OrdersPage() {
                 </div>
 
                 <div className="flex items-center justify-center">
-                  <div className="w-[57rem] px-[1.9rem] border border-solid border-[#E0E0E0] bg-white flex flex-col gap-4 items-center justify-center">
+                  <div className="w-[57rem] px-[1.9rem] border border-solid border-gray-3 bg-white flex flex-col gap-4 items-center justify-center">
                     <div className="w-full  h-[6.125rem] bg-black text-white py-2 flex items-center text-1.5 font-700 gap-6 pl-[4rem]">
                       <div>주문번호</div>
                       <div>01019293485</div>
@@ -144,7 +144,7 @@ export default function OrdersPage() {
                             010.0000.0000
                           </div>
 
-                          <div className="col-span-2 border-t border-[#E0E0E0] my-2">
+                          <div className="col-span-2 border-t border-gray-3 my-2">
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
                               width="828"
@@ -178,7 +178,7 @@ export default function OrdersPage() {
                             3줄까지 가능합니다.
                           </div>
 
-                          <div className="col-span-2 border-t border-[#E0E0E0] my-2">
+                          <div className="col-span-2 border-t border-gray-3 my-2">
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
                               width="828"
