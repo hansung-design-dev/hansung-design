@@ -68,7 +68,7 @@ const FilterableList = ({
       {showCategoryFilter && (
         <CategoryFilter
           selectedCategory={selectedCategory as Category}
-          setSelectedCategory={setSelectedCategory}
+          onCategoryChange={setSelectedCategory}
         />
       )}
 

@@ -33,7 +33,7 @@ const ItemList = ({ items }: { items: ListItem[] }) => (
         className="border-b border-gray-200 px-6 py-4"
       >
         {/* ✅ 데스크탑 / 태블릿 (768px 이상부터) */}
-        <div className="hidden md:grid md:grid-cols-9 md:items-center">
+        <div className="hidden lg:grid lg:grid-cols-9 lg:items-center">
           {/* 타이틀 */}
           <div className="col-span-5 font-500 text-black text-1.25">
             {item.title}&nbsp;
@@ -70,7 +70,7 @@ const ItemList = ({ items }: { items: ListItem[] }) => (
         </div>
 
         {/* ✅ 모바일 (768px 미만) */}
-        <div className="md:hidden flex flex-col gap-5 items-center lg:hidden border-b-solid border-b-gray-13 border-b-[0.1rem] pb-5 w-full">
+        <div className="flex flex-col gap-5 items-center lg:hidden border-b-solid border-b-gray-13 border-b-[0.1rem] pb-5 w-full">
           {/* 타이틀 */}
           <div className="font-500 text-black text-1.25">
             {item.title}&nbsp;

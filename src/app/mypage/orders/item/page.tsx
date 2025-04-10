@@ -62,7 +62,7 @@ export default function OrdersPage() {
               <div className="flex flex-col gap-2 items-center mb-6">
                 <CategoryFilter
                   selectedCategory="전체"
-                  setSelectedCategory={() => {}}
+                  onCategoryChange={() => {}}
                 />
                 <DateLocationFilter
                   startDate="2025.02.06"

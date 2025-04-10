@@ -103,7 +103,7 @@ export default function DesktopMyPage({
                 />
                 <CategoryFilter
                   selectedCategory="전체"
-                  setSelectedCategory={() => {}}
+                  onCategoryChange={() => {}}
                 />
               </div>
             </div>

@@ -30,11 +30,7 @@ export default function MyPage() {
     <main className="min-h-screen bg-white w-full">
       <Nav variant="default" className="bg-white" />
       {isMobile ? (
-        <MobileMyPage
-          tabs={tabs}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-        />
+        <MobileMyPage activeTab={activeTab} setActiveTab={setActiveTab} />
       ) : (
         <DesktopMyPage
           tabs={tabs}

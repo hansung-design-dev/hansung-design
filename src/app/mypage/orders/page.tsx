@@ -1,14 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import Image from 'next/image';
-import Link from 'next/link';
+import { useState } from 'react';
+
 import Nav from '../../../components/Nav';
 import CategoryFilter from '@/src/components/ui/categoryFilter';
 import DateLocationFilter from '@/src/components/ui/datelocationfilter';
 import MypageNav from '@/src/components/mypageNav';
 import ItemList from '@/src/components/ui/itemlist';
-
+import Image from 'next/image';
+import Link from 'next/link';
 const mockOrders = [
   {
     id: 1,
@@ -80,11 +80,6 @@ const mockOrders = [
 
 export default function OrdersPage() {
   const [activeTab, setActiveTab] = useState('주문내역');
-  const [isMobile, setIsMobile] = useState(false);
-
-  // const [startDate, setStartDate] = useState(new Date());
-  // const [endDate, setEndDate] = useState(new Date());
-  // const [location, setLocation] = useState('');
 
   const tabs = [
     { name: '마이페이지', href: '/mypage' },
@@ -93,59 +88,40 @@ export default function OrdersPage() {
     { name: '간편정보관리', href: '/mypage/info' },
   ];
 
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 767);
-      // console.log(window.innerWidth);
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
   return (
     <main className="min-h-screen flex flex-col bg-white">
       <Nav variant="default" className="bg-white" />
 
-      <div className="flex justify-center bg-[#F1F1F1] ">
+      <div className="flex justify-center bg-[#F1F1F1] md:bg-[#F1F1F1] sm:bg-white">
         <div className="container px-4 pt-[7rem] pb-[10rem] max-w-[1200px]">
-          <div className="flex gap-8">
+          <div className="flex flex-col md:flex-row gap-6 md:gap-8">
             {/* Left Navigation */}
-            {isMobile ? (
-              <></>
-            ) : (
-              <MypageNav
-                tabs={tabs}
-                activeTab={activeTab}
-                setActiveTab={setActiveTab}
-              />
-            )}
+            <MypageNav
+              tabs={tabs}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+            />
 
             {/* Main Content */}
-            <div className="flex-1 bg-white lg:p-8 rounded-lg sm:p-4 ">
-              <div className="flex flex-col gap-2 sm:pl-[4rem]">
-                {isMobile && (
-                  <Link href="/mypage" className="border-none">
-                    <Image
-                      src="/svg/arrow-left.svg"
-                      alt="mypage-nav"
-                      width={40}
-                      height={40}
-                    />
-                  </Link>
-                )}
-                <div className="flex flex-col gap-2 items-start mb-6">
-                  <div className="text-2.25 font-500 pt-3">주문내역</div>
+            <div className="flex-1 bg-white lg:p-8 md:p-8 sm:p-0 rounded-lg w-full">
+              <Link href="/mypage" className="md:hidden lg:hidden sm:inline">
+                <Image
+                  src="/svg/arrow-left.svg"
+                  alt="orders"
+                  width={20}
+                  height={20}
+                  className="w-[1.5rem] h-[1.5rem]"
+                />
+              </Link>
+              <h2 className="text-2.25 font-500 mb-3">주문내역</h2>
 
-                  <div className="text-sm text-gray-500 mb-6">
-                    *송출이 시작된 주문은 취소/파일 교체가 불가하며, 신청후 3일
-                    이후 상태에서는 변경이 불가합니다.
-                  </div>
-                </div>
+              <div className="text-sm text-gray-500 mb-6">
+                *송출이 시작된 주문은 취소/파일 교체가 불가하며, 신청후 3일 이후
+                상태에서는 변경이 불가합니다.
               </div>
 
               {/* Filter Row */}
-              <div className="flex flex-col gap-2 items-center mb-6 ">
+              <div className="flex flex-col gap-2 items-center mb-6">
                 <DateLocationFilter
                   startDate="2025.02.06"
                   endDate="2025.03.06"
@@ -158,11 +134,11 @@ export default function OrdersPage() {
                   showEndCalendar={false}
                   setShowEndCalendar={() => {}}
                 />
-                <CategoryFilter
-                  selectedCategory="전체"
-                  setSelectedCategory={() => {}}
-                />
               </div>
+              <CategoryFilter
+                selectedCategory="전체"
+                onCategoryChange={() => {}}
+              />
 
               <ItemList items={mockOrders} />
             </div>
