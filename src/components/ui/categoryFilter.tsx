@@ -40,9 +40,6 @@ const CategoryFilter = ({
           </Button>
         ))}
       </div>
-      <Button variant="ghost" className="ml-auto" Isborder={true}>
-        전체보기 ▼
-      </Button>
     </div>
   );
 };

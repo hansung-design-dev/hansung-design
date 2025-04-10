@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Button } from './button';
 
 interface ListItem {
   id: number;
@@ -29,28 +30,76 @@ const ItemList = ({ items }: { items: ListItem[] }) => (
       <Link
         href={`/mypage/orders/${item.id}`}
         key={item.id}
-        className="grid grid-cols-9 py-4 px-6 border-b border-gray-200 items-center"
+        className="border-b border-gray-200 px-6 py-4"
       >
-        <div className="col-span-5">
-          <div className="flex lg:font-500 lg:text-1.25 lg:font-500 text-black">
-            <div>{item.title}&nbsp;</div>
-            {item.subtitle && <div>{item.subtitle}</div>}
+        {/* ✅ 데스크탑 / 태블릿 (768px 이상부터) */}
+        <div className="hidden md:grid md:grid-cols-9 md:items-center">
+          {/* 타이틀 */}
+          <div className="col-span-5 font-500 text-black text-1.25">
+            {item.title}&nbsp;
+            {item.subtitle && <span>{item.subtitle}</span>}
+          </div>
+
+          {/* 위치 */}
+          <div className="col-span-1 text-center font-500 text-black text-1.25">
+            {item.location}
+          </div>
+
+          {/* 상태 */}
+          <div
+            className={`col-span-1 text-center font-500 text-1.25 ${getStatusClass(
+              item.status
+            )}`}
+          >
+            {item.status}
+          </div>
+
+          {/* 버튼 */}
+          <div className="col-span-2 text-center">
+            <button
+              className={`border ${
+                item.status === '송출중'
+                  ? 'border-[#DADADA] text-[#DADADA]'
+                  : 'border-black text-black'
+              } border-solid border-[1px] w-[7.5rem] py-2 text-sm font-medium rounded-full`}
+              disabled={item.status === '송출중'}
+            >
+              신청 취소
+            </button>
           </div>
         </div>
-        <div className="col-span-1 text-center font-500 text-1.25 text-black">
-          {item.location}
-        </div>
-        <div
-          className={`col-span-1 text-center font-500 text-1.25 ${getStatusClass(
-            item.status
-          )}`}
-        >
-          {item.status}
-        </div>
-        <div className="col-span-2 text-center">
-          <button className="border border-solid border-black border-[1px] w-[7.5rem] py-2 text-sm font-medium text-black rounded-full">
-            신청 취소
-          </button>
+
+        {/* ✅ 모바일 (768px 미만) */}
+        <div className="md:hidden flex flex-col gap-5 items-center lg:hidden border-b-solid border-b-gray-13 border-b-[0.1rem] pb-5 w-full">
+          {/* 타이틀 */}
+          <div className="font-500 text-black text-1.25">
+            {item.title}&nbsp;
+            {item.subtitle && <span>{item.subtitle}</span>}
+          </div>
+
+          {/* 아래 줄: 위치, 상태, 버튼 */}
+          <div className="flex gap-10 items-center">
+            <div className="font-500 text-black text-0.875">
+              {item.location}
+            </div>
+            <div
+              className={`font-500 text-0.875 ${getStatusClass(item.status)}`}
+            >
+              {item.status}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className={`border ${
+                item.status === '송출중'
+                  ? 'border-[#DADADA] text-[#DADADA]'
+                  : 'border-black text-black'
+              } border-solid border-[1px]  sm:text-0.875  rounded-full`}
+              disabled={item.status === '송출중'}
+            >
+              신청 취소
+            </Button>
+          </div>
         </div>
       </Link>
     ))}
