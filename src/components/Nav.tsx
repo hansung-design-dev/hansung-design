@@ -61,6 +61,12 @@ const IconButton = ({
 const IconList = ({ TextInvert }: { TextInvert?: boolean }) => (
   <div className="flex items-center gap-3">
     <IconButton
+      iconPath="/svg/headphones.svg"
+      label="고객센터"
+      href="/support"
+      TextInvert={TextInvert}
+    />
+    <IconButton
       iconPath="/svg/shopping-cart.svg"
       label="장바구니"
       href="/cart"
@@ -70,12 +76,6 @@ const IconList = ({ TextInvert }: { TextInvert?: boolean }) => (
       iconPath="/svg/user.svg"
       label="마이페이지"
       href="/mypage"
-      TextInvert={TextInvert}
-    />
-    <IconButton
-      iconPath="/svg/headphones.svg"
-      label="고객센터"
-      href="/support"
       TextInvert={TextInvert}
     />
   </div>
@@ -120,7 +120,7 @@ const Nav = ({
       } ${className}`}
     >
       <div className="lg:container md:container mx-auto ">
-        <div className="flex justify-between items-center h-[5.5rem] px-4">
+        <div className="flex justify-between items-center h-[5.5rem] px-4 w-full">
           {/* 로고 */}
           <Link
             href="/"
@@ -158,7 +158,7 @@ const Nav = ({
           </div>
 
           {/* ✅ 모바일 전용 햄버거 메뉴 (sm 이하) */}
-          <div className="md:hidden flex items-center gap-4 justify-between min-w-[30rem]">
+          <div className="md:hidden flex items-center gap-4 justify-around w-full">
             <IconButton
               onClick={() => setIsOpen(!isOpen)}
               iconPath={isOpen ? '/svg/x-mark.svg' : '/svg/menu.svg'}

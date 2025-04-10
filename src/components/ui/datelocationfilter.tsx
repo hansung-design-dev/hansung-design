@@ -26,12 +26,12 @@ const DateLocationFilter = ({
   showEndCalendar,
   setShowEndCalendar,
 }: DateLocationFilterProps) => (
-  <div className="bg-[#F5F5F5] p-4 md:p-6 rounded-lg mb-6 lg:w-full sm:w-[28rem] flex flex-col items-center">
-    <div className="flex flex-col md:flex-row gap-6 md:gap-8">
+  <div className="bg-[#F5F5F5] p-4 md:p-6 rounded-lg mb-6 lg:w-full md:w-full sm:w-[20rem]">
+    <div className="flex flex-col md:flex-row flex-wrap gap-6 md:gap-8 justify-between md:items-start md:justify-center">
       {/* 날짜 필터 */}
-      <div className="w-full md:w-1/2">
+      <div className="w-full md:w-auto">
         <div className="text-gray-600 mb-2">주문일</div>
-        <div className="flex flex-col sm:flex-row flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="relative">
             <input
               type="text"
@@ -41,7 +41,7 @@ const DateLocationFilter = ({
                 setShowEndCalendar(false);
               }}
               readOnly
-              className="border-solid shadow-none w-full sm:w-[6rem] border border-gray-200 rounded-lg px-4 py-3 pr-10 cursor-pointer"
+              className="border-solid shadow-none lg:w-[6rem] border border-gray-200 rounded-lg px-4 py-3 pr-10 cursor-pointer md:w-[6rem] sm:w-[4rem]"
               placeholder="YYYY.MM.DD"
             />
             <button
@@ -66,7 +66,7 @@ const DateLocationFilter = ({
               />
             )}
           </div>
-          <div className="text-1.25 font-500 px-2 sm:px-4 self-center">~</div>
+          <div className="text-1.25 font-500 px-4">~</div>
           <div className="relative">
             <input
               type="text"
@@ -76,7 +76,7 @@ const DateLocationFilter = ({
                 setShowStartCalendar(false);
               }}
               readOnly
-              className="border-solid shadow-none w-full sm:w-[6rem] border border-gray-200 rounded-lg px-4 py-3 pr-10 cursor-pointer"
+              className="border-solid shadow-none lg:w-[6rem] border border-gray-200 rounded-lg px-4 py-3 pr-10 cursor-pointer md:w-[6rem] sm:w-[4rem]"
               placeholder="YYYY.MM.DD"
             />
             <button
@@ -103,19 +103,17 @@ const DateLocationFilter = ({
           </div>
         </div>
       </div>
-
-      {/* 광고위치 필터 */}
-      <div className="w-full md:w-1/2 sm:w-[24rem]">
+      <div className="w-full md:w-auto">
         <div className="text-gray-600 mb-2">광고위치</div>
-        <div className="flex flex-col sm:flex-row gap-2">
+        <div className="flex flex-wrap gap-2 sm:gap-10">
           <input
             type="text"
             value={searchLocation}
             onChange={(e) => setSearchLocation(e.target.value)}
-            className="border border-solid shadow-none border-gray-200 rounded-lg w-full px-4 py-3"
+            className="border border-solid shadow-none border-gray-200 rounded-lg w-full md:w-[11rem] px-4 py-3 sm:w-[10rem]"
             placeholder="위치를 입력해보세요. ex.송파구"
           />
-          <button className="w-full sm:w-[5.75rem] px-4 py-3 bg-black text-white rounded-lg hover:bg-gray-800">
+          <button className="w-full md:w-[5.75rem] px-4 py-3 bg-black text-white rounded-lg hover:bg-gray-800 sm:w-[4rem]">
             조회
           </button>
         </div>
