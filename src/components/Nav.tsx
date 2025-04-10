@@ -59,7 +59,7 @@ const IconButton = ({
 );
 
 const IconList = ({ TextInvert }: { TextInvert?: boolean }) => (
-  <div className="flex items-center gap-3">
+  <div className="flex items-center gap-3 sm:gap-10">
     <IconButton
       iconPath="/svg/headphones.svg"
       label="고객센터"
@@ -161,7 +161,7 @@ const Nav = ({
           <div className="md:hidden flex items-center gap-4 justify-around w-full">
             <IconButton
               onClick={() => setIsOpen(!isOpen)}
-              iconPath={isOpen ? '/svg/x-mark.svg' : '/svg/menu.svg'}
+              iconPath={'/svg/menu.svg'}
               label={isOpen ? '메뉴 닫기' : '메뉴 열기'}
               href="#"
               TextInvert={TextInvert && !isScrolled}
