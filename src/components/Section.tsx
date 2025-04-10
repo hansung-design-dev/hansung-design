@@ -51,7 +51,7 @@ const Section = ({
   list,
 }: SectionProps) => {
   return (
-    <section className="h-screen w-full flex items-center justify-center scroll-container">
+    <section className="h-screen w-full flex items-center justify-center scroll-container sm:pl-[4rem] ">
       <motion.div
         variants={staggerContainer}
         initial="initial"
