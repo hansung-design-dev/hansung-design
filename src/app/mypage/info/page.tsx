@@ -62,25 +62,27 @@ export default function UserInfoPage() {
       <Nav variant="default" className="bg-white" />
       <div className="items-center flex justify-center bg-[#F1F1F1]">
         <div className="container px-4 pt-[7rem] pb-[10rem] max-w-[1200px]">
-          <div className="flex gap-8">
+          <div className="flex flex-col md:flex-row gap-4 md:gap-8">
             <MypageNav
               tabs={tabs}
               activeTab={activeTab}
               setActiveTab={setActiveTab}
             />
             {/* Main Content */}
-            <div className="flex-1 bg-white p-10 items-center justify-center flex flex-col">
-              <h2 className="text-2.25 font-500 mb-8 border-b-solid border-gray-3 pb-8 w-full ">
+            <div className="flex-1 bg-white p-4 md:p-10 items-center justify-center flex flex-col">
+              <h2 className="text-1.5 md:text-2.25 font-500 mb-4 md:mb-8 border-b-solid border-gray-3 pb-4 md:pb-8 w-full">
                 간편정보관리
               </h2>
-              <div className="space-y-6 max-w-2xl w-full">
-                <div className="flex flex-col gap-[1.25rem] bg-white p-6 rounded-lg">
+              <div className="space-y-4 md:space-y-6 max-w-2xl w-full">
+                <div className="flex flex-col gap-3 md:gap-[1.25rem] bg-white p-4 md:p-6 rounded-lg">
                   <div className="">
-                    <div className="text-0.875 text-gray-500 mb-2 border border-b-solid border-gray-3 pb-2 ">
+                    <div className="text-0.875 text-gray-500 mb-2 border border-b-solid border-gray-3 pb-2">
                       닉네임
                     </div>
-                    <div className="flex items-center ">
-                      <p className="text-1 font-500 w-[16rem]">닉네임</p>
+                    <div className="flex items-center">
+                      <p className="text-0.875 md:text-1 font-500 w-full md:w-[16rem]">
+                        닉네임
+                      </p>
                       <Button variant="ghost" className="bg-gray-4">
                         수정
                       </Button>
@@ -90,15 +92,17 @@ export default function UserInfoPage() {
                     <div className="text-0.875 text-gray-500 mb-2 border border-b-solid border-gray-3 pb-2">
                       이메일정보
                     </div>
-                    <p className="text-1 font-500">00@naver.com</p>
+                    <p className="text-0.875 md:text-1 font-500">
+                      00@naver.com
+                    </p>
                   </div>
                   <div>
                     <p className="text-0.875 text-gray-500 mb-2 border border-b-solid border-gray-3 pb-2">
                       사업자정보
                     </p>
-                    <div className="flex items-center ">
-                      <div className="text-1 font-500 text-[#636363] underline underline-offset-4 cursor-pointer">
-                        <div className="w-[16rem]">첨부파일이름</div>
+                    <div className="flex items-center">
+                      <div className="text-0.875 md:text-1 font-500 text-[#636363] underline underline-offset-4 cursor-pointer">
+                        <div className="w-full md:w-[16rem]">첨부파일이름</div>
                       </div>
                       <Button variant="ghost" className="bg-gray-4">
                         수정
@@ -107,9 +111,9 @@ export default function UserInfoPage() {
                   </div>
                 </div>
 
-                <div className="bg-white p-6 rounded-lg ">
+                <div className="bg-white p-4 md:p-6 rounded-lg">
                   <button
-                    className=" flex flex-col gap-2 items-center justify-center w-full mb-6 text-1 font-500 text-black py-3 border border-solid border-gray-3 rounded-lg"
+                    className="flex flex-col gap-2 items-center justify-center w-full mb-4 md:mb-6 text-0.875 md:text-1 font-500 text-black py-3 border border-solid border-gray-3 rounded-lg"
                     onClick={() => console.log('간편정보추가')}
                   >
                     <div>+</div>
@@ -118,29 +122,34 @@ export default function UserInfoPage() {
                   {currentItems.map((item, idx) => (
                     <div
                       key={idx}
-                      className="border border-solid border-gray-3 rounded-lg px-4 py-8 mb-4 flex justify-between items-start"
+                      className="border border-solid border-gray-3 rounded-lg px-3 md:px-4 py-4 md:py-8 mb-3 md:mb-4 flex flex-col md:flex-row justify-between items-start gap-3 md:gap-0"
                     >
-                      <div className="font-500 text-gray-2 flex flex-col gap-2">
-                        <div className="text-1.25 mb-1">{item.title}</div>
-                        <div className="text-1">{item.name}</div>
-                        <div className="text-1">{item.phone}</div>
-                        <div className="text-1">{item.email}</div>
+                      <div className="font-500 text-gray-2 flex flex-col gap-1 md:gap-2">
+                        <div className="text-1 md:text-1.25 mb-1">
+                          {item.title}
+                        </div>
+                        <div className="text-0.875 md:text-1">{item.name}</div>
+                        <div className="text-0.875 md:text-1">{item.phone}</div>
+                        <div className="text-0.875 md:text-1">{item.email}</div>
                       </div>
-                      <Button variant="ghost" className="bg-gray-4">
+                      <Button
+                        variant="ghost"
+                        className="bg-gray-4 mt-2 md:mt-0"
+                      >
                         수정
                       </Button>
                     </div>
                   ))}
 
-                  <div className="flex justify-center items-center gap-4 text-gray-500 mt-4 ">
-                    <div className="flex gap-4 text-1.25 items-center justify-center">
+                  <div className="flex justify-center items-center gap-2 md:gap-4 text-gray-500 mt-4">
+                    <div className="flex gap-2 md:gap-4 text-1 md:text-1.25 items-center justify-center">
                       {Array.from({ length: totalPages }, (_, idx) => (
                         <button
                           key={idx}
                           onClick={() => handlePageChange(idx + 1)}
-                          className={` border-none text-1.25 font-500 ${
+                          className={`border-none text-1 md:text-1.25 font-500 ${
                             currentPage === idx + 1
-                              ? 'text-black  '
+                              ? 'text-black'
                               : 'text-gray-5'
                           }`}
                         >
@@ -161,25 +170,27 @@ export default function UserInfoPage() {
                   </div>
                 </div>
 
-                <div className="flex gap-4 justify-center">
+                <div className="flex   md:flex-row gap-3 md:gap-4 justify-center ">
                   <Button
                     variant="outlineGray"
-                    size="lg"
+                    size="md"
+                    className="w-[10rem]"
                     onClick={() => console.log('비번변경')}
                   >
                     비밀번호 변경하기
                   </Button>
                   <Button
                     variant="outlineGray"
-                    size="lg"
+                    size="md"
+                    className="w-[10rem]"
                     onClick={() => console.log('로그아웃')}
                   >
                     로그아웃
                   </Button>
                 </div>
 
-                <div className="text-center mt-6">
-                  <button className="text-1 text-gray-500 border-none">
+                <div className="text-center mt-4 md:mt-6">
+                  <button className="text-0.875 md:text-1 text-gray-500 border-none">
                     탈퇴하기
                   </button>
                 </div>
