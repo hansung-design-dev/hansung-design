@@ -158,29 +158,26 @@ export default function BannerDisplayPage() {
         `}
       >
         <div className="container mx-auto px-4 py-12 mt-[40rem]">
-          <div className="grid grid-cols-4 gap-[1px] bg-gray-100">
+          <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-4 gap-[1px] bg-gray-100">
             {districts.map((district) => (
               <Link
                 key={district.id}
                 href={`/led-display/${district.name}`}
                 className={`
-                  ${district.bgColor}
-                  hover:opacity-90 transition-all p-6 text-white
-                  flex items-center justify-between min-h-[200px] relative
-                `}
+        ${district.bgColor}
+        hover:opacity-90 transition-all
+        p-4 sm:p-6 text-white
+        flex items-center justify-between
+        min-h-[160px] sm:min-h-[200px] relative
+      `}
               >
-                {/* New layout structure with flex column */}
-                <div className="flex flex-col gap-8">
+                <div className="flex flex-col gap-4 sm:gap-8">
                   <div className="text-2.5 font-[700]">{district.name}</div>
-
-                  {/* Main content */}
                   <div className="text-1 font-500 opacity-80">
                     송출사이즈 800*416 <br /> 픽셀 유동인구 : -명 <br />
                     소비자트렌드 :
                   </div>
                 </div>
-
-                {/* Right arrow icon */}
                 <div className="flex items-center">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -203,8 +200,6 @@ export default function BannerDisplayPage() {
           </div>
         </div>
       </section>
-
-      {/* Footer - Positioned at the bottom */}
     </main>
   );
 }
