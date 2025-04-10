@@ -5,6 +5,7 @@ import Nav from '../../../components/Nav';
 import MypageNav from '@/src/components/mypageNav';
 import { Button } from '@/src/components/ui/button';
 import Image from 'next/image';
+import Link from 'next/link';
 export default function UserInfoPage() {
   const [activeTab, setActiveTab] = useState('간편정보관리');
 
@@ -60,7 +61,7 @@ export default function UserInfoPage() {
   return (
     <main className="min-h-screen flex flex-col bg-white">
       <Nav variant="default" className="bg-white" />
-      <div className="items-center flex justify-center bg-[#F1F1F1]">
+      <div className="items-center flex justify-center bg-[#F1F1F1] sm:bg-white">
         <div className="container px-4 pt-[7rem] pb-[10rem] max-w-[1200px]">
           <div className="flex flex-col md:flex-row gap-4 md:gap-8">
             <MypageNav
@@ -69,7 +70,16 @@ export default function UserInfoPage() {
               setActiveTab={setActiveTab}
             />
             {/* Main Content */}
-            <div className="flex-1 bg-white p-4 md:p-10 items-center justify-center flex flex-col">
+            <div className="flex-1 bg-white p-4 md:p-10 items-center justify-center flex flex-col sm:items-start">
+              <Link href="/mypage" className="md:hidden lg:hidden sm:inline">
+                <Image
+                  src="/svg/arrow-left.svg"
+                  alt="orders"
+                  width={20}
+                  height={20}
+                  className="w-[1.5rem] h-[1.5rem]"
+                />
+              </Link>
               <h2 className="text-1.5 md:text-2.25 font-500 mb-4 md:mb-8 border-b-solid border-gray-3 pb-4 md:pb-8 w-full">
                 간편정보관리
               </h2>
@@ -79,11 +89,11 @@ export default function UserInfoPage() {
                     <div className="text-0.875 text-gray-500 mb-2 border border-b-solid border-gray-3 pb-2">
                       닉네임
                     </div>
-                    <div className="flex items-center">
+                    <div className="flex items-center sm:justify-between">
                       <p className="text-0.875 md:text-1 font-500 w-full md:w-[16rem]">
                         닉네임
                       </p>
-                      <Button variant="ghost" className="bg-gray-4">
+                      <Button variant="ghost" size="sm" className="bg-gray-4">
                         수정
                       </Button>
                     </div>
@@ -100,11 +110,11 @@ export default function UserInfoPage() {
                     <p className="text-0.875 text-gray-500 mb-2 border border-b-solid border-gray-3 pb-2">
                       사업자정보
                     </p>
-                    <div className="flex items-center">
+                    <div className="flex items-center sm:justify-between">
                       <div className="text-0.875 md:text-1 font-500 text-[#636363] underline underline-offset-4 cursor-pointer">
                         <div className="w-full md:w-[16rem]">첨부파일이름</div>
                       </div>
-                      <Button variant="ghost" className="bg-gray-4">
+                      <Button variant="ghost" size="sm" className="bg-gray-4">
                         수정
                       </Button>
                     </div>
@@ -134,6 +144,7 @@ export default function UserInfoPage() {
                       </div>
                       <Button
                         variant="ghost"
+                        size="sm"
                         className="bg-gray-4 mt-2 md:mt-0"
                       >
                         수정
