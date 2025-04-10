@@ -25,6 +25,7 @@ export default defineConfig({
     fontSize: {
       '4.375': '4.375rem',
       '3.75': '3.75rem',
+      '3.5': '3.5rem',
       '2.375': '2.375rem',
       '2.25': '2.25rem',
       '2.5': '2.5rem',
