@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Nav from '../../../components/Nav';
 import MypageNav from '@/src/components/mypageNav';
 import Image from 'next/image';
-
+import Link from 'next/link';
 export default function CustomerServicePage() {
   const [activeTab, setActiveTab] = useState('1:1상담');
 
@@ -41,7 +41,7 @@ export default function CustomerServicePage() {
     <main className="min-h-screen flex flex-col bg-white">
       <Nav variant="default" className="bg-white" />
 
-      <div className="flex justify-center bg-[#F1F1F1] ">
+      <div className="flex justify-center bg-[#F1F1F1] sm:bg-white">
         <div className="container px-4 pt-[7rem] pb-[10rem] max-w-[1200px]">
           <div className="flex flex-col md:flex-row gap-6 md:gap-8">
             <MypageNav
@@ -51,24 +51,35 @@ export default function CustomerServicePage() {
             />
 
             {/* Main Content */}
-            <div className="flex-1 bg-white p-8 rounded-lg w-full">
-              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 md:gap-8">
-                <div className="text-2.25 font-500">1:1 상담</div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center">
-                    <div className="w-16 h-16 bg-gray-200 rounded-full" />
-                    <div className="flex flex-col p-6 rounded">
-                      <div className="text-lg font-medium mb-4">주문내역</div>
-                      <div className="text-3xl font-bold">3건</div>
+            <div className="flex-1 bg-white p-4 md:p-8 rounded-lg w-full">
+              <div className="flex flex-col md:flex-row items-start md:items-center sm:items-start justify-between gap-4 md:gap-8 sm:gap-4">
+                <Link href="/mypage" className="md:hidden">
+                  <Image
+                    src="/svg/arrow-left.svg"
+                    alt="orders"
+                    width={20}
+                    height={20}
+                    className="w-[1.5rem] h-[1.5rem]"
+                  />
+                </Link>
+                <div className="text-1.5 md:text-2.25 font-500">1:1 상담</div>
+                <div className="grid grid-cols-2 gap-2 md:gap-4 w-full md:w-auto">
+                  <div className="flex items-center  p-3 md:p-4 rounded-lg">
+                    <div className="w-12 h-12 md:w-16 md:h-16 bg-gray-200 rounded-full" />
+                    <div className="flex flex-col p-3 md:p-6">
+                      <div className="text-sm md:text-lg font-medium mb-2 md:mb-4">
+                        주문내역
+                      </div>
+                      <div className="text-xl md:text-3xl font-bold">3건</div>
                     </div>
                   </div>
-                  <div className="flex items-center">
-                    <div className="w-16 h-16 bg-gray-200 rounded-full" />
-                    <div className="flex flex-col p-6 rounded">
-                      <div className="text-lg font-medium mb-4">
+                  <div className="flex items-center p-3 md:p-4 rounded-lg">
+                    <div className="w-12 h-12 md:w-16 md:h-16 bg-gray-200 rounded-full" />
+                    <div className="flex flex-col p-3 md:p-6">
+                      <div className="text-sm md:text-lg font-medium mb-2 md:mb-4">
                         송출중 광고
                       </div>
-                      <div className="text-3xl font-bold">2건</div>
+                      <div className="text-xl md:text-3xl font-bold">2건</div>
                     </div>
                   </div>
                 </div>
@@ -85,25 +96,24 @@ export default function CustomerServicePage() {
                 <path d="M1088 1L1.33514e-05 1" stroke="#E0E0E0" />
               </svg>
 
-              {/* 유저 질문 리스트 */}
-              <div className="mt-12 w-full overflow-x-auto">
-                <table className="w-full min-w-[800px] pb-[2rem]">
+              <div className="mt-8 md:mt-12 w-full overflow-x-auto">
+                <table className="w-full min-w-[600px] md:min-w-[800px] pb-[2rem]">
                   <tbody>
                     {currentItems.map((item) => (
                       <tr
                         key={item.id}
-                        className="last:border-none border-black border-b-[3px] text-1.25 font-500"
+                        className="last:border-none border-black border-b-[2px] md:border-b-[3px] text-sm md:text-1.25 font-500"
                       >
-                        <td className="px-[2rem] py-4 text-center border-b-solid border-gray-3">
+                        <td className="px-4 md:px-[2rem] py-3 md:py-4 text-center border-b border-gray-200">
                           {item.id}
                         </td>
-                        <td className="px-0 py-8 border-b-solid border-gray-3">
+                        <td className="px-2 md:px-4 py-3 md:py-8 border-b border-gray-200">
                           {item.text}
                         </td>
-                        <td className="px-2 py-4 text-center border-b-solid border-gray-3">
+                        <td className="px-2 md:px-4 py-3 md:py-4 text-center border-b border-gray-200">
                           {item.date}
                         </td>
-                        <td className="pr-[4rem] py-4 text-end font-semibold border-b-solid border-gray-3">
+                        <td className="px-4 md:pr-[4rem] py-3 md:py-4 text-end font-semibold border-b border-gray-200">
                           {item.status}
                         </td>
                       </tr>
@@ -112,12 +122,12 @@ export default function CustomerServicePage() {
                 </table>
 
                 {/* 페이지네이션 */}
-                <div className="flex justify-center items-center mt-4 gap-4 pb-[2rem]">
+                <div className="flex justify-center items-center mt-4 gap-2 md:gap-4 pb-[2rem]">
                   {Array.from({ length: totalPages }, (_, idx) => (
                     <button
                       key={idx}
                       onClick={() => handlePageChange(idx + 1)}
-                      className={`px-2 py-1 text-1.25 font-500 border-none ${
+                      className={`px-2 py-1 text-sm md:text-1.25 font-500 border-none ${
                         currentPage === idx + 1
                           ? 'text-black'
                           : 'text-gray-400 hover:text-black'
@@ -140,17 +150,17 @@ export default function CustomerServicePage() {
               </div>
 
               {/* 하단 정보 */}
-              <div className="flex flex-col md:flex-row justify-between items-start gap-4 pt-[3rem]">
+              <div className="flex flex-col md:flex-row justify-between items-start gap-4 pt-[2rem] md:pt-[3rem]">
                 {/* 자주 묻는 질문 */}
-                <div className="flex flex-col gap-8 w-full md:w-[28rem] border rounded-lg flex-shrink-0 md:mr-4">
-                  <div className="text-1.375 font-semibold px-[2rem]">
+                <div className="flex flex-col gap-4 md:gap-8 w-full md:w-[28rem] border rounded-lg flex-shrink-0 md:mr-4">
+                  <div className="text-lg md:text-1.375 font-semibold px-4 md:px-[2rem] ">
                     자주 묻는 질문
                   </div>
-                  <ul className="space-y-2 text-0.875 text-gray-700">
+                  <ul className="space-y-2 md:text-0.875 text-gray-700 sm:pl-2">
                     {Array.from({ length: 7 }).map((_, idx) => (
                       <li
                         key={idx}
-                        className="flex justify-between border border-b-solid border-gray-3 pb-[1rem] last:border-none last:pb-0 text-0.875 font-500"
+                        className="flex justify-between border-b border-gray-200 pb-3 md:pb-[1rem] last:border-none last:pb-0 text-sm md:text-0.875 font-500 px-4 md:px-[2rem] sm:min-w-[8rem]"
                       >
                         <span>게시글</span>
                         <span className="text-[#939393]">2024-01-01</span>
@@ -159,21 +169,21 @@ export default function CustomerServicePage() {
                   </ul>
                 </div>
 
-                <div className="flex flex-col gap-8 w-full md:flex-1">
+                <div className="flex flex-col gap-4 md:gap-8 w-full md:flex-1 ">
                   {/* 전화번호 */}
-                  <div className="border p-6 rounded-lg">
-                    <div className="text-1.375 font-semibold mb-4">
+                  <div className="border p-4 md:p-6 rounded-lg">
+                    <div className="text-lg md:text-1.375 font-semibold mb-4">
                       전화번호
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
                       {Array.from({ length: 5 }).map((_, idx) => (
                         <div
                           key={idx}
-                          className="bg-[#F9F9F9] p-4 rounded-[0.25rem] font-0.75 min-w-[12rem] h-[3.5rem]"
+                          className="bg-[#F9F9F9] p-3 md:p-4 rounded-[0.25rem] text-sm md:font-0.75 min-w-[10rem] md:min-w-[12rem] h-[3rem] md:h-[3.5rem] sm:w-[7rem] sm:min-w-[9rem] sm:p-2"
                         >
-                          <div className="w-full">
+                          <div className="w-full ">
                             <div className="flex justify-between">
-                              <div className="text-[#939393] font-500 pb-2">
+                              <div className="text-[#939393] font-500 pb-1 md:pb-2">
                                 관악구
                               </div>
                               <Image
@@ -191,19 +201,19 @@ export default function CustomerServicePage() {
                   </div>
 
                   {/* 계좌번호 */}
-                  <div className="border p-6 rounded-lg">
-                    <div className="text-1.375 font-semibold mb-4">
+                  <div className="border p-4 md:p-6 rounded-lg">
+                    <div className="text-lg md:text-1.375 font-semibold mb-4">
                       계좌번호
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
                       {Array.from({ length: 5 }).map((_, idx) => (
                         <div
                           key={idx}
-                          className="bg-[#F9F9F9] p-4 rounded-[0.25rem] font-0.75 min-w-[12rem]"
+                          className="bg-[#F9F9F9] p-3 md:p-4 rounded-[0.25rem] text-sm md:font-0.75 min-w-[10rem] md:min-w-[12rem] h-[3rem] md:h-[3.5rem] sm:w-[7rem] sm:min-w-[9rem] sm:p-2"
                         >
                           <div className="w-full">
                             <div className="flex justify-between">
-                              <div className="text-[#939393] font-500 pb-2">
+                              <div className="text-[#939393] font-500 pb-1 md:pb-2">
                                 관악구
                               </div>
                               <Image

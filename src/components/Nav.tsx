@@ -8,6 +8,7 @@ import { usePathname } from 'next/navigation';
 interface MenuItem {
   name: string;
   href: string;
+  mypage?: boolean;
 }
 
 interface IconButtonProps {
@@ -59,7 +60,7 @@ const IconButton = ({
 );
 
 const IconList = ({ TextInvert }: { TextInvert?: boolean }) => (
-  <div className="flex items-center gap-3 sm:gap-10">
+  <div className="flex items-center gap-3 sm:gap-1">
     <IconButton
       iconPath="/svg/headphones.svg"
       label="고객센터"
@@ -90,6 +91,7 @@ const Nav = ({
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const pathname = usePathname();
+  const [mypage, setMypage] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -113,14 +115,18 @@ const Nav = ({
     }
   };
 
+  useEffect(() => {
+    setMypage(mypage);
+  }, [mypage]);
+
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 z-50 border-b border-gray-200 ${
+      className={`fixed top-0 left-0 right-0 z-50 border-b border-gray-200 lg:py-[1.5rem] sm:px-[1.5rem] ${
         isbg || isScrolled ? 'bg-white' : 'bg-transparent'
       } ${className}`}
     >
       <div className="lg:container md:container mx-auto ">
-        <div className="flex justify-between items-center h-[5.5rem] px-4 w-full">
+        <div className="flex justify-between items-center h-[5.5rem]w-full">
           {/* 로고 */}
           <Link
             href="/"
@@ -165,8 +171,9 @@ const Nav = ({
               label={isOpen ? '메뉴 닫기' : '메뉴 열기'}
               href="#"
               TextInvert={TextInvert && !isScrolled}
-              className="w-[4.5rem] h-[4.5rem]"
+              className="w-[4.5rem] h-[4.5rem] flex items-center justify-center"
             />
+            <div>{mypage ? '마이페이지' : ''}</div>
             <IconList TextInvert={TextInvert && !isScrolled} />
           </div>
         </div>

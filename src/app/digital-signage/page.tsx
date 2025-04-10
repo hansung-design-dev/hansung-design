@@ -9,7 +9,7 @@ import RollingGallery from '../../components/RollingGallery';
 const galleryImages = [
   {
     id: 1,
-    src: '/images/digital-signage-majpeg',
+    src: '/images/landing-1.jpeg',
     mainKeyword: '메인키워드',
     title: '상품이름1',
     subtitle: '서브타이틀',
