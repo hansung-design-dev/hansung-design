@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-
+import { useState, useEffect } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
 import Nav from '../../../components/Nav';
-import { Button } from '@/src/components/ui/button';
 import CategoryFilter from '@/src/components/ui/categoryFilter';
 import DateLocationFilter from '@/src/components/ui/datelocationfilter';
 import MypageNav from '@/src/components/mypageNav';
@@ -80,6 +80,8 @@ const mockOrders = [
 
 export default function OrdersPage() {
   const [activeTab, setActiveTab] = useState('주문내역');
+  const [isMobile, setIsMobile] = useState(false);
+
   // const [startDate, setStartDate] = useState(new Date());
   // const [endDate, setEndDate] = useState(new Date());
   // const [location, setLocation] = useState('');
@@ -91,6 +93,16 @@ export default function OrdersPage() {
     { name: '간편정보관리', href: '/mypage/info' },
   ];
 
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 767);
+      // console.log(window.innerWidth);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   return (
     <main className="min-h-screen flex flex-col bg-white">
       <Nav variant="default" className="bg-white" />
@@ -99,27 +111,41 @@ export default function OrdersPage() {
         <div className="container px-4 pt-[7rem] pb-[10rem] max-w-[1200px]">
           <div className="flex gap-8">
             {/* Left Navigation */}
-            <MypageNav
-              tabs={tabs}
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-            />
+            {isMobile ? (
+              <></>
+            ) : (
+              <MypageNav
+                tabs={tabs}
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+              />
+            )}
 
             {/* Main Content */}
-            <div className="flex-1 bg-white p-8 rounded-lg">
-              <h2 className="text-2.25 font-500 pt-3">주문내역</h2>
+            <div className="flex-1 bg-white lg:p-8 rounded-lg sm:p-4 ">
+              <div className="flex flex-col gap-2 sm:pl-[4rem]">
+                {isMobile && (
+                  <Link href="/mypage" className="border-none">
+                    <Image
+                      src="/svg/arrow-left.svg"
+                      alt="mypage-nav"
+                      width={40}
+                      height={40}
+                    />
+                  </Link>
+                )}
+                <div className="flex flex-col gap-2 items-start mb-6">
+                  <div className="text-2.25 font-500 pt-3">주문내역</div>
 
-              <div className="text-sm text-gray-500 mb-6">
-                *송출이 시작된 주문은 취소/파일 교체가 불가하며, 신청후 3일 이후
-                상태에서는 변경이 불가합니다.
+                  <div className="text-sm text-gray-500 mb-6">
+                    *송출이 시작된 주문은 취소/파일 교체가 불가하며, 신청후 3일
+                    이후 상태에서는 변경이 불가합니다.
+                  </div>
+                </div>
               </div>
 
               {/* Filter Row */}
-              <div className="flex flex-col gap-2 items-center mb-6">
-                <CategoryFilter
-                  selectedCategory="전체"
-                  setSelectedCategory={() => {}}
-                />
+              <div className="flex flex-col gap-2 items-center mb-6 ">
                 <DateLocationFilter
                   startDate="2025.02.06"
                   endDate="2025.03.06"
@@ -132,24 +158,10 @@ export default function OrdersPage() {
                   showEndCalendar={false}
                   setShowEndCalendar={() => {}}
                 />
-              </div>
-
-              {/* Tag Filters */}
-              <div className="flex flex-wrap gap-2 mb-4">
-                {[
-                  '전체',
-                  '공공디자인',
-                  'LED전자게시대',
-                  '현수막',
-                  '디지털사이니지',
-                ].map((tag) => (
-                  <Button variant="outlineGray" size="sm" key={tag}>
-                    {tag}
-                  </Button>
-                ))}
-                <Button variant="ghost" className="ml-auto" Isborder={true}>
-                  전체보기 ▼
-                </Button>
+                <CategoryFilter
+                  selectedCategory="전체"
+                  setSelectedCategory={() => {}}
+                />
               </div>
 
               <ItemList items={mockOrders} />
