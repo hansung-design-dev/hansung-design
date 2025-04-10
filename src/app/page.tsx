@@ -5,12 +5,12 @@ import FAQ from '../components/FAQ';
 
 export default function Home() {
   return (
-    <main>
+    <main className="w-full overflow-x-hidden">
       <Nav />
-      <div className="pt-[3rem]">
+      <div className="pt-[2rem] sm:pt-[3rem]">
         <Section
           title={
-            <div text="display">
+            <div text="display" className="text-center sm:text-left">
               MOVE ON <br /> THE SCREEN
             </div>
           }
@@ -29,7 +29,7 @@ export default function Home() {
       </div>
       <Section
         title={
-          <div text="display">
+          <div text="display" className="text-center sm:text-left">
             MOVE ON <br /> THE BANNER
           </div>
         }
@@ -48,7 +48,7 @@ export default function Home() {
       />
       <Section
         title={
-          <div text="display">
+          <div text="display" className="text-center sm:text-left">
             MOVE ON <br /> THE CITY
           </div>
         }
@@ -66,7 +66,7 @@ export default function Home() {
       />
       <Section
         title={
-          <div text="display">
+          <div text="display" className="text-center sm:text-left">
             MOVE ON <br /> THE FUTURE
           </div>
         }
@@ -83,7 +83,9 @@ export default function Home() {
           '-기업, 공공, 상업시설의  디지털 Ai광고시스템 제공',
         ]}
       />
-      <FAQ />
+      <div className="px-4 sm:px-6 md:px-8">
+        <FAQ />
+      </div>
     </main>
   );
 }
