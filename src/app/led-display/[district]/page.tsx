@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import Nav from '../../../components/Nav';
-import ItemList from '../../../components/ItemList';
+import ItemList from '@/src/components/ui/itemlist';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
 
@@ -75,9 +75,9 @@ export default function DistrictPage() {
     'gallery'
   );
 
-  const handleItemSelect = (selectedItems: number[]) => {
-    console.log('Selected items:', selectedItems);
-  };
+  // const handleItemSelect = (selectedItems: number[]) => {
+  //   console.log('Selected items:', selectedItems);
+  // };
 
   const renderGalleryView = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -159,8 +159,23 @@ export default function DistrictPage() {
           {viewType === 'list' ? (
             <ItemList
               items={districtItems}
-              onItemSelect={handleItemSelect}
-              showFooterInfo={true}
+              showHeader
+              showCheckbox
+              renderAction={(item) => (
+                <button
+                  className={`border ${
+                    item.status === '송출중'
+                      ? 'border-[#DADADA] text-[#DADADA]'
+                      : 'border-black text-black'
+                  } border-[1px] rounded-full px-4 py-1 text-sm`}
+                  disabled={item.status === '송출중'}
+                >
+                  신청 취소
+                </button>
+              )}
+              onItemSelect={(id, checked) =>
+                console.log(`Item ${id} selected: ${checked}`)
+              }
             />
           ) : (
             renderGalleryView()
