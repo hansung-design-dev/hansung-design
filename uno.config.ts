@@ -40,6 +40,7 @@ export default defineConfig({
       '1': '1rem',
       '0.875': '0.875rem',
       '0.75': '0.75rem',
+      '0.625': '0.625rem',
     },
     fontWeight: {
       '700': '700',
