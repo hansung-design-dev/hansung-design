@@ -12,39 +12,58 @@ interface GalleryImage {
   mainKeyword?: string;
 }
 
-interface ProgressiveCarouselProps {
+interface RollingGalleryProps {
   images: GalleryImage[];
   autoPlayInterval?: number;
 }
 
-export default function ProgressiveCarousel({
+export default function RollingGallery({
   images,
   autoPlayInterval = 3000,
-}: ProgressiveCarouselProps) {
+}: RollingGalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [isHovering, setIsHovering] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [containerOffset, setContainerOffset] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
-  const isDragging = useRef(false);
-  const startX = useRef(0);
-  const scrollLeft = useRef(0);
+
+  // Check if mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Auto-play
   useEffect(() => {
-    if (isHovering) return;
-    const interval = setInterval(() => {
-      setActiveIndex((current) => (current + 1) % images.length);
-    }, autoPlayInterval);
+    const interval = setInterval(
+      () => {
+        if (isMobile) {
+          // For mobile, change every 2 seconds and move right
+          setActiveIndex((current) => (current + 1) % images.length);
+        } else if (!isMobile) {
+          setActiveIndex((current) => (current + 1) % images.length);
+        }
+      },
+      isMobile ? 4000 : autoPlayInterval
+    );
     return () => clearInterval(interval);
-  }, [autoPlayInterval, images.length, isHovering]);
+  }, [autoPlayInterval, images.length, isMobile]);
 
   // Calculate visible indices
   const getVisibleIndices = () => {
     const indices = [];
-    for (let i = -2; i <= 2; i++) {
-      const index = (activeIndex + i + images.length) % images.length;
-      indices.push({ index, position: i });
+    // On mobile, only show one image
+    if (isMobile) {
+      indices.push({ index: activeIndex, position: 0 });
+    } else {
+      for (let i = -2; i <= 2; i++) {
+        const index = (activeIndex + i + images.length) % images.length;
+        indices.push({ index, position: i });
+      }
     }
     return indices;
   };
@@ -57,69 +76,24 @@ export default function ProgressiveCarousel({
     setContainerOffset(offset);
   }, [activeIndex]);
 
-  // Mouse drag handlers
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (!carouselRef.current) return;
-    isDragging.current = true;
-    startX.current = e.pageX - carouselRef.current.offsetLeft;
-    scrollLeft.current = carouselRef.current.scrollLeft;
-    setIsHovering(true);
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging.current || !carouselRef.current) return;
-    const x = e.pageX - carouselRef.current.offsetLeft;
-    const walk = (x - startX.current) * 2;
-    carouselRef.current.scrollLeft = scrollLeft.current - walk;
-  };
-
-  const handleMouseUp = () => {
-    isDragging.current = false;
-    if (carouselRef.current) {
-      const currentScroll = carouselRef.current.scrollLeft;
-      const diff = currentScroll - scrollLeft.current;
-
-      if (Math.abs(diff) > 50) {
-        if (diff > 0) {
-          setActiveIndex(
-            (current) => (current - 1 + images.length) % images.length
-          );
-        } else {
-          setActiveIndex((current) => (current + 1) % images.length);
-        }
-      }
-    }
-    setTimeout(() => setIsHovering(false), 1000);
-  };
-
-  const handleMouseLeave = () => {
-    isDragging.current = false;
-    setHoveredIndex(null);
-    setTimeout(() => setIsHovering(false), 1000);
-  };
-
   return (
     <div className="relative w-full  overflow-hidden">
       <div
         ref={carouselRef}
         className="flex justify-center items-center cursor-grab active:cursor-grabbing h-[90%]"
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseLeave}
       >
         <div
           className="flex items-center justify-center"
           style={{
             gap: '1.25rem',
-            transform: `translateX(-${containerOffset}px)`,
+            transform: isMobile ? 'none' : `translateX(-${containerOffset}px)`,
             transition: 'transform 0.5s ease-in-out',
           }}
         >
           {getVisibleIndices().map(({ index, position }) => {
             const absPosition = Math.abs(position);
             const isCenter = position === 0;
-            const isHovered = hoveredIndex === index;
+            const isHovered = !isMobile && hoveredIndex === index;
 
             let width = '18.75rem';
             let height = '24.75rem';
@@ -130,12 +104,39 @@ export default function ProgressiveCarousel({
             }
 
             if (isCenter) {
-              width = isHovered ? '80.25rem' : '31.5rem';
+              width = isHovered ? '80.25rem' : '28.25rem';
               height = '40.5625rem';
             }
 
-            const opacity =
-              absPosition === 0 ? 1 : absPosition === 1 ? 0.7 : 0.4;
+            // Add responsive sizes
+            if (isMobile) {
+              // Small screens - single image view
+              width = '80vw';
+              height = '30rem';
+            } else if (
+              typeof window !== 'undefined' &&
+              window.innerWidth <= 1024
+            ) {
+              // Medium screens
+              if (isCenter) {
+                width = isHovered ? '35rem' : '25rem';
+                height = '35rem';
+              } else if (absPosition === 1) {
+                width = '20rem';
+                height = '30rem';
+              } else {
+                width = '15rem';
+                height = '25rem';
+              }
+            }
+
+            const opacity = isMobile
+              ? 1
+              : absPosition === 0
+              ? 1
+              : absPosition === 1
+              ? 0.7
+              : 0.4;
             const zIndex = 10 - absPosition;
 
             return (
@@ -149,41 +150,29 @@ export default function ProgressiveCarousel({
                   zIndex,
                   aspectRatio: '25 / 33',
                 }}
-                onClick={() => {
-                  if (!isCenter) {
-                    setActiveIndex(index);
-                    setHoveredIndex(null); // 클릭 시 hover 상태 초기화
-                    setIsHovering(true);
-                    setTimeout(() => setIsHovering(false), 1000);
-                  }
-                }}
+                onMouseEnter={() => !isMobile && setHoveredIndex(index)}
+                onMouseLeave={() => !isMobile && setHoveredIndex(null)}
               >
-                <div
-                  className="relative w-full h-full transition-all duration-500 ease-in-out rounded-lg overflow-hidden"
-                  onMouseEnter={() => setHoveredIndex(index)}
-                  onMouseLeave={handleMouseLeave}
-                >
+                <div className="relative w-full h-full transition-all duration-500 ease-in-out rounded-lg overflow-hidden">
                   <Image
                     src={images[index].src}
                     alt={images[index].title}
                     fill
-                    className={`object-cover transition-all duration-500 ${
-                      isCenter && !isHovered ? 'object-left' : 'object-center'
-                    }`}
-                    sizes="(max-width: 768px) 100vw, 33vw"
+                    className="object-cover transition-all duration-500 object-center"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   />
                   {isCenter && (
                     <div className="absolute bottom-6 left-6 bg-opacity-50 p-2 rounded">
-                      <div className="text-white text-sm font-medium">
+                      <div className="text-white text-sm sm:text-xs md:text-sm font-medium">
                         {images[index].keyword}
                       </div>
-                      <div className="text-white text-xl font-medium pb-2">
+                      <div className="text-white text-xl sm:text-lg md:text-xl font-medium pb-2">
                         {images[index].mainKeyword}
                       </div>
-                      <div className="text-white text-4xl font-bold">
+                      <div className="text-white text-4xl sm:text-2xl md:text-3xl font-bold">
                         {images[index].title}
                       </div>
-                      <div className="text-white text-xl font-medium mt-1">
+                      <div className="text-white text-xl sm:text-lg md:text-xl font-medium mt-1">
                         {images[index].subtitle}
                       </div>
                     </div>
