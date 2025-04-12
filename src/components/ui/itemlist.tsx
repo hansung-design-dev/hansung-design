@@ -1,5 +1,4 @@
-import Link from 'next/link';
-import { Button } from './button';
+import React from 'react';
 
 interface ListItem {
   id: number;
@@ -7,9 +6,7 @@ interface ListItem {
   subtitle?: string;
   location?: string;
   status: string;
-  date?: string;
-  category?: string;
-  price?: number;
+  quantity?: number;
 }
 
 const statusColorMap: Record<string, string> = {
@@ -24,86 +21,76 @@ const getStatusClass = (status: string) => {
   return statusColorMap[status] || 'text-black';
 };
 
-const ItemList = ({ items }: { items: ListItem[] }) => (
-  <div className="border-t border-gray-200 py-[2rem]">
-    {items.map((item) => (
-      <Link
-        href={`/mypage/orders/${item.id}`}
-        key={item.id}
-        className="border-b border-gray-200 px-6 py-4"
-      >
-        {/* ✅ 데스크탑 / 태블릿 (768px 이상부터) */}
-        <div className="hidden lg:grid lg:grid-cols-9 lg:items-center">
-          {/* 타이틀 */}
-          <div className="col-span-5 font-500 text-black text-1.25">
-            {item.title}&nbsp;
-            {item.subtitle && <span>{item.subtitle}</span>}
-          </div>
+interface ItemTableProps {
+  items: ListItem[];
+  showHeader?: boolean;
+  showCheckbox?: boolean;
+  renderAction?: (item: ListItem) => React.ReactNode;
+  onItemSelect?: (id: number, checked: boolean) => void;
+}
 
-          {/* 위치 */}
-          <div className="col-span-1 text-center font-500 text-black text-1.25">
-            {item.location}
-          </div>
-
-          {/* 상태 */}
-          <div
-            className={`col-span-1 text-center font-500 text-1.25 ${getStatusClass(
-              item.status
-            )}`}
-          >
-            {item.status}
-          </div>
-
-          {/* 버튼 */}
-          <div className="col-span-2 text-center">
-            <button
-              className={`border ${
-                item.status === '송출중'
-                  ? 'border-[#DADADA] text-[#DADADA]'
-                  : 'border-black text-black'
-              } border-solid border-[1px] w-[7.5rem] py-2 text-sm font-medium rounded-full`}
-              disabled={item.status === '송출중'}
+const ItemList: React.FC<ItemTableProps> = ({
+  items,
+  showHeader = true,
+  showCheckbox = false,
+  renderAction,
+  onItemSelect,
+}) => {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-left border-t border-gray-200 text-0.875">
+        {showHeader && (
+          <thead>
+            <tr className="border-b border-gray-200 h-[3rem] text-gray-500 font-medium">
+              {showCheckbox && <th className="w-10 px-4">no</th>}
+              <th>게시대 명</th>
+              <th className="text-center">행정동</th>
+              <th className="text-center">마감여부</th>
+              <th className="text-center">남은수량</th>
+              {renderAction && <th className="text-center">작업</th>}
+            </tr>
+          </thead>
+        )}
+        <tbody>
+          {items.map((item) => (
+            <tr
+              key={item.id}
+              className="border-b border-gray-200 h-[3.5rem] hover:bg-gray-50"
             >
-              신청 취소
-            </button>
-          </div>
-        </div>
-
-        {/* ✅ 모바일 (768px 미만) */}
-        <div className="flex flex-col gap-5 items-center lg:hidden border-b-solid border-b-gray-13 border-b-[0.1rem] pb-5 w-full">
-          {/* 타이틀 */}
-          <div className="font-500 text-black text-1.25">
-            {item.title}&nbsp;
-            {item.subtitle && <span>{item.subtitle}</span>}
-          </div>
-
-          {/* 아래 줄: 위치, 상태, 버튼 */}
-          <div className="flex gap-10 items-center">
-            <div className="font-500 text-black text-0.875">
-              {item.location}
-            </div>
-            <div
-              className={`font-500 text-0.875 ${getStatusClass(item.status)}`}
-            >
-              {item.status}
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className={`border ${
-                item.status === '송출중'
-                  ? 'border-[#DADADA] text-[#DADADA]'
-                  : 'border-black text-black'
-              } border-solid border-[1px]  sm:text-0.875  rounded-full`}
-              disabled={item.status === '송출중'}
-            >
-              신청 취소
-            </Button>
-          </div>
-        </div>
-      </Link>
-    ))}
-  </div>
-);
+              {showCheckbox && (
+                <td className="text-center px-4">
+                  <input
+                    type="checkbox"
+                    onChange={(e) => onItemSelect?.(item.id, e.target.checked)}
+                  />
+                </td>
+              )}
+              <td className="px-4">
+                <span className="font-medium text-black">
+                  {item.title}
+                  {item.subtitle && (
+                    <span className="ml-1 text-gray-500">{item.subtitle}</span>
+                  )}
+                </span>
+              </td>
+              <td className="text-center">{item.location}</td>
+              <td
+                className={`text-center font-semibold ${getStatusClass(
+                  item.status
+                )}`}
+              >
+                {item.status}
+              </td>
+              <td className="text-center">{item.quantity ?? '-'}</td>
+              {renderAction && (
+                <td className="text-center">{renderAction(item)}</td>
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
 
 export default ItemList;
