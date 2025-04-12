@@ -134,6 +134,36 @@ export default function ProgressiveCarousel({
               height = '40.5625rem';
             }
 
+            // Add responsive sizes
+            if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+              // Small screens
+              if (isCenter) {
+                width = isHovered ? '60rem' : '20rem';
+                height = '30rem';
+              } else if (absPosition === 1) {
+                width = '15rem';
+                height = '25rem';
+              } else {
+                width = '10rem';
+                height = '20rem';
+              }
+            } else if (
+              typeof window !== 'undefined' &&
+              window.innerWidth <= 1024
+            ) {
+              // Medium screens
+              if (isCenter) {
+                width = isHovered ? '70rem' : '25rem';
+                height = '35rem';
+              } else if (absPosition === 1) {
+                width = '20rem';
+                height = '30rem';
+              } else {
+                width = '15rem';
+                height = '25rem';
+              }
+            }
+
             const opacity =
               absPosition === 0 ? 1 : absPosition === 1 ? 0.7 : 0.4;
             const zIndex = 10 - absPosition;
@@ -148,11 +178,12 @@ export default function ProgressiveCarousel({
                   opacity,
                   zIndex,
                   aspectRatio: '25 / 33',
+                  transform: `translateX(${position * 2}rem)`,
                 }}
                 onClick={() => {
                   if (!isCenter) {
                     setActiveIndex(index);
-                    setHoveredIndex(null); // 클릭 시 hover 상태 초기화
+                    setHoveredIndex(null);
                     setIsHovering(true);
                     setTimeout(() => setIsHovering(false), 1000);
                   }
@@ -170,20 +201,20 @@ export default function ProgressiveCarousel({
                     className={`object-cover transition-all duration-500 ${
                       isCenter && !isHovered ? 'object-left' : 'object-center'
                     }`}
-                    sizes="(max-width: 768px) 100vw, 33vw"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   />
                   {isCenter && (
                     <div className="absolute bottom-6 left-6 bg-opacity-50 p-2 rounded">
-                      <div className="text-white text-sm font-medium">
+                      <div className="text-white text-sm sm:text-xs md:text-sm font-medium">
                         {images[index].keyword}
                       </div>
-                      <div className="text-white text-xl font-medium pb-2">
+                      <div className="text-white text-xl sm:text-lg md:text-xl font-medium pb-2">
                         {images[index].mainKeyword}
                       </div>
-                      <div className="text-white text-4xl font-bold">
+                      <div className="text-white text-4xl sm:text-2xl md:text-3xl font-bold">
                         {images[index].title}
                       </div>
-                      <div className="text-white text-xl font-medium mt-1">
+                      <div className="text-white text-xl sm:text-lg md:text-xl font-medium mt-1">
                         {images[index].subtitle}
                       </div>
                     </div>
