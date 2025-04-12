@@ -130,7 +130,7 @@ export default function ProgressiveCarousel({
             }
 
             if (isCenter) {
-              width = isHovered ? '80.25rem' : '31.5rem';
+              width = isHovered ? '80.25rem' : '28.25rem';
               height = '40.5625rem';
             }
 
@@ -168,6 +168,14 @@ export default function ProgressiveCarousel({
               absPosition === 0 ? 1 : absPosition === 1 ? 0.7 : 0.4;
             const zIndex = 10 - absPosition;
 
+            // Calculate transform for center image
+            let transform = `translateX(${position * 2}rem)`;
+            if (isCenter) {
+              transform = isHovered
+                ? 'scale(1) translateX(0)'
+                : 'scale(0.95) translateX(0)';
+            }
+
             return (
               <div
                 key={`${index}-${position}`}
@@ -178,7 +186,8 @@ export default function ProgressiveCarousel({
                   opacity,
                   zIndex,
                   aspectRatio: '25 / 33',
-                  transform: `translateX(${position * 2}rem)`,
+                  transform,
+                  transformOrigin: 'center center',
                 }}
                 onClick={() => {
                   if (!isCenter) {
@@ -198,9 +207,7 @@ export default function ProgressiveCarousel({
                     src={images[index].src}
                     alt={images[index].title}
                     fill
-                    className={`object-cover transition-all duration-500 ${
-                      isCenter && !isHovered ? 'object-left' : 'object-center'
-                    }`}
+                    className={`object-cover transition-all duration-500 object-center`}
                     sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   />
                   {isCenter && (
