@@ -65,7 +65,7 @@ export default function DigitalSignagePage() {
       <Nav variant="default" />
 
       {/* Title Section */}
-      <section className="container mx-auto px-4 pt-[6rem] pb-[1rem] sm:pt-[4rem] md:pt-[5rem]">
+      <section className="container mx-auto px-4 pt-[6rem] pb-[1rem] sm:pt-[6rem] sm:pb-[3rem] md:pt-[5rem]">
         <div className="text-2.5 sm:text-2 md:text-2.25 font-700 mb-4 gmarket">
           디지털사이니지
         </div>
@@ -90,26 +90,28 @@ export default function DigitalSignagePage() {
           {/* Signage Grid */}
           <div className="container grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 lg:gap-6 sm:gap-4 md:gap-5">
             {signageItems.map((item, index) => (
-              <div key={index} className="flex flex-col">
-                <div className="relative lg:aspect-[3/4] lg:w-[25rem] sm:w-[20rem] md:w-[22rem] h-[25rem] sm:h-[20rem] md:h-[22rem] overflow-hidden rounded-lg">
-                  <Image
-                    src={item.image}
-                    alt={item.title}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-                <div className="mt-4 flex flex-col gap-2 items-start">
-                  <div className="flex gap-2">
-                    <div className="text-0.75 sm:text-0.625 md:text-0.75 font-700 text-white bg-black px-3 py-2 rounded-full flex items-center justify-center">
-                      {item.category}
-                    </div>
-                    <div className="text-0.75 sm:text-0.625 md:text-0.75 font-700 text-white bg-black px-3 py-2 rounded-full flex items-center justify-center">
-                      {item.description}
-                    </div>
+              <div key={index} className="flex flex-col sm:items-center">
+                <div className="container grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 lg:gap-6 sm:gap-4 md:gap-5">
+                  <div className="relative lg:aspect-[3/4] lg:w-[25rem] sm:w-[16rem] md:w-[22rem] lg:h-[25rem] sm:h-[16rem] md:h-[22rem] overflow-hidden rounded-lg items-start">
+                    <Image
+                      src={item.image}
+                      alt={item.title}
+                      fill
+                      className="object-cover"
+                    />
                   </div>
-                  <div className="text-1.5 sm:text-1.25 md:text-1.375 font-400 pl-1">
-                    {item.title}
+                  <div className="mt-4 flex flex-col gap-2 items-start ">
+                    <div className="flex gap-2">
+                      <div className="text-0.75 sm:text-0.625 md:text-0.75 font-700 text-white bg-black px-3 py-2 rounded-full flex items-center justify-center">
+                        {item.category}
+                      </div>
+                      <div className="text-0.75 sm:text-0.625 md:text-0.75 font-700 text-white bg-black px-3 py-2 rounded-full flex items-center justify-center">
+                        {item.description}
+                      </div>
+                    </div>
+                    <div className="text-1.5 sm:text-1.25 md:text-1.375 font-400 pl-1">
+                      {item.title}
+                    </div>
                   </div>
                 </div>
               </div>

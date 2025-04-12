@@ -12,15 +12,15 @@ interface GalleryImage {
   mainKeyword?: string;
 }
 
-interface ProgressiveCarouselProps {
+interface RollingGalleryProps {
   images: GalleryImage[];
   autoPlayInterval?: number;
 }
 
-export default function ProgressiveCarousel({
+export default function RollingGallery({
   images,
   autoPlayInterval = 3000,
-}: ProgressiveCarouselProps) {
+}: RollingGalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [containerOffset, setContainerOffset] = useState(0);
@@ -39,10 +39,17 @@ export default function ProgressiveCarousel({
 
   // Auto-play
   useEffect(() => {
-    if (isMobile) return;
-    const interval = setInterval(() => {
-      setActiveIndex((current) => (current + 1) % images.length);
-    }, autoPlayInterval);
+    const interval = setInterval(
+      () => {
+        if (isMobile) {
+          // For mobile, change every 2 seconds and move right
+          setActiveIndex((current) => (current + 1) % images.length);
+        } else if (!isMobile) {
+          setActiveIndex((current) => (current + 1) % images.length);
+        }
+      },
+      isMobile ? 4000 : autoPlayInterval
+    );
     return () => clearInterval(interval);
   }, [autoPlayInterval, images.length, isMobile]);
 
