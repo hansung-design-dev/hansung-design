@@ -64,13 +64,14 @@ const ViewTypeButton = ({
       height={20}
       className={isActive ? 'invert' : ''}
     />
-    <span>{label}</span>
+    <span className="hidden md:inline">{label}</span>
   </button>
 );
 
 export default function DistrictPage() {
   const params = useParams();
-  const district = params.district as string;
+  const encodedDistrict = params.district as string;
+  const district = decodeURIComponent(encodedDistrict);
   const [viewType, setViewType] = useState<'location' | 'gallery' | 'list'>(
     'gallery'
   );
@@ -80,7 +81,7 @@ export default function DistrictPage() {
   // };
 
   const renderGalleryView = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {districtItems.map((item, index) => (
         <div key={index} className="flex flex-col">
           <div className="relative aspect-[1/1] w-full overflow-hidden rounded-lg">
@@ -88,7 +89,7 @@ export default function DistrictPage() {
               src={item.image}
               alt={item.title}
               fill
-              className="object-cover"
+              className="md:object-cover sm:object-cover"
             />
           </div>
           <div className="mt-4">
@@ -116,15 +117,19 @@ export default function DistrictPage() {
 
       <div className="container mx-auto px-4 pt-[7rem]">
         <div className="mb-8">
-          <div className="flex items-center gap-2 text-gray-600 mb-2">
-            <span>LED 전자게시대</span>
-            <span>/</span>
-            <span>{district}</span>
-          </div>
-          <h2 className="text-2.25 font-bold">{district}</h2>
-          <p className="text-gray-600 mt-4">전화번호: 0000-000-0000</p>
-          <p className="text-gray-600">주소: 서울특별시 강동구 000-0</p>
-          <p className="text-gray-600">노선위치번호:</p>
+          <h2 className="text-2.25 font-900 font-gmarket">{district}</h2>
+          <p className="text-gray-600 mt-4">
+            2025년 상반기 신청: <span className="text-red"> 상시모집</span>
+          </p>
+          <p className="text-gray-600">
+            입금계좌
+            <span className="text-red">
+              우리은행 1005-602-397672 (주)한성디자인기획
+            </span>
+          </p>
+          <p className="text-gray-600">송출사이즈 800*416 픽셀</p>
+          <p className="text-gray-600">유동인구 : -명</p>
+          <p className="text-gray-600">소비자트렌드 : </p>
         </div>
 
         {/* View Type Selector */}
