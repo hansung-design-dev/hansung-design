@@ -19,7 +19,7 @@ export default function ScrollToTopButton() {
         <Image
           src="/svg/headphones.svg"
           alt="customer service"
-          className="w-10 h-10 inverted"
+          className="w-10 h-10 inverted sm:w-8 sm:h-8"
           width={40}
           height={40}
         />
@@ -32,7 +32,7 @@ export default function ScrollToTopButton() {
         <Image
           src="/svg/tothetop.svg"
           alt="맨 위로"
-          className="w-10 h-10 "
+          className="w-10 h-10 sm:w-8 sm:h-8 "
           width={40}
           height={40}
         />
