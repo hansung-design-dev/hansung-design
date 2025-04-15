@@ -1,7 +1,9 @@
+// app/layout.tsx
 import type { Metadata } from 'next';
 import './globals.css';
 // import Nav from '../components/Nav';
 import Footer from '../components/Footer';
+import ScrollToTopButton from '../components/scrollToTopButton';
 
 export const metadata: Metadata = {
   title: '한성기업',
@@ -15,9 +17,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko" jd-enabled="true">
-      <body>
+      <body className="relative">
         {/* <Nav /> */}
         {children}
+        <ScrollToTopButton />
         <Footer />
       </body>
     </html>
