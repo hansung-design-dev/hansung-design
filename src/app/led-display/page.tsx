@@ -64,7 +64,7 @@ export default function LEDDisplayPage() {
           {districts.map((district, index) => (
             <Link
               key={district.id}
-              href={`/led-display/${district.name}`}
+              href={`/led-display/${encodeURIComponent(district.name)}`}
               className={`group block p-6 border-16 border-gray-200 rounded-32 hover:border-gray-400 transition-all duration-300 ${
                 index % 2 === 0 ? 'md:translate-y-8' : ''
               }`}

@@ -15,7 +15,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko" jd-enabled="true">
-      <body className="gmarket">
+      <body>
         {/* <Nav /> */}
         {children}
         <Footer />

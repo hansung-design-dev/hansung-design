@@ -162,7 +162,7 @@ export default function BannerDisplayPage() {
             {districts.map((district) => (
               <Link
                 key={district.id}
-                href={`/led-display/${district.name}`}
+                href={`/led-display/${encodeURIComponent(district.name)}`}
                 className={`
         ${district.bgColor}
         hover:opacity-90 transition-all
