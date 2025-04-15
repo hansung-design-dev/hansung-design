@@ -72,11 +72,11 @@ const FAQ = () => {
 
   return (
     <section className="py-[5rem] md:py-[10rem] sm:mb-[2rem] bg-[#F5F5F5] rounded-sm ">
-      <div className="lg:container lg:mx-auto lg:px-4 sm:flex sm:flex-col sm:items-center sm:justify-center">
+      <div className="lg:px-4 sm:flex sm:flex-col sm:items-center sm:justify-center">
         <h1 className="text-2.25 font-bold mb-8 sm:text-1.7 lg:text-center md:text-left sm:text-center ">
           자주 묻는 질문
         </h1>
-        <div className="flex flex-col md:flex-row gap-[2rem] md:gap-[5rem]">
+        <div className="w-[60rem] md:w-[40rem] sm:w-full sm:items-center flex flex-col md:flex-row gap-[2rem] md:gap-[5rem]">
           {/* Categories and Questions - Full width on mobile, 1/3 on desktop */}
           <div className="w-full md:w-full sm:w-[18rem]">
             {faqData.map((item) => (
@@ -157,7 +157,7 @@ const FAQ = () => {
                       <button
                         key={q.question}
                         onClick={() => setSelectedQuestion(q)}
-                        className={`block w-full text-left p-[0.75rem] md:p-[1rem] text-0.875 md:text-1 border-none ${
+                        className={`block w-full text-left p-[0.75rem] md:p-[1rem] text-0.875  border-none ${
                           selectedQuestion?.question === q.question
                             ? 'font-bold text-black'
                             : 'text-gray-600'
@@ -173,10 +173,10 @@ const FAQ = () => {
           </div>
 
           {/* Answer Section - Full width on mobile, 2/3 on desktop */}
-          <div className="w-full md:w-2/3 bg-white rounded-lg shadow p-[1.5rem] md:p-[2.5rem] sm:w-[16rem] sm:px-[1rem]">
+          <div className="w-full md:w-full bg-white rounded-lg shadow p-[1.5rem] md:p-[2.5rem] sm:w-[16rem] sm:px-[1rem] min-h-[250px]">
             {selectedQuestion && (
               <div>
-                <h2 className="text-1.25 md:text-1.5 font-bold mb-[1.5rem]">
+                <h2 className="text-1.25 md:text-1.125 font-600 mb-[1.5rem]">
                   {selectedQuestion.question}
                 </h2>
                 <p className="text-1 text-gray-700 ">

@@ -45,7 +45,7 @@ const IconButton = ({
   <Link href={href} className="relative z-50">
     <button
       onClick={onClick}
-      className="border-none p-2 hover:bg-gray-100 rounded-full transition-colors hover:cursor-pointer"
+      className="border-none p-2 rounded-full transition-colors hover:cursor-pointer"
       aria-label={label}
     >
       <Image
@@ -60,7 +60,7 @@ const IconButton = ({
 );
 
 const IconList = ({ TextInvert }: { TextInvert?: boolean }) => (
-  <div className="flex items-center gap-3 sm:gap-1">
+  <div className="flex items-center gap-3 sm:gap-2">
     <IconButton
       iconPath="/svg/headphones.svg"
       label="고객센터"
@@ -137,7 +137,7 @@ const Nav = ({
               alt="로고"
               width={150}
               height={40}
-              className={`lg:w-[9.375rem] lg:h-10 md:w-[6rem] md:h-8 ${
+              className={`lg:w-[9.375rem] lg:h-10 md:w-[5rem] md:h-8 ${
                 TextInvert && !isScrolled ? 'invert' : ''
               }`}
             />
@@ -145,7 +145,7 @@ const Nav = ({
 
           {/* ✅ 데스크탑/태블릿 메뉴 (md 이상부터) */}
           <div className="hidden md:flex items-center space-x-8">
-            <div className="flex items-center gap-[4rem]">
+            <div className="flex items-center lg:gap-[4rem] md:gap-[2rem] ">
               {menuItems.map((item) => (
                 <Link
                   key={item.name}
@@ -180,13 +180,13 @@ const Nav = ({
 
         {/* ✅ 모바일 드롭다운 메뉴 */}
         {isOpen && (
-          <div className="md:hidden px-4 pb-4">
-            <div className="flex flex-col space-y-4 bg-white p-4 rounded-lg shadow-md">
+          <div className="md:hidden px-4">
+            <div className="flex flex-col space-y-4 bg-white p-4 py-8 gap-4">
               {menuItems.map((item) => (
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`text-1 ${
+                  className={`text-1.25 ${
                     pathname === item.href
                       ? 'font-bold text-black'
                       : 'text-gray-600'
