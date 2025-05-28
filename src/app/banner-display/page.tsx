@@ -70,7 +70,7 @@ export default function BannerDisplayPage() {
   const [bannerHeight, setBannerHeight] = useState(400);
   const bannerImages = [
     '/images/banner-image1.jpeg',
-    '/images/banner-image1.jpeg',
+    '/images/banner-image2.jpeg',
   ];
 
   useEffect(() => {
