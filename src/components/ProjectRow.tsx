@@ -17,6 +17,7 @@ export interface ProjectRowProps {
   largeCardFirst?: boolean;
   splitSmallSection?: boolean;
   className?: string;
+  showTitleOnLargeOnly?: boolean;
 }
 
 export default function ProjectRow({
@@ -24,6 +25,7 @@ export default function ProjectRow({
   largeCardFirst = true,
   splitSmallSection = false,
   className = '',
+  showTitleOnLargeOnly = false,
 }: ProjectRowProps) {
   // Make sure we have the right number of projects
   if (splitSmallSection && projects.length < 3) {
@@ -64,25 +66,29 @@ export default function ProjectRow({
             <>
               <ProjectCard
                 imageSrc={projects[1].imageSrc}
-                title={projects[1].title}
-                subtitle={projects[1].subtitle}
-                description={projects[1].description}
+                title={showTitleOnLargeOnly ? '' : projects[1].title}
+                subtitle={showTitleOnLargeOnly ? '' : projects[1].subtitle}
+                description={
+                  showTitleOnLargeOnly ? '' : projects[1].description
+                }
                 className="h-full"
               />
               <ProjectCard
                 imageSrc={projects[2].imageSrc}
-                title={projects[2].title}
-                subtitle={projects[2].subtitle}
-                description={projects[2].description}
+                title={showTitleOnLargeOnly ? '' : projects[2].title}
+                subtitle={showTitleOnLargeOnly ? '' : projects[2].subtitle}
+                description={
+                  showTitleOnLargeOnly ? '' : projects[2].description
+                }
                 className="h-full"
               />
             </>
           ) : (
             <ProjectCard
               imageSrc={projects[1].imageSrc}
-              title={projects[1].title}
-              subtitle={projects[1].subtitle}
-              description={projects[1].description}
+              title={showTitleOnLargeOnly ? '' : projects[1].title}
+              subtitle={showTitleOnLargeOnly ? '' : projects[1].subtitle}
+              description={showTitleOnLargeOnly ? '' : projects[1].description}
               gridRowSpan
               className="h-full"
             />
@@ -104,25 +110,25 @@ export default function ProjectRow({
           <>
             <ProjectCard
               imageSrc={projects[0].imageSrc}
-              title={projects[0].title}
-              subtitle={projects[0].subtitle}
-              description={projects[0].description}
+              title={showTitleOnLargeOnly ? '' : projects[0].title}
+              subtitle={showTitleOnLargeOnly ? '' : projects[0].subtitle}
+              description={showTitleOnLargeOnly ? '' : projects[0].description}
               className="h-full"
             />
             <ProjectCard
               imageSrc={projects[1].imageSrc}
-              title={projects[1].title}
-              subtitle={projects[1].subtitle}
-              description={projects[1].description}
+              title={showTitleOnLargeOnly ? '' : projects[1].title}
+              subtitle={showTitleOnLargeOnly ? '' : projects[1].subtitle}
+              description={showTitleOnLargeOnly ? '' : projects[1].description}
               className="h-full"
             />
           </>
         ) : (
           <ProjectCard
             imageSrc={projects[0].imageSrc}
-            title={projects[0].title}
-            subtitle={projects[0].subtitle}
-            description={projects[0].description}
+            title={showTitleOnLargeOnly ? '' : projects[0].title}
+            subtitle={showTitleOnLargeOnly ? '' : projects[0].subtitle}
+            description={showTitleOnLargeOnly ? '' : projects[0].description}
             gridRowSpan
             className="h-full"
           />
