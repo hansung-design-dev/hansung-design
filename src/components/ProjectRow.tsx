@@ -5,6 +5,7 @@ import ProjectCard from './ProjectCard';
 
 // Define the project item structure
 export interface ProjectItem {
+  id: number;
   imageSrc: string;
   title: string;
   subtitle?: string;
