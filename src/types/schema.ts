@@ -247,7 +247,7 @@ export interface NavProps {
 }
 
 export interface SectionProps {
-  title: JSX.Element;
+  title: React.ReactNode;
   subtitle?: string;
   description: string;
   imageSrc: string;
