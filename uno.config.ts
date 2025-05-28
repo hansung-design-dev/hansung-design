@@ -22,6 +22,11 @@ export default defineConfig({
     }),
   ],
   theme: {
+    fontFamily: {
+      pretendard: ['Pretendard', 'sans-serif'],
+      gmarket: ['Gmarket Sans', 'sans-serif'],
+    },
+    safelist: ['font-gmarket'],
     fontSize: {
       '4.375': '4.375rem',
       '3.75': '3.75rem',
@@ -45,15 +50,15 @@ export default defineConfig({
     fontWeight: {
       '700': '700',
       '500': '500',
+      '400': '400',
+      '300': '300',
+      '200': '200',
     },
     lineHeight: {
       '1.125': '1.125rem',
       '1.375': '1.375rem',
     },
-    fontFamily: {
-      pretendard: ['Pretendard', 'sans-serif'],
-      gmarket: ['GmarketSans', 'sans-serif'],
-    },
+
     colors: {
       background: 'var(--color-background)',
       foreground: 'var(--color-foreground)',

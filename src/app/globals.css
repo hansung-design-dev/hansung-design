@@ -1,12 +1,38 @@
+@import url('https://cdn.jsdelivr.net/gh/leetaewook/gmarket-sans-dynamic-subset/GmarketSans.css');
 @unocss all;
 
-@import url('https://cdn.jsdelivr.net/gh/leetaewook/gmarket-sans-dynamic-subset/GmarketSans.css');
+@font-face {
+  font-family: 'Gmarket Sans';
+  font-style: normal;
+  font-weight: 700;
+  src: local('Gmarket Sans Bold'), local('GmarketSans-Bold'),
+    url('http://script.ebay.co.kr/fonts/GmarketSansBold.woff2') format('woff2'),
+    url('http://script.ebay.co.kr/fonts/GmarketSansBold.woff') format('woff');
+}
+
+@font-face {
+  font-family: 'Gmarket Sans';
+  font-style: normal;
+  font-weight: 500;
+  src: local('Gmarket Sans Medium'), local('GmarketSans-Medium'),
+    url('http://script.ebay.co.kr/fonts/GmarketSansMedium.woff2')
+      format('woff2'),
+    url('http://script.ebay.co.kr/fonts/GmarketSansMedium.woff') format('woff');
+}
+
+@font-face {
+  font-family: 'Gmarket Sans';
+  font-style: normal;
+  font-weight: 300;
+  src: local('Gmarket Sans Light'), local('GmarketSans-Light'),
+    url('http://script.ebay.co.kr/fonts/GmarketSansLight.woff2') format('woff2'),
+    url('http://script.ebay.co.kr/fonts/GmarketSansLight.woff') format('woff');
+}
 
 /* 나머지 스타일 */
 :root {
   --background: #fff;
   --foreground: #000;
-  --font-sans: 'Pretendard', sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -18,12 +44,11 @@
 
 body {
   background: var(--background);
-  font-family: var(--font-sans);
 }
 
 /* GmarketSans is only applied when the gmarket class is explicitly used */
 .gmarket {
-  font-family: 'GmarketSans', sans-serif;
+  font-family: 'Gmarket Sans', sans-serif;
 }
 
 a {

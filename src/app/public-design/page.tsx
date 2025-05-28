@@ -2,37 +2,47 @@
 
 import Nav from '../../components/Nav';
 import ProjectRow from '../../components/ProjectRow';
-import { ProjectItem } from '../../components/ProjectRow';
+import { ProjectItem as BaseProjectItem } from '../../components/ProjectRow';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+
+interface ProjectItem extends BaseProjectItem {
+  id: number;
+}
 
 // 통합된 project 배열
 const allProjects: ProjectItem[] = [
   {
+    id: 1,
     imageSrc: '/images/public-design-image2.jpeg',
     title: '브랜드 아이템',
     subtitle: '간판개선사업',
     description: '도시의 새로운 경험을 만드는 브랜드',
   },
   {
+    id: 2,
     imageSrc: '/images/public-design-image2.jpeg',
     title: '공공디자인',
     subtitle: '서브타이틀',
     description: '도시 경관을 아름답게 만드는 디자인',
   },
   {
+    id: 3,
     imageSrc: '/images/public-design-image2.jpeg',
     title: '공공시설물',
     subtitle: '서브타이틀',
     description: '도시의 기능을 높이는 시설물',
   },
   {
+    id: 4,
     imageSrc: '/images/public-design-image2.jpeg',
     title: '스마트 시티',
     subtitle: '서브타이틀',
     description: '미래 도시의 새로운 가능성',
   },
   {
+    id: 5,
     imageSrc: '/images/public-design-image2.jpeg',
     title: '도시 경관',
     subtitle: '서브타이틀',
@@ -43,9 +53,13 @@ const allProjects: ProjectItem[] = [
 export default function PublicDesignPage() {
   const router = useRouter();
 
-  const handleRowClick = (index: number) => {
-    router.push(`/public-design/${index}`);
-  };
+  // 줄마다 필요한 개수만큼 slice
+  const rows = [
+    allProjects.slice(0, 2), // 2개: 큰+작은
+    allProjects.slice(2, 5), // 3개: 작은2+큰
+    allProjects.slice(0, 2), // 반복
+    allProjects.slice(2, 5), // 반복
+  ];
 
   return (
     <main className="min-h-screen bg-white">
@@ -53,7 +67,7 @@ export default function PublicDesignPage() {
 
       {/* Header Section */}
       <section className="container mx-auto px-[8rem] pt-[6rem] pb-[3rem]">
-        <h1 className="text-3.75 font-[700] mb-4">공공디자인</h1>
+        <h1 className="text-3.75 font-[700] mb-4 font-gmarket">공공디자인</h1>
         <p className="text-1.25 font-[500] text-gray-600">
           도시의 일상에서 만나는 시간과 공간의 경험 디자인
         </p>
@@ -75,57 +89,18 @@ export default function PublicDesignPage() {
       {/* Projects Grid Section for lg/md */}
       <section className="mx-auto px-10 pb-[12rem] sm:hidden lg:block md:block">
         <div className="flex flex-col gap-[12rem]">
-          {/* First Row */}
-          <div
-            className="h-[400px] cursor-pointer relative"
-            onClick={() => handleRowClick(0)}
-          >
-            <ProjectRow
-              projects={allProjects.slice(0, 2)}
-              largeCardFirst={true}
-              splitSmallSection={false}
-              showTitleOnLargeOnly={true}
-            />
-          </div>
-
-          {/* Second Row */}
-          <div
-            className="h-[400px] cursor-pointer relative"
-            onClick={() => handleRowClick(2)}
-          >
-            <ProjectRow
-              projects={allProjects.slice(2, 5)}
-              largeCardFirst={false}
-              splitSmallSection={true}
-              showTitleOnLargeOnly={true}
-            />
-          </div>
-
-          {/* Third Row */}
-          <div
-            className="h-[400px] cursor-pointer relative"
-            onClick={() => handleRowClick(0)}
-          >
-            <ProjectRow
-              projects={allProjects.slice(0, 2)}
-              largeCardFirst={true}
-              splitSmallSection={false}
-              showTitleOnLargeOnly={true}
-            />
-          </div>
-
-          {/* Fourth Row */}
-          <div
-            className="h-[400px] cursor-pointer relative"
-            onClick={() => handleRowClick(2)}
-          >
-            <ProjectRow
-              projects={allProjects.slice(2, 5)}
-              largeCardFirst={false}
-              splitSmallSection={true}
-              showTitleOnLargeOnly={true}
-            />
-          </div>
+          {rows.map((rowProjects, idx) => (
+            <div key={idx} className="h-[400px] cursor-pointer relative">
+              <Link href={`/public-design/${rowProjects[0].id}`}>
+                <ProjectRow
+                  projects={rowProjects}
+                  largeCardFirst={idx % 2 === 0}
+                  splitSmallSection={idx % 2 !== 0}
+                  showTitleOnLargeOnly={true}
+                />
+              </Link>
+            </div>
+          ))}
         </div>
       </section>
 
