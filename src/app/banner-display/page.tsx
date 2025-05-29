@@ -1,202 +1,121 @@
-'use client';
-
-import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
+import DistrictCard from '@/src/components/DistrictCard';
 
-const districts = [
-  {
-    id: 0,
-    name: '전체',
-    description: '송중사이즈 800×416 픽셀',
-    count: 32,
-    bgColor: 'bg-[#83B9FF]',
-  },
+interface District {
+  id: number;
+  name: string;
+  description: string;
+  count: number;
+  icon: string;
+  size: string;
+  sizeOfPeople: string;
+  src: string;
+}
+
+const districts: District[] = [
   {
     id: 1,
-    name: '강동구',
-    description: '송중사이즈 800×416 픽셀',
-    count: 5,
-    bgColor: 'bg-[#4897FF]',
+    name: '전체',
+    description: '울림픽대교 남단사거리 앞 외 3건',
+    count: 4,
+    icon: '/images/district-icon/1.all.svg',
+    size: '1000x1000',
+    sizeOfPeople: '10000',
+    src: '/images/led/landing.png',
   },
   {
     id: 2,
-    name: '강북구',
-    description: '송중사이즈 800×416 픽셀',
-    count: 3,
-    bgColor: 'bg-[#338BFF]',
+    name: '강동구',
+    description: '울림픽대교 남단사거리 앞 외 3건',
+    count: 4,
+    icon: '/images/district-icon/2.gangdong-gu.png',
+    size: '1000x1000',
+    sizeOfPeople: '10000',
+    src: '/images/led/landing.png',
   },
   {
     id: 3,
-    name: '강서구',
-    description: '송중사이즈 800×416 픽셀',
+    name: '관악구',
+    description: '서울대입구역 앞 외 3건',
     count: 4,
-    bgColor: 'bg-[#006EFF]',
+    icon: '/images/district-icon/3.gwanak-gu.png',
+    size: '1000x1000',
+    sizeOfPeople: '10000',
+    src: '/images/led/landing.png',
   },
   {
     id: 4,
-    name: '관악구',
-    description: '송중사이즈 800×416 픽셀',
+    name: '마포구',
+    description: '홍대입구역 앞 외 5건',
     count: 6,
-    bgColor: 'bg-[#006EFF]',
+    icon: '/images/district-icon/4.mapo-gu.png',
+    size: '1000x1000',
+    sizeOfPeople: '10000',
+    src: '/images/led/landing.png',
   },
   {
     id: 5,
-    name: '광진구',
-    description: '송중사이즈 800×416 픽셀',
+    name: '서대문구',
+    description: '울림픽대교 남단사거리 앞 외 3건',
     count: 4,
-    bgColor: 'bg-[#338BFF]',
+    icon: '/images/district-icon/5.seodaemun-gu.png',
+    size: '1000x1000',
+    sizeOfPeople: '10000',
+    src: '/images/led/landing.png',
   },
+
   {
     id: 6,
-    name: '구로구',
-    description: '송중사이즈 800×416 픽셀',
-    count: 5,
-    bgColor: 'bg-[#4897FF]',
+    name: '송파구',
+    description: '잠실종합운동장 앞 외 5건',
+    count: 6,
+    icon: '/images/district-icon/6.songpa-gu.png',
+    size: '1000x1000',
+    sizeOfPeople: '10000',
+    src: '/images/led/landing.png',
   },
   {
     id: 7,
-    name: '금천구',
-    description: '송중사이즈 800×416 픽셀',
-    count: 3,
-    bgColor: 'bg-[#83B9FF]',
+    name: '용산구',
+    description: '여의도공원 앞 외 6건',
+    count: 7,
+    icon: '/images/district-icon/7.yongsan-gu.png',
+    size: '1000x1000',
+    sizeOfPeople: '10000',
+    src: '/images/led/landing.png',
   },
 ];
 
 export default function BannerDisplayPage() {
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [showDistricts, setShowDistricts] = useState(false);
-  const [bannerHeight, setBannerHeight] = useState(400);
-  const bannerImages = [
-    '/images/banner-image1.jpeg',
-    '/images/banner-image2.jpeg',
-  ];
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentImageIndex((prev) => (prev + 1) % bannerImages.length);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [bannerImages.length]);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollPosition = window.scrollY;
-      setShowDistricts(scrollPosition > 100);
-
-      // Calculate new height (75% of original when scrolled)
-      const minHeight = 300; // 75% of 400
-      const newHeight = Math.max(minHeight, 400 - scrollPosition * 0.5);
-      setBannerHeight(newHeight);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
   return (
-    <main className="min-h-screen bg-white relative pb-[800px]">
+    <main className="min-h-screen bg-white">
       {/* Fixed Header - Always visible */}
-      <div className="sticky top-[5.5rem] bg-white z-20">
-        {/* Header Section */}
-        <section className="flex items-center justify-center gap-4 mx-auto px-4 pt-[2rem] pb-[2rem] text-center">
-          <div className="text-2.5 font-700">현수막게시대</div>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="334"
-            height="2"
-            viewBox="0 0 334 2"
-            fill="none"
-          >
-            <path d="M0.5 1H333.5" stroke="black" />
-          </svg>
-          <div className="text-1.5 font-500 text-gray-600">
-            MOVE ON THE SCREEN
-          </div>
-        </section>
-      </div>
+      <section className="container mx-auto px-[8rem] pt-[6rem] pb-[3rem]">
+        <h1 className="text-3.75 font-[700] mb-4 font-gmarket">현수막게시대</h1>
+        <p className="text-1.25 font-[500] text-gray-600">
+          지역상권 활성화, 합리적인 광고
+        </p>
+      </section>
 
-      {/* Banner Container */}
-      <div className="sticky top-[calc(5.5rem+4rem)] bg-white z-10">
-        {/* Banner Section */}
-        <section
-          className={`${showDistricts && 'container'} mx-auto px-4 mb-12"`}
-        >
-          <div
-            className="relative rounded-2xl overflow-hidden transition-all duration-300"
-            style={{ height: `${bannerHeight}px` }}
-          >
-            {bannerImages.map((src, index) => (
-              <Image
-                key={src}
-                src={src}
-                alt={`Banner ${index + 1}`}
-                fill
-                className={`
-                  object-cover
-                  transition-opacity duration-500
-                  ${currentImageIndex === index ? 'opacity-100' : 'opacity-0'}
-                `}
-                priority
-              />
-            ))}
-          </div>
-        </section>
-      </div>
-
-      {/* Districts Grid - Absolute to show vertically below the banner */}
-      <section
-        className={`
-          absolute left-0 right-0 bg-white transition-transform duration-500 z-0
-          ${
-            showDistricts
-              ? 'translate-y-[calc(5.5rem+8rem+' + bannerHeight + 'px)]'
-              : 'translate-y-full'
-          }
-        `}
-      >
-        <div className="container mx-auto px-4 py-12 mt-[40rem]">
-          <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-4 gap-[1px] bg-gray-100">
-            {districts.map((district) => (
-              <Link
-                key={district.id}
-                href={`/led-display/${encodeURIComponent(district.name)}`}
-                className={`
-        ${district.bgColor}
-        hover:opacity-90 transition-all
-        p-4 sm:p-6 text-white
-        flex items-center justify-between
-        min-h-[160px] sm:min-h-[200px] relative
-      `}
-              >
-                <div className="flex flex-col gap-4 sm:gap-8">
-                  <div className="text-2.5 font-[700]">{district.name}</div>
-                  <div className="text-1 font-500 opacity-80">
-                    송출사이즈 800*416 <br /> 픽셀 유동인구 : -명 <br />
-                    소비자트렌드 :
-                  </div>
-                </div>
-                <div className="flex items-center">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="17"
-                    height="29"
-                    viewBox="0 0 17 29"
-                    fill="none"
-                  >
-                    <path
-                      d="M2.625 26.5L14.625 14.5L2.625 2.5"
-                      stroke="white"
-                      strokeWidth="4"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </div>
-              </Link>
-            ))}
-          </div>
+      <section className=" mx-auto  mb-12">
+        <div className="relative w-full h-[320px] md:h-[400px]  overflow-hidden">
+          <Image
+            src="/images/banner-display-page/landing.png"
+            alt="현수막게시대 메인 이미지"
+            fill
+            className="object-cover"
+            priority
+          />
         </div>
       </section>
+
+      <div className="container mx-auto px-4 py-12">
+        <div className="grid grid-cols-3 gap-[6rem]">
+          {districts.map((district) => (
+            <DistrictCard key={district.id} district={district} />
+          ))}
+        </div>
+      </div>
     </main>
   );
 }

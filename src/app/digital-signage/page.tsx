@@ -1,121 +1,124 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import Image from 'next/image';
-import RollingGallery from '../../components/RollingGallery';
+import DistrictCard from '@/src/components/DistrictCard';
 
-// Define the gallery images for digital signage
-const galleryImages = [
+interface District {
+  id: number;
+  name: string;
+  description: string;
+  count: number;
+  icon: string;
+  size: string;
+  sizeOfPeople: string;
+  src: string;
+}
+
+const districts: District[] = [
   {
     id: 1,
-    src: '/images/landing-1.jpeg',
-    mainKeyword: '메인키워드',
-    title: '상품이름1',
-    subtitle: '서브타이틀',
+    name: '전체',
+    description: '울림픽대교 남단사거리 앞 외 3건',
+    count: 4,
+    icon: '/images/district-icon/1.all.svg',
+    size: '1000x1000',
+    sizeOfPeople: '10000',
+    src: '/images/led/landing.png',
   },
   {
     id: 2,
-    src: '/images/landing-2.jpeg',
-    mainKeyword: '메인키워드',
-    title: '상품이름2',
-    subtitle: '서브타이틀',
+    name: '강동구',
+    description: '울림픽대교 남단사거리 앞 외 3건',
+    count: 4,
+    icon: '/images/district-icon/2.gangdong-gu.png',
+    size: '1000x1000',
+    sizeOfPeople: '10000',
+    src: '/images/led/landing.png',
   },
   {
     id: 3,
-    src: '/images/landing-1.jpeg',
-    mainKeyword: '메인키워드',
-    title: '상품이름3',
-    subtitle: '서브타이틀',
+    name: '관악구',
+    description: '서울대입구역 앞 외 3건',
+    count: 4,
+    icon: '/images/district-icon/3.gwanak-gu.png',
+    size: '1000x1000',
+    sizeOfPeople: '10000',
+    src: '/images/led/landing.png',
   },
   {
     id: 4,
-    src: '/images/landing-2.jpeg',
-    mainKeyword: '메인키워드',
-    title: '상품이름4',
-    subtitle: '서브타이틀',
+    name: '마포구',
+    description: '홍대입구역 앞 외 5건',
+    count: 6,
+    icon: '/images/district-icon/4.mapo-gu.png',
+    size: '1000x1000',
+    sizeOfPeople: '10000',
+    src: '/images/led/landing.png',
   },
   {
     id: 5,
-    src: '/images/landing-1.jpeg',
-    mainKeyword: '메인키워드',
-    title: '상품이름5',
-    subtitle: '서브타이틀',
+    name: '서대문구',
+    description: '울림픽대교 남단사거리 앞 외 3건',
+    count: 4,
+    icon: '/images/district-icon/5.seodaemun-gu.png',
+    size: '1000x1000',
+    sizeOfPeople: '10000',
+    src: '/images/led/landing.png',
+  },
+
+  {
+    id: 6,
+    name: '송파구',
+    description: '잠실종합운동장 앞 외 5건',
+    count: 6,
+    icon: '/images/district-icon/6.songpa-gu.png',
+    size: '1000x1000',
+    sizeOfPeople: '10000',
+    src: '/images/led/landing.png',
+  },
+  {
+    id: 7,
+    name: '용산구',
+    description: '여의도공원 앞 외 6건',
+    count: 7,
+    icon: '/images/district-icon/7.yongsan-gu.png',
+    size: '1000x1000',
+    sizeOfPeople: '10000',
+    src: '/images/led/landing.png',
   },
 ];
-const fadeInUp = {
-  initial: { y: 60, opacity: 0 },
-  animate: {
-    y: 0,
-    opacity: 1,
-    transition: { duration: 0.6, ease: 'easeOut' },
-  },
-};
-
-const signageItems = Array(12).fill({
-  title: '상품 타이틀',
-  category: '카테고리',
-  description: '설명',
-  image: '/images/digital-signage-grid-example.jpeg',
-});
 
 export default function DigitalSignagePage() {
   return (
-    <main className="min-h-screen flex flex-col bg-white">
-      {/* Title Section */}
-      <section className="container mx-auto px-4 pt-[6rem] pb-[1rem] sm:pt-[6rem] sm:pb-[3rem] md:pt-[5rem]">
-        <div className="text-2.5 sm:text-2 md:text-2.25 font-700 mb-4 gmarket">
+    <main className="min-h-screen bg-white ">
+      {/* Header Section */}
+      <section className="container mx-auto px-[8rem] pt-[6rem] pb-[3rem]">
+        <h1 className="text-3.75 font-[700] mb-4 font-gmarket">
           디지털사이니지
-        </div>
-        <div className="text-1.25 sm:text-1 md:text-1.125 text-gray-600">
+        </h1>
+        <p className="text-1.25 font-[500] text-gray-600">
           광고를 혁신하다, 공간을 스마트하게
+        </p>
+      </section>
+
+      <section className=" mx-auto  mb-12">
+        <div className="relative w-full h-[320px] md:h-[400px]  overflow-hidden">
+          <Image
+            src="/images/led/landing.png"
+            alt="공공디자인 메인 이미지"
+            fill
+            className="object-cover"
+            priority
+          />
         </div>
       </section>
 
-      {/* Header Section with Rolling Gallery */}
-      <section className="w-full">
-        <RollingGallery images={galleryImages} />
-      </section>
-
-      {/* Content Section */}
-      <div className="flex-grow bg-white">
-        <motion.div
-          initial="initial"
-          animate="animate"
-          variants={fadeInUp}
-          className="container mx-auto px-4 py-20 sm:py-12 md:py-16"
-        >
-          {/* Signage Grid */}
-          <div className="container grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 lg:gap-6 sm:gap-4 md:gap-5">
-            {signageItems.map((item, index) => (
-              <div
-                key={index}
-                className="flex flex-col items-center justify-center"
-              >
-                <div className="relative lg:aspect-[3/4] lg:w-[25rem] sm:w-[18rem] md:w-[22rem] lg:h-[25rem] sm:h-[16rem] md:h-[22rem] overflow-hidden rounded-lg">
-                  <Image
-                    src={item.image}
-                    alt={item.title}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-                <div className="mt-4 flex flex-col gap-2 items-start w-full pl-8">
-                  <div className="flex gap-2 justify-center">
-                    <div className="text-0.75 sm:text-0.625 md:text-0.75 font-700 text-white bg-black px-3 py-2 rounded-full flex items-center justify-center">
-                      {item.category}
-                    </div>
-                    <div className="text-0.75 sm:text-0.625 md:text-0.75 font-700 text-white bg-black px-3 py-2 rounded-full flex items-center justify-center">
-                      {item.description}
-                    </div>
-                  </div>
-                  <div className="text-1.5 sm:text-1.25 md:text-1.375 font-400 text-center">
-                    {item.title}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </motion.div>
+      <div className="container mx-auto px-4 py-12">
+        <div className="grid grid-cols-5 md:grid-cols-3 lg:grid-cols-3 gap-[6rem] ">
+          {districts.map((district) => (
+            <DistrictCard key={district.id} district={district} />
+          ))}
+        </div>
       </div>
     </main>
   );

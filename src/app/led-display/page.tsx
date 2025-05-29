@@ -90,7 +90,7 @@ const districts: District[] = [
 
 export default function LEDDisplayPage() {
   return (
-    <main className="min-h-screen bg-white pt-[10rem]">
+    <main className="min-h-screen bg-white ">
       {/* Header Section */}
       <section className="container mx-auto px-[8rem] pt-[6rem] pb-[3rem]">
         <h1 className="text-3.75 font-[700] mb-4 font-gmarket">
