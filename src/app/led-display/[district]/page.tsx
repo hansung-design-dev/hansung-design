@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import KakaoMap from '@/src/components/KakaoMap';
 
 const fadeInUp = {
   initial: { y: 60, opacity: 0 },
@@ -156,7 +157,7 @@ export default function DistrictPage() {
       </div>
       {/* Right: Map Placeholder */}
       <div className="flex-1 min-h-[500px] bg-gray-100 rounded-lg flex items-center justify-center">
-        <span className="text-gray-400">카카오맵 자리 (추후 삽입)</span>
+        <KakaoMap />
       </div>
     </div>
   );

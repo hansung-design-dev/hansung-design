@@ -1,3 +1,9 @@
+import KakaoMap from '@/src/components/KakaoMap';
+
 export default function LedDisplayDetailPage() {
-  return <div>LedDisplayDetailPage</div>;
+  return (
+    <div>
+      <KakaoMap />
+    </div>
+  );
 }
