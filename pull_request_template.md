@@ -17,8 +17,7 @@
 
 ### 이슈 번호
 
-> 예) https://github.com/hansung-design-dev/hansung-design[이슈번호]
-> https://github.com/hansung-design-dev/hansung-design/
+> 예) https://github.com/hansung-design-dev/hansung-design[이슈번호] > https://github.com/hansung-design-dev/hansung-design/
 
 ### To Reviewers
 
