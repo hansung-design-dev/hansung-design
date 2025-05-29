@@ -84,7 +84,7 @@ export default function DistrictPage() {
   // };
 
   const renderGalleryView = () => (
-    <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-3 sm:grid-cols-1 md:grid-cols-4 lg:grid-cols-4 gap-6">
       {districtItems.map((item, index) => (
         <div
           key={index}
@@ -119,9 +119,12 @@ export default function DistrictPage() {
   );
 
   const renderLocationView = () => (
-    <div className="w-full flex flex-col lg:flex-row gap-8">
-      {/* Left: Gallery List (single column) */}
-      <div className="flex-1">
+    <div className="flex gap-8" style={{ height: '700px' }}>
+      {/* Left: Card List (scrollable) */}
+      <div
+        className="flex-1 overflow-y-auto pr-2"
+        style={{ maxWidth: '40%', maxHeight: '700px' }}
+      >
         <div className="flex flex-col gap-6">
           {districtItems.map((item, index) => (
             <div
@@ -155,9 +158,13 @@ export default function DistrictPage() {
           ))}
         </div>
       </div>
-      {/* Right: Map Placeholder */}
-      <div className="flex-1 min-h-[500px] bg-gray-100 rounded-lg flex items-center justify-center">
-        <KakaoMap />
+      {/* Right: Map (sticky, 1.5x width of card list) */}
+      <div className="min-w-0" style={{ width: '60%', minWidth: '500px' }}>
+        <div className="sticky top-0">
+          <div className="w-full aspect-square min-h-[500px]">
+            <KakaoMap />
+          </div>
+        </div>
       </div>
     </div>
   );
