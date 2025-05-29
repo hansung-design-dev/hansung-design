@@ -2,7 +2,6 @@
 
 import { motion } from 'framer-motion';
 import Image from 'next/image';
-import Nav from '../../components/Nav';
 import RollingGallery from '../../components/RollingGallery';
 
 // Define the gallery images for digital signage
@@ -62,8 +61,6 @@ const signageItems = Array(12).fill({
 export default function DigitalSignagePage() {
   return (
     <main className="min-h-screen flex flex-col bg-white">
-      <Nav variant="default" />
-
       {/* Title Section */}
       <section className="container mx-auto px-4 pt-[6rem] pb-[1rem] sm:pt-[6rem] sm:pb-[3rem] md:pt-[5rem]">
         <div className="text-2.5 sm:text-2 md:text-2.25 font-700 mb-4 gmarket">

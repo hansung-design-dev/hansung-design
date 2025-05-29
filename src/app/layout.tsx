@@ -1,7 +1,7 @@
 // app/layout.tsx
 import type { Metadata } from 'next';
 import './globals.css';
-// import Nav from '../components/Nav';
+import Nav from '../components/Nav';
 import Footer from '../components/Footer';
 import ScrollToTopButton from '../components/scrollToTopButton';
 
@@ -18,7 +18,7 @@ export default function RootLayout({
   return (
     <html lang="ko" jd-enabled="true">
       <body className="relative">
-        {/* <Nav /> */}
+        <Nav />
         {children}
         <ScrollToTopButton />
         <Footer />

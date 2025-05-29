@@ -1,6 +1,5 @@
 'use client';
 
-import Nav from '../../components/Nav';
 import ProjectRow from '../../components/ProjectRow';
 import { ProjectItem as BaseProjectItem } from '../../components/ProjectRow';
 import Image from 'next/image';
@@ -63,8 +62,6 @@ export default function PublicDesignPage() {
 
   return (
     <main className="min-h-screen bg-white">
-      <Nav variant="default" />
-
       {/* Header Section */}
       <section className="container mx-auto px-[8rem] pt-[6rem] pb-[3rem]">
         <h1 className="text-3.75 font-[700] mb-4 font-gmarket">공공디자인</h1>

@@ -39,7 +39,7 @@ const ItemList: React.FC<ItemTableProps> = ({
   return (
     <>
       {/* ✅ 데스크탑/tablet 이상: table로 표시 */}
-      <div className="overflow-x-auto hidden sm:hidden">
+      <div className="overflow-x-auto hidden lg:block">
         <table className="w-full text-left border-t border-gray-200 text-0.875">
           {showHeader && (
             <thead>
@@ -97,8 +97,8 @@ const ItemList: React.FC<ItemTableProps> = ({
         </table>
       </div>
 
-      {/* ✅ 모바일(sm): 카드형으로 표시 */}
-      <div className="flex flex-col gap-4 sm:block">
+      {/* ✅ 모바일(sm, md): 카드형으로 표시 */}
+      <div className="flex flex-col gap-4 lg:hidden">
         {items.map((item) => (
           <div
             key={item.id}
