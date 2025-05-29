@@ -1,7 +1,6 @@
 'use client';
 
 import Image from 'next/image';
-import Nav from '@/src/components/Nav';
 import { useParams } from 'next/navigation';
 import ProjectRow, { ProjectItem } from '@/src/components/ProjectRow';
 
@@ -87,7 +86,6 @@ export default function PublicDesignDetailPage() {
 
   return (
     <main className="min-h-screen bg-white py-[6rem] px-[8rem] ">
-      <Nav variant="default" />
       {/* 상단: ProjectRow 그대로 사용 */}
       <section className=" mx-auto mb-12">
         <ProjectRow

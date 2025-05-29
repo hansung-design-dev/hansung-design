@@ -82,12 +82,7 @@ const IconList = ({ TextInvert }: { TextInvert?: boolean }) => (
   </div>
 );
 
-const Nav = ({
-  className,
-  isbg,
-  TextInvert,
-  variant = 'default',
-}: NavProps) => {
+const Nav = ({ className, isbg, TextInvert }: NavProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const pathname = usePathname();
@@ -104,15 +99,7 @@ const Nav = ({
 
   const getMenuItemStyles = (isSelected: boolean) => {
     if (isSelected) return 'bg-black text-white rounded-full px-4 py-2';
-    if (isScrolled) return 'text-black';
-
-    switch (variant) {
-      case 'photo':
-      case 'mixed':
-        return 'text-white';
-      default:
-        return 'text-black';
-    }
+    return 'bg-white text-black rounded-full px-4 py-2';
   };
 
   useEffect(() => {
@@ -146,19 +133,22 @@ const Nav = ({
           {/* ✅ 데스크탑/태블릿 메뉴 (md 이상부터) */}
           <div className="hidden md:flex items-center space-x-8">
             <div className="flex items-center lg:gap-[4rem] md:gap-[2rem] ">
-              {menuItems.map((item) => (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`text-1 transition-colors duration-300 ${
-                    pathname === item.href
-                      ? getMenuItemStyles(true)
-                      : getMenuItemStyles(false)
-                  }`}
-                >
-                  {item.name}
-                </Link>
-              ))}
+              {menuItems.map((item) => {
+                const isSelected =
+                  pathname === item.href ||
+                  pathname.startsWith(item.href + '/');
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={`text-1 transition-colors duration-300 ${getMenuItemStyles(
+                      isSelected
+                    )}`}
+                  >
+                    {item.name}
+                  </Link>
+                );
+              })}
               <IconList TextInvert={TextInvert && !isScrolled} />
             </div>
           </div>

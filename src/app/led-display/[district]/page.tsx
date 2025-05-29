@@ -1,10 +1,10 @@
 'use client';
 
+import ItemList from '@/src/components/ui/itemlist';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
-import Nav from '../../../components/Nav';
-import ItemList from '@/src/components/ui/itemlist';
 import { useParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 const fadeInUp = {
@@ -72,6 +72,8 @@ export default function DistrictPage() {
   const params = useParams();
   const encodedDistrict = params.district as string;
   const district = decodeURIComponent(encodedDistrict);
+  const router = useRouter();
+
   const [viewType, setViewType] = useState<'location' | 'gallery' | 'list'>(
     'gallery'
   );
@@ -83,7 +85,11 @@ export default function DistrictPage() {
   const renderGalleryView = () => (
     <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {districtItems.map((item, index) => (
-        <div key={index} className="flex flex-col">
+        <div
+          key={index}
+          className="flex flex-col"
+          onClick={() => router.push(`/led-display/${district}/${item.id}`)}
+        >
           <div className="relative aspect-[1/1] w-full overflow-hidden rounded-lg">
             <Image
               src={item.image}
@@ -111,10 +117,52 @@ export default function DistrictPage() {
     </div>
   );
 
+  const renderLocationView = () => (
+    <div className="w-full flex flex-col lg:flex-row gap-8">
+      {/* Left: Gallery List (single column) */}
+      <div className="flex-1">
+        <div className="flex flex-col gap-6">
+          {districtItems.map((item, index) => (
+            <div
+              key={index}
+              className="flex flex-col cursor-pointer border border-gray-200 rounded-lg overflow-hidden"
+              onClick={() => router.push(`/led-display/${district}/${item.id}`)}
+            >
+              <div className="relative aspect-[1/1] w-full overflow-hidden rounded-t-lg">
+                <Image
+                  src={item.image}
+                  alt={item.title}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+              <div className="p-4">
+                <div className="flex gap-2 mb-2">
+                  {item.tags.map((tag, tagIndex) => (
+                    <span
+                      key={tagIndex}
+                      className="px-2 py-1 bg-gray-100 text-gray-600 text-0.875 rounded"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+                <h3 className="text-1 font-medium">{item.title}</h3>
+                <p className="text-0.875 text-gray-600">{item.subtitle}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      {/* Right: Map Placeholder */}
+      <div className="flex-1 min-h-[500px] bg-gray-100 rounded-lg flex items-center justify-center">
+        <span className="text-gray-400">카카오맵 자리 (추후 삽입)</span>
+      </div>
+    </div>
+  );
+
   return (
     <main className="min-h-screen flex flex-col bg-white">
-      <Nav variant="default" />
-
       <div className="container mx-auto px-4 pt-[7rem]">
         <div className="mb-8">
           <h2 className="text-2.25 font-900 font-gmarket">{district}</h2>
@@ -161,7 +209,9 @@ export default function DistrictPage() {
 
         {/* Content Section */}
         <motion.div initial="initial" animate="animate" variants={fadeInUp}>
-          {viewType === 'list' ? (
+          {viewType === 'location' ? (
+            renderLocationView()
+          ) : viewType === 'list' ? (
             <ItemList
               items={districtItems}
               showHeader

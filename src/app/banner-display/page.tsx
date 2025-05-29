@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import Nav from '../../components/Nav';
 
 const districts = [
   {
@@ -96,8 +95,6 @@ export default function BannerDisplayPage() {
 
   return (
     <main className="min-h-screen bg-white relative pb-[800px]">
-      <Nav variant="default" />
-
       {/* Fixed Header - Always visible */}
       <div className="sticky top-[5.5rem] bg-white z-20">
         {/* Header Section */}

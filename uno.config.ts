@@ -64,6 +64,7 @@ export default defineConfig({
       foreground: 'var(--color-foreground)',
       black: '#000',
       white: '#fff',
+      red: '#D61919',
       gray: {
         DEFAULT: '#625C5C',
         1: '#EDEDED',
@@ -79,6 +80,7 @@ export default defineConfig({
         11: '#EFEFEF',
         12: '#A4A4A4',
         13: '#E1E1E1;',
+        14: '#7D7D7D',
       },
     },
     breakpoints: {
