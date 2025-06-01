@@ -19,7 +19,7 @@ async function getCoords(address: string) {
   console.log(`[KakaoAPI] 응답:`, JSON.stringify(data));
   const doc = data.documents?.[0];
   if (doc) {
-    return { lat: doc.y, lng: doc.x };
+    return { lat: Number(doc.y), lng: Number(doc.x) };
   }
   return { lat: null, lng: null };
 }
@@ -35,14 +35,16 @@ export async function GET() {
   }
   console.log(`[API] Supabase에서 불러온 데이터:`, data);
 
-  // 2. 각 주소에 대해 좌표 변환
-  const results = [];
-  for (const row of data) {
-    if (!row.address) continue;
-    console.log(`[API] 주소 변환 처리:`, row.address);
-    const coords = await getCoords(row.address);
-    results.push({ id: row.id, address: row.address, ...coords });
-  }
+  // 2. 각 주소에 대해 좌표 변환 (병렬 처리)
+  const results = await Promise.all(
+    data
+      .filter((row: any) => !!row.address)
+      .map(async (row: any) => {
+        console.log(`[API] 주소 변환 처리:`, row.address);
+        const coords = await getCoords(row.address);
+        return { id: row.id, address: row.address, ...coords };
+      })
+  );
 
   console.log('[API] 최종 변환 결과:', results);
   // 3. 결과 반환
