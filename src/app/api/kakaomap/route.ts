@@ -38,8 +38,8 @@ export async function GET() {
   // 2. 각 주소에 대해 좌표 변환 (병렬 처리)
   const results = await Promise.all(
     data
-      .filter((row: any) => !!row.address)
-      .map(async (row: any) => {
+      .filter((row) => !!row.address)
+      .map(async (row: { id: number; address: string }) => {
         console.log(`[API] 주소 변환 처리:`, row.address);
         const coords = await getCoords(row.address);
         return { id: row.id, address: row.address, ...coords };
@@ -50,3 +50,5 @@ export async function GET() {
   // 3. 결과 반환
   return NextResponse.json(results);
 }
+
+export {};
