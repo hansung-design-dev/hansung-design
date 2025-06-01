@@ -18,7 +18,7 @@ interface DistrictCardProps {
 
 export default function DistrictCard({ district }: DistrictCardProps) {
   return (
-    <>
+    <div className="flex items-center justify-center">
       <Link
         href={`/led-display/${encodeURIComponent(district.name)}`}
         className="w-[25rem] h-[29.5625rem] bg-gray-4 rounded-[1.25rem] flex flex-col overflow-hidden "
@@ -54,6 +54,6 @@ export default function DistrictCard({ district }: DistrictCardProps) {
           />
         </div>
       </Link>
-    </>
+    </div>
   );
 }
