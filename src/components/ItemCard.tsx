@@ -18,7 +18,7 @@ export default function ItemCard({ item }: ItemCardProps) {
           alt={item.title}
           width={400}
           height={400}
-          className="lg:w-[25rem] lg:h-[25rem] object-cover rounded-[1.25rem] md:w-[15rem] md:h-[15rem] sm:w-[15rem] sm:h-[15rem]"
+          className="lg:w-[25rem] lg:h-[25rem] object-cover rounded-[1.25rem] md:w-[15rem] md:h-[15rem] sm:w-[15rem] sm:h-[15rem] "
         />
         <div className="flex flex-col flex-1 mt-4">
           <div className="flex gap-2 mb-2">
