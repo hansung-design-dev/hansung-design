@@ -1,6 +1,3 @@
-import Image from 'next/image';
-import DistrictCard from '@/src/components/DistrictCard';
-
 interface District {
   id: number;
   name: string;
@@ -86,36 +83,4 @@ const districts: District[] = [
   },
 ];
 
-export default function BannerDisplayPage() {
-  return (
-    <main className="min-h-screen bg-white">
-      {/* Fixed Header - Always visible */}
-      <section className="container mx-auto px-[8rem] pt-[6rem] pb-[3rem]">
-        <h1 className="text-3.75 font-[700] mb-4 font-gmarket">현수막게시대</h1>
-        <p className="text-1.25 font-[500] text-gray-600">
-          지역상권 활성화, 합리적인 광고
-        </p>
-      </section>
-
-      <section className=" mx-auto  mb-12">
-        <div className="relative w-full h-[320px] md:h-[400px]  overflow-hidden">
-          <Image
-            src="/images/banner-display-page/landing.png"
-            alt="현수막게시대 메인 이미지"
-            fill
-            className="object-cover"
-            priority
-          />
-        </div>
-      </section>
-
-      <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-3 gap-[6rem]">
-          {districts.map((district) => (
-            <DistrictCard key={district.id} district={district} />
-          ))}
-        </div>
-      </div>
-    </main>
-  );
-}
+export default districts;

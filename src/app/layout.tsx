@@ -5,6 +5,8 @@ import Nav from '../components/Nav';
 import Footer from '../components/Footer';
 import ScrollToTopButton from '../components/scrollToTopButton';
 
+// export const API = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_KEY}&autoload=false`;
+
 export const metadata: Metadata = {
   title: '한성기업',
   description: '한성기업 공식 웹사이트',
