@@ -39,7 +39,7 @@ export async function GET() {
   const results = await Promise.all(
     data
       .filter((row) => !!row.address)
-      .map(async (row: { id: number; address: string }) => {
+      .map(async (row) => {
         console.log(`[API] 주소 변환 처리:`, row.address);
         const coords = await getCoords(row.address);
         return { id: row.id, address: row.address, ...coords };
