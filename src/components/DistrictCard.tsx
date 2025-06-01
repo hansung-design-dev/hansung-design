@@ -21,7 +21,7 @@ export default function DistrictCard({ district }: DistrictCardProps) {
     <div className="flex items-center justify-center">
       <Link
         href={`/led-display/${encodeURIComponent(district.name)}`}
-        className="w-[25rem] h-[29.5625rem] bg-gray-4 rounded-[1.25rem] flex flex-col overflow-hidden "
+        className="w-[25rem] h-[29.5625rem] md:h-[25rem] bg-gray-4 rounded-[1.25rem] flex flex-col overflow-hidden "
       >
         <div className="flex-1 flex flex-col gap-[3rem] p-8">
           <div className="flex flex-col gap-4">

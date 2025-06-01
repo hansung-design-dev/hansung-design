@@ -62,12 +62,6 @@ const IconButton = ({
 const IconList = ({ TextInvert }: { TextInvert?: boolean }) => (
   <div className="flex items-center gap-3 sm:gap-2">
     <IconButton
-      iconPath="/svg/headphones.svg"
-      label="고객센터"
-      href="/support"
-      TextInvert={TextInvert}
-    />
-    <IconButton
       iconPath="/svg/shopping-cart.svg"
       label="장바구니"
       href="/cart"

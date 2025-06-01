@@ -63,8 +63,10 @@ export default function PublicDesignPage() {
   return (
     <main className="min-h-screen bg-white">
       {/* Header Section */}
-      <section className="container mx-auto px-[8rem] pt-[6rem] pb-[3rem]">
-        <h1 className="text-3.75 font-[700] mb-4 font-gmarket">공공디자인</h1>
+      <section className="lg:container lg:mx-auto lg:px-[8rem] sm:px-[1.5rem] pt-[6rem] pb-[3rem]">
+        <h1 className="text-3.75 sm:text-2.5 font-[700] mb-4 font-gmarket">
+          공공디자인
+        </h1>
         <p className="text-1.25 font-[500] text-gray-600">
           도시의 일상에서 만나는 시간과 공간의 경험 디자인
         </p>
@@ -74,7 +76,7 @@ export default function PublicDesignPage() {
       <section className=" mx-auto  mb-12">
         <div className="relative w-full h-[320px] md:h-[400px]  overflow-hidden">
           <Image
-            src="/images/public-segin-page-main.png"
+            src="/images/public-degin-page-main.png"
             alt="공공디자인 메인 이미지"
             fill
             className="object-cover"
