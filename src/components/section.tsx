@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { JSX } from 'react';
 import { motion } from 'framer-motion';
+import Link from 'next/link';
 
 interface SectionProps {
   title: JSX.Element;
@@ -12,7 +13,7 @@ interface SectionProps {
   imageAlt: string;
   reverse?: boolean;
   buttonText?: string;
-  buttonUrl?: string;
+  href?: string;
   list: string[];
 }
 
@@ -47,7 +48,7 @@ const Section = ({
   imageAlt,
   reverse = false,
   buttonText = '자세히 보기',
-  buttonUrl = '#',
+  href = '#',
   list,
 }: SectionProps) => {
   return (
@@ -89,12 +90,12 @@ const Section = ({
               </motion.div>
             </div>
             <motion.div variants={fadeInUp}>
-              <a
-                href={buttonUrl}
+              <Link
+                href={href}
                 className="bg-black text-white w-[8rem] lg:h-[1.75rem] md:h-[2rem] sm:h-[2rem] lg:py-[1.625rem] md:py-[1.5rem] sm:py-[0.75rem] lg:px-[8rem] md:px-[6rem] sm:px-[3rem] rounded-full hover:bg-gray-800 transition-colors mobile-subtitle font-bold lg:text-1.5 md:text-1.5 sm:text-1 underline-none flex justify-center items-center"
               >
                 {buttonText}
-              </a>
+              </Link>
             </motion.div>
           </div>
         </motion.div>
