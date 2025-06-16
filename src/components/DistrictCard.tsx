@@ -14,13 +14,17 @@ interface District {
 
 interface DistrictCardProps {
   district: District;
+  basePath?: string;
 }
 
-export default function DistrictCard({ district }: DistrictCardProps) {
+export default function DistrictCard({
+  district,
+  basePath = 'led-display',
+}: DistrictCardProps) {
   return (
     <div className="flex items-center justify-center">
       <Link
-        href={`/led-display/${encodeURIComponent(district.name)}`}
+        href={`/${basePath}/${encodeURIComponent(district.name)}`}
         className="w-[25rem] h-[29.5625rem] md:h-[25rem] bg-gray-4 rounded-[1.25rem] flex flex-col overflow-hidden "
       >
         <div className="flex-1 flex flex-col gap-[3rem] p-8">
