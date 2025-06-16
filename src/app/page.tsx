@@ -1,5 +1,5 @@
 import Nav from '../components/layouts/nav';
-import Section from '../components/Section';
+import Section from '../components/section';
 import FAQ from '../components/layouts/faq';
 //import Footer from '../components/Footer';
 
