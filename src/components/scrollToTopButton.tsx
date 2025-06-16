@@ -1,4 +1,3 @@
-// components/ScrollToTopButton.tsx
 'use client';
 
 import Image from 'next/image';
@@ -10,7 +9,7 @@ export default function ScrollToTopButton() {
   };
 
   return (
-    <div className="absolute fixed bottom-6 right-6 flex flex flex-col gap-[1rem]">
+    <div className="absolute  bottom-6 right-6  flex flex-col gap-[1rem]">
       <Link
         href="/mypage/customer-service"
         className={`rounded-full z-50 transition-opacity duration-300 bg-white shadow-lg p-2 border-none flex items-center justify-center`}

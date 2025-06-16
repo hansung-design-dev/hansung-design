@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import DistrictCard from '../../components/districtCard';
+import DistrictCard from '@/src/components/districtCard';
 import districts from '@/src/mock/district';
 
 export default function LEDDisplayPage() {
