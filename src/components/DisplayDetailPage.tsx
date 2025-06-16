@@ -119,14 +119,16 @@ export default function DisplayDetailPage({
             return (
               <div
                 key={index}
-                className={`flex flex-col cursor-pointer ${
-                  isSelected
-                    ? 'border-solid border-[#238CFA] border-[0.3rem]'
-                    : ''
-                }`}
+                className={`flex flex-col cursor-pointer `}
                 onClick={() => handleItemSelect(item.id)}
               >
-                <div className="relative aspect-[1/1] w-full overflow-hidden rounded-lg">
+                <div
+                  className={`relative aspect-[1/1] w-full overflow-hidden rounded-lg ${
+                    isSelected
+                      ? 'border-solid border-[#238CFA] border-[0.3rem]'
+                      : ''
+                  }`}
+                >
                   {isSelected && (
                     <Image
                       src="/images/blue-check.png"
