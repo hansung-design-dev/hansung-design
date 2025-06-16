@@ -1,5 +1,5 @@
 'use client';
-import DisplayDetailPage from '@/src/components/DisplayDetailPage';
+import DisplayDetailPage from '@/src/components/displayDetailPage';
 import { useParams } from 'next/navigation';
 import districts from '@/src/mock/district';
 import { bannerBillboards } from '@/src/mock/billboards';

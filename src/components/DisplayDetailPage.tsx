@@ -8,6 +8,12 @@ import MapPinIcon from '@/src/icons/map-pin.svg';
 import GalleryIcon from '@/src/icons/gallery.svg';
 import ListIcon from '@/src/icons/list.svg';
 import { useState } from 'react';
+import {
+  District,
+  DistrictItem,
+  Billboard,
+  DropdownOption,
+} from '@/src/types/displaydetail';
 
 const fadeInUp = {
   initial: { y: 60, opacity: 0 },
@@ -27,13 +33,13 @@ export default function DisplayDetailPage({
   defaultMenuName,
 }: {
   district: string;
-  districtObj: any;
-  districtItems: any[];
-  billboards: any[];
-  dropdownOptions: { id: number; option: string }[];
+  districtObj: District | undefined;
+  districtItems: DistrictItem[];
+  billboards: Billboard[];
+  dropdownOptions: DropdownOption[];
   defaultMenuName: string;
 }) {
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  // const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selectedOption, setSelectedOption] = useState<{
     id: number;
     option: string;
@@ -169,7 +175,7 @@ export default function DisplayDetailPage({
         <div className="sticky top-0">
           <div className="w-full aspect-square min-h-[500px]">
             <KakaoMap
-              markers={billboards.map((b: any) => ({
+              markers={billboards.map((b: Billboard) => ({
                 id: b.id,
                 title: b.name,
                 lat: b.lat,
