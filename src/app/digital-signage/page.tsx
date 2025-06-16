@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import ItemCard from '@/src/components/ItemCard';
+import ItemCard from '../../components/itemCard';
 
 const items = [
   {

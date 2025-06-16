@@ -1,7 +1,7 @@
 'use client';
 
-import ProjectRow from '../../components/ProjectRow';
-import { ProjectItem as BaseProjectItem } from '../../components/ProjectRow';
+import ProjectRow from '@/src/components/projectRow';
+import { ProjectItem as BaseProjectItem } from '@/src/components/projectRow';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';

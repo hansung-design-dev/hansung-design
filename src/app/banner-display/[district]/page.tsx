@@ -2,17 +2,17 @@
 import DisplayDetailPage from '@/src/components/displayDetailPage';
 import { useParams } from 'next/navigation';
 import districts from '@/src/mock/district';
-import { billboards } from '@/src/mock/billboards';
+import { bannerBillboards } from '@/src/mock/billboards';
 
 const districtItems = Array(12)
   .fill(null)
   .map((_, index) => ({
     id: index + 1,
-    title: '울림픽대교 남단사거리 앞',
-    subtitle: '(남단 유수지앞)',
+    title: '관악IC 만남의 광장',
+    subtitle: '(관악산입구 건너편)',
     image: '/images/led-display.jpeg',
-    tags: ['LED전자게시대', '방이동'],
-    location: '방이동',
+    tags: ['현수막게시대', '관악구'],
+    location: '관악구',
     status: '진행중',
     spots: index < 4 ? 12 - index * 3 : '-',
   }));
@@ -23,9 +23,9 @@ const dropdownOptions = [
   { id: 3, option: '보기2' },
 ];
 
-const defaultMenuName = 'LED전자게시대';
+const defaultMenuName = '현수막게시대';
 
-export default function LedDisplayPage() {
+export default function BannerDisplayPage() {
   const params = useParams();
   const encodedDistrict = params.district as string;
   const district = decodeURIComponent(encodedDistrict);
@@ -36,8 +36,8 @@ export default function LedDisplayPage() {
       district={district}
       districtObj={districtObj}
       districtItems={districtItems}
-      billboards={billboards.filter(
-        (b) => b.district === district && b.type === 'led'
+      billboards={bannerBillboards.filter(
+        (b) => b.district === district && b.type === 'banner'
       )}
       dropdownOptions={dropdownOptions}
       defaultMenuName={defaultMenuName}

@@ -1,4 +1,4 @@
-import { Button } from './button';
+import { Button } from '../button/button';
 interface CategoryFilterProps {
   selectedCategory: string;
   onCategoryChange: (category: string) => void;

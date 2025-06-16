@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import Nav from '../../../components/Nav';
+import Nav from '../../../components/layouts/nav';
 import CategoryFilter from '@/src/components/ui/categoryFilter';
 import DateLocationFilter from '@/src/components/ui/datelocationfilter';
 import MypageNav from '@/src/components/mypageNav';

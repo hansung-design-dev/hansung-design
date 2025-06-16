@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import ProjectCard from './ProjectCard';
+import ProjectCard from './projectCard';
 
 // Define the project item structure
 export interface ProjectItem {

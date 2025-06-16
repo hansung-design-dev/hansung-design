@@ -1,5 +1,3 @@
-import Image from 'next/image';
-
 const Footer = () => {
   return (
     <footer className="text-gray py-[10rem] bg-gray-1 md:px-[8rem] sm:px-[2rem]">
@@ -29,29 +27,6 @@ const Footer = () => {
               Copyright 2018 (주)한성디자인기획. All Rights
               Reserved.banner114@hanmail.net
             </div>
-          </div>
-          <div className="flex gap-[0.94rem]">
-            <Image
-              src="/svg/mail.svg"
-              alt="logo"
-              className="lg:w-[1.5rem] lg:h-[1.5rem]"
-              width={20}
-              height={20}
-            />
-            <Image
-              src="/svg/instagram.svg"
-              alt="logo"
-              className="lg:w-[1.5rem] lg:h-[1.5rem]"
-              width={20}
-              height={20}
-            />
-            <Image
-              src="/svg/threads.svg"
-              alt="logo"
-              className="lg:w-[1.5rem] lg:h-[1.5rem]"
-              width={20}
-              height={20}
-            />
           </div>
         </div>
       </div>

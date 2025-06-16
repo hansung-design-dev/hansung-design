@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
+import ArrowLeft from '@/src/icons/arrow-left.svg';
+import ArrowRight from '@/src/icons/arrow-right.svg';
 
 interface ListItem {
   id: number;
@@ -29,6 +31,8 @@ interface ItemTableProps {
   onItemSelect?: (id: number, checked: boolean) => void;
 }
 
+const ITEMS_PER_PAGE = 10;
+
 const ItemList: React.FC<ItemTableProps> = ({
   items,
   showHeader = true,
@@ -36,16 +40,23 @@ const ItemList: React.FC<ItemTableProps> = ({
   renderAction,
   onItemSelect,
 }) => {
+  const [page, setPage] = useState(1);
+  const totalPages = Math.ceil(items.length / ITEMS_PER_PAGE);
+  const paginatedItems = items.slice(
+    (page - 1) * ITEMS_PER_PAGE,
+    page * ITEMS_PER_PAGE
+  );
+
   return (
     <>
       {/* ✅ 데스크탑/tablet 이상: table로 표시 */}
       <div className="overflow-x-auto hidden lg:block">
-        <table className="w-full text-left border-t border-gray-200 text-0.875">
+        <table className="w-full  border-collapse border-t border-gray-200 text-0.875">
           {showHeader && (
             <thead>
               <tr className="border-b border-gray-200 h-[3rem] text-gray-500 font-medium">
-                {showCheckbox && <th className="w-10 px-4">no</th>}
-                <th>게시대 명</th>
+                {showCheckbox && <th className="w-10">no</th>}
+                <th className="text-left pl-10">게시대 명</th>
                 <th className="text-center">행정동</th>
                 <th className="text-center">마감여부</th>
                 <th className="text-center">남은수량</th>
@@ -54,7 +65,7 @@ const ItemList: React.FC<ItemTableProps> = ({
             </thead>
           )}
           <tbody>
-            {items.map((item) => (
+            {paginatedItems.map((item) => (
               <tr
                 key={item.id}
                 className="border-b border-gray-200 h-[3.5rem] hover:bg-gray-50"
@@ -69,7 +80,7 @@ const ItemList: React.FC<ItemTableProps> = ({
                     />
                   </td>
                 )}
-                <td className="px-4">
+                <td className="px-4 text-left pl-10">
                   <span className="font-medium text-black">
                     {item.title}
                     {item.subtitle && (
@@ -93,13 +104,21 @@ const ItemList: React.FC<ItemTableProps> = ({
                 )}
               </tr>
             ))}
+            {/* 빈 row로 높이 맞추기 */}
+            {Array.from({ length: ITEMS_PER_PAGE - paginatedItems.length }).map(
+              (_, i) => (
+                <tr key={`empty-${i}`} className="h-[3.5rem]">
+                  <td colSpan={showCheckbox ? 6 : 5} />
+                </tr>
+              )
+            )}
           </tbody>
         </table>
       </div>
 
       {/* ✅ 모바일(sm, md): 카드형으로 표시 */}
       <div className="flex flex-col gap-4 lg:hidden">
-        {items.map((item) => (
+        {paginatedItems.map((item) => (
           <div
             key={item.id}
             className="border border-gray-200 rounded-lg p-4 flex flex-col gap-2"
@@ -132,6 +151,34 @@ const ItemList: React.FC<ItemTableProps> = ({
             {renderAction && <div>{renderAction(item)}</div>}
           </div>
         ))}
+      </div>
+      {/* 페이지네이션 UI */}
+      <div className="flex justify-center items-center gap-1 mt-4 pb-10">
+        <button
+          onClick={() => setPage((p) => Math.max(1, p - 1))}
+          disabled={page === 1}
+          className="w-7 h-7 flex items-center justify-center"
+        >
+          <ArrowLeft className="w-4 h-4 text-gray-14" />
+        </button>
+        {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
+          <button
+            key={num}
+            onClick={() => setPage(num)}
+            className={`w-7 h-7 flex items-center justify-center text-1.25 font-500 rounded ${
+              page === num ? 'text-black' : 'text-gray-14'
+            }`}
+          >
+            {num}
+          </button>
+        ))}
+        <button
+          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+          disabled={page === totalPages}
+          className="w-7 h-7 flex items-center justify-center"
+        >
+          <ArrowRight className="w-4 h-4 text-gray-14" />
+        </button>
       </div>
     </>
   );
