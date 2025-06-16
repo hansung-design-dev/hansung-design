@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Nav from '@/src/components/Nav';
+import Nav from '@/src/components/layouts/nav';
 import MobileMyPage from '@/src/components/mobileMypage';
 import DesktopMyPage from '@/src/components/desktopMypage';
 

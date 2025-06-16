@@ -1,29 +1,29 @@
-// src/components/KakaoMap.tsx
-
 'use client';
 
+import React from 'react';
 import { Map, MapMarker } from 'react-kakao-maps-sdk';
 import useKakaoLoader from './hooks/use-kakao-loader';
 
-export interface MarkerData {
+export interface MarkerType {
   id: number;
   title: string;
   lat: number;
   lng: number;
-  type?: string; // led/banner 등 구분용 (옵션)
+  type: string;
+  isSelected?: boolean;
 }
 
 interface KakaoMapProps {
-  markers: MarkerData[];
-  selectedId: number | null;
+  markers: MarkerType[];
+  selectedIds: number[];
   onSelect: (id: number) => void;
 }
 
-export default function KakaoMap({
+const KakaoMap: React.FC<KakaoMapProps> = ({
   markers,
-  selectedId,
+  selectedIds,
   onSelect,
-}: KakaoMapProps) {
+}) => {
   useKakaoLoader();
 
   const center = markers.length
@@ -37,18 +37,17 @@ export default function KakaoMap({
           key={marker.id}
           position={{ lat: marker.lat, lng: marker.lng }}
           image={{
-            src:
-              selectedId === marker.id
-                ? '/images/pos_sel.png'
-                : '/images/pos.png',
+            src: selectedIds.includes(marker.id)
+              ? '/images/pos_sel.png'
+              : '/images/pos.png',
             size: {
-              width: selectedId === marker.id ? 38 : 27,
-              height: selectedId === marker.id ? 37 : 34,
+              width: selectedIds.includes(marker.id) ? 38 : 27,
+              height: selectedIds.includes(marker.id) ? 37 : 34,
             },
           }}
           onClick={() => onSelect(marker.id)}
         >
-          {selectedId === marker.id && (
+          {selectedIds.includes(marker.id) && (
             <div style={{ padding: 5, fontWeight: 'bold', color: 'blue' }}>
               {marker.title}
             </div>
@@ -57,4 +56,6 @@ export default function KakaoMap({
       ))}
     </Map>
   );
-}
+};
+
+export default KakaoMap;

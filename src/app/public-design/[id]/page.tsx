@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
-import ProjectRow, { ProjectItem } from '@/src/components/ProjectRow';
+import ProjectRow, { ProjectItem } from '@/src/components/projectRow';
 
 // 목데이터: 디자인 구성 이미지 리스트
 const designImages = [

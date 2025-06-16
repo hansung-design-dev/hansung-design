@@ -1,8 +1,7 @@
-// app/layout.tsx
 import type { Metadata } from 'next';
 import './globals.css';
-import Nav from '../components/Nav';
-import Footer from '../components/Footer';
+import Nav from '../components/layouts/nav';
+import Footer from '../components/layouts/footer';
 import ScrollToTopButton from '../components/scrollToTopButton';
 
 // export const API = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_KEY}&autoload=false`;

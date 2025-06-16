@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import DistrictCard from '@/src/components/DistrictCard';
+import DistrictCard from '@/src/components/districtCard';
 
 interface District {
   id: number;
@@ -114,7 +114,11 @@ export default function BannerDisplayPage() {
       <div className=" mx-[4rem] px-4 py-12 sm:mx-[0.5rem] md:mx-[2rem]">
         <div className="grid lg:grid-cols-3 sm:grid-cols-1 gap-[6rem] md:gap-[2rem] ">
           {districts.map((district) => (
-            <DistrictCard key={district.id} district={district} />
+            <DistrictCard
+              key={district.id}
+              district={district}
+              basePath="banner-display"
+            />
           ))}
         </div>
       </div>

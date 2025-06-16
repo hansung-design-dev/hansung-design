@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import Calendar from '@/src/components/Calendar';
+import Calendar from '@/src/components/calendar';
 
 interface DateLocationFilterProps {
   startDate: string;

@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import { Button } from '@/src/components/ui/button';
+import { Button } from '@/src/components/button/button';
 
 export default function Signup() {
   return (
