@@ -1,5 +1,5 @@
 'use client';
-import { Button } from '@/src/components/ui/button';
+import { Button } from '@/src/components/button/button';
 import { motion } from 'framer-motion';
 import Nav from '@/src/components/layouts/nav';
 import Link from 'next/link';

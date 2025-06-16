@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Nav from '../../../components/layouts/nav';
 import MypageNav from '@/src/components/mypageNav';
-import { Button } from '@/src/components/ui/button';
+import { Button } from '@/src/components/button/button';
 import Image from 'next/image';
 import Link from 'next/link';
 export default function UserInfoPage() {

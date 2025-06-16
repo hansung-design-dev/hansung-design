@@ -71,7 +71,7 @@ export default function DropdownMenu({
               <li
                 key={item.id}
                 onClick={() => handleSelect(item)}
-                className="w-full text-center cursor-pointer select-none py-3 hover:bg-blue-50 pl-0 text-1"
+                className="w-full text-center cursor-pointer hover:bg-gray-100 select-none py-3 pl-0 text-1"
               >
                 <span className="">{item.option}</span>
               </li>

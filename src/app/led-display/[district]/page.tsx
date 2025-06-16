@@ -8,6 +8,11 @@ import { useState } from 'react';
 import KakaoMap from '@/src/components/kakaoMap';
 import { billboards } from '@/src/mock/billboards';
 import DropdownMenu from '@/src/components/dropdown';
+import MapPinIcon from '@/src/icons/map-pin.svg';
+import GalleryIcon from '@/src/icons/gallery.svg';
+import ListIcon from '@/src/icons/list.svg';
+import ViewTypeButton from '@/src/components/viewTypeButton';
+import districts from '@/src/mock/district';
 
 const fadeInUp = {
   initial: { y: 60, opacity: 0 },
@@ -42,44 +47,19 @@ const districtItems: DistrictItem[] = Array(12)
     spots: index < 4 ? 12 - index * 3 : '-',
   }));
 
-const ViewTypeButton = ({
-  icon,
-  label,
-  isActive,
-  onClick,
-}: {
-  icon: string;
-  label: string;
-  isActive: boolean;
-  onClick: () => void;
-}) => (
-  <button
-    onClick={onClick}
-    className={`flex items-center gap-2 px-4 py-2 rounded ${
-      isActive ? 'bg-black text-white' : 'text-gray-600'
-    }`}
-  >
-    <Image
-      src={icon}
-      alt={label}
-      width={20}
-      height={20}
-      className={isActive ? 'invert' : ''}
-    />
-    <span className="hidden md:inline">{label}</span>
-  </button>
-);
-
 const dropdownOptions = [
   { id: 1, option: '전체보기' },
   { id: 2, option: '보기1' },
   { id: 3, option: '보기2' },
 ];
 
+const defaultMenuName = 'LED전자게시대';
+
 export default function DistrictPage() {
   const params = useParams();
   const encodedDistrict = params.district as string;
   const district = decodeURIComponent(encodedDistrict);
+  const districtObj = districts.find((d) => d.name === district);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selectedOption, setSelectedOption] = useState<{
     id: number;
@@ -114,7 +94,7 @@ export default function DistrictPage() {
               {item.tags.map((tag, tagIndex) => (
                 <span
                   key={tagIndex}
-                  className="px-2 py-1 bg-gray-100 text-gray-600 text-0.875 rounded"
+                  className="px-2 py-1 bg-black text-white text-0.875 rounded-[5rem]"
                 >
                   {tag}
                 </span>
@@ -199,7 +179,21 @@ export default function DistrictPage() {
     <main className="min-h-screen flex flex-col bg-white">
       <div className="container mx-auto px-4 pt-[7rem]">
         <div className="mb-8">
-          <h2 className="text-2.25 font-900 font-gmarket">{district}</h2>
+          <div>
+            {districtObj && (
+              <Image
+                src={districtObj.icon}
+                alt={districtObj.name}
+                width={38}
+                height={38}
+                className="inline-block align-middle mr-2"
+              />
+            )}
+            <h2 className="text-2.25 font-900 font-gmarket inline-block align-middle">
+              {district}
+            </h2>
+          </div>
+          <div>{selectedOption ? selectedOption.option : defaultMenuName}</div>
           <p className="text-gray-600 mt-4">
             2025년 상반기 신청: <span className="text-red"> 상시모집</span>
           </p>
@@ -217,19 +211,19 @@ export default function DistrictPage() {
         {/* View Type Selector */}
         <div className="flex items-center gap-4 mb-8 border-b border-gray-200 pb-4">
           <ViewTypeButton
-            icon="/svg/map-pin.svg"
+            Icon={MapPinIcon}
             label="지도로 보기"
             isActive={viewType === 'location'}
             onClick={() => setViewType('location')}
           />
           <ViewTypeButton
-            icon="/svg/gallery.svg"
+            Icon={GalleryIcon}
             label="갤러리로 보기"
             isActive={viewType === 'gallery'}
             onClick={() => setViewType('gallery')}
           />
           <ViewTypeButton
-            icon="/svg/list.svg"
+            Icon={ListIcon}
             label="목록으로 보기"
             isActive={viewType === 'list'}
             onClick={() => setViewType('list')}
