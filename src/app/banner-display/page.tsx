@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import DistrictCard from '@/src/components/DistrictCard';
+import DistrictCard from '@/src/components/districtCard';
 
 interface District {
   id: number;

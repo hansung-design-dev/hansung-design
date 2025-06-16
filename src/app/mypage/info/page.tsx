@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Nav from '../../../components/Nav';
+import Nav from '../../../components/layouts/nav';
 import MypageNav from '@/src/components/mypageNav';
 import { Button } from '@/src/components/ui/button';
 import Image from 'next/image';

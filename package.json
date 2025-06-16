@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
     "@supabase/supabase-js": "^2.49.8",
     "@unocss/postcss": "^66.1.0-beta.5",
     "framer-motion": "^12.5.0",

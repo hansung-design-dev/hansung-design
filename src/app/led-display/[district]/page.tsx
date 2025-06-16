@@ -5,8 +5,9 @@ import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
-import KakaoMap from '@/src/components/KakaoMap';
+import KakaoMap from '@/src/components/kakaoMap';
 import { billboards } from '@/src/mock/billboards';
+import DropdownMenu from '@/src/components/dropdown';
 
 const fadeInUp = {
   initial: { y: 60, opacity: 0 },
@@ -69,11 +70,21 @@ const ViewTypeButton = ({
   </button>
 );
 
+const dropdownOptions = [
+  { id: 1, option: '전체보기' },
+  { id: 2, option: '보기1' },
+  { id: 3, option: '보기2' },
+];
+
 export default function DistrictPage() {
   const params = useParams();
   const encodedDistrict = params.district as string;
   const district = decodeURIComponent(encodedDistrict);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedOption, setSelectedOption] = useState<{
+    id: number;
+    option: string;
+  } | null>(null);
 
   const districtBillboards = billboards.filter(
     (b) => b.district === district && b.type === 'led'
@@ -180,6 +191,10 @@ export default function DistrictPage() {
     </div>
   );
 
+  const handleDropdownChange = (item: { id: number; option: string }) => {
+    setSelectedOption(item);
+  };
+
   return (
     <main className="min-h-screen flex flex-col bg-white">
       <div className="container mx-auto px-4 pt-[7rem]">
@@ -220,9 +235,11 @@ export default function DistrictPage() {
             onClick={() => setViewType('list')}
           />
           <div className="ml-auto">
-            <select className="border border-gray-200 rounded-lg px-4 py-2">
-              <option>전체보기</option>
-            </select>
+            <DropdownMenu
+              data={dropdownOptions}
+              onChange={handleDropdownChange}
+              title="전체보기"
+            />
           </div>
         </div>
 

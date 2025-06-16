@@ -1,6 +1,6 @@
-import Nav from '../components/Nav';
+import Nav from '../components/layouts/nav';
 import Section from '../components/Section';
-import FAQ from '../components/FAQ';
+import FAQ from '../components/layouts/faq';
 //import Footer from '../components/Footer';
 
 export default function Home() {
