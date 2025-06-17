@@ -71,7 +71,7 @@ const FAQ = () => {
   } | null>(faqData[1].questions[0]);
 
   return (
-    <section className="py-[5rem] md:py-[10rem] sm:mb-[2rem] bg-[#F5F5F5] rounded-sm mb-0">
+    <section className="py-[5rem] md:py-[10rem] sm:mb-[2rem] bg-[#F5F5F5] rounded-sm lg:mb-0 md:mb-0">
       <div className="lg:px-4 sm:flex sm:flex-col sm:items-center sm:justify-center">
         <h1 className="text-2.25 font-bold mb-8 sm:text-1.7 lg:text-center md:text-left sm:text-center ">
           자주 묻는 질문
