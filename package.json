@@ -12,6 +12,7 @@
     "@heroicons/react": "^2.2.0",
     "@supabase/supabase-js": "^2.49.8",
     "@unocss/postcss": "^66.1.0-beta.5",
+    "clsx": "^2.1.1",
     "framer-motion": "^12.5.0",
     "next": "15.2.2",
     "react": "^18.2.0",

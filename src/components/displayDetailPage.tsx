@@ -8,6 +8,7 @@ import MapPinIcon from '@/src/icons/map-pin.svg';
 import GalleryIcon from '@/src/icons/gallery.svg';
 import ListIcon from '@/src/icons/list.svg';
 import { useState } from 'react';
+import { useCart } from '../contexts/cartContext';
 import {
   District,
   DistrictItem,
@@ -48,15 +49,35 @@ export default function DisplayDetailPage({
     'gallery'
   );
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const { dispatch } = useCart();
 
   const handleDropdownChange = (item: { id: number; option: string }) => {
     setSelectedOption(item);
   };
 
   const handleItemSelect = (id: number) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]
-    );
+    const alreadySelected = selectedIds.includes(id);
+    let newSelectedIds;
+    if (alreadySelected) {
+      newSelectedIds = selectedIds.filter((sid) => sid !== id);
+      dispatch({ type: 'REMOVE_ITEM', id });
+    } else {
+      newSelectedIds = [...selectedIds, id];
+      const item = districtItems.find((item) => item.id === id);
+      if (item) {
+        dispatch({
+          type: 'ADD_ITEM',
+          item: {
+            id: item.id,
+            type: 'banner-display',
+            name: item.title,
+            district: item.location,
+            price: 100000, // 가격 정보가 있다면 여기에 입력
+          },
+        });
+      }
+    }
+    setSelectedIds(newSelectedIds);
   };
 
   const renderGalleryView = () => (

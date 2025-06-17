@@ -91,12 +91,12 @@ export default function Signup() {
           <input
             type="password"
             placeholder="비밀번호를 적어주세요."
-            className="flex-1 bg-transparent outline-none text-1-100"
+            className="flex-1 bg-transparent outline-none text-1-100 "
           />
         </div>
 
         {/* 회원가입 버튼 */}
-        <button className="w-full h-[4rem] bg-white text-black text-1-25-500 rounded border border-gray-200">
+        <button className="w-full h-[4rem] bg-white text-black text-1-25-500 rounded border border-gray-200 border-solid border-gray-14 ">
           회원가입
         </button>
       </div>

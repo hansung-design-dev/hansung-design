@@ -2,10 +2,12 @@ import Image from 'next/image';
 
 export default function Signin() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f5f5f5]">
+    <div className="min-h-screen flex items-center justify-center bg-[#f5f5f5] pt-[5.5rem]">
       <div className="w-[27rem] flex flex-col items-center">
-        <div className="text-2-265-600 mt-12 mb-2">로그인</div>
-        <div className="text-1-400 mb-8">한성에 방문해주셔서 감사합니다.</div>
+        <div className="text-2.265 font-600 mt-12 mb-2">로그인</div>
+        <div className="text-1 font-400 mb-8 text-gray-14">
+          한성에 방문해주셔서 감사합니다.
+        </div>
         {/* 아이디 인풋 */}
         <div className="flex items-center w-full h-[4rem] bg-white rounded mb-3 px-4 border border-gray-200">
           <Image
