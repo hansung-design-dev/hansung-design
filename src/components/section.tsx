@@ -58,13 +58,13 @@ const Section = ({
         initial="initial"
         whileInView="animate"
         viewport={{ once: false, amount: 0.2 }}
-        className={`scroll-area lg:px-[1.25rem] md:px-[2rem] lg:flex flex-col sm:px-[0rem] lg:w-full ${
+        className={`scroll-area lg:px-[1.25rem] md:px-[2rem] lg:flex flex-col sm:px-[0rem] lg:w-full md:w-[80%] ${
           reverse ? 'md:flex-row-reverse text-right' : 'md:flex-row'
         } items-start gap-[2.5rem] sm:gap-[2rem] `}
       >
         <motion.div
           variants={fadeInUp}
-          className={`flex-1 w-full lg:min-w-[50rem] px-[5rem] sm:px-[1rem] sm:min-w-[17rem] md:min-w-[45rem] md:px-[2rem] pt-[2rem] sm:pt-[1rem] md:pt-[5rem] ${
+          className={`flex-1  lg:min-w-[50rem] px-[5rem] sm:px-[1rem] sm:min-w-[17rem] md:min-w-[45rem] md:px-[2rem] pt-[2rem] sm:pt-[1rem] md:pt-[5rem] ${
             reverse ? 'items-end justify-between ' : ''
           }`}
         >

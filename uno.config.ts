@@ -51,6 +51,7 @@ export default defineConfig({
       '0.625': '0.625rem',
     },
     fontWeight: {
+      '900': '900',
       '700': '700',
       '600': '600',
       '500': '500',
