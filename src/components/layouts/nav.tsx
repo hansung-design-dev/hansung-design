@@ -135,7 +135,7 @@ const Nav = ({ className, isbg, TextInvert }: NavProps) => {
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`text-1 transition-colors duration-100  ${getMenuItemStyles(
+                    className={`lg:text-1 md:text-1 sm:text-0.75 transition-colors duration-100  ${getMenuItemStyles(
                       isSelected
                     )}`}
                   >
@@ -177,7 +177,7 @@ const Nav = ({ className, isbg, TextInvert }: NavProps) => {
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`text-1.25 ${
+                    className={`text-1.25  ${
                       pathname === item.href
                         ? 'font-bold text-black'
                         : 'text-gray-600'

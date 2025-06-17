@@ -7,7 +7,7 @@ export default function Home() {
   return (
     <main className="w-full overflow-x-hidden">
       <Nav />
-      <div className="pt-[2rem] sm:pt-[3rem]">
+      <div className="pt-[2rem] sm:pt-[3rem] pb-[2rem]">
         <div className="relative pt-[2rem] ">
           <Image
             src="/images/landing/main-part.png"
@@ -43,7 +43,7 @@ export default function Home() {
           </div>
         </div>
       </div>
-      <div className="sm:pt-12">
+      <div className="sm:pt-12 md:pt-16 pb-[4rem]">
         <Section
           title={
             <div text="display" className="">
