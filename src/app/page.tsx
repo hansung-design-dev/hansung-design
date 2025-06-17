@@ -8,15 +8,15 @@ export default function Home() {
     <main className="w-full overflow-x-hidden">
       <Nav />
       <div className="pt-[2rem] sm:pt-[3rem]">
-        <div className="relative pt-[3rem] ">
+        <div className="relative pt-[2rem] ">
           <Image
             src="/images/landing/main-part.png"
             alt="Screen section image"
             width={1000}
             height={1000}
-            className="w-full h-full object-cover sm:h-[40rem] sm:object-left-bottom"
+            className="w-full h-full object-cover  sm:min-h-[48rem] sm:object-left-bottom"
           />
-          <div className="absolute lg:bottom-[4rem]  md:bottom-[2rem] lg:left-[3rem] sm:left-[2rem] text-white sm:bottom-10">
+          <div className="absolute lg:bottom-[6rem]  md:bottom-[2rem] lg:left-[6rem] sm:left-[2rem] text-white sm:bottom-[6rem]">
             <h1 className="lg:text-3 sm:text-2 font-weight-700 sm:text-2 font-gmarket">
               Moving Smart City
             </h1>
@@ -65,7 +65,7 @@ export default function Home() {
         />
         <Section
           title={
-            <div text="display">
+            <div text="display" className="text-right">
               MOVE ON <br /> THE BANNER
             </div>
           }
@@ -104,7 +104,7 @@ export default function Home() {
         />
         <Section
           title={
-            <div text="display">
+            <div text="display" className="text-right">
               MOVE ON <br /> THE FUTURE
             </div>
           }
@@ -123,7 +123,7 @@ export default function Home() {
           ]}
         />
       </div>
-      <div className="px-4 sm:px-6 md:px-8">
+      <div className="px-0">
         <FAQ />
       </div>
     </main>
