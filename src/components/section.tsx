@@ -69,7 +69,7 @@ const Section = ({
           }`}
         >
           <div
-            className={`flex lg:flex-col gap-[2rem]  md:gap-[2rem] max-w-xl md:pb-3 md:items-start sm:flex-col sm:pb-6 sm:gap-[2.5rem] lg:w-full md:w-full ${
+            className={`flex lg:flex-col gap-[2rem]  md:gap-[2rem] max-w-xl lg:max-w-none md:pb-3 md:items-start sm:flex-col sm:pb-6 sm:gap-[2.5rem] lg:w-full md:w-full ${
               reverse
                 ? 'items-end text-right lg:ml-[12rem] md:ml-auto'
                 : 'items-start text-left mr-[1rem]'
@@ -98,7 +98,7 @@ const Section = ({
                 </motion.div>
                 <motion.div
                   variants={fadeInUp}
-                  className="lg:text-2.25 sm:text-1 md:text-1.75 font-weight-500 text-gray-700 w-full"
+                  className="lg:text-2.25 sm:text-1 md:text-1.75 font-weight-500 text-gray-700 whitespace-nowrap"
                 >
                   {description}
                 </motion.div>
