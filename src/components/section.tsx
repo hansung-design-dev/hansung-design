@@ -52,7 +52,7 @@ const Section = ({
   list,
 }: SectionProps) => {
   return (
-    <section className="lg:h-screen sm:h-screen md:min-h-[50rem] scroll-container sm:pb-[4rem]">
+    <section className="h-screen scroll-container sm:pb-[4rem]">
       <motion.div
         variants={staggerContainer}
         initial="initial"
@@ -90,8 +90,8 @@ const Section = ({
 
                 <motion.div
                   variants={fadeInUp}
-                  className={`lg:text-4.375  font-bold font-gmarket flex flex-col text-center sm:text-left sm:text-1.75 md:text-3 font-weight-700 sm:line-height-[2.25rem] ${
-                    reverse && 'sm:text-right'
+                  className={`lg:text-4.375  font-bold font-gmarket flex flex-col  sm:text-1.75 md:text-3 font-weight-700 sm:line-height-[2.25rem]  ${
+                    reverse ? 'text-right' : 'text-left'
                   }`}
                 >
                   {title}
@@ -120,20 +120,20 @@ const Section = ({
         {/* 이미지와 리스트 */}
         <motion.div
           variants={fadeInUp}
-          className={`flex-1  lg:min-w-[25rem] px-[5rem] sm:px-[1rem] sm:min-w-[17rem] md:min-w-[45rem] md:px-[2rem] pt-[2rem] sm:pt-[1rem] md:pt-[1rem] ${
+          className={`flex-1 lg:min-w-[25rem] px-[5rem] sm:px-[1rem] sm:min-w-[17rem] md:min-w-[45rem] md:px-[2rem] pt-[2rem] sm:pt-[1rem] md:pt-[1rem] ${
             reverse ? ' justify-between ' : ''
           }`}
         >
           <div className={`flex flex-col space-y-6 `}>
             <motion.div
               variants={fadeInUp}
-              className="relative h-64 sm:h-56 md:h-80 "
+              className="relative h-64 sm:h-56 md:h-80 sm:min-w-[23rem]"
             >
               <Image
                 src={imageSrc}
                 alt={imageAlt}
                 fill
-                className="lg:object-cover md:object-contain sm:object-cover"
+                className="object-cover md:object-contain"
               />
             </motion.div>
             <motion.div
@@ -144,7 +144,7 @@ const Section = ({
                 <motion.div
                   key={index}
                   variants={fadeInUp}
-                  className="lg:text-1.125 sm:text-0.875 md:text-1 md:mb-[1rem] lg:line-height-[1.5rem] sm:line-height-[1.3rem] sm:font-weight-500"
+                  className="lg:text-1.125 sm:text-0.75 md:text-1 md:mb-[1rem] lg:line-height-[1.5rem] sm:line-height-[1.3rem] sm:font-weight-500"
                 >
                   {item}
                 </motion.div>
