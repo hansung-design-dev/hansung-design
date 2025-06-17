@@ -135,7 +135,7 @@ const Nav = ({ className, isbg, TextInvert }: NavProps) => {
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`text-1 transition-colors duration-300 ${getMenuItemStyles(
+                    className={`lg:text-1 md:text-1 sm:text-0.75 transition-colors duration-100  ${getMenuItemStyles(
                       isSelected
                     )}`}
                   >
@@ -162,24 +162,59 @@ const Nav = ({ className, isbg, TextInvert }: NavProps) => {
           </div>
         </div>
 
-        {/* ✅ 모바일 드롭다운 메뉴 */}
+        {/* ✅ 모바일 드로어 메뉴 (sm에서만) */}
         {isOpen && (
-          <div className="md:hidden px-4">
-            <div className="flex flex-col space-y-4 bg-white p-4 py-8 gap-4">
-              {menuItems.map((item) => (
+          <div className="fixed inset-0 z-50 flex md:hidden">
+            {/* 왼쪽 2/3 메뉴 */}
+            <div className="w-2/3 max-w-[320px] bg-white h-full flex flex-col p-6 animate-slide-in-left ">
+              {/* 로고 */}
+              <Link href="/" className="mb-8">
+                <Image src="/svg/logo.svg" alt="로고" width={120} height={32} />
+              </Link>
+              {/* 메뉴 리스트 */}
+              <nav className="flex flex-col sm:gap-12">
+                {menuItems.map((item) => (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={`text-1.25  ${
+                      pathname === item.href
+                        ? 'font-bold text-black'
+                        : 'text-gray-600'
+                    }`}
+                    onClick={() => setIsOpen(false)}
+                  >
+                    {item.name}
+                  </Link>
+                ))}
                 <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`text-1.25 ${
-                    pathname === item.href
-                      ? 'font-bold text-black'
-                      : 'text-gray-600'
-                  }`}
+                  href="/about"
+                  className="text-1.25 text-gray-600"
                   onClick={() => setIsOpen(false)}
                 >
-                  {item.name}
+                  회사소개
                 </Link>
-              ))}
+                <Link
+                  href="/support"
+                  className="text-1.25 text-gray-600"
+                  onClick={() => setIsOpen(false)}
+                >
+                  고객지원
+                </Link>
+              </nav>
+            </div>
+            {/* 오른쪽 1/3 오버레이 + X버튼 */}
+            <div
+              className="flex-1 bg-black/60 h-full relative"
+              onClick={() => setIsOpen(false)}
+            >
+              <button
+                className="absolute top-6 right-6"
+                onClick={() => setIsOpen(false)}
+                aria-label="메뉴 닫기"
+              >
+                <Image src="/svg/x.svg" alt="닫기" width={36} height={36} />
+              </button>
             </div>
           </div>
         )}

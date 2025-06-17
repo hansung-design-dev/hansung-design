@@ -31,6 +31,7 @@ export default defineConfig({
       '4.375': '4.375rem',
       '3.75': '3.75rem',
       '3.5': '3.5rem',
+      '3.25': '3.25rem',
       '3': '3rem',
       '2.375': '2.375rem',
       '2.25': '2.25rem',
@@ -51,10 +52,12 @@ export default defineConfig({
     },
     fontWeight: {
       '700': '700',
+      '600': '600',
       '500': '500',
       '400': '400',
       '300': '300',
       '200': '200',
+      '100': '100',
     },
     lineHeight: {
       '1.125': '1.125rem',
@@ -93,6 +96,11 @@ export default defineConfig({
     },
   },
   rules: [
+    [
+      'animate-slide-in-left',
+      { animation: 'slide-in-left 0.3s cubic-bezier(.4,0,.2,1) both' },
+    ],
+
     // lineHeight 유틸리티 추가 (lh-body, lh-display 등 사용 가능)
     [
       /^line-height-(\w+)$/,
