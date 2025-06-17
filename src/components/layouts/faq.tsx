@@ -71,14 +71,25 @@ const FAQ = () => {
   } | null>(faqData[1].questions[0]);
 
   return (
-    <section className="py-[5rem] md:py-[10rem] sm:mb-[2rem] bg-[#F5F5F5] rounded-sm mb-0">
-      <div className="lg:px-4 sm:flex sm:flex-col sm:items-center sm:justify-center">
-        <h1 className="text-2.25 font-bold mb-8 sm:text-1.7 lg:text-center md:text-left sm:text-center ">
-          자주 묻는 질문
-        </h1>
-        <div className="w-[60rem] md:w-[40rem] sm:w-full sm:items-center flex flex-col md:flex-row gap-[2rem] md:gap-[5rem]">
+    <section className="py-[5rem] md:py-[10rem] sm:mb-[2rem] bg-[#F5F5F5] rounded-sm lg:mb-0 md:mb-0">
+      <div className="lg:px-4 sm:flex sm:flex-col items-center sm:justify-center lg:gap-[3rem] sm:gap-[2rem]">
+        <div className=" flex flex-col items-center gap-[1rem] ">
+          <div className="text-2.5 sm:text-1.7 font-weight-900">FAQ </div>
+          <div className="text-2.5 sm:text-1.7 font-weight-900">
+            더 궁금한 점이 있으신가요?
+          </div>
+        </div>
+        <div className="mb-8 flex flex-col items-center gap-[1rem] text-[#767676] ">
+          <div className="text-1.75 sm:text-1.25 font-weight-700">
+            자주 물어보신 질문들만
+          </div>
+          <div className="text-1.75  sm:text-1.25 font-weight-700">
+            모아 둔 FAQ를 참고 해 주세요.
+          </div>
+        </div>
+        <div className="lg:w-[60rem] items-center flex flex-col md:flex-row gap-[2rem] md:gap-[5rem] justify-center min-h-[30rem]">
           {/* Categories and Questions - Full width on mobile, 1/3 on desktop */}
-          <div className="w-full md:w-full sm:w-[18rem]">
+          <div className="w-[30rem] md:w-full bg-white rounded-lg shadow p-[1.5rem] md:p-[2.5rem] sm:w-[16rem] sm:px-[1rem] ">
             {faqData.map((item) => (
               <div
                 key={item.category}
@@ -173,7 +184,7 @@ const FAQ = () => {
           </div>
 
           {/* Answer Section - Full width on mobile, 2/3 on desktop */}
-          <div className="w-full md:w-full bg-white rounded-lg shadow p-[1.5rem] md:p-[2.5rem] sm:w-[16rem] sm:px-[1rem] min-h-[250px]">
+          <div className="lg:w-[23rem] md:w-full bg-white rounded-lg shadow p-[1.5rem] md:p-[2.5rem] sm:w-[16rem] sm:px-[1rem] lg:max-h-[27rem] lg:h-[32rem]">
             {selectedQuestion && (
               <div>
                 <h2 className="text-1.25 md:text-1.125 font-600 mb-[1.5rem]">
