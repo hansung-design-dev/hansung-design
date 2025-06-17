@@ -102,7 +102,7 @@ const Nav = ({ className, isbg, TextInvert }: NavProps) => {
 
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 z-50 border-b border-gray-200 lg:py-[1.5rem] sm:px-[1.5rem] ${
+      className={`fixed top-0 left-0 right-0 z-50 border-b border-gray-200 lg:py-[1.5rem] sm:px-[1.5rem] bg-white ${
         isbg || isScrolled ? 'bg-white' : 'bg-transparent'
       } ${className}`}
     >
