@@ -1,6 +1,5 @@
 'use client';
 import { motion } from 'framer-motion';
-import Nav from '@/src/components/layouts/nav';
 import Link from 'next/link';
 import { useCart } from '@/src/contexts/cartContext';
 import { ledItems, bannerItems } from '@/src/mock/billboards';
