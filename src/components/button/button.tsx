@@ -45,7 +45,7 @@ export function Button({
     sm: 'w-[7.5rem] px-3 py-2 text-sm',
     md: 'px-4 py-2 h-[3rem]',
     lg: 'w-[15rem] px-6 h-[3rem] text-1',
-    cart: '', // cart는 variant에서 크기 지정
+    cart: 'w-full md:w-[20rem] sm:w-1/2 h-[4.25rem]  md:h-[3.5rem] sm:text-1 sm:font-weight-700', // cart는 variant에서 크기 지정
   };
 
   return (
