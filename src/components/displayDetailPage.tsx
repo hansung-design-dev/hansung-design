@@ -285,7 +285,7 @@ export default function DisplayDetailPage({
               showHeader
               showCheckbox
               selectedIds={selectedIds}
-              onItemSelect={(id, checked) => handleItemSelect(id)}
+              onItemSelect={(id) => handleItemSelect(id)}
             />
           ) : (
             renderGalleryView()
