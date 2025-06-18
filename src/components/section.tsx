@@ -52,31 +52,29 @@ const Section = ({
   list,
 }: SectionProps) => {
   return (
-    <section className="lg:h-screen sm:h-screen md:min-h-[50rem] w-full flex items-center justify-center scroll-container sm:px-[0rem] sm:w-full md:w-full md:px-0 lg:px-[2rem] sm:pb-[4rem]">
+    <section className="h-screen scroll-container sm:pb-[4rem]">
       <motion.div
         variants={staggerContainer}
         initial="initial"
         whileInView="animate"
         viewport={{ once: false, amount: 0.2 }}
-        className={`scroll-area lg:px-[1.25rem] md:px-[2rem] lg:flex flex-col sm:px-[0rem] lg:w-full md:w-[80%] ${
-          reverse ? 'md:flex-row-reverse text-right' : 'md:flex-row'
-        } items-start gap-[2.5rem] sm:gap-[2rem] `}
+        className={`flex items-center justify-center lg:flex-row sm:flex-col md:flex-col ${
+          reverse && 'lg:flex-row-reverse md:flex-row-reverse text-right '
+        }  `}
       >
         <motion.div
           variants={fadeInUp}
-          className={`flex-1  lg:min-w-[50rem] px-[5rem] sm:px-[1rem] sm:min-w-[17rem] md:min-w-[45rem] md:px-[2rem] pt-[2rem] sm:pt-[1rem] md:pt-[5rem] ${
-            reverse ? 'items-end justify-between ' : ''
+          className={`flex-1  lg:min-w-[25rem] px-[5rem] sm:px-[1rem] sm:min-w-[22rem] md:min-w-[45rem] md:px-[2rem] pt-[2rem] sm:pt-[1rem] md:pt-[5rem] ${
+            reverse && 'items-end justify-between '
           }`}
         >
           <div
-            className={`flex lg:flex-col gap-[2rem]  md:gap-[2rem] max-w-xl lg:max-w-none md:pb-3 md:items-start sm:flex-col sm:pb-6 sm:gap-[2.5rem] lg:w-full md:w-full ${
-              reverse
-                ? 'items-end text-right lg:ml-[12rem] md:ml-auto'
-                : 'items-start text-left mr-[1rem]'
+            className={`flex lg:flex-col gap-[2rem] md:gap-[2rem] md:pb-3 md:items-start sm:flex-col sm:pb-6 sm:gap-[2.5rem] items-start text-left mr-[1rem] ${
+              reverse && 'items-end text-right md:items-end '
             }`}
           >
             <div
-              className={`flex flex-col lg:gap-[5rem] sm:gap-[3rem] md:gap-[1.25rem] ${
+              className={`flex flex-col lg:gap-[5rem] sm:gap-[2rem] md:gap-[1.25rem] ${
                 reverse ? 'items-end text-right' : 'items-start text-left'
               }`}
             >
@@ -92,7 +90,9 @@ const Section = ({
 
                 <motion.div
                   variants={fadeInUp}
-                  className="lg:text-4.375  font-bold font-gmarket flex flex-col text-center sm:text-left sm:text-1.75 md:text-3 font-weight-700 sm:line-height-[2.25rem] "
+                  className={`lg:text-4.375  font-bold font-gmarket flex flex-col  sm:text-1.75 md:text-3 font-weight-700 sm:line-height-[2.25rem]  ${
+                    reverse ? 'text-right' : 'text-left'
+                  }`}
                 >
                   {title}
                 </motion.div>
@@ -117,28 +117,34 @@ const Section = ({
             </div>
           </div>
         </motion.div>
-        <motion.div variants={fadeInUp} className="flex-1 w-full  ">
+        {/* 이미지와 리스트 */}
+        <motion.div
+          variants={fadeInUp}
+          className={`flex-1 lg:min-w-[25rem] px-[5rem] sm:px-[1rem] sm:min-w-[17rem] md:min-w-[45rem] md:px-[2rem] pt-[2rem] sm:pt-[1rem] md:pt-[1rem] ${
+            reverse ? ' justify-between ' : ''
+          }`}
+        >
           <div className={`flex flex-col space-y-6 `}>
             <motion.div
               variants={fadeInUp}
-              className="relative w-[52rem] sm:w-full md:w-full h-64 sm:h-56 md:h-80 "
+              className="relative h-64 sm:h-56 md:h-80 sm:min-w-[23rem]"
             >
               <Image
                 src={imageSrc}
                 alt={imageAlt}
                 fill
-                className="object-cover "
+                className="object-cover md:object-contain"
               />
             </motion.div>
             <motion.div
               variants={fadeInUp}
-              className={`sm:w-full pl-5 sm:pl-0 text-start`}
+              className={`sm:w-full sm:pl-0 text-start lg:ml-[2rem]`}
             >
               {list.map((item, index) => (
                 <motion.div
                   key={index}
                   variants={fadeInUp}
-                  className="lg:text-1.125 sm:text-0.875 md:text-1 md:mb-[1rem] lg:line-height-[1.5rem] sm:line-height-[1.3rem] sm:font-weight-500"
+                  className="lg:text-1.125 sm:text-0.75 md:text-1 md:mb-[1rem] lg:line-height-[1.5rem] sm:line-height-[1.3rem] sm:font-weight-500"
                 >
                   {item}
                 </motion.div>

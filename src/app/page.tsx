@@ -5,7 +5,7 @@ import Image from 'next/image';
 
 export default function Home() {
   return (
-    <main className="w-full overflow-x-hidden">
+    <main className="w-full ">
       <Nav />
       <div className="pt-[2rem] sm:pt-[3rem] pb-[2rem]">
         <div className="relative pt-[2rem] ">
@@ -20,18 +20,18 @@ export default function Home() {
             <h1 className="lg:text-3 sm:text-2 font-weight-700 sm:text-2 font-gmarket">
               Moving Smart City
             </h1>
-            <h2 className="lg:text-1.5 lg:line-height-8 sm:text-1 md:text-1.5 font-weight-500 sm:font-weight-300 sm:line-height-6">
+            <h2 className="lg:text-1.5 lg:line-height-8 sm:text-1 md:text-1.125 md:line-height-6 font-weight-500 sm:font-weight-300 sm:line-height-6">
               한성디자인은 사람을 위한 편리하고 안전한 공간, <br /> 도시를
-              혁신하는 기술, 환경을 고려한 지속 가능한{' '}
+              혁신하는 기술, 환경을 고려한 지속 가능한
               <br className="lg:hidden md:hidden" />
               디자인을 제공합니다.
             </h2>
-            <p className="text-1 font-400 line-height-6 sm:text-0.75 sm:font-300 sm:line-height-5 sm:hidden lg:block md:block">
+            <p className="lg:text-1 md:text-0.875 lg:font-400 md:font-200 lg:line-height-6 md:line-height-5 sm:text-0.75 sm:font-300 sm:line-height-5 sm:hidden lg:block md:block">
               디지털 광고와 공공디자인이 결합된 혁신적인 솔루션을 통해{' '}
               <br className="lg:hidden md:hidden sm:inline" />
               공간을 효율적으로 활용하고,
-              <br className="sm:hidden lg:inline" /> 브랜드 가치를 높이며,{' '}
-              <br className="lg:hidden md:hidden" />
+              <br className="sm:hidden lg:inline md:inline" /> 브랜드 가치를
+              높이며, <br className="lg:hidden md:hidden" />
               도시를 더욱 스마트하게 변화시킵니다.
               <br />
               사람과 공간, 도시와 환경이 조화를 이루는 미래형 디자인,{' '}
@@ -65,7 +65,7 @@ export default function Home() {
         />
         <Section
           title={
-            <div text="display" className="text-right">
+            <div text="display">
               MOVE ON <br /> THE BANNER
             </div>
           }
@@ -104,7 +104,7 @@ export default function Home() {
         />
         <Section
           title={
-            <div text="display" className="text-right">
+            <div text="display">
               MOVE ON <br /> THE FUTURE
             </div>
           }
