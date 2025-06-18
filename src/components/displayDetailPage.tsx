@@ -284,9 +284,8 @@ export default function DisplayDetailPage({
               items={districtItems}
               showHeader
               showCheckbox
-              onItemSelect={(id, checked) =>
-                console.log(`Item ${id} selected: ${checked}`)
-              }
+              selectedIds={selectedIds}
+              onItemSelect={(id) => handleItemSelect(id)}
             />
           ) : (
             renderGalleryView()
