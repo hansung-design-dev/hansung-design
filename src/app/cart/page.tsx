@@ -1,10 +1,10 @@
 'use client';
 import { motion } from 'framer-motion';
+import Nav from '@/src/components/layouts/nav';
 import Link from 'next/link';
 import { useCart } from '@/src/contexts/cartContext';
 import { ledItems, bannerItems } from '@/src/mock/billboards';
 import { Button } from '@/src/components/button/button';
-import { useState } from 'react';
 
 const fadeInUp = {
   initial: { y: 60, opacity: 0 },
@@ -17,13 +17,9 @@ const fadeInUp = {
 
 export default function Cart() {
   const { cart } = useCart();
-  const [checkedIds, setCheckedIds] = useState<string[]>(
-    cart.map((item) => String(item.id))
-  );
 
   const allItems = [...ledItems, ...bannerItems];
   const checkedTotal = cart.reduce((total, item) => {
-    if (!checkedIds.includes(String(item.id))) return total;
     const found = allItems.find((ai) => ai.id === String(item.id));
     return total + (found?.price || 0);
   }, 0);
@@ -57,6 +53,7 @@ export default function Cart() {
         variants={fadeInUp}
         className="px-4 py-20"
       >
+        <Nav variant="default" className="bg-white" />
         {/* Layout: Items Left, Summary Right */}
         <div className="w-full flex flex-col lg:flex-row gap-8">
           {/* Left: Cart Items */}
