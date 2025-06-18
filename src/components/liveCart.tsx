@@ -1,11 +1,17 @@
 import { useCart } from '../contexts/cartContext';
 import { Button } from './button/button';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 
 export default function LiveCart() {
   const { cart, dispatch } = useCart();
+  const router = useRouter();
 
   if (cart.length === 0) return null;
+
+  const handleCartClick = () => {
+    router.push('/cart');
+  };
 
   return (
     <div className="fixed bottom-0 left-0 w-full bg-white shadow-lg z-50 flex flex-col">
@@ -55,7 +61,13 @@ export default function LiveCart() {
 
         {/* 장바구니 버튼 */}
         <div className="lg:w-[27rem]  flex lg:flex-col md:flex-col sm:flex-row justify-center items-center p-6 sm:p-4 gap-2">
-          <Button size="cart" variant="outlinedGray" color="gray" className="">
+          <Button
+            size="cart"
+            variant="outlinedBlack"
+            color="black"
+            className=""
+            onClick={handleCartClick}
+          >
             장바구니 담기
           </Button>
           <Button size="cart" variant="filledBlack" color="black" className="">

@@ -3,6 +3,9 @@ import { Button } from '@/src/components/button/button';
 import { motion } from 'framer-motion';
 import Nav from '@/src/components/layouts/nav';
 import Link from 'next/link';
+import { useCart } from '@/src/contexts/cartContext';
+import { billboards, bannerBillboards } from '@/src/mock/billboards';
+import type { CartItem } from '@/src/contexts/cartContext';
 
 const fadeInUp = {
   initial: { y: 60, opacity: 0 },
@@ -14,43 +17,86 @@ const fadeInUp = {
 };
 
 export default function Cart() {
+  const { cart } = useCart();
+
+  // Helper to get full info for each cart item
+  function getFullInfo(item: CartItem) {
+    if (item.type === 'led-display') {
+      const found = billboards.find((b) => b.id === item.id);
+      return found
+        ? {
+            ...item,
+            neighborhood: found.neighborhood,
+            location: found.district,
+          }
+        : { ...item, neighborhood: '-', location: '-' };
+    } else if (item.type === 'banner-display') {
+      const found = bannerBillboards.find((b) => b.id === item.id);
+      return found
+        ? {
+            ...item,
+            neighborhood: found.neighborhood,
+            location: found.district,
+          }
+        : { ...item, neighborhood: '-', location: '-' };
+    }
+    return { ...item, neighborhood: '-', location: '-' };
+  }
+
+  const cartWithInfo = cart.map(getFullInfo);
+  const totalPrice = cartWithInfo.reduce(
+    (sum, item) => sum + (item.price || 0),
+    0
+  );
+
   return (
     <main className="pt-[5.5rem] bg-gray-100 min-h-screen lg:px-[10rem]">
       <motion.div
         initial="initial"
         animate="animate"
         variants={fadeInUp}
-        className="container mx-auto px-4 py-20"
+        className="px-4 py-20"
       >
         <Nav variant="default" className="bg-white" />
         {/* Layout: Items Left, Summary Right */}
-        <div className="flex flex-col lg:flex-row gap-8">
+        <div className="w-full flex flex-col lg:flex-row gap-8">
           {/* Left: Cart Items */}
-          <div className="flex-1 space-y-6">
-            {[1, 2].map((groupIdx) => (
-              <div key={groupIdx} className="bg-white p-6 rounded-lg shadow-md">
-                <div className="flex items-center gap-2 mb-4 border-b-solid border-black border-b-[3px] pb-4">
-                  <input
-                    type="checkbox"
-                    className="mt-1 w-[1.75rem] h-[1.75rem] border border-solid border-gray-9 border-[0.2rem] rounded-[0.25rem]"
-                  />
-                  <h2 className="pt-1 text-1.25 font-700">현수막 게시대</h2>
-                </div>
-
-                <div className="border-t border-gray-300 pt-4 space-y-4">
-                  {[1, 2].map((itemIdx) => (
-                    <div
-                      key={itemIdx}
-                      className=" rounded-lg p-4 flex justify-between items-start"
-                    >
+          <div className="flex-1 space-y-6 w-full">
+            {cartWithInfo.length === 0 ? (
+              <div className="bg-white p-6 rounded-lg shadow-md text-center text-gray-500">
+                장바구니가 비어 있습니다.
+              </div>
+            ) : (
+              cartWithInfo.map((item) => (
+                <div
+                  key={item.id}
+                  className="bg-white p-6 rounded-lg shadow-md"
+                >
+                  <div className="flex items-center gap-2 mb-4 border-b-solid border-black border-b-[3px] pb-4">
+                    <input
+                      type="checkbox"
+                      className="mt-1 w-[1.75rem] h-[1.75rem] border border-solid border-gray-9 border-[0.2rem] rounded-[0.25rem]"
+                      checked
+                      readOnly
+                    />
+                    <h2 className="pt-1 text-1.25 font-700">
+                      {item.type === 'led-display'
+                        ? 'LED 전자게시대'
+                        : '현수막 게시대'}
+                    </h2>
+                  </div>
+                  <div className="border-t border-gray-300 pt-4 space-y-4">
+                    <div className="rounded-lg p-4 flex justify-between items-start">
                       <div className="flex justify-between items-center w-full border border-solid border-gray-8 px-[1.5rem] rounded-[0.25rem]">
                         <div>
                           <h3 className="font-semibold mb-1">등록명</h3>
-                          <p>고객이름</p>
-                          <p>고객전화번호</p>
-                          <p>이메일</p>
+                          <p>{item.name}</p>
+                          <p>
+                            {item.neighborhood} / {item.location}
+                          </p>
+                          <p>-</p>
+                          <p>-</p>
                         </div>
-
                         <Button
                           variant="ghost"
                           className="bg-gray-4 h-[2.5rem]"
@@ -59,16 +105,15 @@ export default function Cart() {
                         </Button>
                       </div>
                     </div>
-                  ))}
-
-                  <ul className="text-0.875 text-gray-7 mt-2 list-disc list-inside line-height-[1.25rem]">
-                    <li>작업이 진행 된 후 환불이 불가한 상품입니다.</li>
-                    <li>설 명절로 인해 2.1부터 진행됩니다.</li>
-                    <li>기타 안내 사항이 들어가는 부분</li>
-                  </ul>
+                    <ul className="text-0.875 text-gray-7 mt-2 list-disc list-inside line-height-[1.25rem]">
+                      <li>작업이 진행 된 후 환불이 불가한 상품입니다.</li>
+                      <li>설 명절로 인해 2.1부터 진행됩니다.</li>
+                      <li>기타 안내 사항이 들어가는 부분</li>
+                    </ul>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
 
           {/* Right: Summary & Terms */}
@@ -80,11 +125,11 @@ export default function Cart() {
               <div className="flex flex-col gap-[0.88rem] text-1 font-500 text-gray-2">
                 <div className="flex justify-between py-1 ">
                   <span>주문금액</span>
-                  <span>1,350,000원</span>
+                  <span>{totalPrice.toLocaleString()}원</span>
                 </div>
                 <div className="flex justify-between py-1">
                   <span>기본할인금액</span>
-                  <span>-100,000원</span>
+                  <span>-0원</span>
                 </div>
                 <div className="flex justify-between py-1">
                   <span>쿠폰할인금액</span>
@@ -98,7 +143,8 @@ export default function Cart() {
               <div className="flex justify-between items-center mt-4 border-t-solid border-gray-1 border-t-[2px] pt-7">
                 <span className="text-1.25 font-900">최종 결제 금액</span>
                 <span className="text-1.875  font-900">
-                  1,250,000 <span className="text-1 font-400">원</span>
+                  {totalPrice.toLocaleString()}{' '}
+                  <span className="text-1 font-400">원</span>
                 </span>
               </div>
             </div>

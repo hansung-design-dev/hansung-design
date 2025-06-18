@@ -88,7 +88,7 @@ const FAQ = () => {
             모아 둔 FAQ를 참고 해 주세요.
           </div>
         </div>
-        <div className="lg:w-[60rem] items-center flex flex-col md:flex-row gap-[2rem] md:gap-[1rem] justify-center min-h-[30rem] md:min-w-[40rem] md:px-[2rem]">
+        <div className="lg:w-[60rem] items-start flex flex-col md:flex-row gap-[2rem] md:gap-[1rem] justify-center min-h-[30rem] md:min-w-[40rem] md:px-[2rem]">
           {/* 질문파트 */}
           <div className="w-[30rem] md:w-[80%] bg-white rounded-lg shadow p-[1.5rem] md:p-[2.5rem] sm:w-[16rem] sm:px-[1rem] ">
             {faqData.map((item) => (

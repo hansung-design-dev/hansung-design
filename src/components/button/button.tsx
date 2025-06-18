@@ -8,7 +8,8 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
     | 'ghost'
     | 'outlineGray'
     | 'filledBlack'
-    | 'outlinedGray';
+    | 'outlinedGray'
+    | 'outlinedBlack';
   size?: 'sm' | 'md' | 'lg' | 'cart';
   Isborder?: boolean;
   className?: string;
@@ -40,6 +41,8 @@ export function Button({
       'w-[27rem] h-[4.2rem] rounded-[0.625rem] text-white bg-black font-bold text-1.25',
     outlinedGray:
       'w-[27rem] h-[4.2rem] rounded-[0.625rem] border-solid border-[0.1rem] border-gray-14 text-gray-14 font-bold text-1.25 bg-white',
+    outlinedBlack:
+      'w-[27rem] h-[4.2rem] rounded-[0.625rem] border-solid border-[0.1rem] border-black text-black font-bold text-1.25 bg-white',
   };
   const sizes = {
     sm: 'w-[7.5rem] px-3 py-2 text-sm',
