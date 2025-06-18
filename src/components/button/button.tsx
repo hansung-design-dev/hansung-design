@@ -8,7 +8,8 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
     | 'ghost'
     | 'outlineGray'
     | 'filledBlack'
-    | 'outlinedGray';
+    | 'outlinedGray'
+    | 'outlinedBlack';
   size?: 'sm' | 'md' | 'lg' | 'cart';
   Isborder?: boolean;
   className?: string;
@@ -30,7 +31,7 @@ export function Button({
     outline:
       'w-[7.5rem] py-[0.3125rem] px-[1rem] border border-[#000] text-gray-800 rounded-full border-[0.1q]',
     outlineGray:
-      'py-[0.3125rem] px-[1rem] border border-[#B8B8B8] text-[#7D7D7D] rounded-full border-[0.1q]',
+      'py-[0.3125rem] px-[1rem] border-solid border-[#B8B8B8] text-[#7D7D7D] rounded-full border-[0.1q]',
     ghost: `rounded-[0.625rem] text-[#7D7D7D] shadow-none ${
       Isborder
         ? 'border-[#B8B8B8] border border-[0.1rem] border-solid'
@@ -40,6 +41,8 @@ export function Button({
       'w-[27rem] h-[4.2rem] rounded-[0.625rem] text-white bg-black font-bold text-1.25',
     outlinedGray:
       'w-[27rem] h-[4.2rem] rounded-[0.625rem] border-solid border-[0.1rem] border-gray-14 text-gray-14 font-bold text-1.25 bg-white',
+    outlinedBlack:
+      'w-[27rem] h-[4.2rem] rounded-[0.625rem] border-solid border-[0.1rem] border-black text-black font-bold text-1.25 bg-white',
   };
   const sizes = {
     sm: 'w-[7.5rem] px-3 py-2 text-sm',
