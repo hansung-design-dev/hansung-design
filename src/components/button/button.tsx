@@ -31,7 +31,7 @@ export function Button({
     outline:
       'w-[7.5rem] py-[0.3125rem] px-[1rem] border border-[#000] text-gray-800 rounded-full border-[0.1q]',
     outlineGray:
-      'py-[0.3125rem] px-[1rem] border border-[#B8B8B8] text-[#7D7D7D] rounded-full border-[0.1q]',
+      'py-[0.3125rem] px-[1rem] border-solid border-[#B8B8B8] text-[#7D7D7D] rounded-full border-[0.1q]',
     ghost: `rounded-[0.625rem] text-[#7D7D7D] shadow-none ${
       Isborder
         ? 'border-[#B8B8B8] border border-[0.1rem] border-solid'

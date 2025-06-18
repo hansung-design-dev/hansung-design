@@ -4,48 +4,8 @@ import Nav from '@/src/components/layouts/nav';
 import Link from 'next/link';
 import { useCart } from '@/src/contexts/cartContext';
 import { ledItems, bannerItems } from '@/src/mock/billboards';
-import { useMemo } from 'react';
-import type { CartItem } from '@/src/contexts/cartContext';
-
-interface DisplayItem {
-  id: string;
-  type: 'led-display' | 'banner-display';
-  title: string;
-  location: string;
-  image: string;
-  slots: number;
-  price: number;
-}
-
-// 1. cart를 구+타입별로 그룹핑, 그 안에서 동+게시대명별로 그룹핑
-const groupCart = (cart: CartItem[]) => {
-  const allItems = [...ledItems, ...bannerItems];
-  cart.forEach((item) => {
-    const found = allItems.find((ai) => ai.id === String(item.id));
-    console.log('cart item:', item, 'matched allItems:', found);
-  });
-  const grouped: Record<
-    string,
-    Record<string, { display: DisplayItem; slots: CartItem[] }>
-  > = {};
-
-  cart.forEach((item) => {
-    const display = allItems.find(
-      (d) => d.id === String(item.id)
-    ) as DisplayItem;
-    if (!display) return;
-    const [gu, dong] = display.location.split(' ');
-    const typeLabel =
-      display.type === 'led-display' ? 'LED전자게시대' : '현수막게시대';
-    const groupKey = `${gu} ${typeLabel}`;
-    const displayKey = `${dong} ${typeLabel}`;
-    if (!grouped[groupKey]) grouped[groupKey] = {};
-    if (!grouped[groupKey][displayKey])
-      grouped[groupKey][displayKey] = { display, slots: [] };
-    grouped[groupKey][displayKey].slots.push(item);
-  });
-  return grouped;
-};
+import { Button } from '@/src/components/button/button';
+import { useState } from 'react';
 
 const fadeInUp = {
   initial: { y: 60, opacity: 0 },
@@ -58,12 +18,21 @@ const fadeInUp = {
 
 export default function Cart() {
   const { cart } = useCart();
-  const groupedCart = useMemo(() => groupCart(cart), [cart]);
+  const [checkedIds, setCheckedIds] = useState<string[]>(
+    cart.map((item) => String(item.id))
+  );
+
+  const allItems = [...ledItems, ...bannerItems];
+  const checkedTotal = cart.reduce((total, item) => {
+    if (!checkedIds.includes(String(item.id))) return total;
+    const found = allItems.find((ai) => ai.id === String(item.id));
+    return total + (found?.price || 0);
+  }, 0);
 
   return (
     <main className="pt-[5.5rem] bg-gray-100 min-h-screen lg:px-[10rem]">
       {/* 디버깅용: cart 배열 단순 출력 */}
-      <div className="bg-yellow-100 p-4 mb-4 rounded">
+      {/* <div className="bg-yellow-100 p-4 mb-4 rounded">
         <h2 className="font-bold mb-2">[디버깅] 현재 장바구니(cart) 배열</h2>
         <ul className="list-disc list-inside">
           {cart.map((item) => {
@@ -82,7 +51,7 @@ export default function Cart() {
             );
           })}
         </ul>
-      </div>
+      </div> */}
       <motion.div
         initial="initial"
         animate="animate"
@@ -93,91 +62,61 @@ export default function Cart() {
         {/* Layout: Items Left, Summary Right */}
         <div className="w-full flex flex-col lg:flex-row gap-8">
           {/* Left: Cart Items */}
-          <div className="flex-1 space-y-6 w-full">
-            {cart.length === 0 ? (
-              <div className="bg-white p-6 rounded-lg shadow-md text-center text-gray-500">
-                장바구니가 비어 있습니다.
-              </div>
-            ) : (
-              <>
-                {/* 구+타입별 그룹핑 */}
-                {Object.entries(groupedCart).map(([groupKey, displays]) => (
-                  <div key={groupKey} className="mb-10">
-                    <div className="border border-dashed border-blue-400 rounded p-2 mb-4">
-                      <h2 className="text-xl font-bold text-blue-700">
-                        {groupKey}
-                      </h2>
-                    </div>
-                    <div className="space-y-6">
-                      {/* 동+게시대명별 카드 */}
-                      {Object.entries(displays).map(
-                        ([displayKey, { display, slots }]) => (
-                          <div
-                            key={displayKey}
-                            className="border border-dashed border-blue-400 rounded p-4 bg-white"
-                          >
-                            <div className="flex items-center mb-4">
-                              <input
-                                type="checkbox"
-                                checked
-                                readOnly
-                                className="mr-2"
-                              />
-                              <span className="font-semibold">등록명</span>
-                              <span className="ml-2">{displayKey}</span>
-                              <button className="ml-auto px-3 py-1 border rounded text-sm">
-                                주문수정
-                              </button>
-                            </div>
-                            {/* 슬롯(면) 정보 */}
-                            <div className="space-y-4">
-                              {slots.map((slot, idx) => (
-                                <div
-                                  key={slot.id + '-' + idx}
-                                  className="bg-gray-50 rounded p-4 flex flex-col md:flex-row md:items-center md:justify-between"
-                                >
-                                  <div>
-                                    <div>고객이름</div>
-                                    <div>고객전화번호</div>
-                                    <div>이메일</div>
-                                  </div>
-                                  <div className="mt-2 md:mt-0">
-                                    <span className="mr-2">
-                                      {display.title}
-                                    </span>
-                                    <span className="font-bold mr-2">
-                                      (
-                                      {display.type === 'led-display'
-                                        ? 'LED'
-                                        : '배너'}
-                                      )
-                                    </span>
-                                    <span className="mr-2 text-gray-500">
-                                      {display.location}
-                                    </span>
-                                    <span className="mr-2">
-                                      {display.price.toLocaleString()}원
-                                    </span>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                            {/* 안내문구 */}
-                            <ul className="text-sm text-gray-7 mt-2 list-disc list-inside">
-                              <li>
-                                작업이 진행 된 후 환불이 불가한 상품입니다.
-                              </li>
-                              <li>설 명절로 인해 2.1부터 진행됩니다.</li>
-                              <li>기타 안내 사항이 들어가는 부분</li>
-                            </ul>
-                          </div>
-                        )
-                      )}
+          <div className="flex-1 space-y-6">
+            {cart.map((item) => {
+              const found = allItems.find(
+                (ai) => ai.id === 'c247d1fd-55a0-47b5-9713-a95ec1f8e04d'
+              );
+              if (!found) return null;
+              return (
+                <div
+                  key={item.id}
+                  className="bg-white p-6 rounded-lg shadow-md"
+                >
+                  {/* 타입 표시 */}
+                  <div className="flex items-center gap-2 mb-4 border-b-solid border-black border-b-[3px] pb-4">
+                    <input
+                      type="checkbox"
+                      checked={checkedIds.includes(String(item.id))}
+                      onChange={() => {
+                        setCheckedIds((prev) =>
+                          prev.includes(String(item.id))
+                            ? prev.filter((id) => id !== String(item.id))
+                            : [...prev, String(item.id)]
+                        );
+                      }}
+                      className="mt-1 w-[1.75rem] h-[1.75rem] border-solid border-gray-9 border-[0.2rem] rounded-[0.25rem]"
+                    />
+                    <h2 className="pt-1 text-1.25 font-700">
+                      {found.type === 'led-display'
+                        ? 'LED 전자게시대'
+                        : '현수막 게시대'}
+                    </h2>
+                  </div>
+                  {/* 등록명 및 고객 정보 */}
+                  <div className="border-t border-gray-300 pt-4 space-y-4">
+                    <div className="rounded-lg p-4 flex justify-between items-start border border-solid border-gray-8 px-[1.5rem]">
+                      <div>
+                        <h3 className="font-semibold mb-1">{found.title}</h3>
+                        <p>{found.price}원</p>
+                        <p>홍길동</p>
+                        <p>010-0000-0000</p>
+                        <p>hong@gmail.com</p>
+                      </div>
+                      <Button variant="ghost" className="bg-gray-4 h-[2.5rem]">
+                        주문수정
+                      </Button>
                     </div>
                   </div>
-                ))}
-              </>
-            )}
+                  {/* 안내문구 */}
+                  <ul className="text-0.875 text-gray-7 mt-2 list-disc list-inside line-height-[1.25rem]">
+                    <li>작업이 진행 된 후 환불이 불가한 상품입니다.</li>
+                    <li>설 명절로 인해 2.1부터 진행됩니다.</li>
+                    <li>기타 안내 사항이 들어가는 부분</li>
+                  </ul>
+                </div>
+              );
+            })}
           </div>
 
           {/* Right: Summary & Terms (기존 결제/요약 UI 그대로) */}
@@ -189,17 +128,7 @@ export default function Cart() {
               <div className="flex flex-col gap-[0.88rem] text-1 font-500 text-gray-2">
                 <div className="flex justify-between py-1 ">
                   <span>주문금액</span>
-                  <span>
-                    {cart
-                      .reduce((total: number, item: CartItem) => {
-                        const displayItem = [...ledItems, ...bannerItems].find(
-                          (di) => di.id === String(item.id)
-                        ) as DisplayItem;
-                        return total + (displayItem?.price || 0);
-                      }, 0)
-                      .toLocaleString()}
-                    원
-                  </span>
+                  <span>{checkedTotal.toLocaleString()}원</span>
                 </div>
                 <div className="flex justify-between py-1">
                   <span>기본할인금액</span>
@@ -217,15 +146,7 @@ export default function Cart() {
               <div className="flex justify-between items-center mt-4 border-t-solid border-gray-1 border-t-[2px] pt-7">
                 <span className="text-1.25 font-900">최종 결제 금액</span>
                 <span className="text-1.875  font-900">
-                  {cart
-                    .reduce((total: number, item: CartItem) => {
-                      const displayItem = [...ledItems, ...bannerItems].find(
-                        (di) => di.id === String(item.id)
-                      ) as DisplayItem;
-                      return total + (displayItem?.price || 0);
-                    }, 0)
-                    .toLocaleString()}
-                  <span className="text-1 font-400">원</span>
+                  {checkedTotal.toLocaleString()}원
                 </span>
               </div>
             </div>
