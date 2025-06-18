@@ -2,7 +2,7 @@
 import DisplayDetailPage from '@/src/components/displayDetailPage';
 import { useParams } from 'next/navigation';
 import districts from '@/src/mock/district';
-import { bannerBillboards } from '@/src/mock/billboards';
+import { bannerItems } from '@/src/mock/billboards';
 
 const districtItems = Array(12)
   .fill(null)
@@ -36,9 +36,21 @@ export default function BannerDisplayPage() {
       district={district}
       districtObj={districtObj}
       districtItems={districtItems}
-      billboards={bannerBillboards.filter(
-        (b) => b.district === district && b.type === 'banner'
-      )}
+      billboards={bannerItems
+        .filter((b) => b.location.split(' ')[0] === district)
+        .map((item) => ({
+          id: Number(item.id),
+          type: 'banner',
+          district: item.location.split(' ')[0],
+          name: item.title,
+          neighborhood: item.location.split(' ')[1],
+          period: '상시',
+          price: item.price.toString(),
+          size: `${item.width}x${item.height}`,
+          faces: item.slots,
+          lat: 37.5665, // 실제 좌표로 교체 가능
+          lng: 126.978,
+        }))}
       dropdownOptions={dropdownOptions}
       defaultMenuName={defaultMenuName}
     />

@@ -2,7 +2,8 @@
 import DisplayDetailPage from '@/src/components/displayDetailPage';
 import { useParams } from 'next/navigation';
 import districts from '@/src/mock/district';
-import { billboards } from '@/src/mock/billboards';
+import { ledItems } from '@/src/mock/billboards';
+import type { Billboard } from '@/src/types/displaydetail';
 
 const districtItems = Array(12)
   .fill(null)
@@ -36,9 +37,23 @@ export default function LedDisplayPage() {
       district={district}
       districtObj={districtObj}
       districtItems={districtItems}
-      billboards={billboards.filter(
-        (b) => b.district === district && b.type === 'led'
-      )}
+      billboards={ledItems
+        .filter((b) => b.location.split(' ')[0] === district)
+        .map(
+          (item): Billboard => ({
+            id: Number(item.id),
+            type: 'led',
+            district: item.location.split(' ')[0],
+            name: item.title,
+            neighborhood: item.location.split(' ')[1],
+            period: '상시',
+            price: item.price.toString(),
+            size: `${item.width}x${item.height}`,
+            faces: item.slots,
+            lat: 37.5665, // Default coordinates
+            lng: 126.978,
+          })
+        )}
       dropdownOptions={dropdownOptions}
       defaultMenuName={defaultMenuName}
     />

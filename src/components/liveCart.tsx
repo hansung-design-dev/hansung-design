@@ -68,7 +68,7 @@ export default function LiveCart() {
             className=""
             onClick={handleCartClick}
           >
-            장바구니 담기
+            장바구니로 가기
           </Button>
           <Button size="cart" variant="filledBlack" color="black" className="">
             게시대 바로 신청하기
