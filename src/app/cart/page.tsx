@@ -58,65 +58,52 @@ export default function Cart() {
         variants={fadeInUp}
         className="px-4 py-20"
       >
-        <Nav variant="default" className="bg-white" />
         {/* Layout: Items Left, Summary Right */}
         <div className="w-full flex flex-col lg:flex-row gap-8">
           {/* Left: Cart Items */}
           <div className="flex-1 space-y-6">
-            {cart.map((item) => {
-              const found = allItems.find(
-                (ai) => ai.id === 'c247d1fd-55a0-47b5-9713-a95ec1f8e04d'
-              );
-              if (!found) return null;
-              return (
-                <div
-                  key={item.id}
-                  className="bg-white p-6 rounded-lg shadow-md"
-                >
-                  {/* 타입 표시 */}
-                  <div className="flex items-center gap-2 mb-4 border-b-solid border-black border-b-[3px] pb-4">
-                    <input
-                      type="checkbox"
-                      checked={checkedIds.includes(String(item.id))}
-                      onChange={() => {
-                        setCheckedIds((prev) =>
-                          prev.includes(String(item.id))
-                            ? prev.filter((id) => id !== String(item.id))
-                            : [...prev, String(item.id)]
-                        );
-                      }}
-                      className="mt-1 w-[1.75rem] h-[1.75rem] border-solid border-gray-9 border-[0.2rem] rounded-[0.25rem]"
-                    />
-                    <h2 className="pt-1 text-1.25 font-700">
-                      {found.type === 'led-display'
-                        ? 'LED 전자게시대'
-                        : '현수막 게시대'}
-                    </h2>
-                  </div>
-                  {/* 등록명 및 고객 정보 */}
-                  <div className="border-t border-gray-300 pt-4 space-y-4">
-                    <div className="rounded-lg p-4 flex justify-between items-start border border-solid border-gray-8 px-[1.5rem]">
-                      <div>
-                        <h3 className="font-semibold mb-1">{found.title}</h3>
-                        <p>{found.price}원</p>
-                        <p>홍길동</p>
-                        <p>010-0000-0000</p>
-                        <p>hong@gmail.com</p>
+            {[1, 2].map((groupIdx) => (
+              <div key={groupIdx} className="bg-white p-6 rounded-lg shadow-md">
+                <div className="flex items-center gap-2 mb-4 border-b-solid border-black border-b-[3px] pb-4">
+                  <input
+                    type="checkbox"
+                    className="mt-1 w-[1.75rem] h-[1.75rem]  border-solid border-gray-9 border-[0.2rem] rounded-[0.25rem]"
+                  />
+                  <h2 className="pt-1 text-1.25 font-700">현수막 게시대</h2>
+                </div>
+
+                <div className="border-t border-gray-300 pt-4 space-y-4">
+                  {[1, 2].map((itemIdx) => (
+                    <div
+                      key={itemIdx}
+                      className=" rounded-lg p-4 flex justify-between items-start"
+                    >
+                      <div className="flex justify-between items-center w-full border border-solid border-gray-8 px-[1.5rem] rounded-[0.25rem]">
+                        <div>
+                          <h3 className="font-semibold mb-1">등록명</h3>
+                          <p>고객이름</p>
+                          <p>고객전화번호</p>
+                          <p>이메일</p>
+                        </div>
+
+                        <Button
+                          variant="ghost"
+                          className="bg-gray-4 h-[2.5rem]"
+                        >
+                          주문수정
+                        </Button>
                       </div>
-                      <Button variant="ghost" className="bg-gray-4 h-[2.5rem]">
-                        주문수정
-                      </Button>
                     </div>
-                  </div>
-                  {/* 안내문구 */}
+                  ))}
+
                   <ul className="text-0.875 text-gray-7 mt-2 list-disc list-inside line-height-[1.25rem]">
                     <li>작업이 진행 된 후 환불이 불가한 상품입니다.</li>
                     <li>설 명절로 인해 2.1부터 진행됩니다.</li>
                     <li>기타 안내 사항이 들어가는 부분</li>
                   </ul>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
 
           {/* Right: Summary & Terms (기존 결제/요약 UI 그대로) */}

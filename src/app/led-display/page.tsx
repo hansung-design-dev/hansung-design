@@ -29,8 +29,8 @@ export default function LEDDisplayPage() {
         </div>
       </section>
 
-      <div className=" mx-[4rem] px-4 py-12 sm:mx-[0.5rem] md:mx-[2rem]">
-        <div className="grid lg:grid-cols-3 sm:grid-cols-1 gap-[6rem] md:gap-[2rem] ">
+      <div className="flex items-center justify-center mx-[4rem] px-4 py-8 sm:mx-[0.5rem] md:mx-[2rem]">
+        <div className="container grid lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-1 lg:gap-4 md:gap-[2rem] sm:gap-[2rem] ">
           {districts.map((district) => (
             <DistrictCard key={district.id} district={district} />
           ))}
