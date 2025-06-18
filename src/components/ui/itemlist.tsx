@@ -29,6 +29,7 @@ interface ItemTableProps {
   showCheckbox?: boolean;
   renderAction?: (item: ListItem) => React.ReactNode;
   onItemSelect?: (id: number, checked: boolean) => void;
+  selectedIds?: number[];
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -39,6 +40,7 @@ const ItemList: React.FC<ItemTableProps> = ({
   showCheckbox = false,
   renderAction,
   onItemSelect,
+  selectedIds = [],
 }) => {
   const [page, setPage] = useState(1);
   const totalPages = Math.ceil(items.length / ITEMS_PER_PAGE);
@@ -74,6 +76,7 @@ const ItemList: React.FC<ItemTableProps> = ({
                   <td className="text-center px-4">
                     <input
                       type="checkbox"
+                      checked={selectedIds.includes(item.id)}
                       onChange={(e) =>
                         onItemSelect?.(item.id, e.target.checked)
                       }
@@ -127,6 +130,7 @@ const ItemList: React.FC<ItemTableProps> = ({
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
+                  checked={selectedIds.includes(item.id)}
                   onChange={(e) => onItemSelect?.(item.id, e.target.checked)}
                 />
                 <div className="font-medium text-black">{item.title}</div>
