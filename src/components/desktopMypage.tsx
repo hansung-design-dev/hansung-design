@@ -158,14 +158,14 @@ export default function DesktopMyPage({
                         </div>
                       </div>
                       <div className="mt-4 text-[#181717] flex flex-col gap-4">
-                        <div className="lg:text-1 md:text-1.5 font-400">
+                        <div className="lg:text-0.875 md:text-0.875 font-400">
                           {product.title} <br />
                           {product.subtitle}
                         </div>
 
-                        <div className="text-right lg:text-1.875 md:text-2 font-pretendard font-900">
+                        <div className="text-right lg:text-1.5 md:text-1 font-pretendard font-900">
                           {product.price.toLocaleString()}
-                          <span className="lg:text-1.5 md:text-1.25 font-400">
+                          <span className="lg:text-1.25 md:text-1.25 font-400">
                             원
                           </span>
                         </div>

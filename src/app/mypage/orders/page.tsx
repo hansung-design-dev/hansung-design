@@ -6,7 +6,7 @@ import Nav from '../../../components/layouts/nav';
 import CategoryFilter from '@/src/components/ui/categoryFilter';
 import DateLocationFilter from '@/src/components/ui/datelocationfilter';
 import MypageNav from '@/src/components/mypageNav';
-import ItemList from '@/src/components/ui/itemlist';
+import OrderItemList from '@/src/components/orderItemList';
 import Image from 'next/image';
 import Link from 'next/link';
 const mockOrders = [
@@ -160,7 +160,7 @@ export default function OrdersPage() {
                 onCategoryChange={setSelectedCategory}
               />
 
-              <ItemList items={filteredOrders} />
+              <OrderItemList items={filteredOrders} />
             </div>
           </div>
         </div>
