@@ -9,7 +9,7 @@ export default function ScrollToTopButton() {
   };
 
   return (
-    <div className="fixed bottom-1/4 right-6 transform translate-y-1/2 flex flex-col gap-[1rem] z-50">
+    <div className="fixed lg:bottom-1/4 sm:bottom-1/2 right-6 transform translate-y-1/2 flex flex-col gap-[1rem] z-50">
       <Link
         href="/mypage/customer-service"
         className={`rounded-full transition-opacity duration-300 bg-white shadow-lg p-2 border-none flex items-center justify-center`}
