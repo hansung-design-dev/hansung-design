@@ -9,10 +9,12 @@ import LiveCartClientWrapper from '../components/liveCartClientWrapper';
 // export const API = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_KEY}&autoload=false`;
 
 export const metadata: Metadata = {
-  title: '한성기업',
-  description: '한성기업 공식 웹사이트',
+  title: 'Hansung-admin',
+  description: 'Handung-design admin',
+  icons: {
+    icon: '/images/hansung-logo.png',
+  },
 };
-
 export default function RootLayout({
   children,
 }: {
