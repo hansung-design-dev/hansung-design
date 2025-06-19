@@ -85,9 +85,9 @@ export default function PublicDesignDetailPage() {
   // (더 많은 데이터가 있다면 패턴 반복)
 
   return (
-    <main className="min-h-screen bg-white py-[6rem] px-[8rem] ">
+    <main className="min-h-screen bg-white py-[6rem] lg:px-[8rem] sm:px-2 md:px-2">
       {/* 상단: ProjectRow 그대로 사용 */}
-      <section className=" mx-auto mb-12">
+      <section className=" mx-auto mb-12  ">
         <ProjectRow
           projects={rowProjects}
           largeCardFirst={largeCardFirst}

@@ -44,6 +44,12 @@ export const regionGuData = [
     name: '용산구',
     logo_image: '/images/district-icon/7.yongsan-gu.png',
   },
+  {
+    id: uuidv4(),
+    code: '1800000000',
+    name: '강북구',
+    logo_image: '/images/district-icon/7.yongsan-gu.png',
+  },
 ];
 
 // Region Dong (동) Data
