@@ -40,7 +40,7 @@ export default function OrdersPage() {
       <Nav variant="default" />
 
       <div className="bg-[#F1F1F1]">
-        <div className="container px-4 pt-[7rem] pb-[10rem] max-w-[1200px]">
+        <div className="container px-4 pt-[7rem] pb-[10rem] lg:max-w-[1000px]">
           <div className="flex gap-8">
             {/* Left Navigation */}
             <MypageNav

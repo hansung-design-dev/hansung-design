@@ -107,11 +107,11 @@ export default function OrdersPage() {
       : mockOrders.filter((order) => order.category === selectedCategory);
 
   return (
-    <main className="min-h-screen flex flex-col bg-white">
-      <Nav variant="default" className="bg-white" />
+    <main className="min-h-screen flex flex-col bg-white w-full">
+      <Nav variant="default" className="bg-white sm:px-0" />
 
       <div className="flex justify-center bg-[#F1F1F1] md:bg-[#F1F1F1] sm:bg-white">
-        <div className="container px-4 pt-[7rem] pb-[10rem] max-w-[1200px]">
+        <div className="container px-4 pt-[7rem] pb-[10rem] lg:max-w-[1000px]">
           <div className="flex flex-col md:flex-row gap-6 md:gap-8">
             {/* Left Navigation */}
             <MypageNav
@@ -122,7 +122,7 @@ export default function OrdersPage() {
 
             {/* Main Content */}
             <div className="flex-1 bg-white lg:p-8 md:p-8 sm:p-0 rounded-lg w-full">
-              <div className="sm:flex sm:flex-col sm:gap-2 sm:px-12">
+              <div className="sm:flex sm:flex-col sm:gap-2 sm:px-0">
                 <Link href="/mypage" className="md:hidden lg:hidden sm:inline">
                   <Image
                     src="/svg/arrow-left.svg"
