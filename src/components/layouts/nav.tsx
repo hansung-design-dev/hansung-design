@@ -194,13 +194,6 @@ const Nav = ({ className = 'sm:px-[1.5rem]', isbg, TextInvert }: NavProps) => {
                 >
                   회사소개
                 </Link>
-                <Link
-                  href="/support"
-                  className="text-1.25 text-gray-600"
-                  onClick={() => setIsOpen(false)}
-                >
-                  고객지원
-                </Link>
               </nav>
             </div>
             {/* 오른쪽 1/3 오버레이 + X버튼 */}
