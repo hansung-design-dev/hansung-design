@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import ArrowLeft from '@/src/icons/arrow-left.svg';
 import ArrowRight from '@/src/icons/arrow-right.svg';
-import { useRouter } from 'next/navigation';
 
 interface ListItem {
   id: number;
@@ -31,6 +30,7 @@ interface ItemTableProps {
   renderAction?: (item: ListItem) => React.ReactNode;
   onItemSelect?: (id: number, checked: boolean) => void;
   selectedIds?: number[];
+  enableRowClick?: boolean;
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -42,9 +42,9 @@ const ItemList: React.FC<ItemTableProps> = ({
   renderAction,
   onItemSelect,
   selectedIds = [],
+  enableRowClick = true,
 }) => {
   const [page, setPage] = useState(1);
-  const router = useRouter();
   const totalPages = Math.ceil(items.length / ITEMS_PER_PAGE);
   const paginatedItems = items.slice(
     (page - 1) * ITEMS_PER_PAGE,
@@ -52,7 +52,17 @@ const ItemList: React.FC<ItemTableProps> = ({
   );
 
   const handleItemClick = (itemId: number) => {
-    router.push(`/mypage/orders/item/${itemId}`);
+    if (onItemSelect) {
+      const isSelected = selectedIds.includes(itemId);
+      onItemSelect(itemId, !isSelected);
+    }
+  };
+
+  const handleRowClick = (e: React.MouseEvent, itemId: number) => {
+    if ((e.target as HTMLElement).tagName === 'INPUT') {
+      return;
+    }
+    handleItemClick(itemId);
   };
 
   return (
@@ -76,11 +86,16 @@ const ItemList: React.FC<ItemTableProps> = ({
             {paginatedItems.map((item) => (
               <tr
                 key={item.id}
-                className="border-b border-gray-200 h-[3.5rem] hover:bg-gray-50 cursor-pointer"
-                onClick={() => handleItemClick(item.id)}
+                className={`border-b border-gray-200 h-[3.5rem] hover:bg-gray-50 ${
+                  enableRowClick ? 'cursor-pointer' : ''
+                }`}
+                onClick={(e) => handleRowClick(e, item.id)}
               >
                 {showCheckbox && (
-                  <td className="text-center px-4">
+                  <td
+                    className="text-center px-4"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <input
                       type="checkbox"
                       checked={selectedIds.includes(item.id)}
@@ -131,11 +146,20 @@ const ItemList: React.FC<ItemTableProps> = ({
         {paginatedItems.map((item) => (
           <div
             key={item.id}
-            className="border-solid border-gray-200 rounded-lg p-12 flex flex-col gap-2 shadow-sm cursor-pointer hover:bg-gray-50"
-            onClick={() => handleItemClick(item.id)}
+            className={`border-solid border-gray-200 rounded-lg p-12 flex flex-col gap-2 shadow-sm hover:bg-gray-50 ${
+              enableRowClick ? 'cursor-pointer' : ''
+            }`}
+            onClick={() => {
+              if (enableRowClick && !showCheckbox) {
+                handleItemClick(item.id);
+              }
+            }}
           >
             {showCheckbox && (
-              <div className="flex items-center gap-2">
+              <div
+                className="flex items-center gap-2"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <input
                   type="checkbox"
                   checked={selectedIds.includes(item.id)}

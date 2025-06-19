@@ -55,10 +55,14 @@ export default function DisplayDetailPage({
     setSelectedOption(item);
   };
 
-  const handleItemSelect = (id: number) => {
+  const handleItemSelect = (id: number, checked?: boolean) => {
     const alreadySelected = selectedIds.includes(id);
     let newSelectedIds;
-    if (alreadySelected) {
+
+    // checked 파라미터가 있으면 그 값을 사용, 없으면 기존 로직 사용
+    const shouldSelect = checked !== undefined ? checked : !alreadySelected;
+
+    if (!shouldSelect) {
       newSelectedIds = selectedIds.filter((sid) => sid !== id);
       dispatch({ type: 'REMOVE_ITEM', id });
     } else {
@@ -286,6 +290,7 @@ export default function DisplayDetailPage({
               showCheckbox
               selectedIds={selectedIds}
               onItemSelect={(id) => handleItemSelect(id)}
+              enableRowClick={false}
             />
           ) : (
             renderGalleryView()

@@ -10,7 +10,16 @@ export default function LiveCart() {
   if (cart.length === 0) return null;
 
   const handleCartClick = () => {
+    // 라이브 장바구니를 일반 장바구니로 이동
+    dispatch({ type: 'CLEAR_CART' });
+    // 장바구니 페이지로 이동
     router.push('/cart');
+  };
+
+  const handleDirectApply = () => {
+    // 바로 신청하기 로직
+    console.log('바로 신청하기:', cart);
+    // 여기에 신청 로직 구현
   };
 
   return (
@@ -70,7 +79,13 @@ export default function LiveCart() {
           >
             장바구니로 가기
           </Button>
-          <Button size="cart" variant="filledBlack" color="black" className="">
+          <Button
+            size="cart"
+            variant="filledBlack"
+            color="black"
+            className=""
+            onClick={handleDirectApply}
+          >
             게시대 바로 신청하기
           </Button>
         </div>
