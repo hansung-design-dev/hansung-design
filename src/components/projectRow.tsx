@@ -46,8 +46,10 @@ export default function ProjectRow({
   // Render the row with large card first
   if (largeCardFirst) {
     return (
-      <div className={`grid grid-cols-3 gap-6 ${className} h-[32rem]`}>
-        <div className="col-span-2 h-[32rem]">
+      <div
+        className={`grid grid-cols-3 gap-6 ${className} lg:h-[32rem] sm:h-[23rem]`}
+      >
+        <div className="col-span-2 lg:h-[32rem] sm:h-[23rem]">
           <ProjectCard
             imageSrc={projects[0].imageSrc}
             title={projects[0].title}
@@ -61,7 +63,7 @@ export default function ProjectRow({
         <div
           className={`col-span-1 ${
             splitSmallSection ? 'grid grid-rows-2 gap-6' : ''
-          } h-[32rem]`}
+          } lg:h-[32rem] sm:h-[23rem]`}
         >
           {splitSmallSection ? (
             <>
@@ -72,7 +74,7 @@ export default function ProjectRow({
                 description={
                   showTitleOnLargeOnly ? '' : projects[1].description
                 }
-                className="h-full"
+                className="lg:h-full sm:h-[23rem]"
               />
               <ProjectCard
                 imageSrc={projects[2].imageSrc}
@@ -81,7 +83,7 @@ export default function ProjectRow({
                 description={
                   showTitleOnLargeOnly ? '' : projects[2].description
                 }
-                className="h-full"
+                className="lg:h-full sm:h-[23rem]"
               />
             </>
           ) : (
@@ -91,7 +93,7 @@ export default function ProjectRow({
               subtitle={showTitleOnLargeOnly ? '' : projects[1].subtitle}
               description={showTitleOnLargeOnly ? '' : projects[1].description}
               gridRowSpan
-              className="h-full"
+              className="lg:h-full sm:h-[23rem]"
             />
           )}
         </div>
@@ -101,11 +103,13 @@ export default function ProjectRow({
 
   // Render the row with small card first
   return (
-    <div className={`grid grid-cols-3 gap-6 ${className} h-[32rem]`}>
+    <div
+      className={`grid grid-cols-3 gap-6 ${className} lg:h-[32rem] sm:h-[23rem]`}
+    >
       <div
         className={`col-span-1 ${
           splitSmallSection ? 'grid grid-rows-2 gap-6' : ''
-        } h-[32rem]`}
+        } lg:h-[32rem] sm:h-[23rem]`}
       >
         {splitSmallSection ? (
           <>
@@ -136,7 +140,7 @@ export default function ProjectRow({
         )}
       </div>
 
-      <div className="col-span-2 h-[32rem]">
+      <div className="col-span-2 lg:h-[32rem] sm:h-[23rem]">
         <ProjectCard
           imageSrc={
             splitSmallSection ? projects[2].imageSrc : projects[1].imageSrc

@@ -12,7 +12,7 @@ export default function LEDDisplayPage() {
         <h1 className="text-3.75 sm:text-2.5 font-[700] mb-4 font-gmarket">
           LED 전자게시대
         </h1>
-        <p className="text-1.25 font-[500] text-gray-600">
+        <p className="text-1.25 font-[500] sm:text-1 text-gray-600">
           한 번의 광고, 수천 번의 노출
         </p>
       </section>

@@ -68,7 +68,7 @@ export default function DigitalSignagePage() {
         <h1 className="text-3.75 sm:text-2.5 font-[700] mb-4 font-gmarket">
           디지털사이니지
         </h1>
-        <p className="text-1.25 font-[500] text-gray-600">
+        <p className="text-1.25 font-[500] text-gray-600 sm:text-1">
           광고를 혁신하다, 공간을 스마트하게
         </p>
       </section>

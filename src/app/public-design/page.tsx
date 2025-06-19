@@ -67,7 +67,7 @@ export default function PublicDesignPage() {
         <h1 className="text-3.75 sm:text-2.5 font-[700] mb-4 font-gmarket">
           공공디자인
         </h1>
-        <p className="text-1.25 font-[500] text-gray-600">
+        <p className="lg:text-1.25 font-[500] text-gray-600 sm:text-1">
           도시의 일상에서 만나는 시간과 공간의 경험 디자인
         </p>
       </section>
@@ -79,15 +79,15 @@ export default function PublicDesignPage() {
             src="/images/public-degin-page-main.png"
             alt="공공디자인 메인 이미지"
             fill
-            className="object-cover"
+            className="object-cover sm:object-left-top"
             priority
           />
         </div>
       </section>
 
       {/* Projects Grid Section for lg/md */}
-      <section className="mx-auto px-10 pb-[12rem] sm:hidden lg:block md:block">
-        <div className="flex flex-col gap-[12rem]">
+      <section className="mx-auto lg:px-10 md:px-10 sm:px-4 lg:pb-[12rem] md:pb-[12rem] sm:pb-[1rem]">
+        <div className="flex flex-col lg:gap-[12rem] md:gap-[12rem] sm:gap-[1rem] ">
           {rows.map((rowProjects, idx) => (
             <div key={idx} className="h-[400px] cursor-pointer relative">
               <Link href={`/public-design/${rowProjects[0].id}`}>
@@ -104,7 +104,7 @@ export default function PublicDesignPage() {
       </section>
 
       {/* Mobile Version */}
-      <section className="px-4 pb-[12rem] lg:hidden md:hidden">
+      <section className="px-4 pb-[12rem] lg:hidden md:hidden sm:hidden">
         <div className="flex flex-col gap-8">
           {allProjects.map((project, index) => (
             <div

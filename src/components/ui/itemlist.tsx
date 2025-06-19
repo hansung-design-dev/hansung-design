@@ -15,7 +15,7 @@ const statusColorMap: Record<string, string> = {
   추가결제: 'text-[#D61919]',
   파일오류: 'text-[#D61919]',
   송출중: 'text-[#109251]',
-  진행중: 'text-[#000000]',
+  진행중: 'text-[#109251]',
   마감: 'text-[#7D7D7D]',
 };
 
@@ -120,11 +120,11 @@ const ItemList: React.FC<ItemTableProps> = ({
       </div>
 
       {/* ✅ 모바일(sm, md): 카드형으로 표시 */}
-      <div className="flex flex-col gap-4 lg:hidden">
+      <div className="flex flex-col gap-4 lg:hidden items-center ">
         {paginatedItems.map((item) => (
           <div
             key={item.id}
-            className="border border-gray-200 rounded-lg p-4 flex flex-col gap-2"
+            className="border-solid border-gray-200 rounded-lg p-12 flex flex-col gap-2 shadow-sm"
           >
             {showCheckbox && (
               <div className="flex items-center gap-2">
@@ -144,13 +144,17 @@ const ItemList: React.FC<ItemTableProps> = ({
               <div className="text-gray-500">{item.subtitle}</div>
             )}
             <div className="text-0.875">행정동: {item.location}</div>
-            <div
-              className={`text-0.875 ${getStatusClass(
-                item.status
-              )} font-medium`}
-            >
-              상태: {item.status}
+            <div className="text-0.875">
+              상태:&nbsp;
+              <span
+                className={`text-0.875 ${getStatusClass(
+                  item.status
+                )} font-medium`}
+              >
+                {item.status}
+              </span>
             </div>
+
             <div className="text-0.875">남은 수량: {item.quantity ?? '-'}</div>
             {renderAction && <div>{renderAction(item)}</div>}
           </div>

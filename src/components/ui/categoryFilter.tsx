@@ -10,25 +10,25 @@ const CategoryFilter = ({
 }: CategoryFilterProps) => {
   const categories = [
     { id: 'all', name: '전체' },
-    { id: 'pending', name: '대기중' },
-    { id: 'inProgress', name: '진행중' },
-    { id: 'completed', name: '완료' },
-    { id: 'cancelled', name: '취소' },
+    { id: '공공디자인', name: '공공디자인' },
+    { id: 'LED전자게시대', name: 'LED전자게시대' },
+    { id: '현수막', name: '현수막' },
+    { id: '디지털사이니지', name: '디지털사이니지' },
   ];
 
   return (
     <div className="w-full mb-6">
-      <div className="flex flex-wrap gap-2">
+      <div className="flex lg:flex-wrap sm:flex-nowrap overflow-x-auto gap-2 sm:px-2">
         {categories.map((category) => (
           <Button
             variant="outlineGray"
             size="sm"
             key={category.id}
             onClick={() => onCategoryChange(category.id)}
-            className={`px-4 py-2 text-sm ${
+            className={`px-4 py-2 text-sm whitespace-nowrap  sm:text-0.875 ${
               selectedCategory === category.id
-                ? 'bg-black text-white'
-                : ' hover:bg-gray-200'
+                ? 'bg-black text-white hover:bg-gray-800'
+                : 'hover:bg-gray-200'
             }`}
           >
             {category.name}
