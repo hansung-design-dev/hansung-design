@@ -76,7 +76,7 @@ const IconList = ({ TextInvert }: { TextInvert?: boolean }) => (
   </div>
 );
 
-const Nav = ({ className, isbg, TextInvert }: NavProps) => {
+const Nav = ({ className = 'sm:px-[1.5rem]', isbg, TextInvert }: NavProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const pathname = usePathname();

@@ -31,7 +31,7 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
     : { lat: 37.5665, lng: 126.978 };
 
   return (
-    <Map center={center} style={{ width: '100%', height: '100%' }} level={3}>
+    <Map center={center} style={{ width: '100%', height: '80%' }} level={3}>
       {markers.map((marker) => (
         <MapMarker
           key={marker.id}

@@ -9,10 +9,10 @@ export default function ScrollToTopButton() {
   };
 
   return (
-    <div className="absolute  bottom-6 right-6  flex flex-col gap-[1rem]">
+    <div className="fixed bottom-1/4 right-6 transform translate-y-1/2 flex flex-col gap-[1rem] z-50">
       <Link
         href="/mypage/customer-service"
-        className={`rounded-full z-50 transition-opacity duration-300 bg-white shadow-lg p-2 border-none flex items-center justify-center`}
+        className={`rounded-full transition-opacity duration-300 bg-white shadow-lg p-2 border-none flex items-center justify-center`}
         aria-label="customer service"
       >
         <Image
@@ -25,7 +25,7 @@ export default function ScrollToTopButton() {
       </Link>
       <button
         onClick={scrollToTop}
-        className={`z-50 rounded-full transition-opacity duration-300 bg-gray-5 p-2 border-none flex items-center justify-center`}
+        className={`rounded-full transition-opacity duration-300 bg-gray-5 p-2 border-none flex items-center justify-center`}
         aria-label="맨 위로"
       >
         <Image

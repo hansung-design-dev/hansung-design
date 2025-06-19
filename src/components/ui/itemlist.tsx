@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import ArrowLeft from '@/src/icons/arrow-left.svg';
 import ArrowRight from '@/src/icons/arrow-right.svg';
+import { useRouter } from 'next/navigation';
 
 interface ListItem {
   id: number;
@@ -43,11 +44,16 @@ const ItemList: React.FC<ItemTableProps> = ({
   selectedIds = [],
 }) => {
   const [page, setPage] = useState(1);
+  const router = useRouter();
   const totalPages = Math.ceil(items.length / ITEMS_PER_PAGE);
   const paginatedItems = items.slice(
     (page - 1) * ITEMS_PER_PAGE,
     page * ITEMS_PER_PAGE
   );
+
+  const handleItemClick = (itemId: number) => {
+    router.push(`/mypage/orders/item/${itemId}`);
+  };
 
   return (
     <>
@@ -70,7 +76,8 @@ const ItemList: React.FC<ItemTableProps> = ({
             {paginatedItems.map((item) => (
               <tr
                 key={item.id}
-                className="border-b border-gray-200 h-[3.5rem] hover:bg-gray-50"
+                className="border-b border-gray-200 h-[3.5rem] hover:bg-gray-50 cursor-pointer"
+                onClick={() => handleItemClick(item.id)}
               >
                 {showCheckbox && (
                   <td className="text-center px-4">
@@ -124,7 +131,8 @@ const ItemList: React.FC<ItemTableProps> = ({
         {paginatedItems.map((item) => (
           <div
             key={item.id}
-            className="border-solid border-gray-200 rounded-lg p-12 flex flex-col gap-2 shadow-sm"
+            className="border-solid border-gray-200 rounded-lg p-12 flex flex-col gap-2 shadow-sm cursor-pointer hover:bg-gray-50"
+            onClick={() => handleItemClick(item.id)}
           >
             {showCheckbox && (
               <div className="flex items-center gap-2">
