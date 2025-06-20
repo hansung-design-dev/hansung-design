@@ -11,92 +11,92 @@ export default function Signup() {
         </div>
 
         {/* 닉네임/성함 인풋 */}
-        <div className="flex items-center w-full h-[4rem] bg-white rounded mb-6 px-4 border border-gray-200">
+        <div className="flex items-center w-full h-[4rem] bg-white rounded mb-6">
           <Image
             src="/svg/login-password.svg"
             alt="이름"
             width={20}
             height={20}
-            className="h-[1.25rem] w-[1.25rem] mr-2"
+            className="h-[1.25rem] w-[1.25rem] pl-2"
           />
           <input
             type="text"
-            placeholder="이름을 입력해주세요."
-            className="flex-1 bg-transparent outline-none text-1-100"
+            placeholder="  이름을 입력해주세요."
+            className="flex-1 outline-none border-none font-200"
           />
         </div>
 
         {/* 아이디 인풋 */}
-        <div className="flex w-full gap-4">
-          <div className="flex items-center w-full h-[4rem] bg-white rounded mb-6 px-4 border border-gray-200">
+        <div className="flex w-full items-center gap-2 mb-6">
+          <div className="flex flex-1 items-center h-[4rem] bg-white rounded">
             <Image
               src="/svg/login-user.svg"
               alt="아이디"
               width={20}
               height={20}
-              className="h-[1.25rem] w-[1.25rem] mr-2"
+              className="h-[1.25rem] w-[1.25rem] pl-2"
             />
             <input
               type="text"
-              placeholder="아이디를 입력해주세요."
-              className="flex-1 bg-transparent outline-none text-1-100"
+              placeholder="  아이디를 입력해주세요."
+              className="flex-1 outline-none border-none font-200"
             />
           </div>
-          <Button size="sm" className="text-0-75-500 ml-2 h-[4rem]">
+          <Button size="sm" className="text-0-75-500 h-[4rem]">
             중복확인
           </Button>
         </div>
 
         {/* 이메일 인풋 */}
-        <div className="flex items-center w-full h-[4rem] bg-white rounded mb-6 px-4 border border-gray-200">
+        <div className="flex items-center w-full h-[4rem] bg-white rounded mb-6">
           <Image
             src="/svg/login-password.svg"
-            alt="비밀번호"
+            alt="이메일"
             width={20}
             height={20}
-            className="h-[1.25rem] w-[1.25rem] mr-2"
+            className="h-[1.25rem] w-[1.25rem] pl-2"
           />
           <input
-            type="password"
-            placeholder="비밀번호를 적어주세요."
-            className="flex-1 bg-transparent outline-none text-1-100"
+            type="email"
+            placeholder="  이메일을 적어주세요."
+            className="flex-1 outline-none border-none font-200"
           />
         </div>
 
         {/* 비번 인풋 */}
-        <div className="flex items-center w-full h-[4rem] bg-white rounded mb-6 px-4 border border-gray-200">
+        <div className="flex items-center w-full h-[4rem] bg-white rounded mb-6">
           <Image
             src="/svg/login-password.svg"
             alt="비밀번호"
             width={20}
             height={20}
-            className="h-[1.25rem] w-[1.25rem] mr-2"
+            className="h-[1.25rem] w-[1.25rem] pl-2"
           />
           <input
             type="password"
-            placeholder="비밀번호를 적어주세요."
-            className="flex-1 bg-transparent outline-none text-1-100"
+            placeholder="  비밀번호를 적어주세요."
+            className="flex-1 outline-none border-none font-200"
           />
         </div>
 
         {/* 비번확인 인풋 */}
-        <div className="flex items-center w-full h-[4rem] bg-white rounded mb-6 px-4 border border-gray-200">
+        <div className="flex items-center w-full h-[4rem] bg-white rounded mb-6 ">
           <Image
             src="/svg/login-password.svg"
             alt="비밀번호"
             width={20}
             height={20}
-            className="h-[1.25rem] w-[1.25rem] mr-2"
+            className="h-[1.25rem] w-[1.25rem] pl-2"
           />
           <input
             type="password"
-            placeholder="비밀번호를 적어주세요."
-            className="flex-1 bg-transparent outline-none text-1-100 "
+            placeholder="  비밀번호를 한 번 더 입력해주세요."
+            className="flex-1 outline-none border-none font-200"
           />
         </div>
 
         {/* 회원가입 버튼 */}
-        <button className="w-full h-[4rem] bg-white text-black text-1-25-500 rounded border border-gray-200 border-solid border-gray-14 ">
+        <button className="w-full h-[4rem] bg-black text-white text-1.25 fonr-500 rounded">
           회원가입
         </button>
       </div>
