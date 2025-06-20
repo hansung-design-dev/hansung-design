@@ -5,7 +5,7 @@ export default function Signup() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f5f5f5]">
       <div className="w-[27rem] flex flex-col items-center">
-        <div className="text-2-265-600 mt-12 mb-2">회원가입</div>
+        <div className="text-2.265 font-600 mt-12 mb-2">회원가입</div>
         <div className="text-1-400 mb-8">
           회원가입에 필요한 정보를 입력해주세요.
         </div>
@@ -14,21 +14,21 @@ export default function Signup() {
         <div className="flex items-center w-full h-[4rem] bg-white rounded mb-6 px-4 border border-gray-200">
           <Image
             src="/svg/login-password.svg"
-            alt="비밀번호"
+            alt="이름"
             width={20}
             height={20}
             className="h-[1.25rem] w-[1.25rem] mr-2"
           />
           <input
-            type="password"
-            placeholder="비밀번호를 적어주세요."
+            type="text"
+            placeholder="이름을 입력해주세요."
             className="flex-1 bg-transparent outline-none text-1-100"
           />
         </div>
 
         {/* 아이디 인풋 */}
-        <div className="flex  w-full">
-          <div className="flex items-center w-full h-[4rem] bg-white rounded mb-3 px-4 border border-gray-200">
+        <div className="flex w-full gap-4">
+          <div className="flex items-center w-full h-[4rem] bg-white rounded mb-6 px-4 border border-gray-200">
             <Image
               src="/svg/login-user.svg"
               alt="아이디"
@@ -38,11 +38,11 @@ export default function Signup() {
             />
             <input
               type="text"
-              placeholder="닉네임을 적어주세요."
+              placeholder="아이디를 입력해주세요."
               className="flex-1 bg-transparent outline-none text-1-100"
             />
           </div>
-          <Button size="sm" className="text-0-75-500 ml-2">
+          <Button size="sm" className="text-0-75-500 ml-2 h-[4rem]">
             중복확인
           </Button>
         </div>
