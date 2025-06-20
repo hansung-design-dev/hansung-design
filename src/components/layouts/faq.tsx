@@ -185,7 +185,7 @@ const FAQ = () => {
           </div>
 
           {/*답변섹션 */}
-          <div className="lg:w-[23rem] md:w-[80%] bg-white rounded-lg shadow p-[1.5rem] md:p-[2.5rem] sm:w-[16rem] sm:px-[1rem] lg:max-h-[27rem] lg:h-[32rem]">
+          <div className="lg:w-[30rem] md:w-[80%] bg-white rounded-lg shadow p-[1.5rem] md:p-[2.5rem] sm:w-[16rem] sm:px-[1rem] lg:max-h-[27rem] lg:h-[32rem]">
             {selectedQuestion && (
               <div>
                 <h2 className="text-1.25 md:text-1.125 font-600 mb-[1.5rem]">

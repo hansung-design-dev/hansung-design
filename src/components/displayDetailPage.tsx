@@ -85,7 +85,7 @@ export default function DisplayDetailPage({
   };
 
   const renderGalleryView = () => (
-    <div className="grid grid-cols-3 sm:grid-cols-1 md:grid-cols-4 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-3 sm:grid-cols-1 md:grid-cols-4 lg:grid-cols-4 gap-6 ">
       {districtItems.map((item, index) => {
         const isSelected = selectedIds.includes(item.id);
         return (
@@ -218,7 +218,7 @@ export default function DisplayDetailPage({
   );
 
   return (
-    <main className="min-h-screen flex flex-col bg-white">
+    <main className="min-h-screen flex flex-col bg-white pb-10">
       <div className="container mx-auto px-4 pt-[7rem]">
         <div className="mb-8">
           <div>
