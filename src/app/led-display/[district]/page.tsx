@@ -1,7 +1,7 @@
 'use client';
 import DisplayDetailPage from '@/src/components/displayDetailPage';
 import { useParams } from 'next/navigation';
-import districts from '@/src/mock/district';
+import districts from '@/src/mock/banner-district';
 import { ledItems } from '@/src/mock/billboards';
 import type { Billboard } from '@/src/types/displaydetail';
 

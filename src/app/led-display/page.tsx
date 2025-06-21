@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import DistrictCard from '@/src/components/districtCard';
-import districts from '@/src/mock/district';
+import ledDistricts from '@/src/mock/led-district';
 
 export default function LEDDisplayPage() {
   return (
@@ -31,7 +31,7 @@ export default function LEDDisplayPage() {
 
       <div className="flex items-center justify-center mx-[4rem] px-4 py-8 sm:mx-[0.5rem] md:mx-[2rem]">
         <div className="container grid lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-1 lg:gap-4 md:gap-[2rem] sm:gap-[2rem] ">
-          {districts.map((district) => (
+          {ledDistricts.map((district) => (
             <DistrictCard key={district.id} district={district} />
           ))}
         </div>

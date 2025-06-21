@@ -33,9 +33,9 @@ export default function DistrictCard({
               <Image
                 src={district.icon}
                 alt={district.name}
-                width={10}
-                height={10}
-                className="w-[2.375rem] h-[2.375rem]"
+                width={300}
+                height={300}
+                className="w-[2.375rem] h-[2.375rem] bg-white rounded-md"
               />
               <div className="lg:text-2.5 md:text-1.6 font-700 text-black font-gmarket ">
                 {district.name}

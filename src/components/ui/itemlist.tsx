@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import ArrowLeft from '@/src/icons/arrow-left.svg';
 import ArrowRight from '@/src/icons/arrow-right.svg';
+import Image from 'next/image';
 
 interface ListItem {
   id: number;
@@ -62,6 +63,13 @@ const ItemList: React.FC<ItemTableProps> = ({
     if ((e.target as HTMLElement).tagName === 'INPUT') {
       return;
     }
+
+    // 아이콘 버튼 영역 클릭 시 아이템 선택 방지
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.tagName === 'BUTTON') {
+      return;
+    }
+
     handleItemClick(itemId);
   };
 
@@ -75,6 +83,7 @@ const ItemList: React.FC<ItemTableProps> = ({
               <tr className="border-b border-gray-200 h-[3rem] text-gray-500 font-medium">
                 {showCheckbox && <th className="w-10">no</th>}
                 <th className="text-left pl-10">게시대 명</th>
+                <th className="text-center"></th>
                 <th className="text-center">행정동</th>
                 <th className="text-center">마감여부</th>
                 <th className="text-center">남은수량</th>
@@ -105,15 +114,67 @@ const ItemList: React.FC<ItemTableProps> = ({
                     />
                   </td>
                 )}
-                <td className="px-4 text-left pl-10">
-                  <span className="font-medium text-black">
+                <td className="pl-10">
+                  <div
+                    className="font-medium text-black cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleItemClick(item.id);
+                    }}
+                  >
                     {item.title}
                     {item.subtitle && (
                       <span className="ml-1 text-gray-500">
                         {item.subtitle}
                       </span>
                     )}
-                  </span>
+                  </div>
+                </td>
+                <td className="">
+                  <div className="flex gap-1">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        console.log('camera');
+                      }}
+                    >
+                      <Image
+                        src={'/svg/list/camera.svg'}
+                        alt="camera"
+                        width={300}
+                        height={300}
+                        className="w-[0.7rem] h-[0.7rem] rounded-md bg-black p-1"
+                      />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        console.log('map');
+                      }}
+                    >
+                      <Image
+                        src={'/svg/list/map.svg'}
+                        alt="map"
+                        width={300}
+                        height={300}
+                        className="w-[0.7rem] h-[0.7rem] rounded-md bg-black p-1"
+                      />{' '}
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        console.log('navigation');
+                      }}
+                    >
+                      <Image
+                        src={'/svg/list/navigation.svg'}
+                        alt="navi"
+                        width={300}
+                        height={300}
+                        className="w-[0.7rem] h-[0.7rem] rounded-md bg-black p-1"
+                      />
+                    </button>
+                  </div>
                 </td>
                 <td className="text-center">{item.location}</td>
                 <td

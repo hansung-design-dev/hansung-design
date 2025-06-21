@@ -1,54 +1,53 @@
 import { v4 as uuidv4 } from 'uuid';
 
-// Region Gu (구) Data
 export const regionGuData = [
   {
     id: uuidv4(),
     code: '1100000000',
     name: '종로구',
-    logo_image: '/images/district-icon/1.all.svg',
+    logo_image: '/images/district-icon/all.svg',
   },
   {
     id: uuidv4(),
     code: '1200000000',
     name: '강동구',
-    logo_image: '/images/district-icon/2.gangdong-gu.png',
+    logo_image: '/images/district-icon/gangdong-gu.png',
   },
   {
     id: uuidv4(),
     code: '1300000000',
     name: '관악구',
-    logo_image: '/images/district-icon/3.gwanak-gu.png',
+    logo_image: '/images/district-icon/gwanak-gu.png',
   },
   {
     id: uuidv4(),
     code: '1400000000',
     name: '마포구',
-    logo_image: '/images/district-icon/4.mapo-gu.png',
+    logo_image: '/images/district-icon/mapo-gu.png',
   },
   {
     id: uuidv4(),
     code: '1500000000',
     name: '서대문구',
-    logo_image: '/images/district-icon/5.seodaemun-gu.png',
+    logo_image: '/images/district-icon/seodaemun-gu.png',
   },
   {
     id: uuidv4(),
     code: '1600000000',
     name: '송파구',
-    logo_image: '/images/district-icon/6.songpa-gu.png',
+    logo_image: '/images/district-icon/songpa-gu.png',
   },
   {
     id: uuidv4(),
     code: '1700000000',
     name: '용산구',
-    logo_image: '/images/district-icon/7.yongsan-gu.png',
+    logo_image: '/images/district-icon/yongsan-gu.png',
   },
   {
     id: uuidv4(),
     code: '1800000000',
     name: '강북구',
-    logo_image: '/images/district-icon/7.yongsan-gu.png',
+    logo_image: '/images/district-icon/gangbuk-gu.png',
   },
 ];
 

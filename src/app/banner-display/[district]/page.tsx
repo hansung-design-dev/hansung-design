@@ -1,7 +1,7 @@
 'use client';
 import DisplayDetailPage from '@/src/components/displayDetailPage';
 import { useParams } from 'next/navigation';
-import districts from '@/src/mock/district';
+import districts from '@/src/mock/banner-district';
 import { bannerItems } from '@/src/mock/billboards';
 
 const districtItems = Array(12)
