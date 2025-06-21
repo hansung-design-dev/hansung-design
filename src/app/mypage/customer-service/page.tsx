@@ -5,6 +5,7 @@ import MypageContainer from '@/src/components/mypageContainer';
 import Image from 'next/image';
 export default function CustomerServicePage() {
   const [activeTab, setActiveTab] = useState('1:1상담');
+  const [openItemId, setOpenItemId] = useState<number | null>(null);
 
   const tabs = [
     { name: '마이페이지', href: '/mypage' },
@@ -21,6 +22,12 @@ export default function CustomerServicePage() {
     text: `올림픽대교 남단사거리 앞 (남단 유수지앞)`,
     date: '2025-03-01',
     status: idx % 2 === 0 ? '답변완료' : '답변준비중',
+    questionTitle: '디자인 파일로 전달 드렸는데요!',
+    months: '1개월',
+    phone: '010-000-0000',
+    designOption: 'file',
+    details: '내용을 입력해주세요.',
+    answer: idx % 2 === 0 ? '유선상으로 전달드렸습니다. 감사합니다.' : null,
   }));
 
   const totalPages = Math.ceil(inquiries.length / itemsPerPage);
@@ -33,6 +40,10 @@ export default function CustomerServicePage() {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
     }
+  };
+
+  const toggleItem = (id: number) => {
+    setOpenItemId(openItemId === id ? null : id);
   };
 
   return (
@@ -85,23 +96,106 @@ export default function CustomerServicePage() {
           <table className="w-full min-w-[600px] md:min-w-[800px] pb-[2rem]">
             <tbody>
               {currentItems.map((item) => (
-                <tr
-                  key={item.id}
-                  className="last:border-none border-black border-b-[2px] md:border-b-[3px] text-sm md:text-1.25 font-500"
-                >
-                  <td className="px-4 md:px-[2rem] py-3 md:py-4 text-center border-b border-gray-200">
-                    {item.id}
-                  </td>
-                  <td className="px-2 md:px-4 py-3 md:py-8 border-b border-gray-200">
-                    {item.text}
-                  </td>
-                  <td className="px-2 md:px-4 py-3 md:py-4 text-center border-b border-gray-200">
-                    {item.date}
-                  </td>
-                  <td className="px-4 md:pr-[4rem] py-3 md:py-4 text-end font-semibold border-b border-gray-200">
-                    {item.status}
-                  </td>
-                </tr>
+                <>
+                  <tr
+                    key={item.id}
+                    className="last:border-none border-black border-b-[2px] md:border-b-[3px] text-sm md:text-1.25 font-500 cursor-pointer"
+                    onClick={() => toggleItem(item.id)}
+                  >
+                    <td className="px-4 md:px-[2rem] py-3 md:py-4 text-center border-b border-gray-200">
+                      {item.id}
+                    </td>
+                    <td className="px-2 md:px-4 py-3 md:py-8 border-b border-gray-200">
+                      {item.text}
+                    </td>
+                    <td className="px-2 md:px-4 py-3 md:py-4 text-center border-b border-gray-200">
+                      {item.date}
+                    </td>
+                    <td className="px-4 md:pr-[2rem] py-3 md:py-4 text-end font-semibold border-b border-gray-200">
+                      <div className="flex items-center justify-end gap-4">
+                        <span
+                          className={
+                            item.status === '답변완료'
+                              ? 'text-[#1C9133]'
+                              : 'text-black'
+                          }
+                        >
+                          {item.status}
+                        </span>
+                        <Image
+                          src={
+                            openItemId === item.id
+                              ? '/svg/arrow-down.svg'
+                              : '/svg/arrow-up.svg'
+                          }
+                          alt="toggle arrow"
+                          width={20}
+                          height={20}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                  {openItemId === item.id && (
+                    <tr>
+                      <td colSpan={4}>
+                        {/* 질문 내용 */}
+                        <div className="bg-[#F9F9F9] p-6 flex flex-col gap-4">
+                          <h3 className="font-bold">{item.questionTitle}</h3>
+                          <div className="flex items-center gap-8">
+                            <span>원하는 개월수: {item.months}</span>
+                            <span>전화번호: {item.phone}</span>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <span>디자인유무:</span>
+                            <label className="flex items-center gap-2">
+                              <input
+                                type="radio"
+                                name={`design-${item.id}`}
+                                value="file"
+                                checked={item.designOption === 'file'}
+                                readOnly
+                                className="accent-black"
+                              />
+                              파일로 전달
+                            </label>
+                            <label className="flex items-center gap-2">
+                              <input
+                                type="radio"
+                                name={`design-${item.id}`}
+                                value="request"
+                                checked={item.designOption === 'request'}
+                                readOnly
+                                className="accent-black"
+                              />
+                              디자인 요청
+                            </label>
+                          </div>
+                          <div>
+                            <p className="text-gray-500">{item.details}</p>
+                          </div>
+                        </div>
+                        {/* 답변 내용 */}
+                        <div className="bg-[#F4F4F4] p-6 flex flex-col gap-4 items-start">
+                          <Image
+                            src="/svg/answer.svg"
+                            alt="answer icon"
+                            width={24}
+                            height={24}
+                          />
+                          <div>
+                            {item.answer ? (
+                              <p>{item.answer}</p>
+                            ) : (
+                              <p className="text-gray-500">
+                                아직 답변이 없습니다.
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </>
               ))}
             </tbody>
           </table>

@@ -30,7 +30,7 @@ export default function LedDisplayPage() {
   const params = useParams();
   const encodedDistrict = params.district as string;
   const district = decodeURIComponent(encodedDistrict);
-  const districtObj = districts.find((d) => d.name === district);
+  const districtObj = districts.find((d) => d.code === district);
 
   return (
     <DisplayDetailPage
