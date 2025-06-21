@@ -213,7 +213,7 @@ export default function DisplayDetailPage({
 
   return (
     <main className="min-h-screen flex flex-col bg-white pb-10">
-      <div className="container mx-auto px-4 pt-[7rem]">
+      <div className="lg:min-w-[70rem] lg:max-w-[1500px]  mx-auto px-4 pt-[7rem]">
         <div className="mb-8">
           <div>
             {districtObj && (
