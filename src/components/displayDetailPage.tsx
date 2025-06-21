@@ -32,6 +32,7 @@ export default function DisplayDetailPage({
   billboards,
   dropdownOptions,
   defaultMenuName,
+  defaultView = 'gallery',
 }: {
   district: string;
   districtObj: District | undefined;
@@ -39,6 +40,7 @@ export default function DisplayDetailPage({
   billboards: Billboard[];
   dropdownOptions: DropdownOption[];
   defaultMenuName: string;
+  defaultView?: 'location' | 'gallery' | 'list';
 }) {
   // const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selectedOption, setSelectedOption] = useState<{
@@ -46,7 +48,7 @@ export default function DisplayDetailPage({
     option: string;
   } | null>(null);
   const [viewType, setViewType] = useState<'location' | 'gallery' | 'list'>(
-    'gallery'
+    defaultView
   );
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const { dispatch } = useCart();

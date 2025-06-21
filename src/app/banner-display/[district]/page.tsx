@@ -53,6 +53,7 @@ export default function BannerDisplayPage() {
         }))}
       dropdownOptions={dropdownOptions}
       defaultMenuName={defaultMenuName}
+      defaultView="list"
     />
   );
 }

@@ -27,7 +27,7 @@ export default function MyPage() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-white w-full">
+    <main className="min-h-screen bg-[#F1F1F1] w-full">
       <Nav variant="default" className="bg-white" />
       {isMobile ? (
         <MobileMyPage activeTab={activeTab} setActiveTab={setActiveTab} />

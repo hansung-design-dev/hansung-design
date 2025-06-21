@@ -26,7 +26,7 @@ const DateLocationFilter = ({
   showEndCalendar,
   setShowEndCalendar,
 }: DateLocationFilterProps) => (
-  <div className="bg-[#F5F5F5] p-4 md:p-6 rounded-lg mb-6 lg:w-full md:w-full sm:min-w-[20rem]">
+  <div className="bg-[#F5F5F5] p-4 md:p-6 rounded-lg mb-6 lg:max-w-full md:max-w-[35rem] sm:min-w-[20rem]">
     <div className="flex flex-col md:flex-row flex-wrap gap-6 md:gap-8 justify-between md:items-start md:justify-center">
       {/* 날짜 필터 */}
       <div className="w-full md:w-auto ">
