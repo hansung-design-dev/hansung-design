@@ -111,9 +111,16 @@ export async function getBannerDisplayCountsByDistrict() {
       throw error;
     }
 
+    // 실제 데이터 구조 확인
+    console.log('🔍 Count data structure:', data);
+    console.log('🔍 First item:', data?.[0]);
+    console.log('🔍 Data type:', typeof data);
+    console.log('🔍 Is array:', Array.isArray(data));
+
     // 구별 개수 집계
     const counts: Record<string, number> = {};
-    (data as any[])?.forEach((item: any) => {
+
+    (data as unknown as { region_gu: { name: string } }[])?.forEach((item) => {
       const districtName = item.region_gu.name;
       counts[districtName] = (counts[districtName] || 0) + 1;
     });

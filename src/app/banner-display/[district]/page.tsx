@@ -4,7 +4,7 @@ import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import districts from '@/src/mock/banner-district';
 import { getBannerDisplaysByDistrict } from '@/lib/api/banner-display';
-import { testSupabaseConnection } from '@/lib/api/test-connection';
+//import { testSupabaseConnection } from '@/lib/api/test-connection';
 import { testBasicDataFetch } from '@/lib/api/banner-display';
 import { BannerDisplayData } from '@/lib/supabase';
 
@@ -25,17 +25,17 @@ export default function BannerDisplayPage() {
   const [bannerData, setBannerData] = useState<BannerDisplayData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [testResult, setTestResult] = useState<{
-    success: boolean;
-    error?: string;
-    data?: {
-      displayTypes: number;
-      panelInfo: number;
-      bannerDetails: number;
-      regions: number;
-    };
-    message?: string;
-  } | null>(null);
+  // const [testResult, setTestResult] = useState<{
+  //   success: boolean;
+  //   error?: string;
+  //   data?: {
+  //     displayTypes: number;
+  //     panelInfo: number;
+  //     bannerDetails: number;
+  //     regions: number;
+  //   };
+  //   message?: string;
+  // } | null>(null);
 
   useEffect(() => {
     async function fetchBannerData() {
@@ -44,13 +44,13 @@ export default function BannerDisplayPage() {
 
         // 먼저 연결 테스트 실행
         console.log('🔍 Testing Supabase connection...');
-        const testResult = await testSupabaseConnection();
-        setTestResult(testResult);
-        console.log('Test result:', testResult);
+        // const testResult = await testSupabaseConnection();
+        // setTestResult(testResult);
+        //console.log('Test result:', testResult);
 
-        if (!testResult.success) {
-          throw new Error(`Connection test failed: ${testResult.error}`);
-        }
+        // if (!testResult.success) {
+        //   throw new Error(`Connection test failed: ${testResult.error}`);
+        // }
 
         // 기본 데이터 테스트 실행
         console.log('🔍 Testing basic data fetch...');

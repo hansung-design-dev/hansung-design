@@ -70,7 +70,7 @@ export default function DisplayDetailPage({
           item: {
             id: item.id,
             type: 'banner-display',
-            name: item.address,
+            name: item.name,
             district: item.district,
             price: 100000, // 가격 정보가 있다면 여기에 입력
           },
@@ -122,7 +122,7 @@ export default function DisplayDetailPage({
                   {item.district}
                 </span>
               </div>
-              <h3 className="text-1 font-medium">{item.address}</h3>
+              <h3 className="text-1 font-medium">{item.name}</h3>
               <p className="text-0.875 text-gray-600">{item.neighborhood}</p>
             </div>
           </div>
