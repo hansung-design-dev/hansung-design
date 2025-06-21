@@ -86,6 +86,7 @@ const ItemList: React.FC<ItemTableProps> = ({
                 <th className="text-center"></th>
                 <th className="text-center">행정동</th>
                 <th className="text-center">마감여부</th>
+                <th className="text-center">면수</th>
                 <th className="text-center">남은수량</th>
                 {renderAction && <th className="text-center">작업</th>}
               </tr>
@@ -185,6 +186,7 @@ const ItemList: React.FC<ItemTableProps> = ({
                   {item.status}
                 </td>
                 <td className="text-center">{item.quantity ?? '-'}</td>
+                <td className="text-center">-</td>
                 {renderAction && (
                   <td className="text-center">{renderAction(item)}</td>
                 )}
@@ -207,7 +209,7 @@ const ItemList: React.FC<ItemTableProps> = ({
         {paginatedItems.map((item) => (
           <div
             key={item.id}
-            className={`border-solid border-gray-200 rounded-lg p-12 flex flex-col gap-2 shadow-sm hover:bg-gray-50 ${
+            className={`md:w-full sm:w-[70%] border-solid border-gray-200 rounded-lg p-12 flex flex-col gap-2 shadow-sm hover:bg-gray-50 ${
               enableRowClick ? 'cursor-pointer' : ''
             }`}
             onClick={() => {
