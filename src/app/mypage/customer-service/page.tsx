@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import MypageContainer from '@/src/components/mypageContainer';
 import Image from 'next/image';
-import Link from 'next/link';
 export default function CustomerServicePage() {
   const [activeTab, setActiveTab] = useState('1:1상담');
 
