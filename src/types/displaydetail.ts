@@ -7,6 +7,7 @@ export interface District {
   size: string;
   sizeOfPeople: string;
   src: string;
+  code: string;
 }
 
 export interface DistrictItem {

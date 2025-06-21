@@ -7,12 +7,14 @@ interface District {
   size: string;
   sizeOfPeople: string;
   src: string;
+  code: string;
 }
 
 const bannerDistricts: District[] = [
   {
     id: 1,
     name: '전체',
+    code: 'all',
     description: '울림픽대교 남단사거리 앞 외 3건',
     count: 4,
     icon: '/images/district-icon/all.svg',
@@ -23,6 +25,7 @@ const bannerDistricts: District[] = [
   {
     id: 2,
     name: '강동구',
+    code: 'gangdong',
     description: '울림픽대교 남단사거리 앞 외 3건',
     count: 4,
     icon: '/images/district-icon/gangdong-gu.png',
@@ -33,6 +36,7 @@ const bannerDistricts: District[] = [
   {
     id: 3,
     name: '관악구',
+    code: 'gwanak',
     description: '서울대입구역 앞 외 3건',
     count: 4,
     icon: '/images/district-icon/gwanak-gu.png',
@@ -43,6 +47,7 @@ const bannerDistricts: District[] = [
   {
     id: 4,
     name: '마포구',
+    code: 'mapo',
     description: '홍대입구역 앞 외 5건',
     count: 6,
     icon: '/images/district-icon/mapo-gu.png',
@@ -53,6 +58,7 @@ const bannerDistricts: District[] = [
   {
     id: 5,
     name: '서대문구',
+    code: 'seodaemun',
     description: '울림픽대교 남단사거리 앞 외 3건',
     count: 4,
     icon: '/images/district-icon/seodaemun-gu.png',
@@ -64,6 +70,7 @@ const bannerDistricts: District[] = [
   {
     id: 6,
     name: '송파구',
+    code: 'songpa',
     description: '잠실종합운동장 앞 외 5건',
     count: 6,
     icon: '/images/district-icon/songpa-gu.png',
@@ -74,6 +81,7 @@ const bannerDistricts: District[] = [
   {
     id: 7,
     name: '용산구',
+    code: 'yongsan',
     description: '여의도공원 앞 외 6건',
     count: 7,
     icon: '/images/district-icon/yongsan-gu.png',
@@ -84,6 +92,7 @@ const bannerDistricts: District[] = [
   {
     id: 8,
     name: '강북구',
+    code: 'gangbuk',
     description: '여의도공원 앞 외 6건',
     count: 8,
     icon: '/images/district-icon/gangbuk-gu.png',
