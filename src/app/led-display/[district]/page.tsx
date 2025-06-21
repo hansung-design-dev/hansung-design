@@ -5,18 +5,18 @@ import districts from '@/src/mock/banner-district';
 import { ledItems } from '@/src/mock/billboards';
 import type { Billboard } from '@/src/types/displaydetail';
 
-const districtItems = Array(12)
-  .fill(null)
-  .map((_, index) => ({
-    id: index + 1,
-    title: '울림픽대교 남단사거리 앞',
-    subtitle: '(남단 유수지앞)',
-    image: '/images/led-display.jpeg',
-    tags: ['LED전자게시대', '방이동'],
-    location: '방이동',
-    status: '진행중',
-    spots: index < 4 ? 12 - index * 3 : '-',
-  }));
+// const districtItems = Array(12)
+//   .fill(null)
+//   .map((_, index) => ({
+//     id: index + 1,
+//     title: '울림픽대교 남단사거리 앞',
+//     subtitle: '(남단 유수지앞)',
+//     image: '/images/led-display.jpeg',
+//     tags: ['LED전자게시대', '방이동'],
+//     location: '방이동',
+//     status: '진행중',
+//     spots: index < 4 ? 12 - index * 3 : '-',
+//   }));
 
 const dropdownOptions = [
   { id: 1, option: '전체보기' },
@@ -36,7 +36,7 @@ export default function LedDisplayPage() {
     <DisplayDetailPage
       district={district}
       districtObj={districtObj}
-      districtItems={districtItems}
+      //districtItems={districtItems}
       billboards={ledItems
         .filter((b) => b.location.split(' ')[0] === district)
         .map(
