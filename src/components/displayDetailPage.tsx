@@ -9,12 +9,7 @@ import GalleryIcon from '@/src/icons/gallery.svg';
 import ListIcon from '@/src/icons/list.svg';
 import { useState } from 'react';
 import { useCart } from '../contexts/cartContext';
-import {
-  District,
-  DistrictItem,
-  Billboard,
-  DropdownOption,
-} from '@/src/types/displaydetail';
+import { District, Billboard, DropdownOption } from '@/src/types/displaydetail';
 
 const fadeInUp = {
   initial: { y: 60, opacity: 0 },
@@ -26,9 +21,7 @@ const fadeInUp = {
 };
 
 export default function DisplayDetailPage({
-  district,
   districtObj,
-  districtItems,
   billboards,
   dropdownOptions,
   defaultMenuName,
@@ -36,7 +29,6 @@ export default function DisplayDetailPage({
 }: {
   district: string;
   districtObj: District | undefined;
-  districtItems: DistrictItem[];
   billboards: Billboard[];
   dropdownOptions: DropdownOption[];
   defaultMenuName: string;
@@ -51,7 +43,23 @@ export default function DisplayDetailPage({
     defaultView
   );
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [mapoFilter, setMapoFilter] = useState<'yeollip' | 'jeodan' | 'simin'>(
+    'yeollip'
+  );
   const { dispatch } = useCart();
+
+  // 마포구인지 확인
+  const isMapoDistrict = districtObj?.code === 'mapo';
+
+  // 마포구 필터에 따른 데이터 필터링
+  const filteredBillboards = isMapoDistrict
+    ? billboards.filter((item) => {
+        if (mapoFilter === 'yeollip') return true;
+        // 실제 데이터 구조에 따라 필터링 로직 수정 필요
+        // 예시: item.type 또는 item.category를 기준으로 필터링
+        return item.type === mapoFilter;
+      })
+    : billboards;
 
   const handleDropdownChange = (item: { id: number; option: string }) => {
     setSelectedOption(item);
@@ -69,15 +77,16 @@ export default function DisplayDetailPage({
       dispatch({ type: 'REMOVE_ITEM', id });
     } else {
       newSelectedIds = [...selectedIds, id];
-      const item = districtItems.find((item) => item.id === id);
+      // billboards에서 아이템 찾기
+      const item = billboards.find((item) => item.id === id);
       if (item) {
         dispatch({
           type: 'ADD_ITEM',
           item: {
             id: item.id,
             type: 'banner-display',
-            name: item.title,
-            district: item.location,
+            name: item.name,
+            district: item.district,
             price: 100000, // 가격 정보가 있다면 여기에 입력
           },
         });
@@ -88,7 +97,7 @@ export default function DisplayDetailPage({
 
   const renderGalleryView = () => (
     <div className="grid grid-cols-3 sm:grid-cols-1 md:grid-cols-4 lg:grid-cols-4 gap-6 ">
-      {districtItems.map((item, index) => {
+      {filteredBillboards.map((item, index) => {
         const isSelected = selectedIds.includes(item.id);
         return (
           <div
@@ -113,25 +122,23 @@ export default function DisplayDetailPage({
                 />
               )}
               <Image
-                src={item.image}
-                alt={item.title}
+                src="/images/led-display.jpeg" // 기본 이미지 사용
+                alt={item.name}
                 fill
                 className={`md:object-cover sm:object-cover `}
               />
             </div>
             <div className="mt-4">
               <div className="flex gap-2 mb-2">
-                {item.tags.map((tag: string, tagIndex: number) => (
-                  <span
-                    key={tagIndex}
-                    className="px-2 py-1 bg-black text-white text-0.875 rounded-[5rem]"
-                  >
-                    {tag}
-                  </span>
-                ))}
+                <span className="px-2 py-1 bg-black text-white text-0.875 rounded-[5rem]">
+                  현수막게시대
+                </span>
+                <span className="px-2 py-1 bg-black text-white text-0.875 rounded-[5rem]">
+                  {item.district}
+                </span>
               </div>
-              <h3 className="text-1 font-medium">{item.title}</h3>
-              <p className="text-0.875 text-gray-600">{item.subtitle}</p>
+              <h3 className="text-1 font-medium">{item.name}</h3>
+              <p className="text-0.875 text-gray-600">{item.neighborhood}</p>
             </div>
           </div>
         );
@@ -147,7 +154,7 @@ export default function DisplayDetailPage({
         style={{ maxWidth: '40%', maxHeight: '700px' }}
       >
         <div className="flex flex-col gap-6">
-          {districtItems.map((item, index) => {
+          {filteredBillboards.map((item, index) => {
             const isSelected = selectedIds.includes(item.id);
             return (
               <div
@@ -172,25 +179,25 @@ export default function DisplayDetailPage({
                     />
                   )}
                   <Image
-                    src={item.image}
-                    alt={item.title}
+                    src="/images/led-display.jpeg" // 기본 이미지 사용
+                    alt={item.name}
                     fill
                     className="object-cover"
                   />
                 </div>
                 <div className="p-4">
                   <div className="flex gap-2 mb-2">
-                    {item.tags.map((tag: string, tagIndex: number) => (
-                      <span
-                        key={tagIndex}
-                        className="px-2 py-1 bg-gray-100 text-gray-600 text-0.875 rounded"
-                      >
-                        {tag}
-                      </span>
-                    ))}
+                    <span className="px-2 py-1 bg-gray-100 text-gray-600 text-0.875 rounded">
+                      현수막게시대
+                    </span>
+                    <span className="px-2 py-1 bg-gray-100 text-gray-600 text-0.875 rounded">
+                      {item.district}
+                    </span>
                   </div>
-                  <h3 className="text-1 font-medium">{item.title}</h3>
-                  <p className="text-0.875 text-gray-600">{item.subtitle}</p>
+                  <h3 className="text-1 font-medium">{item.name}</h3>
+                  <p className="text-0.875 text-gray-600">
+                    {item.neighborhood}
+                  </p>
                 </div>
               </div>
             );
@@ -202,7 +209,7 @@ export default function DisplayDetailPage({
         <div className="sticky top-0">
           <div className="w-full aspect-square min-h-[500px]">
             <KakaoMap
-              markers={billboards.map((b: Billboard) => ({
+              markers={filteredBillboards.map((b: Billboard) => ({
                 id: b.id,
                 title: b.name,
                 lat: b.lat,
@@ -221,20 +228,20 @@ export default function DisplayDetailPage({
 
   return (
     <main className="min-h-screen flex flex-col bg-white pb-10">
-      <div className="container mx-auto px-4 pt-[7rem]">
+      <div className="lg:min-w-[70rem] lg:max-w-[1500px]  mx-auto px-4 pt-[7rem]">
         <div className="mb-8">
-          <div>
+          <div className="flex gap-2 items-center">
             {districtObj && (
               <Image
                 src={districtObj.icon}
                 alt={districtObj.name}
-                width={38}
-                height={38}
+                width={50}
+                height={50}
                 className="inline-block align-middle mr-2"
               />
             )}
             <h2 className="text-2.25 font-900 font-gmarket inline-block align-middle">
-              {district}
+              {districtObj?.name}
             </h2>
           </div>
           <div>{selectedOption ? selectedOption.option : defaultMenuName}</div>
@@ -251,7 +258,43 @@ export default function DisplayDetailPage({
           <p className="text-gray-600">유동인구 : -명</p>
           <p className="text-gray-600">소비자트렌드 : </p>
         </div>
-
+        {/* 마포구 전용 filter */}
+        {isMapoDistrict && (
+          <div className="mb-8">
+            <div className="flex items-center gap-4 border-b border-gray-200 pb-4">
+              <button
+                onClick={() => setMapoFilter('yeollip')}
+                className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-6 font-medium ${
+                  mapoFilter === 'yeollip'
+                    ? 'text-white bg-black rounded-full '
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                연립형
+              </button>
+              <button
+                onClick={() => setMapoFilter('jeodan')}
+                className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-6 font-medium ${
+                  mapoFilter === 'jeodan'
+                    ? 'text-white bg-black rounded-full '
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                저단형
+              </button>
+              <button
+                onClick={() => setMapoFilter('simin')}
+                className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-6 font-medium ${
+                  mapoFilter === 'simin'
+                    ? 'text-white bg-black rounded-full '
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                시민게시대
+              </button>
+            </div>
+          </div>
+        )}
         {/* View Type Selector */}
         <div className="flex items-center gap-4 mb-8 border-b border-gray-200 pb-4">
           <ViewTypeButton
@@ -287,7 +330,14 @@ export default function DisplayDetailPage({
             renderLocationView()
           ) : viewType === 'list' ? (
             <ItemList
-              items={districtItems}
+              items={filteredBillboards.map((item) => ({
+                id: item.id,
+                title: item.name,
+                subtitle: item.neighborhood,
+                location: item.district,
+                status: '진행중', // 기본값, 실제 데이터에서 가져와야 함
+                quantity: item.faces,
+              }))}
               showHeader
               showCheckbox
               selectedIds={selectedIds}

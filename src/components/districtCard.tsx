@@ -10,6 +10,7 @@ interface District {
   size: string;
   sizeOfPeople: string;
   src: string;
+  code: string;
 }
 
 interface DistrictCardProps {
@@ -24,7 +25,7 @@ export default function DistrictCard({
   return (
     <div className="flex items-center justify-center lg:pb-4">
       <Link
-        href={`/${basePath}/${encodeURIComponent(district.name)}`}
+        href={`/${basePath}/${encodeURIComponent(district.code)}`}
         className="w-[25rem] lg:h-[29.5625rem] md:h-[20rem] bg-gray-4 rounded-[1.25rem] flex flex-col overflow-hidden"
       >
         <div className="flex-1 flex flex-col lg:gap-[3rem] md:gap-[2rem] p-8">
