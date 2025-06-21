@@ -75,7 +75,7 @@ export default function DesktopMyPage({
 
       {/* 필터 리스트 */}
       <div className="mb-12">
-        <h2 className="lg:text-2.25 md:text-1.75 font-500 pt-3">주문내역</h2>
+        <h2 className="lg:text-2 md:text-1.75 font-500 pt-3">주문내역</h2>
 
         <div className="lg:text-sm md:text-0.75 text-gray-500 mb-6">
           *송출이 시작된 주문은 취소/파일 교체가 불가하며, 신청후 3일 이후

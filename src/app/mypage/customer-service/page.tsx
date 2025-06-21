@@ -37,41 +37,36 @@ export default function CustomerServicePage() {
   };
 
   return (
-    <main className="min-h-screen flex flex-col w-full bg-[#F1F1F1]">
-      <MypageContainer
-        tabs={tabs}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-      >
-        <div className="flex flex-col md:flex-row items-start md:items-center sm:items-start justify-between gap-4 md:gap-8 sm:gap-4">
-          <Link href="/mypage" className="md:hidden">
-            <Image
-              src="/svg/arrow-left.svg"
-              alt="orders"
-              width={20}
-              height={20}
-              className="w-[1.5rem] h-[1.5rem]"
-            />
-          </Link>
-          <div className="text-1.5 md:text-2.25 font-500">1:1 상담</div>
-          <div className="grid grid-cols-2 gap-2 md:gap-4 w-full md:w-auto">
-            <div className="flex items-center  p-3 md:p-4 rounded-lg">
-              <div className="w-12 h-12 md:w-16 md:h-16 bg-gray-200 rounded-full" />
-              <div className="flex flex-col p-3 md:p-6">
-                <div className="text-sm md:text-lg font-medium mb-2 md:mb-4">
-                  주문내역
+    <MypageContainer
+      tabs={tabs}
+      activeTab={activeTab}
+      setActiveTab={setActiveTab}
+    >
+      <div className="mb-12">
+        <div className="mb-12">
+          <div className="flex flex-col md:flex-row lg:items-start md:items-center lg:justify-between lg:gap-6 md:gap-2">
+            <h2 className="md:text-1.75 lg:text-2.25 font-500">1:1 상담</h2>
+            <div className="grid grid-cols-2 gap-4">
+              {/* 주문내역 카드 */}
+              {[
+                { label: '주문내역', count: '3건' },
+                { label: '송출중 광고', count: '2건' },
+              ].map((item, index) => (
+                <div
+                  key={index}
+                  className="flex items-center rounded-lg p-4 md:p-6"
+                >
+                  <div className="w-12 h-12 md:w-10 md:h-10 bg-gray-200 rounded-full" />
+                  <div className="flex flex-col pl-4 md:pl-6">
+                    <div className="lg:text-1 md:text-1 font-medium mb-2">
+                      {item.label}
+                    </div>
+                    <div className="lg:text-1.5 md:text-1.6 font-bold">
+                      {item.count}
+                    </div>
+                  </div>
                 </div>
-                <div className="text-xl md:text-3xl font-bold">3건</div>
-              </div>
-            </div>
-            <div className="flex items-center p-3 md:p-4 rounded-lg">
-              <div className="w-12 h-12 md:w-16 md:h-16 bg-gray-200 rounded-full" />
-              <div className="flex flex-col p-3 md:p-6">
-                <div className="text-sm md:text-lg font-medium mb-2 md:mb-4">
-                  송출중 광고
-                </div>
-                <div className="text-xl md:text-3xl font-bold">2건</div>
-              </div>
+              ))}
             </div>
           </div>
         </div>
@@ -222,7 +217,7 @@ export default function CustomerServicePage() {
             </div>
           </div>
         </div>
-      </MypageContainer>
-    </main>
+      </div>
+    </MypageContainer>
   );
 }
