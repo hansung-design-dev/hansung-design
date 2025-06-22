@@ -1,5 +1,6 @@
 'use client';
 import DisplayDetailPage from '@/src/components/displayDetailPage';
+import SkeletonLoader from '@/src/components/layouts/skeletonLoader';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import districts from '@/src/mock/banner-district';
@@ -21,6 +22,14 @@ export default function BannerDisplayPage() {
   const encodedDistrict = params.district as string;
   const district = decodeURIComponent(encodedDistrict);
   const districtObj = districts.find((d) => d.code === district);
+
+  console.log(
+    'district',
+    districts.find((d) => d.code === district)
+  );
+  console.log('🔍 District code from URL:', district);
+  console.log('🔍 District object found:', districtObj);
+  console.log('🔍 District name to pass to API:', districtObj?.name);
 
   const [bannerData, setBannerData] = useState<BannerDisplayData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,11 +67,11 @@ export default function BannerDisplayPage() {
         console.log('Basic test result:', basicTestResult);
 
         console.log('🔍 Fetching banner data for district:', district);
-        const data = await getBannerDisplaysByDistrict(district);
-        console.log('📊 Banner data received:', data);
-        console.log('📊 Banner data type:', typeof data);
-        console.log('📊 Banner data length:', data?.length);
-        console.log('📊 Banner data structure:', JSON.stringify(data, null, 2));
+        console.log('🔍 Using district name for API:', districtObj?.name);
+        const data = await getBannerDisplaysByDistrict(
+          districtObj?.name || district
+        );
+
         setBannerData(data);
       } catch (err) {
         console.error('❌ Error fetching banner data:', err);
@@ -97,23 +106,48 @@ export default function BannerDisplayPage() {
         neighborhood: item.region_dong.name,
         period: '상시',
         price: '문의', // 가격 정보가 없으므로 기본값
-        size: `${item.banner_panel_details.panel_width}x${item.banner_panel_details.panel_height}`,
+        size:
+          `${item.banner_panel_details.panel_width}x${item.banner_panel_details.panel_height}` ||
+          'no size',
         faces: item.banner_panel_details.max_banners,
         lat: 37.5665, // 실제 좌표로 교체 필요
         lng: 126.978,
+        panel_width: item.banner_panel_details.panel_width,
+        panel_height: item.banner_panel_details.panel_height,
       };
     }) || [];
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg">
-          로딩 중...
-          {/* {testResult && (
-            <div className="mt-4 text-sm text-gray-600">
-              <pre>{JSON.stringify(testResult, null, 2)}</pre>
+      <div className="min-h-screen flex flex-col bg-white pb-10">
+        <div className="lg:min-w-[70rem] lg:max-w-[1500px] mx-auto px-4 pt-[7rem]">
+          <div className="mb-8">
+            <div className="flex gap-2 items-center">
+              {districtObj && (
+                <div className="w-[50px] h-[50px] bg-gray-200 rounded mr-2 animate-pulse"></div>
+              )}
+              <div className="h-9 bg-gray-200 rounded w-32 animate-pulse"></div>
             </div>
-          )} */}
+            <div className="h-4 bg-gray-200 rounded w-24 mt-2 animate-pulse"></div>
+            <div className="h-4 bg-gray-200 rounded w-48 mt-4 animate-pulse"></div>
+            <div className="h-4 bg-gray-200 rounded w-64 mt-2 animate-pulse"></div>
+            <div className="h-4 bg-gray-200 rounded w-32 mt-2 animate-pulse"></div>
+            <div className="h-4 bg-gray-200 rounded w-40 mt-2 animate-pulse"></div>
+            <div className="h-4 bg-gray-200 rounded w-32 mt-2 animate-pulse"></div>
+          </div>
+
+          {/* View Type Selector Skeleton */}
+          <div className="flex items-center gap-4 mb-8 border-b border-gray-200 pb-4">
+            <div className="h-8 bg-gray-200 rounded w-24 animate-pulse"></div>
+            <div className="h-8 bg-gray-200 rounded w-24 animate-pulse"></div>
+            <div className="h-8 bg-gray-200 rounded w-24 animate-pulse"></div>
+            <div className="ml-auto">
+              <div className="h-8 bg-gray-200 rounded w-20 animate-pulse"></div>
+            </div>
+          </div>
+
+          {/* Skeleton List */}
+          <SkeletonLoader itemCount={8} showHeader={true} showCheckbox={true} />
         </div>
       </div>
     );

@@ -3,12 +3,15 @@
 
 -- 1-1. 관악구 데이터 확인 (이미 존재하는지 확인)
 SELECT * FROM region_gu WHERE name = '관악구';
--- 패널인포에 닉네임 추가 (각 주소를 짧게 부르는 홈페이지의 '비고'란에 들어있는 내용 null있음.)
+
+-- 관악구가 없다면 추가
+INSERT INTO region_gu (code, name) VALUES ('gwanak', '관악구')
+ON CONFLICT (code) DO NOTHING;
+
+-- 1-2. 패널인포에 닉네임 추가 (각 주소를 짧게 부르는 홈페이지의 '비고'란에 들어있는 내용 null있음.)
 ALTER TABLE panel_info
 ADD COLUMN nickname TEXT;
 
---1 관악구 위도경도
-INSERT INTO region_gu ()
 -- 1-3. 관악구의 행정동 데이터 추가
 INSERT INTO region_dong (district_code, name) VALUES
 ('gwanak', '성현동'),
@@ -20,22 +23,19 @@ INSERT INTO region_dong (district_code, name) VALUES
 ('gwanak', '서원동')
 ON CONFLICT (district_code, name) DO NOTHING;
 
--- 1-4. 현수막 디스플레이 타입 확인
-SELECT * FROM display_types WHERE name = 'banner_display';
+-- 1-4. 현수막 디스플레이 타입 확인 및 추가
 INSERT INTO display_types (name) VALUES ('banner_display')
--- 2. post_code notnull 드롭
+ON CONFLICT (name) DO NOTHING;
+
+-- 1-5. post_code notnull 드롭
 ALTER TABLE panel_info
 ALTER COLUMN post_code DROP NOT NULL;
 
-INSERT INTO region_dong (district_code, name) VALUES
-('gwanak', '성현동'),
-('gwanak', '대학동'),
-('gwanak', '행운동'),
-('gwanak', '난곡동'),
-('gwanak', '조원동'),
-('gwanak', '남현동'),
-('gwanak', '서원동')
-ON CONFLICT (district_code, name) DO NOTHING;
+-- 1-6. post_code 컬럼을 NULL 허용으로 변경
+ALTER TABLE panel_info
+ALTER COLUMN post_code DROP NOT NULL;
+
+-- 2. 현수막 게시대 데이터 입력
 
 -- 2-1. 강남중앙교회 건너편(가)(봉천고개) 게시대 - 성현동
 INSERT INTO panel_info (
@@ -47,8 +47,8 @@ INSERT INTO panel_info (
   panel_status
 ) VALUES (
   (SELECT id FROM display_types WHERE name = 'banner_display'),
-  '548f8a9a-ba58-4d66-82a0-65c8533beb8b',
-  '5165dddb-3929-4f40-bd6d-56cd44d27fa0',
+  (SELECT id FROM region_gu WHERE name = '관악구'),
+  (SELECT id FROM region_dong WHERE name = '성현동' AND district_code = 'gwanak'),
   '강남중앙교회 건너편(가)(봉천고개)',
   '관악로285',
   'active'
@@ -64,8 +64,8 @@ INSERT INTO panel_info (
   panel_status
 ) VALUES (
   (SELECT id FROM display_types WHERE name = 'banner_display'),
-  '548f8a9a-ba58-4d66-82a0-65c8533beb8b',
-  '5576c452-1277-4b3f-89d6-d6ca0d81c737',
+  (SELECT id FROM region_gu WHERE name = '관악구'),
+  (SELECT id FROM region_dong WHERE name = '대학동' AND district_code = 'gwanak'),
   '관악IC 만남의 광장(가)(관악산입구 건너편)',
   '신림로',
   'active'
@@ -81,8 +81,8 @@ INSERT INTO panel_info (
   panel_status
 ) VALUES (
   (SELECT id FROM display_types WHERE name = 'banner_display'),
-  '548f8a9a-ba58-4d66-82a0-65c8533beb8b',
-  '5576c452-1277-4b3f-89d6-d6ca0d81c737',
+  (SELECT id FROM region_gu WHERE name = '관악구'),
+  (SELECT id FROM region_dong WHERE name = '대학동' AND district_code = 'gwanak'),
   '관악IC 만남의 광장(나)(관악산입구 건너편)',
   '신림로',
   'active'
@@ -98,8 +98,8 @@ INSERT INTO panel_info (
   panel_status
 ) VALUES (
   (SELECT id FROM display_types WHERE name = 'banner_display'),
-  '548f8a9a-ba58-4d66-82a0-65c8533beb8b',
-  '5576c452-1277-4b3f-89d6-d6ca0d81c737',
+  (SELECT id FROM region_gu WHERE name = '관악구'),
+  (SELECT id FROM region_dong WHERE name = '대학동' AND district_code = 'gwanak'),
   '신림중 담장앞',
   '신림로',
   'active'
@@ -115,8 +115,8 @@ INSERT INTO panel_info (
   panel_status
 ) VALUES (
   (SELECT id FROM display_types WHERE name = 'banner_display'),
-  '548f8a9a-ba58-4d66-82a0-65c8533beb8b',
-  'fb3eeeb0-30db-48e2-a9f2-5712815bc458',
+  (SELECT id FROM region_gu WHERE name = '관악구'),
+  (SELECT id FROM region_dong WHERE name = '행운동' AND district_code = 'gwanak'),
   '원당초등학교 담장 옆(서울대학교 입구)',
   '봉천로 505',
   'active'
@@ -132,8 +132,8 @@ INSERT INTO panel_info (
   panel_status
 ) VALUES (
   (SELECT id FROM display_types WHERE name = 'banner_display'),
-  '548f8a9a-ba58-4d66-82a0-65c8533beb8b',
-  '5165dddb-3929-4f40-bd6d-56cd44d27fa0',
+  (SELECT id FROM region_gu WHERE name = '관악구'),
+  (SELECT id FROM region_dong WHERE name = '성현동' AND district_code = 'gwanak'),
   '강남중앙교회 건너편(나)',
   '관악로 285',
   'active'
@@ -148,8 +148,8 @@ INSERT INTO panel_info (
   panel_status
 ) VALUES (
   (SELECT id FROM display_types WHERE name = 'banner_display'),
-  '548f8a9a-ba58-4d66-82a0-65c8533beb8b',
-  '9b9b922d-0bbe-44a2-859c-44d36db40b2f',
+  (SELECT id FROM region_gu WHERE name = '관악구'),
+  (SELECT id FROM region_dong WHERE name = '난곡동' AND district_code = 'gwanak'),
   '난곡보건소 맞은편(우측)',
   'active'
 );
@@ -164,8 +164,8 @@ INSERT INTO panel_info (
   panel_status
 ) VALUES (
   (SELECT id FROM display_types WHERE name = 'banner_display'),
-  '548f8a9a-ba58-4d66-82a0-65c8533beb8b',
-  '9f3c1dd4-315e-44c3-8c01-b9de75b19eaf',
+  (SELECT id FROM region_gu WHERE name = '관악구'),
+  (SELECT id FROM region_dong WHERE name = '조원동' AND district_code = 'gwanak'),
   '현대A교차로 옆(시민의 숲 삼거리)(배수펌프장앞)',
   '신사로60',
   'active'
@@ -181,8 +181,8 @@ INSERT INTO panel_info (
   panel_status
 ) VALUES (
   (SELECT id FROM display_types WHERE name = 'banner_display'),
-  '548f8a9a-ba58-4d66-82a0-65c8533beb8b',
-  '9b9b922d-0bbe-44a2-859c-44d36db40b2f',
+  (SELECT id FROM region_gu WHERE name = '관악구'),
+  (SELECT id FROM region_dong WHERE name = '난곡동' AND district_code = 'gwanak'),
   '난곡보건소 맞은편(좌측)',
   '난곡로154',
   'active'
@@ -198,8 +198,8 @@ INSERT INTO panel_info (
   panel_status
 ) VALUES (
   (SELECT id FROM display_types WHERE name = 'banner_display'),
-  '548f8a9a-ba58-4d66-82a0-65c8533beb8b',
-  '49f161e3-d720-451d-96be-df1e02444ffb',
+  (SELECT id FROM region_gu WHERE name = '관악구'),
+  (SELECT id FROM region_dong WHERE name = '남현동' AND district_code = 'gwanak'),
   '사당역 홈플러스 공터 옆',
   '남현동 611-3',
   'active'
@@ -215,8 +215,8 @@ INSERT INTO panel_info (
   panel_status
 ) VALUES (
   (SELECT id FROM display_types WHERE name = 'banner_display'),
-  '548f8a9a-ba58-4d66-82a0-65c8533beb8b',
-  '698ddd37-fcc5-46e7-a6e8-0a9822d52d00',
+  (SELECT id FROM region_gu WHERE name = '관악구'),
+  (SELECT id FROM region_dong WHERE name = '서원동' AND district_code = 'gwanak'),
   '서원동 GS주유소 건너편(가)',
   '신림로',
   'active'
@@ -232,8 +232,8 @@ INSERT INTO panel_info (
   panel_status
 ) VALUES (
   (SELECT id FROM display_types WHERE name = 'banner_display'),
-  '548f8a9a-ba58-4d66-82a0-65c8533beb8b',
-  '698ddd37-fcc5-46e7-a6e8-0a9822d52d00',
+  (SELECT id FROM region_gu WHERE name = '관악구'),
+  (SELECT id FROM region_dong WHERE name = '서원동' AND district_code = 'gwanak'),
   '서원동 GS주유소 건너편(나)',
   '신림로',
   'active'
@@ -249,27 +249,147 @@ INSERT INTO panel_info (
   panel_status
 ) VALUES (
   (SELECT id FROM display_types WHERE name = 'banner_display'),
-  '548f8a9a-ba58-4d66-82a0-65c8533beb8b',
-  '49f161e3-d720-451d-96be-df1e02444ffb',
+  (SELECT id FROM region_gu WHERE name = '관악구'),
+  (SELECT id FROM region_dong WHERE name = '남현동' AND district_code = 'gwanak'),
   '사당역IC(강남순환고속도로)',
   '남현동 산 69-19',
   'active'
 );
 
--- 3. 현수막 게시대 상세 정보 입력 (banner_panel_details)
+-- 3. 현수막 게시대 상세 정보 입력 (banner_slot_info)
 -- 각 게시대별로 면수 정보 입력 (주소로 구분)
+INSERT INTO banner_slot_info (
+  panel_info_id, slot_number, slot_name, max_width, max_height,
+  base_price, tax_price, banner_type, price_unit, is_premium, panel_slot_status
+) VALUES
+-- 강남중앙교회 건너편(가)(봉천고개) - 5면
+((SELECT id FROM panel_info WHERE address = '강남중앙교회 건너편(가)(봉천고개)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 1, '1번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '강남중앙교회 건너편(가)(봉천고개)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 2, '2번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '강남중앙교회 건너편(가)(봉천고개)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 3, '3번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '강남중앙교회 건너편(가)(봉천고개)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 4, '4번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '강남중앙교회 건너편(가)(봉천고개)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 5, '5번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
 
-INSERT INTO banner_panel_details (panel_info_id, max_banners, panel_height, panel_width) VALUES
-('f2c0172f-6270-40e2-beb5-907ee24723cf', 5, 70.00, 700.00), -- 강남중앙교회 건너편(가)
-('c0dcaacb-3d2b-4d3d-94a0-cb1cefc4cf87', 4, 70.00, 700.00), -- 관악IC 만남의 광장(가)
-('abeb4da2-a158-4d45-97ba-bf4ac5c60fab', 1, 70.00, 700.00), -- 관악IC 만남의 광장(나)
-('e157d8c9-0f3f-4ccf-9bc8-63604591ed3f', 5, 70.00, 700.00), -- 신림중 담장앞
-('594c8b63-5a11-41bf-91a6-ebc819dbf590', 5, 70.00, 700.00), -- 원당초등학교 담장 옆
-('b0ee2a4f-d5d5-4cfd-bdef-c13e0e601189', 5, 70.00, 700.00), -- 강남중앙교회 건너편(나)
-('d3a262e8-5aad-4a14-bb8c-17e3a3d45a61', 5, 70.00, 700.00), -- 난곡보건소 맞은편(우측)
-('6cace8eb-2ba7-4f39-87a7-d87a05cad2ba', 5, 70.00, 700.00), -- 현대A교차로 옆
-('69b7cd7f-cfe5-4dec-8419-b0af7222e411', 5, 70.00, 700.00), -- 난곡보건소 맞은편(좌측)
-('a19ff1cb-edc0-47fb-84a7-31248b513c85', 5, 70.00, 700.00), -- 사당역 홈플러스 공터 옆
-('7c8d518a-654e-4790-81b2-b665cb1966e6', 5, 70.00, 700.00), -- 서원동 GS주유소 건너편(가)
-('1192252d-2ab3-4400-97f4-0ac43eb95f09', 5, 70.00, 700.00), -- 서원동 GS주유소 건너편(나)
-('2d5d4057-d1d8-4f91-87fc-644357360e4c', 5, 70.00, 700.00); -- 사당역IC
+-- 관악IC 만남의 광장(가)(관악산입구 건너편) - 4면
+((SELECT id FROM panel_info WHERE address = '관악IC 만남의 광장(가)(관악산입구 건너편)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 1, '1번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '관악IC 만남의 광장(가)(관악산입구 건너편)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 2, '2번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '관악IC 만남의 광장(가)(관악산입구 건너편)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 3, '3번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '관악IC 만남의 광장(가)(관악산입구 건너편)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 4, '4번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+
+-- 관악IC 만남의 광장(나)(관악산입구 건너편) - 1면
+((SELECT id FROM panel_info WHERE address = '관악IC 만남의 광장(나)(관악산입구 건너편)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 1, '1번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+
+-- 신림중 담장앞 - 5면
+((SELECT id FROM panel_info WHERE address = '신림중 담장앞' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 1, '1번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '신림중 담장앞' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 2, '2번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '신림중 담장앞' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 3, '3번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '신림중 담장앞' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 4, '4번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '신림중 담장앞' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 5, '5번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+
+-- 원당초등학교 담장 옆(서울대학교 입구) - 5면
+((SELECT id FROM panel_info WHERE address = '원당초등학교 담장 옆(서울대학교 입구)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 1, '1번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '원당초등학교 담장 옆(서울대학교 입구)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 2, '2번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '원당초등학교 담장 옆(서울대학교 입구)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 3, '3번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '원당초등학교 담장 옆(서울대학교 입구)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 4, '4번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '원당초등학교 담장 옆(서울대학교 입구)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 5, '5번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+
+-- 강남중앙교회 건너편(나) - 5면
+((SELECT id FROM panel_info WHERE address = '강남중앙교회 건너편(나)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 1, '1번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '강남중앙교회 건너편(나)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 2, '2번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '강남중앙교회 건너편(나)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 3, '3번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '강남중앙교회 건너편(나)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 4, '4번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '강남중앙교회 건너편(나)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 5, '5번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+
+-- 난곡보건소 맞은편(우측) - 5면
+((SELECT id FROM panel_info WHERE address = '난곡보건소 맞은편(우측)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 1, '1번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '난곡보건소 맞은편(우측)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 2, '2번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '난곡보건소 맞은편(우측)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 3, '3번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '난곡보건소 맞은편(우측)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 4, '4번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '난곡보건소 맞은편(우측)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 5, '5번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+
+-- 현대A교차로 옆(시민의 숲 삼거리)(배수펌프장앞) - 5면
+((SELECT id FROM panel_info WHERE address = '현대A교차로 옆(시민의 숲 삼거리)(배수펌프장앞)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 1, '1번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '현대A교차로 옆(시민의 숲 삼거리)(배수펌프장앞)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 2, '2번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '현대A교차로 옆(시민의 숲 삼거리)(배수펌프장앞)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 3, '3번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '현대A교차로 옆(시민의 숲 삼거리)(배수펌프장앞)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 4, '4번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '현대A교차로 옆(시민의 숲 삼거리)(배수펌프장앞)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 5, '5번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+
+-- 난곡보건소 맞은편(좌측) - 5면
+((SELECT id FROM panel_info WHERE address = '난곡보건소 맞은편(좌측)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 1, '1번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '난곡보건소 맞은편(좌측)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 2, '2번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '난곡보건소 맞은편(좌측)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 3, '3번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '난곡보건소 맞은편(좌측)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 4, '4번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '난곡보건소 맞은편(좌측)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 5, '5번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+
+-- 사당역 홈플러스 공터 옆 - 5면
+((SELECT id FROM panel_info WHERE address = '사당역 홈플러스 공터 옆' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 1, '1번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '사당역 홈플러스 공터 옆' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 2, '2번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '사당역 홈플러스 공터 옆' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 3, '3번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '사당역 홈플러스 공터 옆' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 4, '4번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '사당역 홈플러스 공터 옆' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 5, '5번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+
+-- 서원동 GS주유소 건너편(가) - 5면
+((SELECT id FROM panel_info WHERE address = '서원동 GS주유소 건너편(가)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 1, '1번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '서원동 GS주유소 건너편(가)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 2, '2번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '서원동 GS주유소 건너편(가)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 3, '3번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '서원동 GS주유소 건너편(가)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 4, '4번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '서원동 GS주유소 건너편(가)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 5, '5번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+
+-- 서원동 GS주유소 건너편(나) - 5면
+((SELECT id FROM panel_info WHERE address = '서원동 GS주유소 건너편(나)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 1, '1번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '서원동 GS주유소 건너편(나)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 2, '2번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '서원동 GS주유소 건너편(나)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 3, '3번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '서원동 GS주유소 건너편(나)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 4, '4번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '서원동 GS주유소 건너편(나)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 5, '5번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+
+-- 사당역IC(강남순환고속도로) - 5면
+((SELECT id FROM panel_info WHERE address = '사당역IC(강남순환고속도로)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 1, '1번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '사당역IC(강남순환고속도로)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 2, '2번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '사당역IC(강남순환고속도로)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 3, '3번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '사당역IC(강남순환고속도로)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 4, '4번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available'),
+((SELECT id FROM panel_info WHERE address = '사당역IC(강남순환고속도로)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 5, '5번면', 700.00, 70.00, 110000.00, 0.00, 'panel', '15 days', false, 'available');
+
+-- 4. 현수막 게시대 상세 정보 입력 (banner_panel_details)
+-- 각 게시대별로 상세 정보 입력 (주소로 구분)
+INSERT INTO banner_panel_details (
+  panel_info_id, max_banners, panel_height, panel_width, is_for_admin
+) VALUES
+-- 강남중앙교회 건너편(가)(봉천고개) - 5면
+((SELECT id FROM panel_info WHERE address = '강남중앙교회 건너편(가)(봉천고개)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 5, 70.00, 700.00, false),
+
+-- 관악IC 만남의 광장(가)(관악산입구 건너편) - 4면
+((SELECT id FROM panel_info WHERE address = '관악IC 만남의 광장(가)(관악산입구 건너편)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 4, 70.00, 700.00, false),
+
+-- 관악IC 만남의 광장(나)(관악산입구 건너편) - 1면
+((SELECT id FROM panel_info WHERE address = '관악IC 만남의 광장(나)(관악산입구 건너편)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 1, 70.00, 700.00, false),
+
+-- 신림중 담장앞 - 5면
+((SELECT id FROM panel_info WHERE address = '신림중 담장앞' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 5, 70.00, 700.00, false),
+
+-- 원당초등학교 담장 옆(서울대학교 입구) - 5면
+((SELECT id FROM panel_info WHERE address = '원당초등학교 담장 옆(서울대학교 입구)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 5, 70.00, 700.00, false),
+
+-- 강남중앙교회 건너편(나) - 5면
+((SELECT id FROM panel_info WHERE address = '강남중앙교회 건너편(나)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 5, 70.00, 700.00, false),
+
+-- 난곡보건소 맞은편(우측) - 5면
+((SELECT id FROM panel_info WHERE address = '난곡보건소 맞은편(우측)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 5, 70.00, 700.00, false),
+
+-- 현대A교차로 옆(시민의 숲 삼거리)(배수펌프장앞) - 5면
+((SELECT id FROM panel_info WHERE address = '현대A교차로 옆(시민의 숲 삼거리)(배수펌프장앞)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 5, 70.00, 700.00, false),
+
+-- 난곡보건소 맞은편(좌측) - 5면
+((SELECT id FROM panel_info WHERE address = '난곡보건소 맞은편(좌측)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 5, 70.00, 700.00, false),
+
+-- 사당역 홈플러스 공터 옆 - 5면
+((SELECT id FROM panel_info WHERE address = '사당역 홈플러스 공터 옆' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 5, 70.00, 700.00, false),
+
+-- 서원동 GS주유소 건너편(가) - 5면
+((SELECT id FROM panel_info WHERE address = '서원동 GS주유소 건너편(가)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 5, 70.00, 700.00, false),
+
+-- 서원동 GS주유소 건너편(나) - 5면
+((SELECT id FROM panel_info WHERE address = '서원동 GS주유소 건너편(나)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 5, 70.00, 700.00, false),
+
+-- 사당역IC(강남순환고속도로) - 5면
+((SELECT id FROM panel_info WHERE address = '사당역IC(강남순환고속도로)' AND region_gu_id = (SELECT id FROM region_gu WHERE name = '관악구')), 5, 70.00, 700.00, false);
+
+

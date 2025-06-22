@@ -7,9 +7,11 @@ interface ListItem {
   id: number;
   title: string;
   subtitle?: string;
-  location?: string;
+  region_dong?: string;
   status: string;
   quantity?: number;
+  panel_width?: number;
+  panel_height?: number;
 }
 
 const statusColorMap: Record<string, string> = {
@@ -34,7 +36,7 @@ interface ItemTableProps {
   enableRowClick?: boolean;
 }
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 20;
 
 const ItemList: React.FC<ItemTableProps> = ({
   items,
@@ -85,9 +87,10 @@ const ItemList: React.FC<ItemTableProps> = ({
                 <th className="text-left pl-10">게시대 명</th>
                 <th className="text-center"></th>
                 <th className="text-center">행정동</th>
-                <th className="text-center">마감여부</th>
+                <th className="text-center">규격(cm)</th>
                 <th className="text-center">면수</th>
                 <th className="text-center">남은수량</th>
+                <th className="text-center">마감여부</th>
                 {renderAction && <th className="text-center">작업</th>}
               </tr>
             </thead>
@@ -177,7 +180,14 @@ const ItemList: React.FC<ItemTableProps> = ({
                     </button>
                   </div>
                 </td>
-                <td className="text-center">{item.location}</td>
+                <td className="text-center">{item.region_dong}</td>
+                <td className="text-center">
+                  {item.panel_width && item.panel_height
+                    ? `${item.panel_width} x ${item.panel_height}`
+                    : '-'}
+                </td>
+                <td className="text-center">{item.quantity ?? '-'}</td>
+                <td className="text-center">-</td>
                 <td
                   className={`text-center font-semibold ${getStatusClass(
                     item.status
@@ -185,8 +195,6 @@ const ItemList: React.FC<ItemTableProps> = ({
                 >
                   {item.status}
                 </td>
-                <td className="text-center">{item.quantity ?? '-'}</td>
-                <td className="text-center">-</td>
                 {renderAction && (
                   <td className="text-center">{renderAction(item)}</td>
                 )}
@@ -196,7 +204,7 @@ const ItemList: React.FC<ItemTableProps> = ({
             {Array.from({ length: ITEMS_PER_PAGE - paginatedItems.length }).map(
               (_, i) => (
                 <tr key={`empty-${i}`} className="h-[3.5rem]">
-                  <td colSpan={showCheckbox ? 6 : 5} />
+                  <td colSpan={showCheckbox ? 8 : 7} />
                 </tr>
               )
             )}
@@ -238,7 +246,7 @@ const ItemList: React.FC<ItemTableProps> = ({
             {item.subtitle && (
               <div className="text-gray-500">{item.subtitle}</div>
             )}
-            <div className="text-0.875">행정동: {item.location}</div>
+            <div className="text-0.875">행정동: {item.region_dong}</div>
             <div className="text-0.875">
               상태:&nbsp;
               <span
