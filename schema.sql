@@ -1,17 +1,24 @@
+-- 21 june 테이블 수정본 반영
+
+--2. panel_info  닉네임 추가 (각 주소를 짧게 부르는 홈페이지의 '비고'란에 들어있는 내용 null있음.)
+
+
 -- UUID Extension 활성화
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ENUM 타입 정의
-CREATE TYPE display_type_enum AS ENUM ('banner_display', 'led_display', 'public_design', 'digital_signage');
-CREATE TYPE homepage_menu_enum AS ENUM ('landing', 'banner_display', 'led_display', 'public_design', 'digital_signage');
-CREATE TYPE banner_type_enum AS ENUM ('horizontal', 'vertical', 'custom');
-CREATE TYPE price_unit_enum AS ENUM ('daily', 'weekly', 'monthly');
+CREATE TYPE display_type_enum AS ENUM ('banner_display', 'led_display', 'public_design', 'digital_signage'); --상품타입
+CREATE TYPE homepage_menu_enum AS ENUM ('landing', 'banner_display', 'led_display', 'public_design', 'digital_signage'); --홈페이지컨텐츠타입
+
+CREATE TYPE banner_type_enum AS ENUM ('manual', 'semi-auto', 'panel','citizen-bulletin-board');--현수막타입
+CREATE TYPE price_unit_enum AS ENUM ('15 days');
 CREATE TYPE panel_status_enum AS ENUM ('active', 'maintenance', 'inactive');
 CREATE TYPE payment_method_enum AS ENUM ('bank_transfer', 'card', 'cash', 'etc');
 CREATE TYPE cs_category_enum AS ENUM ('personal_cs', 'frequent_questions');
 CREATE TYPE panel_slot_status_enum AS ENUM ('available', 'maintenance', 'unavailable');
 CREATE TYPE order_status_enum AS ENUM ('draft_uploaded', 'submitted', 'awaiting_payment', 'paid', 'verified', 'completed');
 CREATE TYPE notice_priority_enum AS ENUM ('important', 'normal');
+
 
 -- 서울 구 테이블
 CREATE TABLE region_gu (
@@ -80,6 +87,7 @@ CREATE TABLE panel_info (
   region_gu_id UUID REFERENCES region_gu(id),
   region_dong_id UUID REFERENCES region_dong(id),
   address TEXT NOT NULL,
+  nickname TEXT, 
   photo_url TEXT,
   location_url TEXT,
   map_url TEXT,
@@ -88,11 +96,7 @@ CREATE TABLE panel_info (
   panel_status panel_status_enum DEFAULT 'active',
   maintenance_notes TEXT,
   created_at TIMESTAMP DEFAULT now(),
-  updated_at TIMESTAMP DEFAULT now(),
-  CONSTRAINT chk_coordinates CHECK (
-    latitude BETWEEN -90 AND 90 AND 
-    longitude BETWEEN -180 AND 180
-  )
+  updated_at TIMESTAMP DEFAULT now()
 );
 
 -- 현수막 게시대 상세
@@ -103,17 +107,6 @@ CREATE TABLE banner_panel_details (
   panel_height DECIMAL(5, 2) CHECK (panel_height > 0),
   panel_width DECIMAL(5, 2) CHECK (panel_width > 0),
   is_for_admin BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP DEFAULT now(),
-  updated_at TIMESTAMP DEFAULT now()
-);
-
--- LED 게시대 상세
-CREATE TABLE led_panel_details (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  panel_info_id UUID UNIQUE NOT NULL REFERENCES panel_info(id) ON DELETE CASCADE,
-  exposure_count INTEGER CHECK (exposure_count >= 0),
-  panel_width INTEGER CHECK (panel_width > 0),
-  panel_height INTEGER CHECK (panel_height > 0),
   created_at TIMESTAMP DEFAULT now(),
   updated_at TIMESTAMP DEFAULT now()
 );
@@ -129,13 +122,24 @@ CREATE TABLE banner_slot_info (
   base_price DECIMAL(10, 2) CHECK (base_price >= 0),
   tax_price NUMERIC CHECK (tax_price >= 0),
   banner_type banner_type_enum NOT NULL,
-  price_unit price_unit_enum DEFAULT 'daily',
+  price_unit price_unit_enum DEFAULT '15 days',
   is_premium BOOLEAN DEFAULT FALSE,
   panel_slot_status panel_slot_status_enum DEFAULT 'available',
   notes TEXT,
   created_at TIMESTAMP DEFAULT now(),
   updated_at TIMESTAMP DEFAULT now(),
   UNIQUE(panel_info_id, slot_number)
+);
+
+-- LED 게시대 상세
+CREATE TABLE led_panel_details (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  panel_info_id UUID UNIQUE NOT NULL REFERENCES panel_info(id) ON DELETE CASCADE,
+  exposure_count INTEGER CHECK (exposure_count >= 0),
+  panel_width INTEGER CHECK (panel_width > 0),
+  panel_height INTEGER CHECK (panel_height > 0),
+  created_at TIMESTAMP DEFAULT now(),
+  updated_at TIMESTAMP DEFAULT now()
 );
 
 -- LED 면 정보
@@ -149,7 +153,7 @@ CREATE TABLE led_slot_info (
   position_y INTEGER DEFAULT 0,
   base_price DECIMAL(10, 2) CHECK (base_price >= 0),
   tax_price NUMERIC CHECK (tax_price >= 0),
-  price_unit price_unit_enum DEFAULT 'daily',
+  price_unit price_unit_enum DEFAULT '15 days',
   is_premium BOOLEAN DEFAULT FALSE,
   panel_slot_status panel_slot_status_enum DEFAULT 'available',
   notes TEXT,

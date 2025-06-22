@@ -33,7 +33,8 @@ export interface Billboard {
   faces: number;
   lat: number;
   lng: number;
-  note?: string;
+  panel_width?: number;
+  panel_height?: number;
 }
 
 export interface DropdownOption {

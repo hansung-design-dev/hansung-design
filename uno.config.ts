@@ -97,11 +97,15 @@ export default defineConfig({
       xl: '1280px',
     },
   },
+  shortcuts: {
+    'animate-shimmer': 'animate-[shimmer_1.5s_ease-in-out_infinite]',
+  },
   rules: [
     [
       'animate-slide-in-left',
       { animation: 'slide-in-left 0.3s cubic-bezier(.4,0,.2,1) both' },
     ],
+    ['animate-shimmer', { animation: 'shimmer 1.5s ease-in-out infinite' }],
 
     // lineHeight 유틸리티 추가 (lh-body, lh-display 등 사용 가능)
     [

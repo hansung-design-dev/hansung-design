@@ -1,6 +1,7 @@
 import ItemList from '@/src/components/ui/itemlist';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import KakaoMap from '@/src/components/kakaoMap';
 import DropdownMenu from '@/src/components/dropdown';
 import ViewTypeButton from '@/src/components/viewTypeButton';
@@ -47,6 +48,7 @@ export default function DisplayDetailPage({
     'yeollip'
   );
   const { dispatch } = useCart();
+  const router = useRouter();
 
   // 마포구인지 확인
   const isMapoDistrict = districtObj?.code === 'mapo';
@@ -229,6 +231,19 @@ export default function DisplayDetailPage({
   return (
     <main className="min-h-screen flex flex-col bg-white pb-10">
       <div className="lg:min-w-[70rem] lg:max-w-[1500px]  mx-auto px-4 pt-[7rem]">
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-2 lg:text-1.125 md:text-1 font-semibold mb-4 text-gray-600"
+        >
+          <Image
+            src="/svg/arrow-left.svg"
+            alt="arrow-left"
+            width={100}
+            height={100}
+            className="w-10 h-10 "
+          />
+          구 목록으로 돌아가기
+        </button>
         <div className="mb-8">
           <div className="flex gap-2 items-center">
             {districtObj && (
@@ -334,9 +349,11 @@ export default function DisplayDetailPage({
                 id: item.id,
                 title: item.name,
                 subtitle: item.neighborhood,
-                location: item.district,
+                region_dong: item.neighborhood,
                 status: '진행중', // 기본값, 실제 데이터에서 가져와야 함
                 quantity: item.faces,
+                panel_width: item.panel_width,
+                panel_height: item.panel_height,
               }))}
               showHeader
               showCheckbox
