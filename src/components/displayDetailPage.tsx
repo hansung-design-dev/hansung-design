@@ -27,6 +27,7 @@ export default function DisplayDetailPage({
   districtObj,
   billboards,
   dropdownOptions,
+
   defaultView = 'gallery',
 }: {
   district: string;

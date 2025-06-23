@@ -22,11 +22,17 @@ export default function DistrictCard({
   district,
   basePath = 'led-display',
 }: DistrictCardProps) {
+  const isGangbuk = district.code === 'gangbuk';
+  const href = isGangbuk
+    ? 'https://gangbuk.uriad.com/sub01-01.jsp'
+    : `/${basePath}/${encodeURIComponent(district.code)}`;
+
   return (
     <div className="flex items-center justify-center lg:pb-4">
       <Link
-        href={`/${basePath}/${encodeURIComponent(district.code)}`}
+        href={href}
         className="w-[25rem] lg:h-[29.5625rem] md:h-[20rem] bg-gray-4 rounded-[1.25rem] flex flex-col overflow-hidden"
+        {...(isGangbuk && { target: '_blank', rel: 'noopener noreferrer' })}
       >
         <div className="flex-1 flex flex-col lg:gap-[3rem] md:gap-[2rem] p-8">
           <div className="flex flex-col gap-4">

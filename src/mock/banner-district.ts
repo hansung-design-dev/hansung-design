@@ -90,7 +90,7 @@ const bannerDistricts: District[] = [
     src: '/images/led/landing.png',
   },
   {
-    id: 6,
+    id: 7,
     name: '강북구',
     code: 'gangbuk',
     description: '여의도공원 앞 외 6건',
