@@ -84,6 +84,7 @@ CREATE TABLE panel_info (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   display_type_id UUID REFERENCES display_types(id),
   post_code TEXT UNIQUE NOT NULL,
+  panel_code int2
   region_gu_id UUID REFERENCES region_gu(id),
   region_dong_id UUID REFERENCES region_dong(id),
   address TEXT NOT NULL,

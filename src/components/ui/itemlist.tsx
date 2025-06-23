@@ -108,6 +108,8 @@ const ItemList: React.FC<ItemTableProps> = ({
                 displayBannerType && displayBannerType.trim() !== ''
                   ? `${category} / ${displayBannerType}`
                   : category;
+              const isSpecialDistrict =
+                item.district === '송파구' || item.district === '용산구';
               return (
                 <tr
                   key={item.id}
@@ -203,7 +205,9 @@ const ItemList: React.FC<ItemTableProps> = ({
                   <td className="text-center pl-4">
                     {item.faces ? `${item.faces}` : '-'}
                   </td>
-                  <td className="text-center pl-4">{item.price}</td>
+                  <td className="text-center pl-4">
+                    {isSpecialDistrict ? '-' : item.price}
+                  </td>
                   <td className="text-center pl-4">{fullCategory}</td>
                   <td className="text-center pl-4">
                     {item.faces ? `${item.faces}` : '-'}
