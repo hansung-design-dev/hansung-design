@@ -21,7 +21,7 @@ export interface DistrictItem {
   spots: number | string;
 }
 
-export interface Billboard {
+export interface BannerBillboard {
   id: number;
   type: string;
   district: string;
@@ -33,12 +33,14 @@ export interface Billboard {
   faces: number;
   lat: number;
   lng: number;
+  status: string;
   panel_width?: number;
   panel_height?: number;
   price_unit?: string;
   is_for_admin?: boolean;
   address?: string;
   nickname?: string;
+  panel_code?: number;
 }
 export interface ListItem {
   id: number;

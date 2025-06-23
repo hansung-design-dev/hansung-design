@@ -2,7 +2,7 @@ import { useState } from 'react';
 import ArrowLeft from '@/src/icons/arrow-left.svg';
 import ArrowRight from '@/src/icons/arrow-right.svg';
 import Image from 'next/image';
-import { BannerBillboard } from '@/src/types/banner';
+import { BannerBillboard } from '@/src/types/displaydetail';
 
 const statusColorMap: Record<string, string> = {
   추가결제: 'text-[#D61919]',

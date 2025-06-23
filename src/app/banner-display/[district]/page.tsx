@@ -10,7 +10,7 @@ import {
 } from '@/lib/api/banner-display';
 //import { testSupabaseConnection } from '@/lib/api/test-connection';
 import { BannerDisplayData } from '@/lib/supabase';
-import { BannerBillboard } from '@/src/types/banner';
+import { BannerBillboard } from '@/src/types/displaydetail';
 
 const dropdownOptions = [
   { id: 1, option: '전체보기' },

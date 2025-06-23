@@ -11,7 +11,7 @@ import ListIcon from '@/src/icons/list.svg';
 import { useState } from 'react';
 import { useCart } from '../contexts/cartContext';
 import { District, DropdownOption } from '@/src/types/displaydetail';
-import { BannerBillboard } from '@/src/types/banner';
+import { BannerBillboard } from '@/src/types/displaydetail';
 
 const fadeInUp = {
   initial: { y: 60, opacity: 0 },
