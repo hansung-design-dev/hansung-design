@@ -18,8 +18,6 @@ const dropdownOptions = [
   { id: 3, option: '보기2' },
 ];
 
-const defaultMenuName = '현수막게시대';
-
 export default function BannerDisplayPage() {
   const params = useParams();
   const encodedDistrict = params.district as string;
@@ -42,10 +40,7 @@ export default function BannerDisplayPage() {
     : districts.find((d) => d.code === district);
 
   const pageDropdownOptions = isAllDistricts
-    ? [
-        { id: 1, option: '전체' },
-        ...districts.map((d, i) => ({ id: i + 2, option: d.name })),
-      ]
+    ? districts.slice(0, 5).map((d, i) => ({ id: i + 1, option: d.name }))
     : dropdownOptions;
 
   console.log(
@@ -204,7 +199,6 @@ export default function BannerDisplayPage() {
       districtObj={districtObj}
       billboards={billboards}
       dropdownOptions={pageDropdownOptions}
-      defaultMenuName={defaultMenuName}
       defaultView="list"
     />
   );

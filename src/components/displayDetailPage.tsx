@@ -27,14 +27,12 @@ export default function DisplayDetailPage({
   districtObj,
   billboards,
   dropdownOptions,
-  defaultMenuName,
   defaultView = 'gallery',
 }: {
   district: string;
   districtObj: District | undefined;
   billboards: BannerBillboard[];
   dropdownOptions: DropdownOption[];
-  defaultMenuName: string;
   defaultView?: 'location' | 'gallery' | 'list';
 }) {
   // const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -67,7 +65,7 @@ export default function DisplayDetailPage({
     : billboards;
 
   const filteredByDistrict =
-    isAllDistrictsView && selectedOption && selectedOption.option !== '전체보기'
+    isAllDistrictsView && selectedOption
       ? filteredByMapo.filter((item) => item.district === selectedOption.option)
       : filteredByMapo;
 
@@ -290,11 +288,7 @@ export default function DisplayDetailPage({
               {districtObj?.name}
             </h2>
           </div>
-          {selectedOption?.option !== '전체보기' && (
-            <div>
-              {selectedOption ? selectedOption.option : defaultMenuName}
-            </div>
-          )}
+          {selectedOption && <div>{selectedOption.option}</div>}
           <p className="text-gray-600 mt-4">
             2025년 상반기 신청: <span className="text-red"> 상시모집</span>
           </p>
