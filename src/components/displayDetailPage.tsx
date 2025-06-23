@@ -83,6 +83,18 @@ export default function DisplayDetailPage({
       // billboards에서 아이템 찾기
       const item = billboards.find((item) => item.id === id);
       if (item) {
+        const isSpecialDistrict =
+          item.district === '송파구' || item.district === '용산구';
+
+        const priceString = String(item.price || '').replace(/,|원/g, '');
+        const priceNumber = parseInt(priceString, 10);
+
+        const priceForCart = isSpecialDistrict
+          ? 0 // '상담문의'는 string이라 타입 에러가 발생하여 0으로 설정
+          : !isNaN(priceNumber)
+          ? priceNumber
+          : 0;
+
         dispatch({
           type: 'ADD_ITEM',
           item: {
@@ -90,7 +102,7 @@ export default function DisplayDetailPage({
             type: 'banner-display',
             name: item.name,
             district: item.district,
-            price: 100000, // 가격 정보가 있다면 여기에 입력
+            price: priceForCart,
           },
         });
       }

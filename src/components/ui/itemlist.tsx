@@ -5,11 +5,21 @@ import Image from 'next/image';
 import { BannerBillboard } from '@/src/types/displaydetail';
 
 const statusColorMap: Record<string, string> = {
-  추가결제: 'text-[#D61919]',
-  파일오류: 'text-[#D61919]',
-  송출중: 'text-[#109251]',
   진행중: 'text-[#109251]',
   마감: 'text-[#7D7D7D]',
+};
+
+const statusDisplayMap: { [key: string]: string } = {
+  active: '진행중',
+  inactive: '마감',
+};
+
+const bannerTypeDisplayMap: { [key: string]: string } = {
+  panel: '판넬형',
+  'semi-auto': '반자동',
+  with_lighting: '조명용',
+  no_lighting: '비조명용',
+  top_fixed: '상단고정',
 };
 
 const getStatusClass = (status: string) => {
@@ -74,125 +84,147 @@ const ItemList: React.FC<ItemTableProps> = ({
             <thead>
               <tr className="border-b border-gray-200 h-[3rem] text-gray-500 font-medium">
                 {showCheckbox && <th className="w-10">no</th>}
-                <th className="text-left pl-10">게시대 명</th>
-                <th className="text-center"></th>
-                <th className="text-center">규격(cm)</th>
-                <th className="text-center">면수</th>
-                <th className="text-center">가격</th>
-                <th className="text-center">남은수량</th>
-                <th className="text-center">마감여부</th>
+                <th className="text-left pl-4">게시대 명</th>
+                <th className="text-center pl-4"></th>
+                <th className="text-center pl-4">규격(cm)</th>
+                <th className="text-center pl-4">면수</th>
+                <th className="text-center pl-4">가격</th>
+                <th className="text-center pl-4">구분</th>
+                <th className="text-center pl-4">수량</th>
+                <th className="text-center pl-4">상태</th>
                 {renderAction && <th className="text-center">작업</th>}
               </tr>
             </thead>
           )}
           <tbody>
-            {paginatedItems.map((item) => (
-              <tr
-                key={item.id}
-                className={`border-b border-gray-200 h-[3.5rem] hover:bg-gray-50 ${
-                  enableRowClick ? 'cursor-pointer' : ''
-                } ${
-                  item.is_for_admin ? 'bg-yellow-100 hover:bg-yellow-200' : ''
-                }`}
-                onClick={(e) => handleRowClick(e, item.id)}
-              >
-                {showCheckbox && (
-                  <td
-                    className="text-center px-4"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(item.id)}
-                      onChange={(e) =>
-                        onItemSelect?.(item.id, e.target.checked)
-                      }
-                    />
-                  </td>
-                )}
-                <td className="pl-10">
-                  <div
-                    className="font-medium text-black cursor-pointer"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleItemClick(item.id);
-                    }}
-                  >
-                    {item.nickname && <span> {item.nickname} - </span>}
-                    {item.address ? <span>{item.address}</span> : <></>}
-                    {item.neighborhood && (
-                      <span className="ml-1 text-gray-500">
-                        {item.neighborhood}
-                      </span>
-                    )}
-                  </div>
-                </td>
-                <td className="">
-                  <div className="flex gap-1">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        console.log('camera');
-                      }}
-                    >
-                      <Image
-                        src={'/svg/list/camera.svg'}
-                        alt="camera"
-                        width={300}
-                        height={300}
-                        className="w-[0.7rem] h-[0.7rem] rounded-md bg-black p-1"
-                      />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        console.log('map');
-                      }}
-                    >
-                      <Image
-                        src={'/svg/list/map.svg'}
-                        alt="map"
-                        width={300}
-                        height={300}
-                        className="w-[0.7rem] h-[0.7rem] rounded-md bg-black p-1"
-                      />{' '}
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        console.log('navigation');
-                      }}
-                    >
-                      <Image
-                        src={'/svg/list/navigation.svg'}
-                        alt="navi"
-                        width={300}
-                        height={300}
-                        className="w-[0.7rem] h-[0.7rem] rounded-md bg-black p-1"
-                      />
-                    </button>
-                  </div>
-                </td>
-                <td className="text-center">
-                  {item.panel_width && item.panel_height
-                    ? `${item.panel_width} x ${item.panel_height}`
-                    : '-'}
-                </td>
-                <td className="text-center">{item.faces ?? '-'}</td>
-                <td className="text-center">{item.price ?? '-'}</td>
-                <td className="text-center">-</td>
-                <td
-                  className={`text-center font-semibold ${getStatusClass(
-                    item.status
-                  )}`}
+            {paginatedItems.map((item) => {
+              const displayStatus =
+                statusDisplayMap[item.status] || item.status;
+              const displayBannerType = item.banner_type
+                ? bannerTypeDisplayMap[item.banner_type] || item.banner_type
+                : '';
+              const category = item.is_for_admin ? '행정' : '상업';
+              const fullCategory =
+                displayBannerType && displayBannerType.trim() !== ''
+                  ? `${category} / ${displayBannerType}`
+                  : category;
+              const isSpecialDistrict =
+                item.district === '송파구' || item.district === '용산구';
+              return (
+                <tr
+                  key={item.id}
+                  className={`border-b border-gray-200 h-[3.5rem] hover:bg-gray-50 ${
+                    enableRowClick ? 'cursor-pointer' : ''
+                  } ${
+                    item.is_for_admin ? 'bg-yellow-100 hover:bg-yellow-200' : ''
+                  }`}
+                  onClick={(e) => handleRowClick(e, item.id)}
                 >
-                  {item.status}
-                </td>
-                {renderAction && (
-                  <td className="text-center">{renderAction(item)}</td>
-                )}
-              </tr>
-            ))}
+                  {showCheckbox && (
+                    <td
+                      className="text-center px-4"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(item.id)}
+                        onChange={(e) =>
+                          onItemSelect?.(item.id, e.target.checked)
+                        }
+                      />
+                    </td>
+                  )}
+                  <td className="pl-4">
+                    <div
+                      className="font-medium text-black cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleItemClick(item.id);
+                      }}
+                    >
+                      {item.nickname && <span> {item.nickname} - </span>}
+                      {item.address ? <span>{item.address}</span> : <></>}
+                      {item.neighborhood && (
+                        <span className="ml-1 text-gray-500">
+                          {item.neighborhood}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="">
+                    <div className="flex gap-1">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          console.log('camera');
+                        }}
+                      >
+                        <Image
+                          src={'/svg/list/camera.svg'}
+                          alt="camera"
+                          width={300}
+                          height={300}
+                          className="w-[0.7rem] h-[0.7rem] rounded-md bg-black p-1"
+                        />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          console.log('map');
+                        }}
+                      >
+                        <Image
+                          src={'/svg/list/map.svg'}
+                          alt="map"
+                          width={300}
+                          height={300}
+                          className="w-[0.7rem] h-[0.7rem] rounded-md bg-black p-1"
+                        />{' '}
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          console.log('navigation');
+                        }}
+                      >
+                        <Image
+                          src={'/svg/list/navigation.svg'}
+                          alt="navi"
+                          width={300}
+                          height={300}
+                          className="w-[0.7rem] h-[0.7rem] rounded-md bg-black p-1"
+                        />
+                      </button>
+                    </div>
+                  </td>
+                  <td className="text-center pl-4">
+                    {item.panel_width && item.panel_height
+                      ? `${item.panel_width} x ${item.panel_height}`
+                      : '-'}
+                  </td>
+                  <td className="text-center pl-4">
+                    {item.faces ? `${item.faces}` : '-'}
+                  </td>
+                  <td className="text-center pl-4">
+                    {isSpecialDistrict ? '-' : item.price}
+                  </td>
+                  <td className="text-center pl-4">{fullCategory}</td>
+                  <td className="text-center pl-4">
+                    {item.faces ? `${item.faces}` : '-'}
+                  </td>
+                  <td
+                    className={`text-center font-semibold pl-4 ${getStatusClass(
+                      displayStatus
+                    )}`}
+                  >
+                    {displayStatus}
+                  </td>
+                  {renderAction && (
+                    <td className="text-center">{renderAction(item)}</td>
+                  )}
+                </tr>
+              );
+            })}
             {/* 빈 row로 높이 맞추기 */}
             {Array.from({ length: ITEMS_PER_PAGE - paginatedItems.length }).map(
               (_, i) => (
@@ -207,61 +239,73 @@ const ItemList: React.FC<ItemTableProps> = ({
 
       {/* ✅ 모바일(sm, md): 카드형으로 표시 */}
       <div className="flex flex-col gap-4 lg:hidden items-center ">
-        {paginatedItems.map((item) => (
-          <div
-            key={item.id}
-            className={`md:w-full sm:w-[70%] border-solid border-gray-200 rounded-lg p-12 flex flex-col gap-2 shadow-sm hover:bg-gray-50 ${
-              enableRowClick ? 'cursor-pointer' : ''
-            }`}
-            onClick={() => {
-              if (enableRowClick && !showCheckbox) {
-                handleItemClick(item.id);
-              }
-            }}
-          >
-            {showCheckbox && (
-              <div
-                className="flex items-center gap-2"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedIds.includes(item.id)}
-                  onChange={(e) => onItemSelect?.(item.id, e.target.checked)}
-                />
+        {paginatedItems.map((item) => {
+          const displayStatus = statusDisplayMap[item.status] || item.status;
+          const displayBannerType = item.banner_type
+            ? bannerTypeDisplayMap[item.banner_type] || item.banner_type
+            : '';
+          const category = item.is_for_admin ? '행정' : '상업';
+          const fullCategory =
+            displayBannerType && displayBannerType.trim() !== ''
+              ? `${category} - ${displayBannerType}`
+              : category;
+          return (
+            <div
+              key={item.id}
+              className={`md:w-full sm:w-[70%] border-solid border-gray-200 rounded-lg p-12 flex flex-col gap-2 shadow-sm hover:bg-gray-50 ${
+                enableRowClick ? 'cursor-pointer' : ''
+              }`}
+              onClick={() => {
+                if (enableRowClick && !showCheckbox) {
+                  handleItemClick(item.id);
+                }
+              }}
+            >
+              {showCheckbox && (
+                <div
+                  className="flex items-center gap-2"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(item.id)}
+                    onChange={(e) => onItemSelect?.(item.id, e.target.checked)}
+                  />
+                  <div className="font-medium text-black">{item.name}</div>
+                </div>
+              )}
+              {!showCheckbox && (
                 <div className="font-medium text-black">{item.name}</div>
+              )}
+
+              {item.neighborhood && (
+                <div className="text-gray-500">{item.neighborhood}</div>
+              )}
+              <div className="text-0.875">행정동: {item.neighborhood}</div>
+              <div className="text-0.875">
+                상태:&nbsp;
+                <span
+                  className={`text-0.875 ${getStatusClass(
+                    displayStatus
+                  )} font-medium`}
+                >
+                  {displayStatus}
+                </span>
               </div>
-            )}
-            {!showCheckbox && (
-              <div className="font-medium text-black">{item.name}</div>
-            )}
 
-            {item.neighborhood && (
-              <div className="text-gray-500">{item.neighborhood}</div>
-            )}
-            <div className="text-0.875">행정동: {item.neighborhood}</div>
-            <div className="text-0.875">
-              상태:&nbsp;
-              <span
-                className={`text-0.875 ${getStatusClass(
-                  item.status
-                )} font-medium`}
-              >
-                {item.status}
-              </span>
+              <div className="text-0.875">구분: {fullCategory}</div>
+              <div className="text-0.875">수량: {item.faces ?? '-'}</div>
+              {renderAction && <div>{renderAction(item)}</div>}
             </div>
-
-            <div className="text-0.875">남은 수량: {item.faces ?? '-'}</div>
-            {renderAction && <div>{renderAction(item)}</div>}
-          </div>
-        ))}
+          );
+        })}
       </div>
       {/* 페이지네이션 UI */}
-      <div className="flex justify-center items-center gap-1 mt-4 pb-10">
+      <div className="flex justify-center items-center gap-4 mt-4 pb-10">
         <button
           onClick={() => setPage((p) => Math.max(1, p - 1))}
           disabled={page === 1}
-          className="w-7 h-7 flex items-center justify-center"
+          className="w-3 h-3 flex items-center justify-center"
         >
           <ArrowLeft className="w-4 h-4 text-gray-14" />
         </button>
@@ -269,7 +313,7 @@ const ItemList: React.FC<ItemTableProps> = ({
           <button
             key={num}
             onClick={() => setPage(num)}
-            className={`w-7 h-7 flex items-center justify-center text-1.25 font-500 rounded ${
+            className={`w-3 h-3 flex items-center justify-center text-1.25 font-500 rounded ${
               page === num ? 'text-black' : 'text-gray-14'
             }`}
           >
@@ -279,7 +323,7 @@ const ItemList: React.FC<ItemTableProps> = ({
         <button
           onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
           disabled={page === totalPages}
-          className="w-7 h-7 flex items-center justify-center"
+          className="w-3 h-3 flex items-center justify-center"
         >
           <ArrowRight className="w-4 h-4 text-gray-14" />
         </button>
