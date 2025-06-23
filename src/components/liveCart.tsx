@@ -61,7 +61,11 @@ export default function LiveCart() {
                       height={20}
                     />
                   </button>{' '}
-                  <span className="mr-2">{item.price.toLocaleString()}원</span>
+                  <span className="mr-2">
+                    {item.price === 0
+                      ? '상담문의'
+                      : `${item.price.toLocaleString()}원`}
+                  </span>
                 </div>
               </div>
             ))}
