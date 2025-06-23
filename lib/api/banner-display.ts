@@ -7,9 +7,7 @@ export async function getBannerDisplaysByDistrict(districtName: string) {
       .from('panel_info')
       .select(
         `
-        id,
-        address,
-        nickname,
+        *,
         banner_panel_details (*),
         banner_slot_info (
           id,
