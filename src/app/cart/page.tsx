@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import Nav from '@/src/components/layouts/nav';
 import Link from 'next/link';
 import { useCart } from '@/src/contexts/cartContext';
+import { useState, useEffect } from 'react';
 
 const fadeInUp = {
   initial: { y: 60, opacity: 0 },
@@ -15,10 +16,41 @@ const fadeInUp = {
 
 export default function Cart() {
   const { cart } = useCart();
+  const [timeLeft, setTimeLeft] = useState<string>('');
 
   // 디버깅용: cart 배열 상태 확인
   console.log('🔍 Cart state in /cart page:', cart);
   console.log('🔍 Cart length:', cart.length);
+
+  // 남은 시간 계산
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const stored = localStorage.getItem('hansung_cart');
+      if (!stored) return;
+
+      try {
+        const cartState = JSON.parse(stored);
+        const now = Date.now();
+        const timeElapsed = now - cartState.lastUpdated;
+        const timeRemaining = 15 * 60 * 1000 - timeElapsed; // 15분 - 경과시간
+
+        if (timeRemaining <= 0) {
+          setTimeLeft('만료됨');
+          return;
+        }
+
+        const minutes = Math.floor(timeRemaining / (1000 * 60));
+        setTimeLeft(`${minutes}분`);
+      } catch (error) {
+        console.error('Error calculating time left:', error);
+      }
+    };
+
+    calculateTimeLeft();
+    const interval = setInterval(calculateTimeLeft, 60000); // 1분마다 업데이트
+
+    return () => clearInterval(interval);
+  }, [cart.length]);
 
   const checkedTotal = cart.reduce((total, item) => {
     if (typeof item.price === 'number') {
@@ -73,6 +105,13 @@ export default function Cart() {
                   {cart.length > 0 ? '현수막 게시대' : '장바구니가 비었습니다'}
                 </h2>
               </div>
+
+              {/* 남은 시간 표시 */}
+              {cart.length > 0 && (
+                <div className="text-sm text-red-500 font-medium mb-4">
+                  ⏰ 장바구니 만료까지: {timeLeft}
+                </div>
+              )}
 
               <div className="border-t border-gray-300 pt-4 space-y-4">
                 {cart.map((item) => (
