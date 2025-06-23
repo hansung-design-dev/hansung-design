@@ -7,12 +7,12 @@ export const regionGuData = [
     name: '종로구',
     logo_image: '/images/district-icon/all.svg',
   },
-  {
-    id: uuidv4(),
-    code: '1200000000',
-    name: '강동구',
-    logo_image: '/images/district-icon/gangdong-gu.png',
-  },
+  // {
+  //   id: uuidv4(),
+  //   code: '1200000000',
+  //   name: '강동구',
+  //   logo_image: '/images/district-icon/gangdong-gu.png',
+  // },
   {
     id: uuidv4(),
     code: '1300000000',

@@ -4,13 +4,16 @@ import SkeletonLoader from '@/src/components/layouts/skeletonLoader';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import districts from '@/src/mock/banner-district';
-import { getBannerDisplaysByDistrict } from '@/lib/api/banner-display';
+import {
+  getBannerDisplaysByDistrict,
+  getAllBannerDisplays,
+} from '@/lib/api/banner-display';
 //import { testSupabaseConnection } from '@/lib/api/test-connection';
 import { BannerBillboard } from '@/src/types/displaydetail';
 import { ledItems } from '@/src/mock/billboards';
 
 const dropdownOptions = [
-  { id: 1, option: '전체보기' },
+  { id: 1, option: '전체' },
   { id: 2, option: '보기1' },
   { id: 3, option: '보기2' },
 ];
@@ -21,7 +24,29 @@ export default function BannerDisplayPage() {
   const params = useParams();
   const encodedDistrict = params.district as string;
   const district = decodeURIComponent(encodedDistrict);
-  const districtObj = districts.find((d) => d.code === district);
+  const isAllDistricts = district === 'all';
+  const districtObj = isAllDistricts
+    ? {
+        id: 0,
+        name: '전체 보기',
+        code: 'all',
+        icon: '/images/district-icon/all.svg',
+        description: '모든 자치구',
+        count: 0,
+        size: '',
+        led_count: 0,
+        banner_count: 0,
+        sizeOfPeople: '',
+        src: '',
+      }
+    : districts.find((d) => d.code === district);
+
+  const pageDropdownOptions = isAllDistricts
+    ? [
+        { id: 1, option: '전체' },
+        ...districts.map((d, i) => ({ id: i + 2, option: d.name })),
+      ]
+    : dropdownOptions;
 
   console.log(
     'district',
@@ -40,9 +65,9 @@ export default function BannerDisplayPage() {
       try {
         setLoading(true);
 
-        const data = await getBannerDisplaysByDistrict(
-          districtObj?.name || district
-        );
+        const data = isAllDistricts
+          ? await getAllBannerDisplays()
+          : await getBannerDisplaysByDistrict(districtObj?.name || district);
 
         if (data && data.length > 0) {
           const transformed = data.map((item, index) => {
@@ -86,6 +111,8 @@ export default function BannerDisplayPage() {
             };
           });
           setBillboards(transformed);
+        } else if (isAllDistricts) {
+          setBillboards([]);
         } else {
           // DB에 데이터가 없으면 목업 데이터를 사용
           const mockBillboards = ledItems
@@ -123,7 +150,7 @@ export default function BannerDisplayPage() {
     if (district) {
       fetchBannerData();
     }
-  }, [district, districtObj?.name]);
+  }, [district, districtObj?.name, isAllDistricts]);
 
   if (loading) {
     return (
@@ -176,7 +203,7 @@ export default function BannerDisplayPage() {
       district={district}
       districtObj={districtObj}
       billboards={billboards}
-      dropdownOptions={dropdownOptions}
+      dropdownOptions={pageDropdownOptions}
       defaultMenuName={defaultMenuName}
       defaultView="list"
     />
