@@ -12,6 +12,10 @@ interface ListItem {
   quantity?: number;
   panel_width?: number;
   panel_height?: number;
+  price?: string;
+  is_for_admin?: boolean;
+  address?: string;
+  nickname?: string;
 }
 
 const statusColorMap: Record<string, string> = {
@@ -86,9 +90,9 @@ const ItemList: React.FC<ItemTableProps> = ({
                 {showCheckbox && <th className="w-10">no</th>}
                 <th className="text-left pl-10">게시대 명</th>
                 <th className="text-center"></th>
-                <th className="text-center">행정동</th>
                 <th className="text-center">규격(cm)</th>
                 <th className="text-center">면수</th>
+                <th className="text-center">가격</th>
                 <th className="text-center">남은수량</th>
                 <th className="text-center">마감여부</th>
                 {renderAction && <th className="text-center">작업</th>}
@@ -101,7 +105,7 @@ const ItemList: React.FC<ItemTableProps> = ({
                 key={item.id}
                 className={`border-b border-gray-200 h-[3.5rem] hover:bg-gray-50 ${
                   enableRowClick ? 'cursor-pointer' : ''
-                }`}
+                } ${item.is_for_admin ? 'bg-yellow-100' : ''}`}
                 onClick={(e) => handleRowClick(e, item.id)}
               >
                 {showCheckbox && (
@@ -126,7 +130,8 @@ const ItemList: React.FC<ItemTableProps> = ({
                       handleItemClick(item.id);
                     }}
                   >
-                    {item.title}
+                    {item.address ? <span>{item.address} -</span> : <></>}
+                    {item.nickname && <span> {item.nickname}</span>}
                     {item.subtitle && (
                       <span className="ml-1 text-gray-500">
                         {item.subtitle}
@@ -180,13 +185,13 @@ const ItemList: React.FC<ItemTableProps> = ({
                     </button>
                   </div>
                 </td>
-                <td className="text-center">{item.region_dong}</td>
                 <td className="text-center">
                   {item.panel_width && item.panel_height
                     ? `${item.panel_width} x ${item.panel_height}`
                     : '-'}
                 </td>
                 <td className="text-center">{item.quantity ?? '-'}</td>
+                <td className="text-center">{item.price ?? '-'}</td>
                 <td className="text-center">-</td>
                 <td
                   className={`text-center font-semibold ${getStatusClass(
@@ -204,7 +209,7 @@ const ItemList: React.FC<ItemTableProps> = ({
             {Array.from({ length: ITEMS_PER_PAGE - paginatedItems.length }).map(
               (_, i) => (
                 <tr key={`empty-${i}`} className="h-[3.5rem]">
-                  <td colSpan={showCheckbox ? 8 : 7} />
+                  <td colSpan={showCheckbox ? 9 : 8} />
                 </tr>
               )
             )}

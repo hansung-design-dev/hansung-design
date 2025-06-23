@@ -20,7 +20,11 @@ interface ListItem {
   status: string;
   date?: string;
   category?: string;
-  price?: number;
+  price?: string;
+  price_unit?: string;
+  is_for_admin?: boolean;
+  address?: string;
+  nickname?: string;
 }
 
 interface FilterableListProps {

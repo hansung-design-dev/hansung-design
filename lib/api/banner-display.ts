@@ -9,6 +9,20 @@ export async function getBannerDisplaysByDistrict(districtName: string) {
         `
         *,
         banner_panel_details (*),
+        banner_slot_info (
+          id,
+          slot_number,
+          slot_name,
+          max_width,
+          max_height,
+          base_price,
+          tax_price,
+          banner_type,
+          price_unit,
+          is_premium,
+          panel_slot_status,
+          notes
+        ),
         region_gu!inner (
           id,
           name,
@@ -62,6 +76,20 @@ export async function getAllBannerDisplays() {
         `
         *,
         banner_panel_details (*),
+        banner_slot_info (
+          id,
+          slot_number,
+          slot_name,
+          max_width,
+          max_height,
+          base_price,
+          tax_price,
+          banner_type,
+          price_unit,
+          is_premium,
+          panel_slot_status,
+          notes
+        ),
         region_gu!inner (
           id,
           name,

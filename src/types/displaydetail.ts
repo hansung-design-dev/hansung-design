@@ -35,6 +35,10 @@ export interface Billboard {
   lng: number;
   panel_width?: number;
   panel_height?: number;
+  price_unit?: string;
+  is_for_admin?: boolean;
+  address?: string;
+  nickname?: string;
 }
 
 export interface DropdownOption {
