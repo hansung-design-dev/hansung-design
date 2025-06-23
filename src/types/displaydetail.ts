@@ -41,6 +41,7 @@ export interface BannerBillboard {
   address?: string;
   nickname?: string;
   panel_code?: number;
+  banner_type?: string;
 }
 export interface ListItem {
   id: number;

@@ -10,7 +10,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TYPE display_type_enum AS ENUM ('banner_display', 'led_display', 'public_design', 'digital_signage'); --상품타입
 CREATE TYPE homepage_menu_enum AS ENUM ('landing', 'banner_display', 'led_display', 'public_design', 'digital_signage'); --홈페이지컨텐츠타입
 
-CREATE TYPE banner_type_enum AS ENUM ('manual', 'semi-auto', 'panel','citizen-bulletin-board');--현수막타입
+CREATE TYPE banner_type_enum AS ENUM ('manual', 'semi-auto', 'panel','citizen-bulletin-board','with_lighting', 'no_lighting','top_fixed');--현수막타입
 CREATE TYPE price_unit_enum AS ENUM ('15 days');
 CREATE TYPE panel_status_enum AS ENUM ('active', 'maintenance', 'inactive');
 CREATE TYPE payment_method_enum AS ENUM ('bank_transfer', 'card', 'cash', 'etc');
@@ -119,10 +119,10 @@ CREATE TABLE banner_slot_info (
   slot_name TEXT,
   max_width DECIMAL(5, 2),
   max_height DECIMAL(5, 2),
-  base_price DECIMAL(10, 2) CHECK (base_price >= 0),
-  --도로사용료
-  --광고대행료
-  tax_price NUMERIC CHECK (tax_price >= 0),
+  total_price DECIMAL(10, 2) CHECK (base_price >= 0),
+  road_usage_fee DECIMAL(10, 2) CHECK (road_usage_fee >= 0), --도로사용료
+  advertising_fee DECIMAL(10, 2) CHECK (advertising_fee >= 0), --광고대행료
+  tax_price NUMERIC CHECK (tax_price >= 0), --부가세
   banner_type banner_type_enum NOT NULL,
   price_unit price_unit_enum DEFAULT '15 days',
   is_premium BOOLEAN DEFAULT FALSE, -- 상단광고표기 하는 용도? 

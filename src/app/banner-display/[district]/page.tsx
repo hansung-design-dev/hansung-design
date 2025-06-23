@@ -56,6 +56,11 @@ export default function BannerDisplayPage() {
                 ? `${item.banner_slot_info[0].total_price?.toLocaleString()}원`
                 : '문의';
 
+            const bannerType =
+              item.banner_slot_info && item.banner_slot_info.length > 0
+                ? item.banner_slot_info[0].banner_type
+                : undefined;
+
             return {
               id: index + 1, // 단순한 인덱스 사용
               type: 'banner',
@@ -77,6 +82,7 @@ export default function BannerDisplayPage() {
               is_for_admin: item.banner_panel_details.is_for_admin,
               status: item.panel_status,
               panel_code: item.panel_code,
+              banner_type: bannerType,
             };
           });
           setBillboards(transformed);

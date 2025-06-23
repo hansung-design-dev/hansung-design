@@ -14,6 +14,14 @@ const statusDisplayMap: { [key: string]: string } = {
   inactive: '마감',
 };
 
+const bannerTypeDisplayMap: { [key: string]: string } = {
+  panel: '판넬형',
+  'semi-auto': '반자동',
+  with_lighting: '조명용',
+  no_lighting: '비조명용',
+  top_fixed: '상단고정',
+};
+
 const getStatusClass = (status: string) => {
   return statusColorMap[status] || 'text-black';
 };
@@ -81,8 +89,9 @@ const ItemList: React.FC<ItemTableProps> = ({
                 <th className="text-center pl-4">규격(cm)</th>
                 <th className="text-center pl-4">면수</th>
                 <th className="text-center pl-4">가격</th>
-                <th className="text-center pl-4">남은수량</th>
-                <th className="text-center pl-4">마감여부</th>
+                <th className="text-center pl-4">구분</th>
+                <th className="text-center pl-4">수량</th>
+                <th className="text-center pl-4">상태</th>
                 {renderAction && <th className="text-center">작업</th>}
               </tr>
             </thead>
@@ -91,6 +100,14 @@ const ItemList: React.FC<ItemTableProps> = ({
             {paginatedItems.map((item) => {
               const displayStatus =
                 statusDisplayMap[item.status] || item.status;
+              const displayBannerType = item.banner_type
+                ? bannerTypeDisplayMap[item.banner_type] || item.banner_type
+                : '';
+              const category = item.is_for_admin ? '행정' : '상업';
+              const fullCategory =
+                displayBannerType && displayBannerType.trim() !== ''
+                  ? `${category} / ${displayBannerType}`
+                  : category;
               return (
                 <tr
                   key={item.id}
@@ -183,11 +200,16 @@ const ItemList: React.FC<ItemTableProps> = ({
                       ? `${item.panel_width} x ${item.panel_height}`
                       : '-'}
                   </td>
-                  <td className="text-center pl-4">{item.faces ?? '-'}</td>
-                  <td className="text-center pl-4">{item.price ?? '-'}</td>
-                  <td className="text-center pl-4">-</td>
+                  <td className="text-center pl-4">
+                    {item.faces ? `${item.faces}` : '-'}
+                  </td>
+                  <td className="text-center pl-4">{item.price}</td>
+                  <td className="text-center pl-4">{fullCategory}</td>
+                  <td className="text-center pl-4">
+                    {item.faces ? `${item.faces}` : '-'}
+                  </td>
                   <td
-                    className={`text-center font-semibold pl-8 ${getStatusClass(
+                    className={`text-center font-semibold pl-4 ${getStatusClass(
                       displayStatus
                     )}`}
                   >
@@ -215,6 +237,14 @@ const ItemList: React.FC<ItemTableProps> = ({
       <div className="flex flex-col gap-4 lg:hidden items-center ">
         {paginatedItems.map((item) => {
           const displayStatus = statusDisplayMap[item.status] || item.status;
+          const displayBannerType = item.banner_type
+            ? bannerTypeDisplayMap[item.banner_type] || item.banner_type
+            : '';
+          const category = item.is_for_admin ? '행정' : '상업';
+          const fullCategory =
+            displayBannerType && displayBannerType.trim() !== ''
+              ? `${category} - ${displayBannerType}`
+              : category;
           return (
             <div
               key={item.id}
@@ -259,18 +289,19 @@ const ItemList: React.FC<ItemTableProps> = ({
                 </span>
               </div>
 
-              <div className="text-0.875">남은 수량: {item.faces ?? '-'}</div>
+              <div className="text-0.875">구분: {fullCategory}</div>
+              <div className="text-0.875">수량: {item.faces ?? '-'}</div>
               {renderAction && <div>{renderAction(item)}</div>}
             </div>
           );
         })}
       </div>
       {/* 페이지네이션 UI */}
-      <div className="flex justify-center items-center gap-1 mt-4 pb-10">
+      <div className="flex justify-center items-center gap-4 mt-4 pb-10">
         <button
           onClick={() => setPage((p) => Math.max(1, p - 1))}
           disabled={page === 1}
-          className="w-7 h-7 flex items-center justify-center"
+          className="w-3 h-3 flex items-center justify-center"
         >
           <ArrowLeft className="w-4 h-4 text-gray-14" />
         </button>
@@ -278,7 +309,7 @@ const ItemList: React.FC<ItemTableProps> = ({
           <button
             key={num}
             onClick={() => setPage(num)}
-            className={`w-7 h-7 flex items-center justify-center text-1.25 font-500 rounded ${
+            className={`w-3 h-3 flex items-center justify-center text-1.25 font-500 rounded ${
               page === num ? 'text-black' : 'text-gray-14'
             }`}
           >
@@ -288,7 +319,7 @@ const ItemList: React.FC<ItemTableProps> = ({
         <button
           onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
           disabled={page === totalPages}
-          className="w-7 h-7 flex items-center justify-center"
+          className="w-3 h-3 flex items-center justify-center"
         >
           <ArrowRight className="w-4 h-4 text-gray-14" />
         </button>
