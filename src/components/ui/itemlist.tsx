@@ -1,22 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import ArrowLeft from '@/src/icons/arrow-left.svg';
 import ArrowRight from '@/src/icons/arrow-right.svg';
 import Image from 'next/image';
-
-interface ListItem {
-  id: number;
-  title: string;
-  subtitle?: string;
-  region_dong?: string;
-  status: string;
-  quantity?: number;
-  panel_width?: number;
-  panel_height?: number;
-  price?: string;
-  is_for_admin?: boolean;
-  address?: string;
-  nickname?: string;
-}
+import { BannerBillboard } from '@/src/types/displaydetail';
 
 const statusColorMap: Record<string, string> = {
   추가결제: 'text-[#D61919]',
@@ -31,10 +17,10 @@ const getStatusClass = (status: string) => {
 };
 
 interface ItemTableProps {
-  items: ListItem[];
+  items: BannerBillboard[];
   showHeader?: boolean;
   showCheckbox?: boolean;
-  renderAction?: (item: ListItem) => React.ReactNode;
+  renderAction?: (item: BannerBillboard) => React.ReactNode;
   onItemSelect?: (id: number, checked: boolean) => void;
   selectedIds?: number[];
   enableRowClick?: boolean;
@@ -105,7 +91,9 @@ const ItemList: React.FC<ItemTableProps> = ({
                 key={item.id}
                 className={`border-b border-gray-200 h-[3.5rem] hover:bg-gray-50 ${
                   enableRowClick ? 'cursor-pointer' : ''
-                } ${item.is_for_admin ? 'bg-yellow-100' : ''}`}
+                } ${
+                  item.is_for_admin ? 'bg-yellow-100 hover:bg-yellow-200' : ''
+                }`}
                 onClick={(e) => handleRowClick(e, item.id)}
               >
                 {showCheckbox && (
@@ -130,11 +118,11 @@ const ItemList: React.FC<ItemTableProps> = ({
                       handleItemClick(item.id);
                     }}
                   >
-                    {item.address ? <span>{item.address} -</span> : <></>}
-                    {item.nickname && <span> {item.nickname}</span>}
-                    {item.subtitle && (
+                    {item.nickname && <span> {item.nickname} - </span>}
+                    {item.address ? <span>{item.address}</span> : <></>}
+                    {item.neighborhood && (
                       <span className="ml-1 text-gray-500">
-                        {item.subtitle}
+                        {item.neighborhood}
                       </span>
                     )}
                   </div>
@@ -190,7 +178,7 @@ const ItemList: React.FC<ItemTableProps> = ({
                     ? `${item.panel_width} x ${item.panel_height}`
                     : '-'}
                 </td>
-                <td className="text-center">{item.quantity ?? '-'}</td>
+                <td className="text-center">{item.faces ?? '-'}</td>
                 <td className="text-center">{item.price ?? '-'}</td>
                 <td className="text-center">-</td>
                 <td
@@ -241,17 +229,17 @@ const ItemList: React.FC<ItemTableProps> = ({
                   checked={selectedIds.includes(item.id)}
                   onChange={(e) => onItemSelect?.(item.id, e.target.checked)}
                 />
-                <div className="font-medium text-black">{item.title}</div>
+                <div className="font-medium text-black">{item.name}</div>
               </div>
             )}
             {!showCheckbox && (
-              <div className="font-medium text-black">{item.title}</div>
+              <div className="font-medium text-black">{item.name}</div>
             )}
 
-            {item.subtitle && (
-              <div className="text-gray-500">{item.subtitle}</div>
+            {item.neighborhood && (
+              <div className="text-gray-500">{item.neighborhood}</div>
             )}
-            <div className="text-0.875">행정동: {item.region_dong}</div>
+            <div className="text-0.875">행정동: {item.neighborhood}</div>
             <div className="text-0.875">
               상태:&nbsp;
               <span
@@ -263,7 +251,7 @@ const ItemList: React.FC<ItemTableProps> = ({
               </span>
             </div>
 
-            <div className="text-0.875">남은 수량: {item.quantity ?? '-'}</div>
+            <div className="text-0.875">남은 수량: {item.faces ?? '-'}</div>
             {renderAction && <div>{renderAction(item)}</div>}
           </div>
         ))}

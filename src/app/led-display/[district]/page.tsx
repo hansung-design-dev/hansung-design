@@ -3,7 +3,7 @@ import DisplayDetailPage from '@/src/components/displayDetailPage';
 import { useParams } from 'next/navigation';
 import districts from '@/src/mock/banner-district';
 import { ledItems } from '@/src/mock/billboards';
-import type { Billboard } from '@/src/types/displaydetail';
+import type { BannerBillboard } from '@/src/types/displaydetail';
 
 // const districtItems = Array(12)
 //   .fill(null)
@@ -40,11 +40,13 @@ export default function LedDisplayPage() {
       billboards={ledItems
         .filter((b) => b.location.split(' ')[0] === district)
         .map(
-          (item): Billboard => ({
+          (item): BannerBillboard => ({
             id: Number(item.id),
             type: 'led',
             district: item.location.split(' ')[0],
             name: item.title,
+            address: item.title,
+            nickname: item.location.split(' ')[1],
             neighborhood: item.location.split(' ')[1],
             period: '상시',
             price: item.price.toString(),
@@ -52,6 +54,9 @@ export default function LedDisplayPage() {
             faces: item.slots,
             lat: 37.5665, // Default coordinates
             lng: 126.978,
+            status: '진행중',
+            panel_width: item.width,
+            panel_height: item.height,
           })
         )}
       dropdownOptions={dropdownOptions}
