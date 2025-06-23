@@ -16,6 +16,10 @@ const fadeInUp = {
 export default function Cart() {
   const { cart } = useCart();
 
+  // 디버깅용: cart 배열 상태 확인
+  console.log('🔍 Cart state in /cart page:', cart);
+  console.log('🔍 Cart length:', cart.length);
+
   const checkedTotal = cart.reduce((total, item) => {
     if (typeof item.price === 'number') {
       return total + item.price;

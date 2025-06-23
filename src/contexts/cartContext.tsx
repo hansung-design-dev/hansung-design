@@ -20,13 +20,29 @@ const CartContext = createContext<{
 }>({ cart: [], dispatch: () => {} });
 
 function cartReducer(state: CartItem[], action: CartAction): CartItem[] {
+  console.log('🔍 Cart reducer called with action:', action);
+  console.log('🔍 Current cart state:', state);
+
+  let newState: CartItem[];
+
   switch (action.type) {
     case 'ADD_ITEM':
-      if (state.find((i) => i.id === action.item.id)) return state;
-      return [...state, action.item];
+      if (state.find((i) => i.id === action.item.id)) {
+        console.log(
+          '🔍 Item already exists in cart, skipping:',
+          action.item.id
+        );
+        return state;
+      }
+      newState = [...state, action.item];
+      console.log('🔍 New cart state after ADD_ITEM:', newState);
+      return newState;
     case 'REMOVE_ITEM':
-      return state.filter((i) => i.id !== action.id);
+      newState = state.filter((i) => i.id !== action.id);
+      console.log('🔍 New cart state after REMOVE_ITEM:', newState);
+      return newState;
     case 'CLEAR_CART':
+      console.log('🔍 Clearing cart');
       return [];
     default:
       return state;

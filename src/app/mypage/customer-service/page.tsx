@@ -4,6 +4,8 @@ import { useState } from 'react';
 import MypageContainer from '@/src/components/mypageContainer';
 import Image from 'next/image';
 import { BankAccount, contactNumber } from '@/src/mock/contact-bank';
+import { useRouter } from 'next/navigation';
+
 export default function CustomerServicePage() {
   const [activeTab, setActiveTab] = useState('1:1상담');
   const [openItemId, setOpenItemId] = useState<number | null>(null);
@@ -47,6 +49,8 @@ export default function CustomerServicePage() {
     setOpenItemId(openItemId === id ? null : id);
   };
 
+  const router = useRouter();
+
   return (
     <MypageContainer
       tabs={tabs}
@@ -65,7 +69,8 @@ export default function CustomerServicePage() {
               ].map((item, index) => (
                 <div
                   key={index}
-                  className="flex items-center rounded-lg p-4 md:p-6"
+                  className="flex items-center rounded-lg p-4 md:p-6 cursor-pointer hover:bg-gray-50 transition-colors"
+                  onClick={() => router.push('/mypage/orders')}
                 >
                   <div className="w-12 h-12 md:w-10 md:h-10 bg-gray-200 rounded-full" />
                   <div className="flex flex-col pl-4 md:pl-6">

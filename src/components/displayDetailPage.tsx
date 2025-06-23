@@ -113,6 +113,7 @@ export default function DisplayDetailPage({
     if (!shouldSelect) {
       newSelectedIds = selectedIds.filter((sid) => sid !== id);
       dispatch({ type: 'REMOVE_ITEM', id });
+      console.log('🔍 Removed item from cart:', id);
     } else {
       newSelectedIds = [...selectedIds, id];
       // billboards에서 아이템 찾기
@@ -130,16 +131,21 @@ export default function DisplayDetailPage({
           ? priceNumber
           : 0;
 
+        const cartItem = {
+          id: item.id,
+          type: 'banner-display' as const,
+          name: item.name,
+          district: item.district,
+          price: priceForCart,
+        };
+
+        console.log('🔍 Adding item to cart:', cartItem);
         dispatch({
           type: 'ADD_ITEM',
-          item: {
-            id: item.id,
-            type: 'banner-display',
-            name: item.name,
-            district: item.district,
-            price: priceForCart,
-          },
+          item: cartItem,
         });
+      } else {
+        console.error('🔍 Item not found in billboards:', id);
       }
     }
     setSelectedIds(newSelectedIds);

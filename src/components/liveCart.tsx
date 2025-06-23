@@ -7,12 +7,15 @@ export default function LiveCart() {
   const { cart, dispatch } = useCart();
   const router = useRouter();
 
+  // 디버깅용: cart 배열 상태 확인
+  console.log('🔍 Cart state in LiveCart:', cart);
+  console.log('🔍 Cart length in LiveCart:', cart.length);
+
   if (cart.length === 0) return null;
 
   const handleCartClick = () => {
-    // 라이브 장바구니를 일반 장바구니로 이동
-    dispatch({ type: 'CLEAR_CART' });
-    // 장바구니 페이지로 이동
+    // 라이브 장바구니를 일반 장바구니로 이동하지 않고,
+    // 현재 장바구니 상태를 유지한 채 장바구니 페이지로 이동
     router.push('/cart');
   };
 
