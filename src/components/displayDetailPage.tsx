@@ -348,12 +348,17 @@ export default function DisplayDetailPage({
               items={filteredBillboards.map((item) => ({
                 id: item.id,
                 title: item.name,
+                address: item.address,
+                nickname: item.nickname,
                 subtitle: item.neighborhood,
                 region_dong: item.neighborhood,
                 status: '진행중', // 기본값, 실제 데이터에서 가져와야 함
                 quantity: item.faces,
                 panel_width: item.panel_width,
                 panel_height: item.panel_height,
+                price: item.price,
+                price_unit: item.price_unit,
+                is_for_admin: item.is_for_admin,
               }))}
               showHeader
               showCheckbox

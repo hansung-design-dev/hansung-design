@@ -90,22 +90,30 @@ export default function BannerDisplayPage() {
   const transformedBillboards =
     bannerData?.map((item, index) => {
       console.log('Processing item:', item);
-      console.log('Nickname value:', item.nickname);
-      console.log('Nickname type:', typeof item.nickname);
+      // console.log('Nickname value:', item.nickname);
+      // console.log('Nickname type:', typeof item.nickname);
 
       const displayName =
         item.address && item.address.trim() !== ''
           ? item.address
           : item.address;
 
+      // 가격 정보: banner_slot_info의 첫 번째 슬롯의 base_price 사용
+      const price =
+        item.banner_slot_info && item.banner_slot_info.length > 0
+          ? `${item.banner_slot_info[0].base_price?.toLocaleString()}원`
+          : '문의';
+
       return {
         id: index + 1, // 단순한 인덱스 사용
         type: 'banner',
         district: item.region_gu.name,
         name: displayName,
+        address: item.address,
+        nickname: item.nickname,
         neighborhood: item.region_dong.name,
         period: '상시',
-        price: '문의', // 가격 정보가 없으므로 기본값
+        price: price,
         size:
           `${item.banner_panel_details.panel_width}x${item.banner_panel_details.panel_height}` ||
           'no size',
