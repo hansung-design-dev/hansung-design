@@ -26,8 +26,6 @@ const dropdownOptions = [
   { id: 3, option: '보기2' },
 ];
 
-const defaultMenuName = 'LED전자게시대';
-
 export default function LedDisplayPage() {
   const params = useParams();
   const encodedDistrict = params.district as string;
@@ -111,7 +109,6 @@ export default function LedDisplayPage() {
       districtObj={districtObj}
       billboards={billboards}
       dropdownOptions={dropdownOptions}
-      defaultMenuName={defaultMenuName}
     />
   );
 }

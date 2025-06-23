@@ -23,17 +23,17 @@ const fadeInUp = {
 };
 
 export default function DisplayDetailPage({
+  district,
   districtObj,
   billboards,
   dropdownOptions,
-  defaultMenuName,
+
   defaultView = 'gallery',
 }: {
   district: string;
   districtObj: District | undefined;
   billboards: BannerBillboard[];
   dropdownOptions: DropdownOption[];
-  defaultMenuName: string;
   defaultView?: 'location' | 'gallery' | 'list';
 }) {
   // const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -51,11 +51,12 @@ export default function DisplayDetailPage({
   const { dispatch } = useCart();
   const router = useRouter();
 
+  const isAllDistrictsView = district === 'all';
   // 마포구인지 확인
   const isMapoDistrict = districtObj?.code === 'mapo';
 
   // 마포구 필터에 따른 데이터 필터링
-  const filteredBillboards = isMapoDistrict
+  const filteredByMapo = isMapoDistrict
     ? billboards.filter((item) => {
         if (mapoFilter === 'yeollip') return true;
         // 실제 데이터 구조에 따라 필터링 로직 수정 필요
@@ -64,8 +65,22 @@ export default function DisplayDetailPage({
       })
     : billboards;
 
+  const filteredByDistrict =
+    isAllDistrictsView && selectedOption
+      ? filteredByMapo.filter((item) => item.district === selectedOption.option)
+      : filteredByMapo;
+
+  const filteredBillboards = isAllDistrictsView
+    ? [...filteredByDistrict].sort((a, b) =>
+        a.district.localeCompare(b.district)
+      )
+    : filteredByDistrict;
+
   const handleDropdownChange = (item: { id: number; option: string }) => {
     setSelectedOption(item);
+    if (item.option === '전체보기' && !isAllDistrictsView) {
+      router.push('/banner-display/all');
+    }
   };
 
   const handleItemSelect = (id: number, checked?: boolean) => {
@@ -274,7 +289,7 @@ export default function DisplayDetailPage({
               {districtObj?.name}
             </h2>
           </div>
-          <div>{selectedOption ? selectedOption.option : defaultMenuName}</div>
+          {selectedOption && <div>{selectedOption.option}</div>}
           <p className="text-gray-600 mt-4">
             2025년 상반기 신청: <span className="text-red"> 상시모집</span>
           </p>
@@ -349,7 +364,7 @@ export default function DisplayDetailPage({
             <DropdownMenu
               data={dropdownOptions}
               onChange={handleDropdownChange}
-              title="전체보기"
+              title={selectedOption?.option || '전체보기'}
             />
           </div>
         </div>

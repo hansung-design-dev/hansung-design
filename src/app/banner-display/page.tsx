@@ -3,6 +3,7 @@ import DistrictCard from '@/src/components/districtCard';
 import bannerDistricts from '@/src/mock/banner-district';
 
 export default function BannerDisplayPage() {
+  console.log('bannerDistricts[0]', bannerDistricts[0]);
   return (
     <main className="min-h-screen bg-white">
       {/* Fixed Header - Always visible */}
@@ -26,9 +27,8 @@ export default function BannerDisplayPage() {
           />
         </div>
       </section>
-
-      <div className="flex items-center justify-center mx-[4rem] px-4 py-8 sm:mx-[0.5rem] md:mx-[2rem]">
-        <div className="container grid lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-1 lg:gap-4 md:gap-[2rem] sm:gap-[2rem] ">
+      <div className="flex flex-col items-center justify-center mx-[4rem] px-4 py-8 sm:mx-[0.5rem] md:mx-[2rem]">
+        <div className="container grid lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-1 lg:gap-4 md:gap-[2rem] sm:gap-[2rem]">
           {bannerDistricts.map((district) => (
             <DistrictCard
               key={district.id}
