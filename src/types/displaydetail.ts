@@ -40,6 +40,20 @@ export interface Billboard {
   address?: string;
   nickname?: string;
 }
+export interface ListItem {
+  id: number;
+  title: string;
+  subtitle?: string;
+  location?: string;
+  status: string;
+  date?: string;
+  category?: string;
+  price?: string;
+  price_unit?: string;
+  is_for_admin?: boolean;
+  address?: string;
+  nickname?: string;
+}
 
 export interface DropdownOption {
   id: number;

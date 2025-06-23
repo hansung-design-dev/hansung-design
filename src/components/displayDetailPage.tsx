@@ -10,7 +10,8 @@ import GalleryIcon from '@/src/icons/gallery.svg';
 import ListIcon from '@/src/icons/list.svg';
 import { useState } from 'react';
 import { useCart } from '../contexts/cartContext';
-import { District, Billboard, DropdownOption } from '@/src/types/displaydetail';
+import { District, DropdownOption } from '@/src/types/displaydetail';
+import { BannerBillboard } from '@/src/types/banner';
 
 const fadeInUp = {
   initial: { y: 60, opacity: 0 },
@@ -30,7 +31,7 @@ export default function DisplayDetailPage({
 }: {
   district: string;
   districtObj: District | undefined;
-  billboards: Billboard[];
+  billboards: BannerBillboard[];
   dropdownOptions: DropdownOption[];
   defaultMenuName: string;
   defaultView?: 'location' | 'gallery' | 'list';
@@ -211,14 +212,16 @@ export default function DisplayDetailPage({
         <div className="sticky top-0">
           <div className="w-full aspect-square min-h-[500px]">
             <KakaoMap
-              markers={filteredBillboards.map((b: Billboard) => ({
-                id: b.id,
-                title: b.name,
-                lat: b.lat,
-                lng: b.lng,
-                type: b.type,
-                isSelected: selectedIds.includes(b.id),
-              }))}
+              markers={filteredBillboards
+                .filter((b) => b.lat != null && b.lng != null)
+                .map((b) => ({
+                  id: b.id,
+                  title: b.name,
+                  lat: b.lat!,
+                  lng: b.lng!,
+                  type: b.type,
+                  isSelected: selectedIds.includes(b.id),
+                }))}
               selectedIds={selectedIds}
               onSelect={handleItemSelect}
             />
@@ -345,21 +348,7 @@ export default function DisplayDetailPage({
             renderLocationView()
           ) : viewType === 'list' ? (
             <ItemList
-              items={filteredBillboards.map((item) => ({
-                id: item.id,
-                title: item.name,
-                address: item.address,
-                nickname: item.nickname,
-                subtitle: item.neighborhood,
-                region_dong: item.neighborhood,
-                status: '진행중', // 기본값, 실제 데이터에서 가져와야 함
-                quantity: item.faces,
-                panel_width: item.panel_width,
-                panel_height: item.panel_height,
-                price: item.price,
-                price_unit: item.price_unit,
-                is_for_admin: item.is_for_admin,
-              }))}
+              items={filteredBillboards}
               showHeader
               showCheckbox
               selectedIds={selectedIds}

@@ -15,7 +15,7 @@ export async function getBannerDisplaysByDistrict(districtName: string) {
           slot_name,
           max_width,
           max_height,
-          base_price,
+          total_price,
           tax_price,
           banner_type,
           price_unit,
@@ -37,7 +37,8 @@ export async function getBannerDisplaysByDistrict(districtName: string) {
       )
       .eq('region_gu.name', districtName)
       .eq('display_type_id', (await getBannerDisplayTypeId()).id)
-      .eq('panel_status', 'active');
+      .eq('panel_status', 'active')
+      .order('panel_code', { ascending: true });
 
     if (error) {
       console.error('Error fetching banner displays:', error);
@@ -82,7 +83,7 @@ export async function getAllBannerDisplays() {
           slot_name,
           max_width,
           max_height,
-          base_price,
+          total_price,
           tax_price,
           banner_type,
           price_unit,
@@ -103,7 +104,8 @@ export async function getAllBannerDisplays() {
       `
       )
       .eq('display_type_id', (await getBannerDisplayTypeId()).id)
-      .eq('panel_status', 'active');
+      .eq('panel_status', 'active')
+      .order('panel_code', { ascending: true });
 
     if (error) {
       console.error('Error fetching all banner displays:', error);

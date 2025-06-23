@@ -4,10 +4,13 @@ import SkeletonLoader from '@/src/components/layouts/skeletonLoader';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import districts from '@/src/mock/banner-district';
-import { getBannerDisplaysByDistrict } from '@/lib/api/banner-display';
+import {
+  getBannerDisplaysByDistrict,
+  testBasicDataFetch,
+} from '@/lib/api/banner-display';
 //import { testSupabaseConnection } from '@/lib/api/test-connection';
-import { testBasicDataFetch } from '@/lib/api/banner-display';
 import { BannerDisplayData } from '@/lib/supabase';
+import { BannerBillboard } from '@/src/types/banner';
 
 const dropdownOptions = [
   { id: 1, option: '전체보기' },
@@ -87,7 +90,7 @@ export default function BannerDisplayPage() {
   }, [district]);
 
   // Supabase 데이터를 컴포넌트에서 사용할 수 있는 형태로 변환
-  const transformedBillboards =
+  const transformedBillboards: BannerBillboard[] =
     bannerData?.map((item, index) => {
       console.log('Processing item:', item);
       // console.log('Nickname value:', item.nickname);
@@ -98,10 +101,10 @@ export default function BannerDisplayPage() {
           ? item.address
           : item.address;
 
-      // 가격 정보: banner_slot_info의 첫 번째 슬롯의 base_price 사용
+      // 가격 정보: banner_slot_info의 첫 번째 슬롯의 total_price 사용
       const price =
         item.banner_slot_info && item.banner_slot_info.length > 0
-          ? `${item.banner_slot_info[0].base_price?.toLocaleString()}원`
+          ? `${item.banner_slot_info[0].total_price?.toLocaleString()}원`
           : '문의';
 
       return {
@@ -122,6 +125,9 @@ export default function BannerDisplayPage() {
         lng: 126.978,
         panel_width: item.banner_panel_details.panel_width,
         panel_height: item.banner_panel_details.panel_height,
+        is_for_admin: item.banner_panel_details.is_for_admin,
+        status: item.panel_status, // panel_status를 status로 매핑
+        panel_code: item.panel_code,
       };
     }) || [];
 

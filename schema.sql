@@ -120,10 +120,12 @@ CREATE TABLE banner_slot_info (
   max_width DECIMAL(5, 2),
   max_height DECIMAL(5, 2),
   base_price DECIMAL(10, 2) CHECK (base_price >= 0),
+  --도로사용료
+  --광고대행료
   tax_price NUMERIC CHECK (tax_price >= 0),
   banner_type banner_type_enum NOT NULL,
   price_unit price_unit_enum DEFAULT '15 days',
-  is_premium BOOLEAN DEFAULT FALSE,
+  is_premium BOOLEAN DEFAULT FALSE, -- 상단광고표기 하는 용도? 
   panel_slot_status panel_slot_status_enum DEFAULT 'available',
   notes TEXT,
   created_at TIMESTAMP DEFAULT now(),

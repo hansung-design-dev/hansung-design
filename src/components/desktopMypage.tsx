@@ -1,5 +1,4 @@
 import Image from 'next/image';
-//import FilterableList from '@/src/components/FilterableList';
 import CategoryFilter from '@/src/components/ui/categoryFilter';
 import DateLocationFilter from '@/src/components/ui/datelocationfilter';
 import MypageContainer from './mypageContainer';
