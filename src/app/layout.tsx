@@ -9,7 +9,7 @@ import LiveCartClientWrapper from '../components/liveCartClientWrapper';
 // export const API = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_KEY}&autoload=false`;
 
 export const metadata: Metadata = {
-  title: 'Hansung-admin',
+  title: '한성디자인',
   description: 'Handung-design admin',
   icons: {
     icon: '/images/hansung-logo.png',

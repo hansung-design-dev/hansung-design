@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import MypageContainer from '@/src/components/mypageContainer';
 import Image from 'next/image';
+import { BankAccount, contactNumber } from '@/src/mock/contact-bank';
 export default function CustomerServicePage() {
   const [activeTab, setActiveTab] = useState('1:1상담');
   const [openItemId, setOpenItemId] = useState<number | null>(null);
@@ -255,15 +256,15 @@ export default function CustomerServicePage() {
                 전화번호
               </div>
               <div className="grid lg:grid-cols-2 md:grid-cols-2 sm:grid-cols-2 gap-3 md:gap-4">
-                {Array.from({ length: 5 }).map((_, idx) => (
+                {contactNumber.map((item) => (
                   <div
-                    key={idx}
-                    className="bg-[#F9F9F9] p-3 md:p-4 rounded-[0.25rem] lg:text-0.875 md:font-0.75 lg:min-w-[10rem] md:min-w-[10rem] h-[3rem] md:h-[3.5rem] sm:w-[7rem] sm:min-w-[9rem] sm:p-2"
+                    key={item.id}
+                    className="bg-[#F9F9F9] lg:p-4 md:p-4 rounded-[0.25rem] lg:text-0.875 md:font-0.75 lg:min-w-[9rem] md:min-w-[10rem] lg:h-[2.7rem] md:h-[3.5rem] sm:w-[7rem] sm:min-w-[9rem] sm:p-2"
                   >
-                    <div className="w-full ">
+                    <div className="w-full flex flex-col gap-2">
                       <div className="flex justify-between">
                         <div className="text-[#939393] font-500 pb-1 md:pb-2">
-                          관악구
+                          {item.region_gu}
                         </div>
                         <Image
                           src="/svg/copy.svg"
@@ -272,7 +273,7 @@ export default function CustomerServicePage() {
                           height={12}
                         />
                       </div>
-                      <div className="font-700">010-0000-0000</div>
+                      <div className="font-700">{item.number}</div>
                     </div>
                   </div>
                 ))}
@@ -285,15 +286,15 @@ export default function CustomerServicePage() {
                 계좌번호
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
-                {Array.from({ length: 5 }).map((_, idx) => (
+                {BankAccount.map((item) => (
                   <div
-                    key={idx}
-                    className="bg-[#F9F9F9] p-3 md:p-4 rounded-[0.25rem] text-sm md:font-0.75 lg:min-w-[10rem] md:min-w-[12rem] h-[3rem] md:h-[3.5rem] sm:w-[7rem] sm:min-w-[9rem] sm:p-2"
+                    key={item.id}
+                    className="bg-[#F9F9F9] p-3 md:p-4 rounded-[0.25rem] text-sm md:font-0.75 lg:min-w-[11rem] md:min-w-[12rem] h-[3rem] md:h-[3.5rem] sm:w-[7rem] sm:min-w-[9rem] sm:p-2"
                   >
                     <div className="w-full">
                       <div className="flex justify-between">
                         <div className="text-[#939393] font-500 pb-1 md:pb-2">
-                          관악구
+                          {item.region_gu}
                         </div>
                         <Image
                           src="/svg/copy.svg"
@@ -302,7 +303,9 @@ export default function CustomerServicePage() {
                           height={10}
                         />
                       </div>
-                      <div className="font-700">우리 1005-103-367439</div>
+                      <div className="font-700">
+                        {item.bank_name} {item.bank_account}
+                      </div>
                     </div>
                   </div>
                 ))}
