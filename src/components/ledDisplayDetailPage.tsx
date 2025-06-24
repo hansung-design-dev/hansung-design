@@ -1,4 +1,5 @@
-import ItemList from '@/src/components/ui/itemlist';
+'use client';
+import LEDItemList from '@/src/components/ui/ledItemList';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -10,12 +11,8 @@ import GalleryIcon from '@/src/icons/gallery.svg';
 import ListIcon from '@/src/icons/list.svg';
 import { useState } from 'react';
 import { useCart } from '../contexts/cartContext';
-import {
-  District,
-  DropdownOption,
-  DisplayBillboard,
-} from '@/src/types/displaydetail';
-// import { BannerBillboard } from '@/src/types/displaydetail';
+import { District, DropdownOption } from '@/src/types/displaydetail';
+import { LEDBillboard } from '@/src/types/leddetail';
 
 const fadeInUp = {
   initial: { y: 60, opacity: 0 },
@@ -26,21 +23,19 @@ const fadeInUp = {
   },
 };
 
-export default function DisplayDetailPage({
+export default function LEDDisplayDetailPage({
   district,
   districtObj,
   billboards,
   dropdownOptions,
-
   defaultView = 'gallery',
 }: {
   district: string;
   districtObj: District | undefined;
-  billboards: DisplayBillboard[];
+  billboards: LEDBillboard[];
   dropdownOptions: DropdownOption[];
   defaultView?: 'location' | 'gallery' | 'list';
 }) {
-  // const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selectedOption, setSelectedOption] = useState<{
     id: number;
     option: string;
@@ -49,34 +44,15 @@ export default function DisplayDetailPage({
     defaultView
   );
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [mapoFilter, setMapoFilter] = useState<'yeollip' | 'jeodan' | 'simin'>(
-    'yeollip'
-  );
   const { dispatch } = useCart();
   const router = useRouter();
 
   const isAllDistrictsView = district === 'all';
-  // 마포구인지 확인
-  const isMapoDistrict = districtObj?.code === 'mapo';
-
-  // 마포구 필터에 따른 데이터 필터링
-  const filteredByMapo = isMapoDistrict
-    ? billboards.filter((item) => {
-        if (mapoFilter === 'yeollip') {
-          return item.panel_type === 'multi-panel';
-        } else if (mapoFilter === 'jeodan') {
-          return item.panel_type === 'lower-panel';
-        } else if (mapoFilter === 'simin') {
-          return item.panel_type === 'bulletin-board';
-        }
-        return true;
-      })
-    : billboards;
 
   const filteredByDistrict =
     isAllDistrictsView && selectedOption
-      ? filteredByMapo.filter((item) => item.district === selectedOption.option)
-      : filteredByMapo;
+      ? billboards.filter((item) => item.district === selectedOption.option)
+      : billboards;
 
   const filteredBillboards = isAllDistrictsView
     ? [...filteredByDistrict].sort((a, b) =>
@@ -84,23 +60,16 @@ export default function DisplayDetailPage({
       )
     : filteredByDistrict;
 
-  // 구분 컬럼에 표시할 값 계산 함수
-  const getPanelTypeLabel = (panelType?: string) => {
-    if (!panelType) return '현수막게시대';
-
-    switch (panelType) {
-      case 'multi-panel':
-        return '연립형';
-      case 'lower-panel':
-        return '저단형';
-      case 'bulletin-board':
-        return '시민/문화게시판';
-      default:
-        return '현수막게시대';
-    }
+  // LED 전용 구분 컬럼에 표시할 값 계산 함수
+  const getLEDPanelTypeLabel = (panelType?: string) => {
+    if (!panelType) return 'LED전자게시대';
+    return 'LED전자게시대';
   };
 
-  const getCartItemName = (item: { nickname?: string; address?: string }) => {
+  const getCartItemName = (item: {
+    nickname?: string | null;
+    address?: string;
+  }) => {
     if (item.nickname && item.address)
       return `${item.nickname} - ${item.address}`;
     if (item.nickname) return item.nickname;
@@ -111,7 +80,7 @@ export default function DisplayDetailPage({
   const handleDropdownChange = (item: { id: number; option: string }) => {
     setSelectedOption(item);
     if (item.option === '전체보기' && !isAllDistrictsView) {
-      router.push('/banner-display/all');
+      router.push('/led-display/all');
     }
   };
 
@@ -119,45 +88,36 @@ export default function DisplayDetailPage({
     const alreadySelected = selectedIds.includes(id);
     let newSelectedIds;
 
-    // checked 파라미터가 있으면 그 값을 사용, 없으면 기존 로직 사용
     const shouldSelect = checked !== undefined ? checked : !alreadySelected;
 
     if (!shouldSelect) {
       newSelectedIds = selectedIds.filter((sid) => sid !== id);
       dispatch({ type: 'REMOVE_ITEM', id });
-      console.log('🔍 Removed item from cart:', id);
+      console.log('🔍 Removed LED item from cart:', id);
     } else {
       newSelectedIds = [...selectedIds, id];
-      // billboards에서 아이템 찾기
       const item = billboards.find((item) => item.id === id);
       if (item) {
-        const isSpecialDistrict =
-          item.district === '송파구' || item.district === '용산구';
-
         const priceString = String(item.price || '').replace(/,|원/g, '');
         const priceNumber = parseInt(priceString, 10);
 
-        const priceForCart = isSpecialDistrict
-          ? 0 // '상담문의'는 string이라 타입 에러가 발생하여 0으로 설정
-          : !isNaN(priceNumber)
-          ? priceNumber
-          : 0;
+        const priceForCart = !isNaN(priceNumber) ? priceNumber : 0;
 
         const cartItem = {
           id: item.id,
-          type: 'banner-display' as const,
+          type: 'led-display' as const,
           name: getCartItemName(item),
           district: item.district,
           price: priceForCart,
         };
 
-        console.log('🔍 Adding item to cart:', cartItem);
+        console.log('🔍 Adding LED item to cart:', cartItem);
         dispatch({
           type: 'ADD_ITEM',
           item: cartItem,
         });
       } else {
-        console.error('🔍 Item not found in billboards:', id);
+        console.error('🔍 LED item not found in billboards:', id);
       }
     }
     setSelectedIds(newSelectedIds);
@@ -167,9 +127,10 @@ export default function DisplayDetailPage({
     <div className="grid grid-cols-3 sm:grid-cols-1 md:grid-cols-4 lg:grid-cols-4 gap-6 ">
       {filteredBillboards.map((item, index) => {
         const isSelected = selectedIds.includes(item.id);
+        const uniqueKey = item.id || `led-gallery-${index}`; // fallback key
         return (
           <div
-            key={index}
+            key={uniqueKey}
             className={`flex flex-col cursor-pointer `}
             onClick={() => handleItemSelect(item.id)}
           >
@@ -190,7 +151,7 @@ export default function DisplayDetailPage({
                 />
               )}
               <Image
-                src="/images/led-display.jpeg" // 기본 이미지 사용
+                src="/images/led-display.jpeg"
                 alt={item.name}
                 fill
                 className={`md:object-cover sm:object-cover `}
@@ -199,7 +160,7 @@ export default function DisplayDetailPage({
             <div className="mt-4">
               <div className="flex gap-2 mb-2">
                 <span className="px-2 py-1 bg-black text-white text-0.875 rounded-[5rem]">
-                  {getPanelTypeLabel(item.panel_type)}
+                  {getLEDPanelTypeLabel(item.panel_type)}
                 </span>
                 <span className="px-2 py-1 bg-black text-white text-0.875 rounded-[5rem]">
                   {item.district}
@@ -216,7 +177,6 @@ export default function DisplayDetailPage({
 
   const renderLocationView = () => (
     <div className="flex gap-8" style={{ height: '700px' }}>
-      {/* Left: Card List (scrollable) */}
       <div
         className="flex-1 overflow-y-auto pr-2"
         style={{ maxWidth: '40%', maxHeight: '700px' }}
@@ -224,9 +184,10 @@ export default function DisplayDetailPage({
         <div className="flex flex-col gap-6">
           {filteredBillboards.map((item, index) => {
             const isSelected = selectedIds.includes(item.id);
+            const uniqueKey = item.id || `led-location-${index}`; // fallback key
             return (
               <div
-                key={index}
+                key={uniqueKey}
                 className={`flex flex-col cursor-pointer `}
                 onClick={() => handleItemSelect(item.id)}
               >
@@ -247,7 +208,7 @@ export default function DisplayDetailPage({
                     />
                   )}
                   <Image
-                    src="/images/led-display.jpeg" // 기본 이미지 사용
+                    src="/images/led-display.jpeg"
                     alt={item.name}
                     fill
                     className="object-cover"
@@ -256,7 +217,7 @@ export default function DisplayDetailPage({
                 <div className="p-4">
                   <div className="flex gap-2 mb-2">
                     <span className="px-2 py-1 bg-gray-100 text-gray-600 text-0.875 rounded">
-                      {getPanelTypeLabel(item.panel_type)}
+                      {getLEDPanelTypeLabel(item.panel_type)}
                     </span>
                     <span className="px-2 py-1 bg-gray-100 text-gray-600 text-0.875 rounded">
                       {item.district}
@@ -272,7 +233,6 @@ export default function DisplayDetailPage({
           })}
         </div>
       </div>
-      {/* Right: Map (sticky, 1.5x width of card list) */}
       <div className="min-w-0" style={{ width: '60%', minWidth: '500px' }}>
         <div className="sticky top-0">
           <div className="w-full aspect-square min-h-[500px]">
@@ -341,43 +301,7 @@ export default function DisplayDetailPage({
           <p className="text-gray-600">유동인구 : -명</p>
           <p className="text-gray-600">소비자트렌드 : </p>
         </div>
-        {/* 마포구 전용 filter */}
-        {isMapoDistrict && (
-          <div className="mb-8">
-            <div className="flex items-center gap-4 border-b border-gray-200 pb-4">
-              <button
-                onClick={() => setMapoFilter('yeollip')}
-                className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-6 font-medium ${
-                  mapoFilter === 'yeollip'
-                    ? 'text-white bg-black rounded-full '
-                    : 'text-gray-600 hover:text-gray-800'
-                }`}
-              >
-                연립형
-              </button>
-              <button
-                onClick={() => setMapoFilter('jeodan')}
-                className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-6 font-medium ${
-                  mapoFilter === 'jeodan'
-                    ? 'text-white bg-black rounded-full '
-                    : 'text-gray-600 hover:text-gray-800'
-                }`}
-              >
-                저단형
-              </button>
-              <button
-                onClick={() => setMapoFilter('simin')}
-                className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-6 font-medium ${
-                  mapoFilter === 'simin'
-                    ? 'text-white bg-black rounded-full '
-                    : 'text-gray-600 hover:text-gray-800'
-                }`}
-              >
-                시민게시대
-              </button>
-            </div>
-          </div>
-        )}
+
         {/* View Type Selector */}
         <div className="flex items-center gap-4 mb-8 border-b border-gray-200 pb-4">
           <ViewTypeButton
@@ -412,7 +336,7 @@ export default function DisplayDetailPage({
           {viewType === 'location' ? (
             renderLocationView()
           ) : viewType === 'list' ? (
-            <ItemList
+            <LEDItemList
               items={filteredBillboards}
               showHeader
               showCheckbox

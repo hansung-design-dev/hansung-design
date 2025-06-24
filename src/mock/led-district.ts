@@ -46,6 +46,17 @@ const ledDistricts: District[] = [
   },
   {
     id: 4,
+    name: '관악구',
+    code: 'gwanak',
+    description: '서울대입구역 앞 외 3건',
+    count: 4,
+    icon: '/images/district-icon/gwanak-gu.png',
+    size: '1000x1000',
+    sizeOfPeople: '10000',
+    src: '/images/led/landing.png',
+  },
+  {
+    id: 5,
     name: '동작구',
     code: 'donjak',
     description: '홍대입구역 앞 외 5건',
@@ -56,7 +67,7 @@ const ledDistricts: District[] = [
     src: '/images/led/landing.png',
   },
   {
-    id: 5,
+    id: 6,
     name: '동대문구',
     code: 'dongdaemun',
     description: '울림픽대교 남단사거리 앞 외 3건',
