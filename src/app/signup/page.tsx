@@ -243,7 +243,7 @@ export default function Signup() {
             />
           </div>
           {validation.name.message && (
-            <div className="text-blue-500 text-0-625 font-100 mt-1 ml-2">
+            <div className="text-blue-500 text-0.75 mt-2 ml-2">
               {validation.name.message}
             </div>
           )}
@@ -274,7 +274,7 @@ export default function Signup() {
             </Button>
           </div>
           {validation.id.message && (
-            <div className="text-blue-500 text-0-625 font-100 mt-1 ml-2">
+            <div className="text-blue-500 text-0.75 mt-2 ml-2">
               {validation.id.message}
             </div>
           )}
@@ -300,7 +300,7 @@ export default function Signup() {
             />
           </div>
           {validation.email.message && (
-            <div className="text-blue-500 text-0-625 font-100 mt-1 ml-2">
+            <div className="text-blue-500 text-0.75 mt-2 ml-2">
               {validation.email.message}
             </div>
           )}
@@ -326,7 +326,7 @@ export default function Signup() {
             />
           </div>
           {validation.password.message && (
-            <div className="text-blue-500 text-0-625 font-100 mt-1 ml-2">
+            <div className="text-blue-500 text-0.75 mt-2 ml-2">
               {validation.password.message}
             </div>
           )}
@@ -354,7 +354,7 @@ export default function Signup() {
             />
           </div>
           {validation.passwordConfirm.message && (
-            <div className="text-blue-500 text-0-625 font-100 mt-1 ml-2">
+            <div className="text-blue-500 text-0.75 mt-2 ml-2">
               {validation.passwordConfirm.message}
             </div>
           )}
