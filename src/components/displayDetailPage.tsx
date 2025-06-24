@@ -96,6 +96,14 @@ export default function DisplayDetailPage({
     }
   };
 
+  const getCartItemName = (item: { nickname?: string; address?: string }) => {
+    if (item.nickname && item.address)
+      return `${item.nickname} - ${item.address}`;
+    if (item.nickname) return item.nickname;
+    if (item.address) return item.address;
+    return '';
+  };
+
   const handleDropdownChange = (item: { id: number; option: string }) => {
     setSelectedOption(item);
     if (item.option === '전체보기' && !isAllDistrictsView) {
@@ -134,7 +142,7 @@ export default function DisplayDetailPage({
         const cartItem = {
           id: item.id,
           type: 'banner-display' as const,
-          name: item.name,
+          name: getCartItemName(item),
           district: item.district,
           price: priceForCart,
         };
