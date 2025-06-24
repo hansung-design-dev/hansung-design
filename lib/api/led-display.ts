@@ -44,18 +44,39 @@ export interface LEDDisplayData {
 
 // LED 디스플레이 타입 ID 조회
 export async function getLEDDisplayTypeId() {
-  const { data, error } = await supabase
-    .from('display_types')
-    .select('id')
-    .eq('name', 'led_display')
-    .single();
+  try {
+    console.log('🔍 API: Getting LED display type ID...');
 
-  if (error) {
-    console.error('Error fetching LED display type:', error);
+    const { data, error } = await supabase
+      .from('display_types')
+      .select('id')
+      .eq('name', 'led_display')
+      .single();
+
+    console.log('🔍 API: Display type query result:', { data, error });
+
+    if (error) {
+      console.error('Error fetching LED display type:', error);
+      console.error('Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+      });
+      throw error;
+    }
+
+    if (!data) {
+      console.error('No LED display type found in database');
+      throw new Error('LED display type not found');
+    }
+
+    console.log('🔍 API: Found LED display type ID:', data.id);
+    return data;
+  } catch (error) {
+    console.error('Error in getLEDDisplayTypeId:', error);
     throw error;
   }
-
-  return data;
 }
 
 // 특정 구의 LED 전자게시대 데이터 조회
@@ -119,6 +140,12 @@ export async function getLEDDisplaysByDistrict(districtName: string) {
 // 모든 구의 LED 전자게시대 데이터 조회
 export async function getAllLEDDisplays() {
   try {
+    console.log('🔍 API: Starting getAllLEDDisplays...');
+
+    // display_type_id 가져오기
+    const displayType = await getLEDDisplayTypeId();
+    console.log('🔍 API: Display type ID:', displayType?.id);
+
     const { data, error } = await supabase
       .from('panel_info')
       .select(
@@ -134,7 +161,7 @@ export async function getAllLEDDisplays() {
           position_y,
           total_price,
           tax_price,
-          advertising_price,
+          advertising_fee,
           road_usage_fee,
           administrative_fee,
           price_unit,
@@ -152,18 +179,30 @@ export async function getAllLEDDisplays() {
         )
       `
       )
-      .eq('display_type_id', (await getLEDDisplayTypeId()).id)
+      .eq('display_type_id', displayType.id)
       .eq('panel_status', 'active')
       .order('panel_code', { ascending: true });
 
+    console.log('🔍 API: getAllLEDDisplays - Raw data:', data);
+    console.log('🔍 API: getAllLEDDisplays - Error:', error);
+    console.log('🔍 API: getAllLEDDisplays - Data length:', data?.length);
+
     if (error) {
       console.error('Error fetching all LED displays:', error);
+      console.error('Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+      });
       throw error;
     }
 
     return data as LEDDisplayData[];
   } catch (error) {
     console.error('Error in getAllLEDDisplays:', error);
+    console.error('Error type:', typeof error);
+    console.error('Error stringified:', JSON.stringify(error, null, 2));
     throw error;
   }
 }

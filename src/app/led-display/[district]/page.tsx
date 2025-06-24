@@ -39,14 +39,6 @@ export default function LEDDisplayPage() {
       }
     : bannerDistricts.find((d) => d.code === district);
 
-  const pageDropdownOptions = isAllDistricts
-    ? bannerDistricts.slice(0, 5).map((d, i) => ({ id: i + 1, option: d.name }))
-    : dropdownOptions;
-
-  console.log('🔍 District code from URL:', district);
-  console.log('🔍 District object found:', districtObj);
-  console.log('🔍 District name to pass to API:', districtObj?.name);
-
   const [billboards, setBillboards] = useState<LEDBillboard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -88,6 +80,32 @@ export default function LEDDisplayPage() {
       };
     });
   }
+
+  // 드롭다운 옵션 생성 함수
+  const generateDropdownOptions = (ledBillboards: LEDBillboard[]) => {
+    if (isAllDistricts) {
+      // 전체보기인 경우 실제 LED 데이터에서 구별 옵션 생성
+      const districts = Array.from(
+        new Set(ledBillboards.map((b) => b.district))
+      ).sort();
+      return [
+        { id: 0, option: '전체보기' },
+        ...districts.map((districtName, index) => ({
+          id: index + 1,
+          option: districtName,
+        })),
+      ];
+    } else {
+      // 개별 구인 경우 기본 옵션
+      return dropdownOptions;
+    }
+  };
+
+  const pageDropdownOptions = generateDropdownOptions(billboards);
+
+  console.log('🔍 District code from URL:', district);
+  console.log('🔍 District object found:', districtObj);
+  console.log('🔍 District name to pass to API:', districtObj?.name);
 
   useEffect(() => {
     async function fetchLEDData() {

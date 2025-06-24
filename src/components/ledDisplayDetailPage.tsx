@@ -50,7 +50,7 @@ export default function LEDDisplayDetailPage({
   const isAllDistrictsView = district === 'all';
 
   const filteredByDistrict =
-    isAllDistrictsView && selectedOption
+    isAllDistrictsView && selectedOption && selectedOption.option !== '전체보기'
       ? billboards.filter((item) => item.district === selectedOption.option)
       : billboards;
 
