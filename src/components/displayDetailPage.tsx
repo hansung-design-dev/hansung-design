@@ -58,10 +58,14 @@ export default function DisplayDetailPage({
   // 마포구 필터에 따른 데이터 필터링
   const filteredByMapo = isMapoDistrict
     ? billboards.filter((item) => {
-        if (mapoFilter === 'yeollip') return true;
-        // 실제 데이터 구조에 따라 필터링 로직 수정 필요
-        // 예시: item.type 또는 item.category를 기준으로 필터링
-        return item.type === mapoFilter;
+        if (mapoFilter === 'yeollip') {
+          return item.panel_type === 'multi-panel';
+        } else if (mapoFilter === 'jeodan') {
+          return item.panel_type === 'lower-panel';
+        } else if (mapoFilter === 'simin') {
+          return item.panel_type === 'bulletin-board';
+        }
+        return true;
       })
     : billboards;
 
@@ -75,6 +79,30 @@ export default function DisplayDetailPage({
         a.district.localeCompare(b.district)
       )
     : filteredByDistrict;
+
+  // 구분 컬럼에 표시할 값 계산 함수
+  const getPanelTypeLabel = (panelType?: string) => {
+    if (!panelType) return '현수막게시대';
+
+    switch (panelType) {
+      case 'multi-panel':
+        return '연립형';
+      case 'lower-panel':
+        return '저단형';
+      case 'bulletin-board':
+        return '시민/문화게시판';
+      default:
+        return '현수막게시대';
+    }
+  };
+
+  const getCartItemName = (item: { nickname?: string; address?: string }) => {
+    if (item.nickname && item.address)
+      return `${item.nickname} - ${item.address}`;
+    if (item.nickname) return item.nickname;
+    if (item.address) return item.address;
+    return '';
+  };
 
   const handleDropdownChange = (item: { id: number; option: string }) => {
     setSelectedOption(item);
@@ -93,6 +121,7 @@ export default function DisplayDetailPage({
     if (!shouldSelect) {
       newSelectedIds = selectedIds.filter((sid) => sid !== id);
       dispatch({ type: 'REMOVE_ITEM', id });
+      console.log('🔍 Removed item from cart:', id);
     } else {
       newSelectedIds = [...selectedIds, id];
       // billboards에서 아이템 찾기
@@ -110,16 +139,21 @@ export default function DisplayDetailPage({
           ? priceNumber
           : 0;
 
+        const cartItem = {
+          id: item.id,
+          type: 'banner-display' as const,
+          name: getCartItemName(item),
+          district: item.district,
+          price: priceForCart,
+        };
+
+        console.log('🔍 Adding item to cart:', cartItem);
         dispatch({
           type: 'ADD_ITEM',
-          item: {
-            id: item.id,
-            type: 'banner-display',
-            name: item.name,
-            district: item.district,
-            price: priceForCart,
-          },
+          item: cartItem,
         });
+      } else {
+        console.error('🔍 Item not found in billboards:', id);
       }
     }
     setSelectedIds(newSelectedIds);
@@ -161,7 +195,7 @@ export default function DisplayDetailPage({
             <div className="mt-4">
               <div className="flex gap-2 mb-2">
                 <span className="px-2 py-1 bg-black text-white text-0.875 rounded-[5rem]">
-                  현수막게시대
+                  {getPanelTypeLabel(item.panel_type)}
                 </span>
                 <span className="px-2 py-1 bg-black text-white text-0.875 rounded-[5rem]">
                   {item.district}
@@ -218,7 +252,7 @@ export default function DisplayDetailPage({
                 <div className="p-4">
                   <div className="flex gap-2 mb-2">
                     <span className="px-2 py-1 bg-gray-100 text-gray-600 text-0.875 rounded">
-                      현수막게시대
+                      {getPanelTypeLabel(item.panel_type)}
                     </span>
                     <span className="px-2 py-1 bg-gray-100 text-gray-600 text-0.875 rounded">
                       {item.district}

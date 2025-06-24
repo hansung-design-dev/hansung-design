@@ -2,17 +2,52 @@ import { useCart } from '../contexts/cartContext';
 import { Button } from './button/button';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 
 export default function LiveCart() {
   const { cart, dispatch } = useCart();
   const router = useRouter();
+  const [timeLeft, setTimeLeft] = useState<string>('');
+
+  // 디버깅용: cart 배열 상태 확인
+  console.log('🔍 Cart state in LiveCart:', cart);
+  console.log('🔍 Cart length in LiveCart:', cart.length);
+
+  // 남은 시간 계산
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const stored = localStorage.getItem('hansung_cart');
+      if (!stored) return;
+
+      try {
+        const cartState = JSON.parse(stored);
+        const now = Date.now();
+        const timeElapsed = now - cartState.lastUpdated;
+        const timeRemaining = 15 * 60 * 1000 - timeElapsed; // 15분 - 경과시간
+
+        if (timeRemaining <= 0) {
+          setTimeLeft('만료됨');
+          return;
+        }
+
+        const minutes = Math.floor(timeRemaining / (1000 * 60));
+        setTimeLeft(`${minutes}분`);
+      } catch (error) {
+        console.error('Error calculating time left:', error);
+      }
+    };
+
+    calculateTimeLeft();
+    const interval = setInterval(calculateTimeLeft, 60000); // 1분마다 업데이트
+
+    return () => clearInterval(interval);
+  }, [cart.length]);
 
   if (cart.length === 0) return null;
 
   const handleCartClick = () => {
-    // 라이브 장바구니를 일반 장바구니로 이동
-    dispatch({ type: 'CLEAR_CART' });
-    // 장바구니 페이지로 이동
+    // 라이브 장바구니를 일반 장바구니로 이동하지 않고,
+    // 현재 장바구니 상태를 유지한 채 장바구니 페이지로 이동
     router.push('/cart');
   };
 
@@ -32,6 +67,10 @@ export default function LiveCart() {
         {/* 장바구니 */}
         <div className="h-[7rem] sm:h-auto p-6 sm:p-3 overflow-y-auto py-[3rem] sm:py-2 flex items-center sm:items-start ">
           <div className="lg:w-[30rem] sm:w-full flex flex-col gap-2 max-h-[13rem] sm:max-h-[10rem] overflow-y-auto py-6 sm:py-4 sm:px-4 ">
+            {/* 남은 시간 표시 */}
+            <div className="text-sm text-red-500 font-medium mb-2">
+              ⏰ 장바구니 만료까지: {timeLeft}
+            </div>
             {cart.map((item) => (
               <div
                 key={item.id}

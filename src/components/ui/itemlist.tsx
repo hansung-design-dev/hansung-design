@@ -75,6 +75,41 @@ const ItemList: React.FC<ItemTableProps> = ({
     handleItemClick(itemId);
   };
 
+  // 구분 컬럼에 표시할 값 계산 함수
+  const getPanelTypeLabel = (panelType?: string) => {
+    if (!panelType) return '현수막게시대';
+
+    switch (panelType) {
+      case 'multi-panel':
+        return '연립형';
+      case 'lower-panel':
+        return '저단형';
+      case 'bulletin-board':
+        return '시민/문화게시판';
+      default:
+        return '현수막게시대';
+    }
+  };
+
+  const getCategoryDisplay = (item: BannerBillboard) => {
+    // 마포구의 경우 panel_type을 우선 사용
+    if (item.panel_type) {
+      return getPanelTypeLabel(item.panel_type);
+    }
+
+    // 기존 로직 (다른 구들)
+    const displayBannerType = item.banner_type
+      ? bannerTypeDisplayMap[item.banner_type] || item.banner_type
+      : '';
+    const category = item.is_for_admin ? '행정' : '상업';
+    const fullCategory =
+      displayBannerType && displayBannerType.trim() !== ''
+        ? `${category} / ${displayBannerType}`
+        : category;
+
+    return fullCategory;
+  };
+
   return (
     <>
       {/* ✅ 데스크탑/tablet 이상: table로 표시 */}
@@ -100,14 +135,7 @@ const ItemList: React.FC<ItemTableProps> = ({
             {paginatedItems.map((item) => {
               const displayStatus =
                 statusDisplayMap[item.status] || item.status;
-              const displayBannerType = item.banner_type
-                ? bannerTypeDisplayMap[item.banner_type] || item.banner_type
-                : '';
-              const category = item.is_for_admin ? '행정' : '상업';
-              const fullCategory =
-                displayBannerType && displayBannerType.trim() !== ''
-                  ? `${category} / ${displayBannerType}`
-                  : category;
+              const categoryDisplay = getCategoryDisplay(item);
               const isSpecialDistrict =
                 item.district === '송파구' || item.district === '용산구';
               return (
@@ -208,7 +236,7 @@ const ItemList: React.FC<ItemTableProps> = ({
                   <td className="text-center pl-4">
                     {isSpecialDistrict ? '-' : item.price}
                   </td>
-                  <td className="text-center pl-4">{fullCategory}</td>
+                  <td className="text-center pl-4">{categoryDisplay}</td>
                   <td className="text-center pl-4">
                     {item.faces ? `${item.faces}` : '-'}
                   </td>
@@ -241,14 +269,7 @@ const ItemList: React.FC<ItemTableProps> = ({
       <div className="flex flex-col gap-4 lg:hidden items-center ">
         {paginatedItems.map((item) => {
           const displayStatus = statusDisplayMap[item.status] || item.status;
-          const displayBannerType = item.banner_type
-            ? bannerTypeDisplayMap[item.banner_type] || item.banner_type
-            : '';
-          const category = item.is_for_admin ? '행정' : '상업';
-          const fullCategory =
-            displayBannerType && displayBannerType.trim() !== ''
-              ? `${category} - ${displayBannerType}`
-              : category;
+          const categoryDisplay = getCategoryDisplay(item);
           return (
             <div
               key={item.id}
@@ -293,7 +314,7 @@ const ItemList: React.FC<ItemTableProps> = ({
                 </span>
               </div>
 
-              <div className="text-0.875">구분: {fullCategory}</div>
+              <div className="text-0.875">구분: {categoryDisplay}</div>
               <div className="text-0.875">수량: {item.faces ?? '-'}</div>
               {renderAction && <div>{renderAction(item)}</div>}
             </div>

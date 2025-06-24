@@ -89,6 +89,7 @@ export interface BannerDisplayData {
   nickname?: string;
   panel_status: string;
   panel_code?: number;
+  panel_type?: string;
   created_at: string;
   updated_at: string;
   banner_panel_details: BannerPanelDetails;

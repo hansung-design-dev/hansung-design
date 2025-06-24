@@ -103,6 +103,7 @@ export default function BannerDisplayPage() {
               status: item.panel_status,
               panel_code: item.panel_code,
               banner_type: bannerType,
+              panel_type: item.panel_type,
             };
           });
           setBillboards(transformed);

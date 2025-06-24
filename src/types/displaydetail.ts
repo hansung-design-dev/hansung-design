@@ -42,7 +42,9 @@ export interface BannerBillboard {
   nickname?: string;
   panel_code?: number;
   banner_type?: string;
+  panel_type?: string;
 }
+
 export interface ListItem {
   id: number;
   title: string;
