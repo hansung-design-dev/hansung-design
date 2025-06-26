@@ -100,7 +100,10 @@ export default function DisplayDetailPage({
     }
   };
 
-  const getCartItemName = (item: { nickname?: string; address?: string }) => {
+  const getCartItemName = (item: {
+    nickname?: string | null;
+    address?: string;
+  }) => {
     if (item.nickname && item.address)
       return `${item.nickname} - ${item.address}`;
     if (item.nickname) return item.nickname;

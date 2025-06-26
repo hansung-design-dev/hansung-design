@@ -2,7 +2,7 @@ import { useState } from 'react';
 import ArrowLeft from '@/src/icons/arrow-left.svg';
 import ArrowRight from '@/src/icons/arrow-right.svg';
 import Image from 'next/image';
-import { BannerBillboard } from '@/src/types/displaydetail';
+import { DisplayBillboard } from '@/src/types/displaydetail';
 
 const statusColorMap: Record<string, string> = {
   진행중: 'text-[#109251]',
@@ -27,10 +27,10 @@ const getStatusClass = (status: string) => {
 };
 
 interface ItemTableProps {
-  items: BannerBillboard[];
+  items: DisplayBillboard[];
   showHeader?: boolean;
   showCheckbox?: boolean;
-  renderAction?: (item: BannerBillboard) => React.ReactNode;
+  renderAction?: (item: DisplayBillboard) => React.ReactNode;
   onItemSelect?: (id: number, checked: boolean) => void;
   selectedIds?: number[];
   enableRowClick?: boolean;
@@ -91,23 +91,28 @@ const ItemList: React.FC<ItemTableProps> = ({
     }
   };
 
-  const getCategoryDisplay = (item: BannerBillboard) => {
+  const getCategoryDisplay = (item: DisplayBillboard) => {
     // 마포구의 경우 panel_type을 우선 사용
     if (item.panel_type) {
       return getPanelTypeLabel(item.panel_type);
     }
 
-    // 기존 로직 (다른 구들)
-    const displayBannerType = item.banner_type
-      ? bannerTypeDisplayMap[item.banner_type] || item.banner_type
-      : '';
-    const category = item.is_for_admin ? '행정' : '상업';
-    const fullCategory =
-      displayBannerType && displayBannerType.trim() !== ''
-        ? `${category} / ${displayBannerType}`
-        : category;
+    // BannerBillboard인지 확인 후 banner_type 접근
+    if (item.type === 'banner') {
+      const displayBannerType = item.banner_type
+        ? bannerTypeDisplayMap[item.banner_type] || item.banner_type
+        : '';
+      const category = item.is_for_admin ? '행정' : '상업';
+      const fullCategory =
+        displayBannerType && displayBannerType.trim() !== ''
+          ? `${category} / ${displayBannerType}`
+          : category;
 
-    return fullCategory;
+      return fullCategory;
+    }
+
+    // LED의 경우 기본값 반환
+    return 'LED전자게시대';
   };
 
   return (
@@ -144,7 +149,9 @@ const ItemList: React.FC<ItemTableProps> = ({
                   className={`border-b border-gray-200 h-[3.5rem] hover:bg-gray-50 ${
                     enableRowClick ? 'cursor-pointer' : ''
                   } ${
-                    item.is_for_admin ? 'bg-yellow-100 hover:bg-yellow-200' : ''
+                    item.type === 'banner' && item.is_for_admin
+                      ? 'bg-yellow-100 hover:bg-yellow-200'
+                      : ''
                   }`}
                   onClick={(e) => handleRowClick(e, item.id)}
                 >
