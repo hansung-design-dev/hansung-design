@@ -64,3 +64,36 @@ export const BankAccount = [
     bank_account: '049-039964-04-128',
   },
 ];
+
+export const ledBankAccount = [
+  {
+    id: 1,
+    region_gu: '강동구',
+    bank_name: '우리',
+    bank_account: '1005-602-397672',
+  },
+  {
+    id: 2,
+    region_gu: '광진구',
+    bank_name: '기업',
+    bank_account: '049-039964-04-103',
+  },
+  {
+    id: 3,
+    region_gu: '광진구',
+    bank_name: '기업',
+    bank_account: '049-039964-04-150',
+  },
+  {
+    id: 4,
+    region_gu: '동작구',
+    bank_name: '기업',
+    bank_account: '049-039964-04-111',
+  },
+  {
+    id: 5,
+    region_gu: '동대문구',
+    bank_name: '기업',
+    bank_account: '049-039964-04-167',
+  },
+];

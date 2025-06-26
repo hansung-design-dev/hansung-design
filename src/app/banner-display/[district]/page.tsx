@@ -106,7 +106,7 @@ export default function BannerDisplayPage() {
               panel_type: item.panel_type,
             };
           });
-          setBillboards(transformed);
+          setBillboards(transformed as BannerBillboard[]);
         } else if (isAllDistricts) {
           setBillboards([]);
         } else {

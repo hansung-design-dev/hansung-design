@@ -21,9 +21,9 @@ export interface DistrictItem {
   spots: number | string;
 }
 
-export interface BannerBillboard {
+// 공통 베이스 타입
+export interface BaseBillboard {
   id: number;
-  type: string;
   district: string;
   name: string;
   neighborhood: string;
@@ -37,13 +37,36 @@ export interface BannerBillboard {
   panel_width?: number;
   panel_height?: number;
   price_unit?: string;
-  is_for_admin?: boolean;
   address?: string;
-  nickname?: string;
+  nickname?: string | null; // null도 허용하도록 통일
   panel_code?: number;
-  banner_type?: string;
   panel_type?: string;
 }
+
+// 현수막게시대 전용 타입
+export interface BannerBillboard extends BaseBillboard {
+  type: 'banner';
+  is_for_admin?: boolean;
+  banner_type?: string;
+}
+
+// LED 전자게시대 전용 타입
+export interface LEDBillboard extends BaseBillboard {
+  type: 'led';
+  exposure_count: number;
+  max_banners: number;
+  slot_width_px: number;
+  slot_height_px: number;
+  total_price: number;
+  tax_price: number;
+  advertising_fee: number;
+  road_usage_fee: number;
+  administrative_fee: number;
+  panel_slot_status: string;
+}
+
+// 통합 타입 (기존 DisplayBillboard와 동일)
+export type DisplayBillboard = BannerBillboard | LEDBillboard;
 
 export interface ListItem {
   id: number;
