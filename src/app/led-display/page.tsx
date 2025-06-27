@@ -138,7 +138,11 @@ export default function LEDDisplayPage() {
         ) : (
           <div className="container grid lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-1 lg:gap-4 md:gap-[2rem] sm:gap-[2rem] ">
             {updatedDistricts.map((district) => (
-              <DistrictCard key={district.id} district={district} />
+              <DistrictCard
+                key={district.id}
+                district={district}
+                display_type="led_display"
+              />
             ))}
           </div>
         )}

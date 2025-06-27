@@ -46,30 +46,22 @@ export interface BannerDisplayData {
 // 현수막 게시대 타입 ID 조회
 async function getBannerDisplayTypeId() {
   try {
-    console.log('🔍 API: Getting banner display type ID...');
-
     const { data, error } = await supabase
       .from('display_types')
       .select('id')
       .eq('name', 'banner_display')
       .single();
 
-    console.log('🔍 API: Display type query result:', { data, error });
-
     if (error) {
-      console.error('Error fetching banner display type:', error);
       throw error;
     }
 
     if (!data) {
-      console.error('No banner display type found in database');
       throw new Error('Banner display type not found');
     }
 
-    console.log('🔍 API: Found banner display type ID:', data.id);
     return data;
   } catch (error) {
-    console.error('Error in getBannerDisplayTypeId:', error);
     throw error;
   }
 }
@@ -77,8 +69,6 @@ async function getBannerDisplayTypeId() {
 // 특정 구의 현수막 게시대 데이터 조회
 async function getBannerDisplaysByDistrict(districtName: string) {
   try {
-    console.log('🔍 API: Fetching banner displays for district:', districtName);
-
     const { data, error } = await supabase
       .from('panel_info')
       .select(
@@ -117,17 +107,12 @@ async function getBannerDisplaysByDistrict(districtName: string) {
       .eq('panel_status', 'active')
       .order('panel_code', { ascending: true });
 
-    console.log('🔍 API: Supabase response data:', data);
-    console.log('🔍 API: Supabase error:', error);
-
     if (error) {
-      console.error('Error fetching banner displays:', error);
       throw error;
     }
 
     return data as BannerDisplayData[];
   } catch (error) {
-    console.error('Error in getBannerDisplaysByDistrict:', error);
     throw error;
   }
 }
@@ -135,11 +120,8 @@ async function getBannerDisplaysByDistrict(districtName: string) {
 // 모든 구의 현수막 게시대 데이터 조회
 async function getAllBannerDisplays() {
   try {
-    console.log('🔍 API: Starting getAllBannerDisplays...');
-
     // display_type_id 가져오기
     const displayType = await getBannerDisplayTypeId();
-    console.log('🔍 API: Display type ID:', displayType?.id);
 
     const { data, error } = await supabase
       .from('panel_info')
@@ -178,18 +160,12 @@ async function getAllBannerDisplays() {
       .eq('panel_status', 'active')
       .order('panel_code', { ascending: true });
 
-    console.log('🔍 API: getAllBannerDisplays - Raw data:', data);
-    console.log('🔍 API: getAllBannerDisplays - Error:', error);
-    console.log('🔍 API: getAllBannerDisplays - Data length:', data?.length);
-
     if (error) {
-      console.error('Error fetching all banner displays:', error);
       throw error;
     }
 
     return data as BannerDisplayData[];
   } catch (error) {
-    console.error('Error in getAllBannerDisplays:', error);
     throw error;
   }
 }
@@ -212,7 +188,6 @@ async function getBannerDisplayCountsByDistrict() {
       .eq('panel_status', 'active');
 
     if (error) {
-      console.error('Error fetching banner display counts:', error);
       throw error;
     }
 
@@ -226,7 +201,6 @@ async function getBannerDisplayCountsByDistrict() {
 
     return counts;
   } catch (error) {
-    console.error('Error in getBannerDisplayCountsByDistrict:', error);
     throw error;
   }
 }
@@ -237,13 +211,6 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
     const district = searchParams.get('district');
-
-    console.log(
-      '🔍 Banner Display API called with action:',
-      action,
-      'district:',
-      district
-    );
 
     switch (action) {
       case 'getAll':
@@ -270,8 +237,7 @@ export async function GET(request: NextRequest) {
           { status: 400 }
         );
     }
-  } catch (error) {
-    console.error('Banner Display API error:', error);
+  } catch {
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
