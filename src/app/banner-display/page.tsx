@@ -3,7 +3,6 @@ import DistrictCard from '@/src/components/districtCard';
 import bannerDistricts from '@/src/mock/banner-district';
 
 export default function BannerDisplayPage() {
-  //console.log('bannerDistricts[0]', bannerDistricts[0]);
   return (
     <main className="min-h-screen bg-white">
       {/* Fixed Header - Always visible */}

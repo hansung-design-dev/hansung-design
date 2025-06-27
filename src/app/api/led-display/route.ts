@@ -1,4 +1,5 @@
-import { supabase } from '../supabase';
+import { NextRequest, NextResponse } from 'next/server';
+import { supabase } from '@/src/lib/supabase';
 
 // LED 디스플레이 타입 정의
 export interface LEDDisplayData {
@@ -43,7 +44,7 @@ export interface LEDDisplayData {
 }
 
 // LED 디스플레이 타입 ID 조회
-export async function getLEDDisplayTypeId() {
+async function getLEDDisplayTypeId() {
   try {
     console.log('🔍 API: Getting LED display type ID...');
 
@@ -57,12 +58,6 @@ export async function getLEDDisplayTypeId() {
 
     if (error) {
       console.error('Error fetching LED display type:', error);
-      console.error('Error details:', {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code,
-      });
       throw error;
     }
 
@@ -80,7 +75,7 @@ export async function getLEDDisplayTypeId() {
 }
 
 // 특정 구의 LED 전자게시대 데이터 조회
-export async function getLEDDisplaysByDistrict(districtName: string) {
+async function getLEDDisplaysByDistrict(districtName: string) {
   try {
     console.log('🔍 API: Fetching LED displays for district:', districtName);
 
@@ -138,7 +133,7 @@ export async function getLEDDisplaysByDistrict(districtName: string) {
 }
 
 // 모든 구의 LED 전자게시대 데이터 조회
-export async function getAllLEDDisplays() {
+async function getAllLEDDisplays() {
   try {
     console.log('🔍 API: Starting getAllLEDDisplays...');
 
@@ -189,26 +184,18 @@ export async function getAllLEDDisplays() {
 
     if (error) {
       console.error('Error fetching all LED displays:', error);
-      console.error('Error details:', {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code,
-      });
       throw error;
     }
 
     return data as LEDDisplayData[];
   } catch (error) {
     console.error('Error in getAllLEDDisplays:', error);
-    console.error('Error type:', typeof error);
-    console.error('Error stringified:', JSON.stringify(error, null, 2));
     throw error;
   }
 }
 
 // 구별 LED 전자게시대 개수 조회
-export async function getLEDDisplayCountsByDistrict() {
+async function getLEDDisplayCountsByDistrict() {
   try {
     const { data, error } = await supabase
       .from('panel_info')
@@ -244,135 +231,50 @@ export async function getLEDDisplayCountsByDistrict() {
   }
 }
 
-// 간단한 테스트 함수 - 기본 데이터 조회
-export async function testLEDBasicDataFetch() {
+// GET 요청 처리
+export async function GET(request: NextRequest) {
   try {
-    console.log('🔍 Testing LED basic data fetch...');
+    const { searchParams } = new URL(request.url);
+    const action = searchParams.get('action');
+    const district = searchParams.get('district');
 
-    // 1. region_gu 테이블에서 관악구 확인
-    const { data: regionData, error: regionError } = await supabase
-      .from('region_gu')
-      .select('*')
-      .eq('name', '관악구');
+    console.log(
+      '🔍 LED Display API called with action:',
+      action,
+      'district:',
+      district
+    );
 
-    console.log('Region data:', regionData);
-    console.log('Region error:', regionError);
+    switch (action) {
+      case 'getAll':
+        const allData = await getAllLEDDisplays();
+        return NextResponse.json({ success: true, data: allData });
 
-    // 2. display_types 테이블에서 led_display 확인
-    const { data: displayData, error: displayError } = await supabase
-      .from('display_types')
-      .select('*')
-      .eq('name', 'led_display');
+      case 'getByDistrict':
+        if (!district) {
+          return NextResponse.json(
+            { success: false, error: 'District parameter is required' },
+            { status: 400 }
+          );
+        }
+        const districtData = await getLEDDisplaysByDistrict(district);
+        return NextResponse.json({ success: true, data: districtData });
 
-    console.log('Display data:', displayData);
-    console.log('Display error:', displayError);
+      case 'getCounts':
+        const counts = await getLEDDisplayCountsByDistrict();
+        return NextResponse.json({ success: true, data: counts });
 
-    // 3. panel_info 테이블에서 LED 데이터 확인
-    const { data: panelData, error: panelError } = await supabase
-      .from('panel_info')
-      .select('*')
-      .eq('display_type_id', displayData?.[0]?.id)
-      .limit(5);
-
-    console.log('Panel data:', panelData);
-    console.log('Panel error:', panelError);
-
-    // 4. led_panel_details 테이블 확인
-    const { data: ledPanelData, error: ledPanelError } = await supabase
-      .from('led_panel_details')
-      .select('*')
-      .limit(5);
-
-    console.log('LED Panel Details data:', ledPanelData);
-    console.log('LED Panel Details error:', ledPanelError);
-
-    // 5. led_slot_info 테이블 확인
-    const { data: ledSlotData, error: ledSlotError } = await supabase
-      .from('led_slot_info')
-      .select('*')
-      .limit(5);
-
-    console.log('LED Slot Info data:', ledSlotData);
-    console.log('LED Slot Info error:', ledSlotError);
-
-    // 6. 전체 LED 데이터 조회 테스트
-    if (displayData && displayData.length > 0) {
-      const { data: fullLEDData, error: fullLEDError } = await supabase
-        .from('panel_info')
-        .select(
-          `
-          *,
-          led_panel_details (*),
-          led_slot_info (*),
-          region_gu!inner (
-            id,
-            name,
-            code
-          ),
-          region_dong!inner (
-            id,
-            name,
-            district_code
-          )
-        `
-        )
-        .eq('display_type_id', displayData[0].id)
-        .eq('panel_status', 'active')
-        .limit(3);
-
-      console.log('Full LED data:', fullLEDData);
-      console.log('Full LED error:', fullLEDError);
+      default:
+        return NextResponse.json(
+          { success: false, error: 'Invalid action parameter' },
+          { status: 400 }
+        );
     }
-
-    return {
-      regionData,
-      displayData,
-      panelData,
-      ledPanelData,
-      ledSlotData,
-      errors: {
-        regionError,
-        displayError,
-        panelError,
-        ledPanelError,
-        ledSlotError,
-      },
-    };
   } catch (error) {
-    console.error('Test failed:', error);
-    throw error;
-  }
-}
-
-// 간단한 연결 테스트 함수
-export async function testSupabaseConnection() {
-  try {
-    console.log('🔍 Testing Supabase connection...');
-
-    // 환경변수 체크
-    if (
-      !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-      !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    ) {
-      console.error('❌ Environment variables not set');
-      return { success: false, error: 'Environment variables not set' };
-    }
-
-    // 간단한 쿼리 테스트
-    const { data, error } = await supabase
-      .from('display_types')
-      .select('id, name')
-      .limit(1);
-
-    if (error) {
-      console.error('❌ Supabase query failed:', error);
-      return { success: false, error: error.message };
-    }
-
-    console.log('✅ Supabase connection successful:', data);
-    return { success: true, data };
-  } catch (error) {
-    console.error('❌ Supabase connection test failed:', error);
-    return { success: false, error: String(error) };
+    console.error('LED Display API error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }

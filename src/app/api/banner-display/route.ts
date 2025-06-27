@@ -1,7 +1,8 @@
-import { supabase, BannerDisplayData } from '../supabase';
+import { NextRequest, NextResponse } from 'next/server';
+import { supabase, BannerDisplayData } from '@/src/lib/supabase';
 
 // 특정 구의 현수막 게시대 데이터 조회
-export async function getBannerDisplaysByDistrict(districtName: string) {
+async function getBannerDisplaysByDistrict(districtName: string) {
   try {
     const { data, error } = await supabase
       .from('panel_info')
@@ -53,7 +54,7 @@ export async function getBannerDisplaysByDistrict(districtName: string) {
 }
 
 // 현수막 디스플레이 타입 ID 조회
-export async function getBannerDisplayTypeId() {
+async function getBannerDisplayTypeId() {
   const { data, error } = await supabase
     .from('display_types')
     .select('id')
@@ -69,7 +70,7 @@ export async function getBannerDisplayTypeId() {
 }
 
 // 모든 구의 현수막 게시대 데이터 조회
-export async function getAllBannerDisplays() {
+async function getAllBannerDisplays() {
   try {
     const { data, error } = await supabase
       .from('panel_info')
@@ -120,7 +121,7 @@ export async function getAllBannerDisplays() {
 }
 
 // 구별 현수막 게시대 개수 조회
-export async function getBannerDisplayCountsByDistrict() {
+async function getBannerDisplayCountsByDistrict() {
   try {
     const { data, error } = await supabase
       .from('panel_info')
@@ -141,12 +142,6 @@ export async function getBannerDisplayCountsByDistrict() {
       throw error;
     }
 
-    // 실제 데이터 구조 확인
-    console.log('🔍 Count data structure:', data);
-    console.log('🔍 First item:', data?.[0]);
-    console.log('🔍 Data type:', typeof data);
-    console.log('🔍 Is array:', Array.isArray(data));
-
     // 구별 개수 집계
     const counts: Record<string, number> = {};
 
@@ -162,46 +157,50 @@ export async function getBannerDisplayCountsByDistrict() {
   }
 }
 
-// 간단한 테스트 함수 - 기본 데이터 조회
-export async function testBasicDataFetch() {
+// GET 요청 처리
+export async function GET(request: NextRequest) {
   try {
-    console.log('🔍 Testing basic data fetch...');
+    const { searchParams } = new URL(request.url);
+    const action = searchParams.get('action');
+    const district = searchParams.get('district');
 
-    // 1. region_gu 테이블에서 관악구 확인
-    const { data: regionData, error: regionError } = await supabase
-      .from('region_gu')
-      .select('*')
-      .eq('name', '관악구');
+    console.log(
+      '🔍 Banner Display API called with action:',
+      action,
+      'district:',
+      district
+    );
 
-    console.log('Region data:', regionData);
-    console.log('Region error:', regionError);
+    switch (action) {
+      case 'getAll':
+        const allData = await getAllBannerDisplays();
+        return NextResponse.json({ success: true, data: allData });
 
-    // 2. display_types 테이블에서 banner_display 확인
-    const { data: displayData, error: displayError } = await supabase
-      .from('display_types')
-      .select('*')
-      .eq('name', 'banner_display');
+      case 'getByDistrict':
+        if (!district) {
+          return NextResponse.json(
+            { success: false, error: 'District parameter is required' },
+            { status: 400 }
+          );
+        }
+        const districtData = await getBannerDisplaysByDistrict(district);
+        return NextResponse.json({ success: true, data: districtData });
 
-    console.log('Display data:', displayData);
-    console.log('Display error:', displayError);
+      case 'getCounts':
+        const counts = await getBannerDisplayCountsByDistrict();
+        return NextResponse.json({ success: true, data: counts });
 
-    // 3. panel_info 테이블에서 기본 데이터 확인
-    const { data: panelData, error: panelError } = await supabase
-      .from('panel_info')
-      .select('*')
-      .limit(5);
-
-    console.log('Panel data:', panelData);
-    console.log('Panel error:', panelError);
-
-    return {
-      regionData,
-      displayData,
-      panelData,
-      errors: { regionError, displayError, panelError },
-    };
+      default:
+        return NextResponse.json(
+          { success: false, error: 'Invalid action parameter' },
+          { status: 400 }
+        );
+    }
   } catch (error) {
-    console.error('Test failed:', error);
-    throw error;
+    console.error('Banner Display API error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
