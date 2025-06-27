@@ -46,30 +46,22 @@ export interface LEDDisplayData {
 // LED 디스플레이 타입 ID 조회
 async function getLEDDisplayTypeId() {
   try {
-    console.log('🔍 API: Getting LED display type ID...');
-
     const { data, error } = await supabase
       .from('display_types')
       .select('id')
       .eq('name', 'led_display')
       .single();
 
-    console.log('🔍 API: Display type query result:', { data, error });
-
     if (error) {
-      console.error('Error fetching LED display type:', error);
       throw error;
     }
 
     if (!data) {
-      console.error('No LED display type found in database');
       throw new Error('LED display type not found');
     }
 
-    console.log('🔍 API: Found LED display type ID:', data.id);
     return data;
   } catch (error) {
-    console.error('Error in getLEDDisplayTypeId:', error);
     throw error;
   }
 }
@@ -77,8 +69,6 @@ async function getLEDDisplayTypeId() {
 // 특정 구의 LED 전자게시대 데이터 조회
 async function getLEDDisplaysByDistrict(districtName: string) {
   try {
-    console.log('🔍 API: Fetching LED displays for district:', districtName);
-
     const { data, error } = await supabase
       .from('panel_info')
       .select(
@@ -117,17 +107,12 @@ async function getLEDDisplaysByDistrict(districtName: string) {
       .eq('panel_status', 'active')
       .order('panel_code', { ascending: true });
 
-    console.log('🔍 API: Supabase response data:', data);
-    console.log('🔍 API: Supabase error:', error);
-
     if (error) {
-      console.error('Error fetching LED displays:', error);
       throw error;
     }
 
     return data as LEDDisplayData[];
   } catch (error) {
-    console.error('Error in getLEDDisplaysByDistrict:', error);
     throw error;
   }
 }
@@ -135,11 +120,8 @@ async function getLEDDisplaysByDistrict(districtName: string) {
 // 모든 구의 LED 전자게시대 데이터 조회
 async function getAllLEDDisplays() {
   try {
-    console.log('🔍 API: Starting getAllLEDDisplays...');
-
     // display_type_id 가져오기
     const displayType = await getLEDDisplayTypeId();
-    console.log('🔍 API: Display type ID:', displayType?.id);
 
     const { data, error } = await supabase
       .from('panel_info')
@@ -178,18 +160,12 @@ async function getAllLEDDisplays() {
       .eq('panel_status', 'active')
       .order('panel_code', { ascending: true });
 
-    console.log('🔍 API: getAllLEDDisplays - Raw data:', data);
-    console.log('🔍 API: getAllLEDDisplays - Error:', error);
-    console.log('🔍 API: getAllLEDDisplays - Data length:', data?.length);
-
     if (error) {
-      console.error('Error fetching all LED displays:', error);
       throw error;
     }
 
     return data as LEDDisplayData[];
   } catch (error) {
-    console.error('Error in getAllLEDDisplays:', error);
     throw error;
   }
 }
@@ -212,7 +188,6 @@ async function getLEDDisplayCountsByDistrict() {
       .eq('panel_status', 'active');
 
     if (error) {
-      console.error('Error fetching LED display counts:', error);
       throw error;
     }
 
@@ -226,7 +201,6 @@ async function getLEDDisplayCountsByDistrict() {
 
     return counts;
   } catch (error) {
-    console.error('Error in getLEDDisplayCountsByDistrict:', error);
     throw error;
   }
 }
@@ -237,13 +211,6 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
     const district = searchParams.get('district');
-
-    console.log(
-      '🔍 LED Display API called with action:',
-      action,
-      'district:',
-      district
-    );
 
     switch (action) {
       case 'getAll':
@@ -270,8 +237,7 @@ export async function GET(request: NextRequest) {
           { status: 400 }
         );
     }
-  } catch (error) {
-    console.error('LED Display API error:', error);
+  } catch {
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

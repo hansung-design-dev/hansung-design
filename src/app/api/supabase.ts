@@ -3,9 +3,9 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-// 디버깅을 위한 로그
-console.log('🔍 Supabase URL:', supabaseUrl ? 'Set' : 'Not set');
-console.log('🔍 Supabase Key:', supabaseAnonKey ? 'Set' : 'Not set');
+// // 디버깅을 위한 로그
+// console.log('🔍 Supabase URL:', supabaseUrl ? 'Set' : 'Not set');
+// console.log('🔍 Supabase Key:', supabaseAnonKey ? 'Set' : 'Not set');
 
 // 환경변수가 없을 때 에러 방지
 if (!supabaseUrl || !supabaseAnonKey) {
