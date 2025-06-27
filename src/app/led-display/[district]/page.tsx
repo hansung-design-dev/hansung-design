@@ -91,7 +91,7 @@ async function getAllLEDDisplays(): Promise<LEDDisplayData[]> {
 const dropdownOptions = [
   { id: 1, option: '전체' },
   { id: 2, option: '보기1' },
-  { id: 3, option: '보기2' },
+  { id: 3, option: '보기2!' },
 ];
 
 export default function LEDDisplayPage() {
