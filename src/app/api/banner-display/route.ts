@@ -1,9 +1,84 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, BannerDisplayData } from '@/src/lib/supabase';
+import { supabase } from '@/src/lib/supabase';
+
+// 현수막 게시대 타입 정의
+export interface BannerDisplayData {
+  id: string;
+  panel_code: number;
+  nickname: string | null;
+  address: string;
+  panel_status: string;
+  panel_type: string;
+  region_gu: {
+    id: string;
+    name: string;
+    code: string;
+  };
+  region_dong: {
+    id: string;
+    name: string;
+    district_code: string;
+  };
+  banner_panel_details: {
+    id: string;
+    max_banners: number;
+    panel_width: number;
+    panel_height: number;
+    is_for_admin: boolean;
+  };
+  banner_slot_info: {
+    id: string;
+    slot_number: number;
+    slot_name: string;
+    max_width: number;
+    max_height: number;
+    total_price: number;
+    tax_price: number;
+    advertising_fee: number;
+    road_usage_fee: number;
+    banner_type: string;
+    price_unit: string;
+    is_premium: boolean;
+    panel_slot_status: string;
+  }[];
+}
+
+// 현수막 게시대 타입 ID 조회
+async function getBannerDisplayTypeId() {
+  try {
+    console.log('🔍 API: Getting banner display type ID...');
+
+    const { data, error } = await supabase
+      .from('display_types')
+      .select('id')
+      .eq('name', 'banner_display')
+      .single();
+
+    console.log('🔍 API: Display type query result:', { data, error });
+
+    if (error) {
+      console.error('Error fetching banner display type:', error);
+      throw error;
+    }
+
+    if (!data) {
+      console.error('No banner display type found in database');
+      throw new Error('Banner display type not found');
+    }
+
+    console.log('🔍 API: Found banner display type ID:', data.id);
+    return data;
+  } catch (error) {
+    console.error('Error in getBannerDisplayTypeId:', error);
+    throw error;
+  }
+}
 
 // 특정 구의 현수막 게시대 데이터 조회
 async function getBannerDisplaysByDistrict(districtName: string) {
   try {
+    console.log('🔍 API: Fetching banner displays for district:', districtName);
+
     const { data, error } = await supabase
       .from('panel_info')
       .select(
@@ -18,11 +93,12 @@ async function getBannerDisplaysByDistrict(districtName: string) {
           max_height,
           total_price,
           tax_price,
+          advertising_fee,
+          road_usage_fee,
           banner_type,
           price_unit,
           is_premium,
-          panel_slot_status,
-          notes
+          panel_slot_status
         ),
         region_gu!inner (
           id,
@@ -41,6 +117,9 @@ async function getBannerDisplaysByDistrict(districtName: string) {
       .eq('panel_status', 'active')
       .order('panel_code', { ascending: true });
 
+    console.log('🔍 API: Supabase response data:', data);
+    console.log('🔍 API: Supabase error:', error);
+
     if (error) {
       console.error('Error fetching banner displays:', error);
       throw error;
@@ -53,25 +132,15 @@ async function getBannerDisplaysByDistrict(districtName: string) {
   }
 }
 
-// 현수막 디스플레이 타입 ID 조회
-async function getBannerDisplayTypeId() {
-  const { data, error } = await supabase
-    .from('display_types')
-    .select('id')
-    .eq('name', 'banner_display')
-    .single();
-
-  if (error) {
-    console.error('Error fetching banner display type:', error);
-    throw error;
-  }
-
-  return data;
-}
-
 // 모든 구의 현수막 게시대 데이터 조회
 async function getAllBannerDisplays() {
   try {
+    console.log('🔍 API: Starting getAllBannerDisplays...');
+
+    // display_type_id 가져오기
+    const displayType = await getBannerDisplayTypeId();
+    console.log('🔍 API: Display type ID:', displayType?.id);
+
     const { data, error } = await supabase
       .from('panel_info')
       .select(
@@ -86,11 +155,12 @@ async function getAllBannerDisplays() {
           max_height,
           total_price,
           tax_price,
+          advertising_fee,
+          road_usage_fee,
           banner_type,
           price_unit,
           is_premium,
-          panel_slot_status,
-          notes
+          panel_slot_status
         ),
         region_gu!inner (
           id,
@@ -104,9 +174,13 @@ async function getAllBannerDisplays() {
         )
       `
       )
-      .eq('display_type_id', (await getBannerDisplayTypeId()).id)
+      .eq('display_type_id', displayType.id)
       .eq('panel_status', 'active')
       .order('panel_code', { ascending: true });
+
+    console.log('🔍 API: getAllBannerDisplays - Raw data:', data);
+    console.log('🔍 API: getAllBannerDisplays - Error:', error);
+    console.log('🔍 API: getAllBannerDisplays - Data length:', data?.length);
 
     if (error) {
       console.error('Error fetching all banner displays:', error);

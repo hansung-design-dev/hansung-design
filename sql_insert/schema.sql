@@ -1,4 +1,5 @@
-CREATE TYPE panel_type_enum_v2 AS ENUM (
+CREATE TYPE panel_type_enum_v2 AS ENUM ( -- 게시대 타입: 게시대 형태,설치방법, 디스플레이 형태에 따른 분류
+-- > 수동설치타입, 반자동, 시민게시대, 저단형, 연립형, 전자게시대, 조명, 비조명, 패널형
   'manual',
   'semi-auto',
   'bulletin-boardg',
@@ -9,20 +10,15 @@ CREATE TYPE panel_type_enum_v2 AS ENUM (
   'with_lighting',
   'panel'
 );
-ALTER TYPE panel_type_enum_v2 ADD VALUE 'panel';
-— 게시대 타입: 게시대 형태,설치방법, 디스플레이 형태에 따른 분류
-	- > 수동설치타입, 반자동, 시민게시대, 저단형, 연립형, 전자게시대, 조명, 비조명, 패널형
+
 
 -- banner_type_enum_v2
-CREATE TYPE banner_type_enum_v2 AS ENUM (
+CREATE TYPE banner_type_enum_v2 AS ENUM ( --  현수막 재질이나 위치 분류 -> 천, 패널(비닐재질), 시민/문화게시대 , 상단고정
   'fabric',
   'panel',
   'bulletin-board',
   'top_fixed'
 );
-— 현수막 재질이나 위치 분류
-	-> 천, 패널(비닐재질), 시민/문화게시대 , 상단고정
-
 
 CREATE TYPE price_unit_enum AS ENUM ('15 days', '1 year', '6 months', '3 years');
 CREATE TYPE panel_status_enum AS ENUM ('active', 'maintenance', 'inactive');
@@ -31,16 +27,24 @@ CREATE TYPE cs_category_enum AS ENUM ('personal_cs', 'frequent_questions');
 CREATE TYPE panel_slot_status_enum AS ENUM ('available', 'maintenance', 'unavailable');
 CREATE TYPE order_status_enum AS ENUM ('draft_uploaded', 'submitted', 'awaiting_payment', 'paid', 'verified', 'completed');
 CREATE TYPE notice_priority_enum AS ENUM ('important', 'normal');
-
+CREATE TYPE guideline_category_enum AS ENUM (
+  'default',        -- 기본 가이드라인 = 상업용 (모든 구에 적용)
+  'admin',          -- 행정용 (서대문구 전용)
+  'top_fixed',      -- 상단광고 (마포구 전용)
+  'led'
+);
 
 CREATE TYPE panel_status_enum AS ENUM ('active', 'maintenance', 'inactive');
+
+
 
 CREATE TABLE region_gu (
   id uuid PRIMARY KEY,
   code text,
   name varchar,
-  logo_image text,
+  logo_image_url text,
   bank_info text,
+  bank_depositor text,
   created_at timestamptz,
   updated_at timestamptz
 );
@@ -103,20 +107,7 @@ CREATE TABLE panel_guideline -- 게시판 기간 안내
   updated_at timestamp
 );
 
-CREATE TABLE panel_popup_notices -- 게시판 팝업 안내, 구별, 게시판 종류별 
-(
-  id uuid PRIMARY KEY,
-  display_category_id uuid,
-  title text,
-  hide_oneday boolean,
-  content text,
-  image_url text,
-  start_date date,
-  end_date date,
-  created_at timestamp,
-  updated_at timestamp,
-  region_gu_id uuid
-);
+
 
 CREATE TYPE banner_type_enum AS ENUM (
   'fabric',
@@ -261,43 +252,27 @@ CREATE TABLE led_slot_info (
   slot_number integer
 );
 
-CREATE TABLE notice_contents (
-  id uuid PRIMARY KEY,
-  category_id uuid,
-  display_type_id uuid,
-  homepage_menu_type_id uuid,
-  content text,
-  content_json jsonb,
-  is_active boolean,
-  created_at timestamp,
-  updated_at timestamp
-);
 
-CREATE TABLE notice_categories (
+CREATE TABLE panel_popup_notices -- 게시판 팝업 안내, 구별, 게시판 종류별 
+(
   id uuid PRIMARY KEY,
-  name varchar,
-  sub_name varchar,
-  display_order integer,
-  is_active boolean,
-  created_at timestamp
-);
-
-CREATE TYPE notice_priority_enum AS ENUM (
-  'important', 'normal'
-);
-
-CREATE TABLE homepage_notice (
-  id uuid PRIMARY KEY,
+  display_category_id uuid,
+  notice_categories_id uuid, 
   title text,
-  content text,
-  is_active boolean,
-  priority notice_priority_enum,
+  hide_oneday boolean,
+  content json,
+  image_url text,
+  start_date date,
+  end_date date,
   created_at timestamp,
-  updated_at timestamp
+  updated_at timestamp,
+  region_gu_id uuid
 );
 
 
-CREATE TABLE homepage_contents (
+
+CREATE TABLE homepage_contents --랜딩페이지 섹션별 컨텐트
+ (
   id uuid PRIMARY KEY,
   homepage_menu_type uuid,
   region_gu_id uuid,
@@ -310,16 +285,34 @@ CREATE TABLE homepage_contents (
   updated_at timestamp
 );
 
-CREATE TABLE homepage_contents_region (
+
+CREATE TABLE notice_categories  -- 구별 안내사항 종류 - 기본안내, 주의안내 ....
+(
   id uuid PRIMARY KEY,
-  region_gu_id uuid,
-  panel_info_id uuid,
-  traffic_info text,
-  memo text,
-  image_url text,
+  name varchar,
+  sub_name varchar,
+  display_order integer,
+  is_active boolean,
   created_at timestamp,
   updated_at timestamp
 );
+
+
+CREATE TYPE notice_priority_enum AS ENUM (
+  'important', 'normal'
+);
+
+CREATE TABLE homepage_notice  -- 공지사항리스트 (디자인 안나옴)
+(
+  id uuid PRIMARY KEY,
+  title text,
+  content text,
+  is_active boolean,
+  priority notice_priority_enum,
+  created_at timestamp,
+  updated_at timestamp
+);
+
 
 CREATE TYPE homepage_menu_enum AS ENUM (
   'landing',
@@ -350,7 +343,8 @@ CREATE TABLE display_types (
   created_at timestamp
 );
 
-CREATE TABLE region_gu_display_periods (
+CREATE TABLE region_gu_display_periods -- 구별 게시기간 정보
+(
   id uuid PRIMARY KEY,
   display_type_id uuid,
   region_gu_id uuid,
@@ -368,4 +362,24 @@ CREATE TABLE region_gu_display_periods (
   next_second_half_closure_quantity integer,
   created_at timestamp,
   updated_at timestamp
+);
+
+CREATE TYPE guideline_category_enum AS ENUM (
+  'default',        -- 기본 가이드라인 (모든 구에 적용)
+  'admin',          -- 행정용 (서대문구 전용)
+  'top_fixed',    -- 상단광고 (마포구 전용)
+  'led' -- led 가이드라인
+);
+
+CREATE TABLE region_gu_guideline (
+  id uuid PRIMARY KEY,
+  region_gu_id uuid REFERENCES region_gu(id),
+  display_type display_type_enum NOT NULL,          -- 현수막 or LED
+  category guideline_category_enum DEFAULT 'default', -- 추가 구분 (선택적)
+  title text,
+  description text,
+  image_urls text[],
+  content_json jsonb,
+  created_at timestamp DEFAULT now(),
+  updated_at timestamp DEFAULT now()
 );

@@ -340,7 +340,7 @@ export default function DisplayDetailPage({
               우리은행 1005-602-397672 (주)한성디자인기획
             </span>
           </p>
-          <p className="text-gray-600">송출사이즈 800*416 픽셀</p>
+
           <p className="text-gray-600">유동인구 : -명</p>
           <p className="text-gray-600">소비자트렌드 : </p>
         </div>

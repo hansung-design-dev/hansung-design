@@ -76,7 +76,7 @@ export default function PublicDesignPage() {
       <section className=" mx-auto  mb-12">
         <div className="relative w-full h-[320px] md:h-[400px]  overflow-hidden">
           <Image
-            src="/images/public-degin-page-main.png"
+            src="/images/public-design/landing.png"
             alt="공공디자인 메인 이미지"
             fill
             className="object-cover sm:object-left-top"
