@@ -72,12 +72,14 @@ async function getBannerDisplaysByDistrict(
   districtName: string
 ): Promise<BannerDisplayData[]> {
   try {
+    console.log('🔍 Fetching banner displays for district:', districtName);
     const response = await fetch(
       `/api/banner-display?action=getByDistrict&district=${encodeURIComponent(
         districtName
       )}`
     );
     const result = await response.json();
+    console.log('🔍 API response:', result);
 
     if (result.success) {
       return result.data;
@@ -137,10 +139,6 @@ export default function BannerDisplayPage() {
     ? districts.slice(0, 5).map((d, i) => ({ id: i + 1, option: d.name }))
     : dropdownOptions;
 
-  console.log(
-    'district',
-    districts.find((d) => d.code === district)
-  );
   console.log('🔍 District code from URL:', district);
   console.log('🔍 District object found:', districtObj);
   console.log('🔍 District name to pass to API:', districtObj?.name);
@@ -153,10 +151,16 @@ export default function BannerDisplayPage() {
     async function fetchBannerData() {
       try {
         setLoading(true);
+        console.log('🔍 Starting to fetch banner data...');
+        console.log('🔍 isAllDistricts:', isAllDistricts);
+        console.log('🔍 districtObj?.name:', districtObj?.name);
+        console.log('🔍 district:', district);
 
         const data = isAllDistricts
           ? await getAllBannerDisplays()
           : await getBannerDisplaysByDistrict(districtObj?.name || district);
+
+        console.log('🔍 Fetched data:', data);
 
         if (data && data.length > 0) {
           const transformed = data.map(
@@ -207,6 +211,10 @@ export default function BannerDisplayPage() {
           setBillboards([]);
         } else {
           // DB에 데이터가 없으면 목업 데이터를 사용
+          console.log(
+            '🔍 No data found, using mock data for district:',
+            district
+          );
           const mockBillboards = ledItems
             .filter((b) => b.location.split(' ')[0] === district)
             .map(
