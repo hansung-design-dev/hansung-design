@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import { useEffect, useState } from 'react';
+import BannerPeriod from './bannerPeriod';
 
 interface District {
   id: number;
@@ -27,6 +29,52 @@ export default function DistrictCard({
     ? 'https://gangbuk.uriad.com/sub01-01.jsp'
     : `/${basePath}/${encodeURIComponent(district.code)}`;
 
+  // 신청기간 상태
+  const [period, setPeriod] = useState<{
+    first_half_from: string;
+    first_half_to: string;
+    second_half_from: string;
+    second_half_to: string;
+  } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let ignore = false;
+    async function fetchPeriod() {
+      if (!district.name || district.name === '전체') return;
+      console.log('[신청기간 fetch] district.name:', district.name);
+      const url = `/api/display-period?district=${encodeURIComponent(
+        district.name
+      )}`;
+      console.log('[신청기간 fetch] API URL:', url);
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(url);
+        const result = await res.json();
+        console.log('[신청기간 fetch] API result:', result);
+        if (!ignore) {
+          if (result.success) {
+            setPeriod(result.data);
+          } else {
+            setError(result.error || '신청기간 정보를 불러올 수 없습니다.');
+            console.error('[신청기간 fetch] API error:', result.error);
+          }
+        }
+      } catch (err) {
+        if (!ignore) setError('신청기간 정보를 불러올 수 없습니다.');
+        console.error('[신청기간 fetch] fetch error:', err);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    }
+    fetchPeriod();
+    return () => {
+      ignore = true;
+    };
+  }, [district.name]);
+
   return (
     <div className="flex items-center justify-center lg:pb-4">
       <Link
@@ -53,9 +101,15 @@ export default function DistrictCard({
             </div>
           </div>
           <div className="text-gray-14 lg:text-1 md:text-0.875 font-500">
-            <div>송출사이즈 {district.size}</div>
-            <div>유동인구: {district.sizeOfPeople}</div>
-            <div>소비자트렌드: </div>
+            {district.name === '전체' ? (
+              <div>전체 구의 신청기간을 확인하려면 구별 카드를 클릭하세요.</div>
+            ) : loading ? (
+              <div>신청기간 불러오는 중...</div>
+            ) : error ? (
+              <div className="text-red-500">{error}</div>
+            ) : period ? (
+              <BannerPeriod {...period} />
+            ) : null}
           </div>
         </div>
         <div className="relative w-full h-[12rem]">
