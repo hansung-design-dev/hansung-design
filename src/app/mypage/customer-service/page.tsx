@@ -102,7 +102,7 @@ export default function CustomerServicePage() {
           <table className="w-full min-w-[600px] md:min-w-[800px] pb-[2rem]">
             <tbody>
               {currentItems.map((item) => (
-                <>
+                <div key={item.id}>
                   <tr
                     key={item.id}
                     className="last:border-none border-black border-b-[2px] md:border-b-[3px] text-sm md:text-1.25 font-500 cursor-pointer"
@@ -201,7 +201,7 @@ export default function CustomerServicePage() {
                       </td>
                     </tr>
                   )}
-                </>
+                </div>
               ))}
             </tbody>
           </table>
