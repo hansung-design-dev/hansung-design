@@ -1,7 +1,8 @@
-import { supabase } from '../supabase';
+import { NextResponse } from 'next/server';
+import { supabase } from '@/src/lib/supabase';
 
 // Supabase 연결 테스트
-export async function testSupabaseConnection() {
+async function testSupabaseConnection() {
   try {
     console.log('Testing Supabase connection...');
 
@@ -74,5 +75,26 @@ export async function testSupabaseConnection() {
   } catch (error) {
     console.error('Test failed with exception:', error);
     return { success: false, error: String(error) };
+  }
+}
+
+// GET 요청 처리
+export async function GET() {
+  try {
+    console.log('🔍 Test Connection API called');
+
+    const result = await testSupabaseConnection();
+
+    if (result.success) {
+      return NextResponse.json(result);
+    } else {
+      return NextResponse.json(result, { status: 500 });
+    }
+  } catch (error) {
+    console.error('Test Connection API error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }

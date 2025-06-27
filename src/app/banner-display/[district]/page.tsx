@@ -4,13 +4,107 @@ import SkeletonLoader from '@/src/components/layouts/skeletonLoader';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import districts from '@/src/mock/banner-district';
-import {
-  getBannerDisplaysByDistrict,
-  getAllBannerDisplays,
-} from '@/lib/api/banner-display';
-//import { testSupabaseConnection } from '@/lib/api/test-connection';
 import { BannerBillboard } from '@/src/types/displaydetail';
 import { ledItems } from '@/src/mock/billboards';
+
+// BannerDisplayData 타입 정의
+interface BannerDisplayData {
+  id: string;
+  display_type_id: string;
+  region_gu_id: string;
+  region_dong_id: string;
+  address: string;
+  nickname?: string;
+  panel_status: string;
+  panel_code?: number;
+  panel_type?: string;
+  created_at: string;
+  updated_at: string;
+  banner_panel_details: {
+    id: string;
+    panel_info_id: string;
+    max_banners: number;
+    panel_height: number;
+    panel_width: number;
+    is_for_admin?: boolean;
+    created_at: string;
+    updated_at: string;
+    panel_code?: number;
+    address: string;
+    nickname?: string;
+    panel_status: string;
+  };
+  banner_slot_info: {
+    id: string;
+    panel_info_id: string;
+    slot_number: number;
+    slot_name: string;
+    max_width: number;
+    max_height: number;
+    total_price?: number;
+    tax_price?: number;
+    banner_type: '일반형' | '돌출형' | '지정게시대' | '자율게시대';
+    price_unit?: '15 days' | 'month';
+    is_premium: boolean;
+    panel_slot_status: string;
+    notes: string;
+    created_at: string;
+    updated_at: string;
+  }[];
+  region_gu: {
+    id: string;
+    name: string;
+    code: string;
+  };
+  region_dong: {
+    id: string;
+    district_code: string;
+    name: string;
+  };
+  price?: string;
+  price_unit?: string;
+  panel_width?: number;
+  panel_height?: number;
+}
+
+// API 함수들
+async function getBannerDisplaysByDistrict(
+  districtName: string
+): Promise<BannerDisplayData[]> {
+  try {
+    const response = await fetch(
+      `/api/banner-display?action=getByDistrict&district=${encodeURIComponent(
+        districtName
+      )}`
+    );
+    const result = await response.json();
+
+    if (result.success) {
+      return result.data;
+    } else {
+      throw new Error(result.error);
+    }
+  } catch (error) {
+    console.error('Error fetching banner displays by district:', error);
+    throw error;
+  }
+}
+
+async function getAllBannerDisplays(): Promise<BannerDisplayData[]> {
+  try {
+    const response = await fetch('/api/banner-display?action=getAll');
+    const result = await response.json();
+
+    if (result.success) {
+      return result.data;
+    } else {
+      throw new Error(result.error);
+    }
+  } catch (error) {
+    console.error('Error fetching all banner displays:', error);
+    throw error;
+  }
+}
 
 const dropdownOptions = [
   { id: 1, option: '전체' },
@@ -65,47 +159,49 @@ export default function BannerDisplayPage() {
           : await getBannerDisplaysByDistrict(districtObj?.name || district);
 
         if (data && data.length > 0) {
-          const transformed = data.map((item, index) => {
-            const displayName =
-              item.address && item.address.trim() !== ''
-                ? item.address
-                : item.address;
+          const transformed = data.map(
+            (item: BannerDisplayData, index: number) => {
+              const displayName =
+                item.address && item.address.trim() !== ''
+                  ? item.address
+                  : item.address;
 
-            const price =
-              item.banner_slot_info && item.banner_slot_info.length > 0
-                ? `${item.banner_slot_info[0].total_price?.toLocaleString()}원`
-                : '문의';
+              const price =
+                item.banner_slot_info && item.banner_slot_info.length > 0
+                  ? `${item.banner_slot_info[0].total_price?.toLocaleString()}원`
+                  : '문의';
 
-            const bannerType =
-              item.banner_slot_info && item.banner_slot_info.length > 0
-                ? item.banner_slot_info[0].banner_type
-                : undefined;
+              const bannerType =
+                item.banner_slot_info && item.banner_slot_info.length > 0
+                  ? item.banner_slot_info[0].banner_type
+                  : undefined;
 
-            return {
-              id: index + 1, // 단순한 인덱스 사용
-              type: 'banner',
-              district: item.region_gu.name,
-              name: displayName,
-              address: item.address,
-              nickname: item.nickname,
-              neighborhood: item.region_dong.name,
-              period: '상시',
-              price: price,
-              size:
-                `${item.banner_panel_details.panel_width}x${item.banner_panel_details.panel_height}` ||
-                'no size',
-              faces: item.banner_panel_details.max_banners,
-              lat: 37.5665, // 실제 좌표로 교체 필요
-              lng: 126.978,
-              panel_width: item.banner_panel_details.panel_width,
-              panel_height: item.banner_panel_details.panel_height,
-              is_for_admin: item.banner_panel_details.is_for_admin,
-              status: item.panel_status,
-              panel_code: item.panel_code,
-              banner_type: bannerType,
-              panel_type: item.panel_type,
-            };
-          });
+              return {
+                id: index + 1, // 단순한 인덱스 사용
+                type: 'banner',
+                district: item.region_gu.name,
+                name: displayName,
+                address: item.address,
+                nickname: item.nickname,
+                neighborhood: item.region_dong.name,
+                period: '상시',
+                price: price,
+                size:
+                  `${item.banner_panel_details.panel_width}x${item.banner_panel_details.panel_height}` ||
+                  'no size',
+                faces: item.banner_panel_details.max_banners,
+                lat: 37.5665, // 실제 좌표로 교체 필요
+                lng: 126.978,
+                panel_width: item.banner_panel_details.panel_width,
+                panel_height: item.banner_panel_details.panel_height,
+                is_for_admin: item.banner_panel_details.is_for_admin,
+                status: item.panel_status,
+                panel_code: item.panel_code,
+                banner_type: bannerType,
+                panel_type: item.panel_type,
+              };
+            }
+          );
           setBillboards(transformed as BannerBillboard[]);
         } else if (isAllDistricts) {
           setBillboards([]);

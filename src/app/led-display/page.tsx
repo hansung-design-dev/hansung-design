@@ -5,10 +5,39 @@ import DistrictCard from '@/src/components/districtCard';
 import DistrictCardSkeleton from '@/src/components/skeleton/DistrictCardSkeleton';
 import ledDistricts from '@/src/mock/led-district';
 import { useEffect, useState } from 'react';
-import {
-  getLEDDisplayCountsByDistrict,
-  testSupabaseConnection,
-} from '@/lib/api/led-display';
+
+// API 함수들
+async function getLEDDisplayCountsByDistrict() {
+  try {
+    const response = await fetch('/api/led-display?action=getCounts');
+    const result = await response.json();
+
+    if (result.success) {
+      return result.data;
+    } else {
+      throw new Error(result.error);
+    }
+  } catch (error) {
+    console.error('Error fetching LED display counts:', error);
+    throw error;
+  }
+}
+
+async function testSupabaseConnection() {
+  try {
+    const response = await fetch('/api/test-connection');
+    const result = await response.json();
+
+    if (result.success) {
+      return result;
+    } else {
+      throw new Error(result.error);
+    }
+  } catch (error) {
+    console.error('Error testing connection:', error);
+    throw error;
+  }
+}
 
 export default function LEDDisplayPage() {
   const [districtCounts, setDistrictCounts] = useState<Record<string, number>>(

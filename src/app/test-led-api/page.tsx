@@ -1,11 +1,59 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  testLEDBasicDataFetch,
-  getLEDDisplaysByDistrict,
-  getAllLEDDisplays,
-} from '@/lib/api/led-display';
+
+// API 함수들
+async function testLEDBasicDataFetch() {
+  try {
+    const response = await fetch('/api/test-connection');
+    const result = await response.json();
+
+    if (result.success) {
+      return result;
+    } else {
+      throw new Error(result.error);
+    }
+  } catch (error) {
+    console.error('Error testing LED basic data fetch:', error);
+    throw error;
+  }
+}
+
+async function getLEDDisplaysByDistrict(districtName: string) {
+  try {
+    const response = await fetch(
+      `/api/led-display?action=getByDistrict&district=${encodeURIComponent(
+        districtName
+      )}`
+    );
+    const result = await response.json();
+
+    if (result.success) {
+      return result.data;
+    } else {
+      throw new Error(result.error);
+    }
+  } catch (error) {
+    console.error('Error fetching LED displays by district:', error);
+    throw error;
+  }
+}
+
+async function getAllLEDDisplays() {
+  try {
+    const response = await fetch('/api/led-display?action=getAll');
+    const result = await response.json();
+
+    if (result.success) {
+      return result.data;
+    } else {
+      throw new Error(result.error);
+    }
+  } catch (error) {
+    console.error('Error fetching all LED displays:', error);
+    throw error;
+  }
+}
 
 export default function TestLEDAPIPage() {
   const [testResults, setTestResults] = useState<Record<

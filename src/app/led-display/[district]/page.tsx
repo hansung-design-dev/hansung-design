@@ -4,13 +4,89 @@ import SkeletonLoader from '@/src/components/layouts/skeletonLoader';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import bannerDistricts from '@/src/mock/banner-district';
-import {
-  getLEDDisplaysByDistrict,
-  getAllLEDDisplays,
-  LEDDisplayData,
-} from '@/lib/api/led-display';
 import { LEDBillboard } from '@/src/types/leddetail';
 import { ledItems } from '@/src/mock/billboards';
+
+// LEDDisplayData 타입 정의
+export interface LEDDisplayData {
+  id: string;
+  panel_code: number;
+  nickname: string | null;
+  address: string;
+  panel_status: string;
+  panel_type: string;
+  region_gu: {
+    id: string;
+    name: string;
+    code: string;
+  };
+  region_dong: {
+    id: string;
+    name: string;
+    district_code: string;
+  };
+  led_panel_details: {
+    id: string;
+    exposure_count: number;
+    max_banners: number;
+    panel_width: number;
+    panel_height: number;
+  };
+  led_slot_info: {
+    id: string;
+    slot_number: number;
+    slot_width_px: number;
+    slot_height_px: number;
+    position_x: number;
+    position_y: number;
+    total_price: number;
+    tax_price: number;
+    advertising_fee: number;
+    road_usage_fee: number;
+    administrative_fee: number;
+    price_unit: string;
+    panel_slot_status: string;
+  }[];
+}
+
+// API 함수들
+async function getLEDDisplaysByDistrict(
+  districtName: string
+): Promise<LEDDisplayData[]> {
+  try {
+    const response = await fetch(
+      `/api/led-display?action=getByDistrict&district=${encodeURIComponent(
+        districtName
+      )}`
+    );
+    const result = await response.json();
+
+    if (result.success) {
+      return result.data;
+    } else {
+      throw new Error(result.error);
+    }
+  } catch (error) {
+    console.error('Error fetching LED displays by district:', error);
+    throw error;
+  }
+}
+
+async function getAllLEDDisplays(): Promise<LEDDisplayData[]> {
+  try {
+    const response = await fetch('/api/led-display?action=getAll');
+    const result = await response.json();
+
+    if (result.success) {
+      return result.data;
+    } else {
+      throw new Error(result.error);
+    }
+  } catch (error) {
+    console.error('Error fetching all LED displays:', error);
+    throw error;
+  }
+}
 
 const dropdownOptions = [
   { id: 1, option: '전체' },
