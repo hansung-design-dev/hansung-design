@@ -1,9 +1,26 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// 디버깅을 위한 로그
+console.log('🔍 Supabase URL:', supabaseUrl ? 'Set' : 'Not set');
+console.log('🔍 Supabase Key:', supabaseAnonKey ? 'Set' : 'Not set');
+
+// 환경변수가 없을 때 에러 방지
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn(
+    'Supabase environment variables are not set. Some features may not work.'
+  );
+  console.warn('Please check your .env.local file contains:');
+  console.warn('NEXT_PUBLIC_SUPABASE_URL=your_supabase_url');
+  console.warn('NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key');
+}
+
+export const supabase = createClient(
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseAnonKey || 'placeholder-key'
+);
 
 // 타입 정의
 export interface PanelInfo {
