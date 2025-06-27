@@ -343,3 +343,36 @@ export async function testLEDBasicDataFetch() {
     throw error;
   }
 }
+
+// 간단한 연결 테스트 함수
+export async function testSupabaseConnection() {
+  try {
+    console.log('🔍 Testing Supabase connection...');
+
+    // 환경변수 체크
+    if (
+      !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    ) {
+      console.error('❌ Environment variables not set');
+      return { success: false, error: 'Environment variables not set' };
+    }
+
+    // 간단한 쿼리 테스트
+    const { data, error } = await supabase
+      .from('display_types')
+      .select('id, name')
+      .limit(1);
+
+    if (error) {
+      console.error('❌ Supabase query failed:', error);
+      return { success: false, error: error.message };
+    }
+
+    console.log('✅ Supabase connection successful:', data);
+    return { success: true, data };
+  } catch (error) {
+    console.error('❌ Supabase connection test failed:', error);
+    return { success: false, error: String(error) };
+  }
+}

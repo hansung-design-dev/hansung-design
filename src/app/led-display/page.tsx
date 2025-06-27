@@ -2,28 +2,56 @@
 
 import Image from 'next/image';
 import DistrictCard from '@/src/components/districtCard';
+import DistrictCardSkeleton from '@/src/components/skeleton/DistrictCardSkeleton';
 import ledDistricts from '@/src/mock/led-district';
 import { useEffect, useState } from 'react';
-import { getLEDDisplayCountsByDistrict } from '@/lib/api/led-display';
+import {
+  getLEDDisplayCountsByDistrict,
+  testSupabaseConnection,
+} from '@/lib/api/led-display';
 
 export default function LEDDisplayPage() {
   const [districtCounts, setDistrictCounts] = useState<Record<string, number>>(
     {}
   );
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchDistrictCounts() {
       try {
+        setIsLoading(true);
+        setError(null);
+
+        // 먼저 연결 테스트
+        console.log('🔍 Testing connection...');
+        const connectionTest = await testSupabaseConnection();
+        console.log('🔍 Connection test result:', connectionTest);
+
+        if (!connectionTest.success) {
+          throw new Error(`Connection failed: ${connectionTest.error}`);
+        }
+
         console.log('🔍 Fetching LED district counts...');
         const counts = await getLEDDisplayCountsByDistrict();
         console.log('🔍 LED district counts:', counts);
         setDistrictCounts(counts);
       } catch (error) {
         console.error('Error fetching LED district counts:', error);
+        setError(
+          '데이터를 불러오는 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.'
+        );
+        // 에러 발생 시 빈 객체로 설정하여 기본값 사용
+        setDistrictCounts({});
+      } finally {
+        setIsLoading(false);
       }
     }
 
-    fetchDistrictCounts();
+    // 클라이언트 사이드에서만 실행
+    if (typeof window !== 'undefined') {
+      fetchDistrictCounts();
+    }
   }, []);
 
   // 구별 개수를 업데이트한 districts 배열 생성
@@ -60,11 +88,31 @@ export default function LEDDisplayPage() {
       </section>
 
       <div className="flex items-center justify-center mx-[4rem] px-4 py-8 sm:mx-[0.5rem] md:mx-[2rem]">
-        <div className="container grid lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-1 lg:gap-4 md:gap-[2rem] sm:gap-[2rem] ">
-          {updatedDistricts.map((district) => (
-            <DistrictCard key={district.id} district={district} />
-          ))}
-        </div>
+        {isLoading ? (
+          <div className="container grid lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-1 lg:gap-4 md:gap-[2rem] sm:gap-[2rem] ">
+            {/* 구별 카드 스켈레톤 */}
+
+            {[...Array(6)].map((_, index) => (
+              <DistrictCardSkeleton key={index} />
+            ))}
+          </div>
+        ) : error ? (
+          <div className="text-center py-8">
+            <p className="text-red-500 mb-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              다시 시도
+            </button>
+          </div>
+        ) : (
+          <div className="container grid lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-1 lg:gap-4 md:gap-[2rem] sm:gap-[2rem] ">
+            {updatedDistricts.map((district) => (
+              <DistrictCard key={district.id} district={district} />
+            ))}
+          </div>
+        )}
       </div>
     </main>
   );
