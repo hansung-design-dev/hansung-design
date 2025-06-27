@@ -18,11 +18,13 @@ interface District {
 interface DistrictCardProps {
   district: District;
   basePath?: string;
+  display_type?: string; // 'banner_display' | 'led_display' 등
 }
 
 export default function DistrictCard({
   district,
   basePath = 'led-display',
+  display_type = 'banner_display',
 }: DistrictCardProps) {
   const isGangbuk = district.code === 'gangbuk';
   const href = isGangbuk
@@ -46,7 +48,7 @@ export default function DistrictCard({
       console.log('[신청기간 fetch] district.name:', district.name);
       const url = `/api/display-period?district=${encodeURIComponent(
         district.name
-      )}`;
+      )}&display_type=${encodeURIComponent(display_type)}`;
       console.log('[신청기간 fetch] API URL:', url);
       setLoading(true);
       setError(null);
@@ -73,7 +75,7 @@ export default function DistrictCard({
     return () => {
       ignore = true;
     };
-  }, [district.name]);
+  }, [district.name, display_type]);
 
   return (
     <div className="flex items-center justify-center lg:pb-4">
@@ -82,8 +84,8 @@ export default function DistrictCard({
         className="w-[25rem] lg:h-[29.5625rem] md:h-[20rem] bg-gray-4 rounded-[1.25rem] flex flex-col overflow-hidden"
         {...(isGangbuk && { target: '_blank', rel: 'noopener noreferrer' })}
       >
-        <div className="flex-1 flex flex-col lg:gap-[3rem] md:gap-[2rem] p-8">
-          <div className="flex flex-col gap-4">
+        <div className="flex-1 flex flex-col lg:gap-[1rem] md:gap-[2rem] p-6 lg:py-10 ">
+          <div className="flex flex-col lg:gap-[2rem] md:gap-[2rem] sm:gap-6">
             <div className="flex gap-[1rem]">
               <Image
                 src={district.icon}
@@ -96,20 +98,26 @@ export default function DistrictCard({
                 {district.name}
               </div>
             </div>
-            <div className="lg:text-1 text-red md:text-0.75">
-              마감안내 및 안내내용 최종 2줄
+            <div className="flex flex-col sm:gap-6 lg:gap-10 md:gap-6 sm:gap-2">
+              <div className="lg:text-1 text-red md:text-0.75">
+                마감안내 및 안내내용 <br /> 최종 2줄
+              </div>
+              <div className="text-gray-14 text-0.875 font-500">
+                {district.name === '전체' ? (
+                  <div className="sm:pt-0 lg:pt-0 md:pt-0">
+                    전체 구의 신청기간을 확인하려면{' '}
+                    <br className="sm:inline lg:hidden md:hidden" /> 구별 카드를
+                    클릭하세요.
+                  </div>
+                ) : loading ? (
+                  <div>신청기간 불러오는 중...</div>
+                ) : error ? (
+                  <div className="text-red-500">{error}</div>
+                ) : period ? (
+                  <BannerPeriod {...period} />
+                ) : null}
+              </div>
             </div>
-          </div>
-          <div className="text-gray-14 lg:text-1 md:text-0.875 font-500">
-            {district.name === '전체' ? (
-              <div>전체 구의 신청기간을 확인하려면 구별 카드를 클릭하세요.</div>
-            ) : loading ? (
-              <div>신청기간 불러오는 중...</div>
-            ) : error ? (
-              <div className="text-red-500">{error}</div>
-            ) : period ? (
-              <BannerPeriod {...period} />
-            ) : null}
           </div>
         </div>
         <div className="relative w-full h-[12rem]">

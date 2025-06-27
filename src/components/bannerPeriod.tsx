@@ -24,12 +24,16 @@ const BannerPeriod: React.FC<BannerPeriodProps> = ({
   second_half_to,
 }) => {
   return (
-    <div>
-      신청일
-      <br />
-      1차: {formatDate(first_half_from)} ~ {formatDate(first_half_to)}
-      <br />
-      2차: {formatDate(second_half_from)} ~ {formatDate(second_half_to)}
+    <div className="flex gap-3">
+      <div>신청일</div>
+      <div className="flex flex-col gap-1">
+        <span>
+          1차: {formatDate(first_half_from)} ~ {formatDate(first_half_to)}
+        </span>
+        <span>
+          2차: {formatDate(second_half_from)} ~ {formatDate(second_half_to)}
+        </span>
+      </div>
     </div>
   );
 };

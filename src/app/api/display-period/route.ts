@@ -5,6 +5,8 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const district = searchParams.get('district');
+    const displayTypeParam =
+      searchParams.get('display_type') || 'banner_display';
     if (!district) {
       return NextResponse.json(
         { success: false, error: 'district parameter is required' },
@@ -29,7 +31,7 @@ export async function GET(request: NextRequest) {
     const { data: typeData, error: typeError } = await supabase
       .from('display_types')
       .select('id')
-      .eq('name', 'banner_display')
+      .eq('name', displayTypeParam)
       .single();
     if (typeError || !typeData) {
       return NextResponse.json(
