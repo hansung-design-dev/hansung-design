@@ -85,6 +85,8 @@ const ItemList: React.FC<ItemTableProps> = ({
       case 'lower-panel':
         return '저단형';
       case 'bulletin-board':
+        return '시민게시대';
+      case 'citizen-board':
         return '시민/문화게시판';
       default:
         return '현수막게시대';
