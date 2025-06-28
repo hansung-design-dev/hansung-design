@@ -136,7 +136,7 @@ export default function LEDDisplayPage() {
         // 4. 모든 데이터를 조합하여 districts 배열 생성
         const districtsWithLogos = ledDistricts.map((district) => {
           // DB에서 가져온 로고 URL이 있으면 사용, 없으면 기본값 사용
-          const logoUrl = logosMap[district.name] || district.icon;
+          const logoUrl = logosMap[district.name] || district.logo;
 
           return {
             ...district,

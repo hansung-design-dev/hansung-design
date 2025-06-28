@@ -67,6 +67,22 @@ interface BannerDisplayData {
   panel_height?: number;
 }
 
+// BankInfo 타입 정의
+interface BankInfo {
+  id: string;
+  bank_name: string;
+  account_number: string;
+  depositor: string;
+  region_gu: {
+    id: string;
+    name: string;
+  };
+  display_types: {
+    id: string;
+    name: string;
+  };
+}
+
 // API 함수들
 async function getBannerDisplaysByDistrict(
   districtName: string
@@ -127,10 +143,7 @@ export default function BannerDisplayPage() {
         icon: '/images/district-icon/all.svg',
         description: '모든 자치구',
         count: 0,
-        size: '',
-        led_count: 0,
-        banner_count: 0,
-        sizeOfPeople: '',
+
         src: '',
       }
     : districts.find((d) => d.code === district);
@@ -146,6 +159,45 @@ export default function BannerDisplayPage() {
   const [billboards, setBillboards] = useState<BannerBillboard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [period, setPeriod] = useState<{
+    first_half_from: string;
+    first_half_to: string;
+    second_half_from: string;
+    second_half_to: string;
+  } | null>(null);
+  const [bankInfo, setBankInfo] = useState<BankInfo | null>(null);
+
+  // 신청기간 가져오기 함수
+  async function getDisplayPeriod(districtName: string) {
+    try {
+      const response = await fetch(
+        `/api/display-period?district=${encodeURIComponent(
+          districtName
+        )}&display_type=banner_display`
+      );
+      const result = await response.json();
+      return result.success ? result.data : null;
+    } catch (err) {
+      console.warn(`Failed to fetch period for ${districtName}:`, err);
+      return null;
+    }
+  }
+
+  // 계좌번호 정보 가져오기 함수
+  async function getBankInfo(districtName: string) {
+    try {
+      const response = await fetch(
+        `/api/bank-info?action=getByDistrict&district=${encodeURIComponent(
+          districtName
+        )}&displayType=banner_display`
+      );
+      const result = await response.json();
+      return result.success ? result.data : null;
+    } catch (err) {
+      console.warn(`Failed to fetch bank info for ${districtName}:`, err);
+      return null;
+    }
+  }
 
   useEffect(() => {
     async function fetchBannerData() {
@@ -156,6 +208,7 @@ export default function BannerDisplayPage() {
         console.log('🔍 districtObj?.name:', districtObj?.name);
         console.log('🔍 district:', district);
 
+        // 1. 현수막 데이터 가져오기
         const data = isAllDistricts
           ? await getAllBannerDisplays()
           : await getBannerDisplaysByDistrict(districtObj?.name || district);
@@ -239,6 +292,18 @@ export default function BannerDisplayPage() {
             );
           setBillboards(mockBillboards);
         }
+
+        // 2. 신청기간 가져오기 (전체보기가 아닌 경우에만)
+        if (!isAllDistricts && districtObj?.name) {
+          const periodData = await getDisplayPeriod(districtObj.name);
+          setPeriod(periodData);
+        }
+
+        // 3. 계좌번호 정보 가져오기 (전체보기가 아닌 경우에만)
+        if (!isAllDistricts && districtObj?.name) {
+          const bankData = await getBankInfo(districtObj.name);
+          setBankInfo(bankData);
+        }
       } catch (err) {
         console.error('❌ Error fetching banner data:', err);
         setError(`데이터를 불러오는 중 오류가 발생했습니다: ${err}`);
@@ -305,6 +370,8 @@ export default function BannerDisplayPage() {
       billboards={billboards}
       dropdownOptions={pageDropdownOptions}
       defaultView="list"
+      period={period}
+      bankInfo={bankInfo}
     />
   );
 }

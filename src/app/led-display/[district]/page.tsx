@@ -49,6 +49,22 @@ export interface LEDDisplayData {
   }[];
 }
 
+// BankInfo 타입 정의
+interface BankInfo {
+  id: string;
+  bank_name: string;
+  account_number: string;
+  depositor: string;
+  region_gu: {
+    id: string;
+    name: string;
+  };
+  display_types: {
+    id: string;
+    name: string;
+  };
+}
+
 // API 함수들
 async function getLEDDisplaysByDistrict(
   districtName: string
@@ -118,6 +134,13 @@ export default function LEDDisplayPage() {
   const [billboards, setBillboards] = useState<LEDBillboard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [period, setPeriod] = useState<{
+    first_half_from: string;
+    first_half_to: string;
+    second_half_from: string;
+    second_half_to: string;
+  } | null>(null);
+  const [bankInfo, setBankInfo] = useState<BankInfo | null>(null);
 
   // LEDDisplayData를 LEDBillboard로 변환하는 함수
   function transformLEDData(ledData: LEDDisplayData[]): LEDBillboard[] {
@@ -183,11 +206,44 @@ export default function LEDDisplayPage() {
   console.log('🔍 District object found:', districtObj);
   console.log('🔍 District name to pass to API:', districtObj?.name);
 
+  // 신청기간 가져오기 함수
+  async function getDisplayPeriod(districtName: string) {
+    try {
+      const response = await fetch(
+        `/api/display-period?district=${encodeURIComponent(
+          districtName
+        )}&display_type=led_display`
+      );
+      const result = await response.json();
+      return result.success ? result.data : null;
+    } catch (err) {
+      console.warn(`Failed to fetch period for ${districtName}:`, err);
+      return null;
+    }
+  }
+
+  // 계좌번호 정보 가져오기 함수
+  async function getBankInfo(districtName: string) {
+    try {
+      const response = await fetch(
+        `/api/bank-info?action=getByDistrict&district=${encodeURIComponent(
+          districtName
+        )}&displayType=led_display`
+      );
+      const result = await response.json();
+      return result.success ? result.data : null;
+    } catch (err) {
+      console.warn(`Failed to fetch bank info for ${districtName}:`, err);
+      return null;
+    }
+  }
+
   useEffect(() => {
     async function fetchLEDData() {
       try {
         setLoading(true);
 
+        // 1. LED 데이터 가져오기
         const data = isAllDistricts
           ? await getAllLEDDisplays()
           : await getLEDDisplaysByDistrict(districtObj?.name || district);
@@ -235,6 +291,18 @@ export default function LEDDisplayPage() {
               })
             );
           setBillboards(mockBillboards);
+        }
+
+        // 2. 신청기간 가져오기 (전체보기가 아닌 경우에만)
+        if (!isAllDistricts && districtObj?.name) {
+          const periodData = await getDisplayPeriod(districtObj.name);
+          setPeriod(periodData);
+        }
+
+        // 3. 계좌번호 정보 가져오기 (전체보기가 아닌 경우에만)
+        if (!isAllDistricts && districtObj?.name) {
+          const bankData = await getBankInfo(districtObj.name);
+          setBankInfo(bankData);
         }
       } catch (err) {
         console.error('❌ Error fetching LED data:', err);
@@ -302,6 +370,8 @@ export default function LEDDisplayPage() {
       billboards={billboards}
       dropdownOptions={pageDropdownOptions}
       defaultView="gallery"
+      period={period}
+      bankInfo={bankInfo}
     />
   );
 }

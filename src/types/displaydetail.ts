@@ -3,9 +3,7 @@ export interface District {
   name: string;
   description: string;
   count: number;
-  icon: string;
-  size: string;
-  sizeOfPeople: string;
+  logo: string;
   src: string;
   code: string;
 }
