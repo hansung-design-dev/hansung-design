@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/src/contexts/authContext';
 import Nav from '@/src/components/layouts/nav';
 import MobileMyPage from '@/src/components/mobileMypage';
 import DesktopMyPage from '@/src/components/desktopMypage';
@@ -8,6 +9,7 @@ import DesktopMyPage from '@/src/components/desktopMypage';
 export default function MyPage() {
   const [activeTab, setActiveTab] = useState('마이페이지');
   const [isMobile, setIsMobile] = useState(false);
+  const { user } = useAuth();
 
   const tabs = [
     { name: '마이페이지', href: '/mypage' },
@@ -30,12 +32,17 @@ export default function MyPage() {
     <main className="min-h-screen bg-[#F1F1F1] w-full">
       <Nav variant="default" className="bg-white" />
       {isMobile ? (
-        <MobileMyPage activeTab={activeTab} setActiveTab={setActiveTab} />
+        <MobileMyPage
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          userName={user?.name || ''}
+        />
       ) : (
         <DesktopMyPage
           tabs={tabs}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
+          userName={user?.name || ''}
         />
       )}
     </main>

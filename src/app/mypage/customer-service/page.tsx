@@ -1,14 +1,57 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import MypageContainer from '@/src/components/mypageContainer';
 import Image from 'next/image';
 import { BankAccount, contactNumber } from '@/src/mock/contact-bank';
 import { useRouter } from 'next/navigation';
+import React from 'react';
+import { useAuth } from '@/src/contexts/authContext';
+
+interface Inquiry {
+  id: string;
+  title: string;
+  content: string;
+  status: string;
+  answer?: string;
+  answered_at?: string;
+  created_at: string;
+}
+
+interface CustomerServiceResponse {
+  success: boolean;
+  inquiries: Inquiry[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  statusSummary: {
+    total: number;
+    pending: number;
+    answered: number;
+    closed: number;
+  };
+  error?: string;
+}
 
 export default function CustomerServicePage() {
   const [activeTab, setActiveTab] = useState('1:1상담');
-  const [openItemId, setOpenItemId] = useState<number | null>(null);
+  const [openItemId, setOpenItemId] = useState<string | null>(null);
+  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [statusSummary, setStatusSummary] = useState({
+    total: 0,
+    pending: 0,
+    answered: 0,
+    closed: 0,
+  });
+
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
 
   const tabs = [
     { name: '마이페이지', href: '/mypage' },
@@ -17,39 +60,74 @@ export default function CustomerServicePage() {
     { name: '간편정보관리', href: '/mypage/info' },
   ];
 
-  const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
-  const inquiries = Array.from({ length: 13 }, (_, idx) => ({
-    id: idx + 1,
-    text: `올림픽대교 남단사거리 앞 (남단 유수지앞)`,
-    date: '2025-03-01',
-    status: idx % 2 === 0 ? '답변완료' : '답변준비중',
-    questionTitle: '디자인 파일로 전달 드렸는데요!',
-    months: '1개월',
-    phone: '010-000-0000',
-    designOption: 'file',
-    details: '내용을 입력해주세요.',
-    answer: idx % 2 === 0 ? '유선상으로 전달드렸습니다. 감사합니다.' : null,
-  }));
+  useEffect(() => {
+    if (authLoading) return;
 
-  const totalPages = Math.ceil(inquiries.length / itemsPerPage);
-  const currentItems = inquiries.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+    if (!user) {
+      router.push('/signin');
+      return;
+    }
+
+    fetchInquiries();
+  }, [user, authLoading, currentPage]);
+
+  const fetchInquiries = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(
+        `/api/customer-service?page=${currentPage}&limit=${itemsPerPage}`
+      );
+      const data: CustomerServiceResponse = await response.json();
+
+      if (data.success) {
+        setInquiries(data.inquiries);
+        setStatusSummary(data.statusSummary);
+      } else {
+        setError(data.error || '상담 내역을 불러오는데 실패했습니다.');
+      }
+    } catch {
+      setError('상담 내역을 불러오는데 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handlePageChange = (page: number) => {
-    if (page >= 1 && page <= totalPages) {
+    if (page >= 1) {
       setCurrentPage(page);
     }
   };
 
-  const toggleItem = (id: number) => {
+  const toggleItem = (id: string) => {
     setOpenItemId(openItemId === id ? null : id);
   };
 
-  const router = useRouter();
+  const getStatusDisplay = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return '답변준비중';
+      case 'answered':
+        return '답변완료';
+      case 'closed':
+        return '답변완료';
+      default:
+        return status;
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('ko-KR');
+  };
+
+  if (authLoading) {
+    return <div>로딩 중...</div>;
+  }
+
+  if (!user) {
+    return null; // 리다이렉트 중
+  }
 
   return (
     <MypageContainer
@@ -63,26 +141,33 @@ export default function CustomerServicePage() {
             <h2 className="md:text-1.75 lg:text-2.25 font-500">1:1 상담</h2>
             <div className="grid grid-cols-2 gap-4">
               {/* 주문내역 카드 */}
-              {[
-                { label: '주문내역', count: '3건' },
-                { label: '송출중 광고', count: '2건' },
-              ].map((item, index) => (
-                <div
-                  key={index}
-                  className="flex items-center rounded-lg p-4 md:p-6 cursor-pointer hover:bg-gray-50 transition-colors"
-                  onClick={() => router.push('/mypage/orders')}
-                >
-                  <div className="w-12 h-12 md:w-10 md:h-10 bg-gray-200 rounded-full" />
-                  <div className="flex flex-col pl-4 md:pl-6">
-                    <div className="lg:text-1 md:text-1 font-medium mb-2">
-                      {item.label}
-                    </div>
-                    <div className="lg:text-1.5 md:text-1.6 font-bold">
-                      {item.count}
-                    </div>
+              <div
+                className="flex items-center rounded-lg p-4 md:p-6 cursor-pointer hover:bg-gray-50 transition-colors"
+                onClick={() => router.push('/mypage/orders')}
+              >
+                <div className="w-12 h-12 md:w-10 md:h-10 bg-gray-200 rounded-full" />
+                <div className="flex flex-col pl-4 md:pl-6">
+                  <div className="lg:text-1 md:text-1 font-500 mb-2">
+                    주문내역
+                  </div>
+                  <div className="lg:text-1.5 md:text-1.6 font-bold">
+                    {statusSummary.total}건
                   </div>
                 </div>
-              ))}
+              </div>
+
+              {/* 상담내역 카드 */}
+              <div className="flex items-center rounded-lg p-2 md:p-4">
+                <div className="w-12 h-12 md:w-10 md:h-10 bg-gray-200 rounded-full" />
+                <div className="flex flex-col pl-4 md:pl-6">
+                  <div className="lg:text-1 md:text-1 font-500 mb-2">
+                    상담내역
+                  </div>
+                  <div className="lg:text-1.5 md:text-1.6 font-bold">
+                    {inquiries.length}건
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -98,140 +183,116 @@ export default function CustomerServicePage() {
           <path d="M1088 1L1.33514e-05 1" stroke="#E0E0E0" />
         </svg>
 
-        <div className="mt-8 md:mt-12 w-full overflow-x-auto">
-          <table className="w-full min-w-[600px] md:min-w-[800px] pb-[2rem]">
-            <tbody>
-              {currentItems.map((item) => (
-                <>
-                  <tr
-                    key={item.id}
-                    className="last:border-none border-black border-b-[2px] md:border-b-[3px] text-sm md:text-1.25 font-500 cursor-pointer"
-                    onClick={() => toggleItem(item.id)}
-                  >
-                    <td className="px-4 md:px-[2rem] py-3 md:py-4 text-center border-b border-gray-200">
-                      {item.id}
-                    </td>
-                    <td className="px-2 md:px-4 py-3 md:py-8 border-b border-gray-200">
-                      {item.text}
-                    </td>
-                    <td className="px-2 md:px-4 py-3 md:py-4 text-center border-b border-gray-200">
-                      {item.date}
-                    </td>
-                    <td className="px-4 md:pr-[2rem] py-3 md:py-4 text-end font-semibold border-b border-gray-200">
-                      <div className="flex items-center justify-end gap-4">
-                        <span
-                          className={
-                            item.status === '답변완료'
-                              ? 'text-[#1C9133]'
-                              : 'text-black'
-                          }
-                        >
-                          {item.status}
-                        </span>
-                        <Image
-                          src={
-                            openItemId === item.id
-                              ? '/svg/arrow-down.svg'
-                              : '/svg/arrow-up.svg'
-                          }
-                          alt="toggle arrow"
-                          width={20}
-                          height={20}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                  {openItemId === item.id && (
-                    <tr>
-                      <td colSpan={4}>
-                        {/* 질문 내용 */}
-                        <div className="bg-[#F9F9F9] p-6 flex flex-col gap-4">
-                          <h3 className="font-bold">{item.questionTitle}</h3>
-                          <div className="flex items-center gap-8">
-                            <span>원하는 개월수: {item.months}</span>
-                            <span>전화번호: {item.phone}</span>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <span>디자인유무:</span>
-                            <label className="flex items-center gap-2">
-                              <input
-                                type="radio"
-                                name={`design-${item.id}`}
-                                value="file"
-                                checked={item.designOption === 'file'}
-                                readOnly
-                                className="accent-black"
-                              />
-                              파일로 전달
-                            </label>
-                            <label className="flex items-center gap-2">
-                              <input
-                                type="radio"
-                                name={`design-${item.id}`}
-                                value="request"
-                                checked={item.designOption === 'request'}
-                                readOnly
-                                className="accent-black"
-                              />
-                              디자인 요청
-                            </label>
-                          </div>
-                          <div>
-                            <p className="text-gray-500">{item.details}</p>
-                          </div>
-                        </div>
-                        {/* 답변 내용 */}
-                        <div className="bg-[#F4F4F4] p-6 flex flex-col gap-4 items-start">
-                          <Image
-                            src="/svg/answer.svg"
-                            alt="answer icon"
-                            width={24}
-                            height={24}
-                          />
-                          <div>
-                            {item.answer ? (
-                              <p>{item.answer}</p>
-                            ) : (
-                              <p className="text-gray-500">
-                                아직 답변이 없습니다.
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </>
-              ))}
-            </tbody>
-          </table>
-
-          {/* 페이지네이션 */}
-          <div className="flex justify-center items-center mt-4 gap-2 md:gap-4 pb-[2rem]">
-            {Array.from({ length: totalPages }, (_, idx) => (
-              <button
-                key={idx}
-                onClick={() => handlePageChange(idx + 1)}
-                className={`px-2 py-1 text-sm md:text-1.25 font-500 border-none ${
-                  currentPage === idx + 1
-                    ? 'text-black'
-                    : 'text-gray-400 hover:text-black'
-                }`}
-              >
-                {idx + 1}
-              </button>
-            ))}
-            {currentPage < totalPages && (
-              <Image
-                src="/svg/arrow-right.svg"
-                width={13}
-                height={13}
-                alt="arrow-right"
-                className="cursor-pointer"
-                onClick={() => handlePageChange(currentPage + 1)}
-              />
-            )}
+        {/* 에러 메시지 */}
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+            {error}
           </div>
+        )}
+
+        <div className="mt-8 md:mt-12 w-full overflow-x-auto">
+          {loading ? (
+            <div className="text-center py-8">상담 내역을 불러오는 중...</div>
+          ) : (
+            <>
+              <table className="w-full min-w-[600px] md:min-w-[800px] pb-[2rem]">
+                <tbody>
+                  {inquiries.map((item) => (
+                    <React.Fragment key={item.id}>
+                      <tr
+                        className="last:border-none border-black border-b-[2px] md:border-b-[3px] text-sm md:text-1.25 font-500 cursor-pointer"
+                        onClick={() => toggleItem(item.id)}
+                      >
+                        <td className="px-4 md:px-[2rem] py-3 md:py-4 text-center border-b border-gray-200">
+                          {item.id.slice(0, 8)}
+                        </td>
+                        <td className="px-2 md:px-4 py-3 md:py-8 border-b border-gray-200">
+                          {item.title}
+                        </td>
+                        <td className="px-2 md:px-4 py-3 md:py-4 text-center border-b border-gray-200">
+                          {formatDate(item.created_at)}
+                        </td>
+                        <td className="px-4 md:pr-[2rem] py-3 md:py-4 text-end font-semibold border-b border-gray-200">
+                          <div className="flex items-center justify-end gap-4">
+                            <span
+                              className={
+                                item.status === 'answered'
+                                  ? 'text-[#1C9133]'
+                                  : 'text-black'
+                              }
+                            >
+                              {getStatusDisplay(item.status)}
+                            </span>
+                            <Image
+                              src={
+                                openItemId === item.id
+                                  ? '/svg/arrow-down.svg'
+                                  : '/svg/arrow-up.svg'
+                              }
+                              alt="toggle arrow"
+                              width={20}
+                              height={20}
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                      {openItemId === item.id && (
+                        <tr>
+                          <td colSpan={4}>
+                            {/* 질문 내용 */}
+                            <div className="bg-[#F9F9F9] p-6 flex flex-col gap-4">
+                              <h3 className="font-bold">{item.title}</h3>
+                              <div>
+                                <p className="text-gray-500">{item.content}</p>
+                              </div>
+                            </div>
+                            {/* 답변 내용 */}
+                            <div className="bg-[#F4F4F4] p-6 flex flex-col gap-4 items-start">
+                              <Image
+                                src="/svg/answer.svg"
+                                alt="answer icon"
+                                width={24}
+                                height={24}
+                              />
+                              <div>
+                                {item.answer ? (
+                                  <p>{item.answer}</p>
+                                ) : (
+                                  <p className="text-gray-500">
+                                    아직 답변이 없습니다.
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* 페이지네이션 */}
+              <div className="flex justify-center items-center mt-4 gap-2 md:gap-4 pb-[2rem]">
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="px-2 py-1 text-sm md:text-1.25 font-500 border-none disabled:opacity-50"
+                >
+                  이전
+                </button>
+                <span className="px-2 py-1 text-sm md:text-1.25 font-500">
+                  {currentPage}
+                </span>
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  className="px-2 py-1 text-sm md:text-1.25 font-500 border-none"
+                >
+                  다음
+                </button>
+              </div>
+            </>
+          )}
         </div>
 
         {/* 하단 정보 */}

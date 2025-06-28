@@ -36,7 +36,14 @@ export default function CartItemAccordion({ item }: CartItemAccordionProps) {
 
   return (
     <div className="mb-6">
-      <div className="text-1.25 font-700 py-4">{item.name}</div>
+      <div className="text-1.25 font-700 py-4">
+        {item.name}
+        {item.halfPeriod && (
+          <span className="ml-2 text-sm text-blue-600 font-medium">
+            ({item.halfPeriod === 'first_half' ? '상반기' : '하반기'})
+          </span>
+        )}
+      </div>
       <div
         className="flex items-center justify-between bg-gray-100 rounded-lg px-4 py-3 cursor-pointer"
         onClick={() => setOpen((o) => !o)}

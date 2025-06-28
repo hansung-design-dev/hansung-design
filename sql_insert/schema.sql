@@ -69,10 +69,10 @@ CREATE TABLE region_dong (
 CREATE TABLE panel_info --게시판 메타 정보
 (
   id uuid PRIMARY KEY,
-  display_type_id uuid,
+  display_type_id uuid REFERENCES display_types(id),
+  region_gu_id uuid REFERENCES region_gu(id),
+  region_dong_id uuid REFERENCES region_dong(id),
   post_code text,
-  region_gu_id uuid,
-  region_dong_id uuid,
   nickname text,
   address text,
   photo_url text,
@@ -103,7 +103,7 @@ CREATE TYPE panel_type_enum_v2 AS ENUM (
 CREATE TABLE panel_guideline -- 게시판 기간 안내
 (
   id uuid PRIMARY KEY,
-  display_category_id uuid,
+  display_category_id uuid REFERENCES display_types(id),
   notes text,
   order_period text,
   order_method text,
@@ -127,8 +127,8 @@ CREATE TYPE banner_type_enum AS ENUM (
 
 CREATE TABLE panel_slot_usage (
   id uuid PRIMARY KEY,
-  display_type_id uuid,
-  panel_info_id uuid,
+  display_type_id uuid REFERENCES display_types(id),
+  panel_info_id uuid REFERENCES panel_info(id),
   slot_number integer,
   usage_type text,
   attach_date_from date,
@@ -159,7 +159,7 @@ CREATE TYPE panel_slot_status_enum AS ENUM (
 
 CREATE TABLE banner_slot_info (
   id uuid PRIMARY KEY,
-  panel_info_id uuid,
+  panel_info_id uuid REFERENCES panel_info(id),
   slot_number integer,
   slot_name text,
   max_width numeric,
@@ -179,7 +179,7 @@ CREATE TABLE banner_slot_info (
 
 CREATE TABLE banner_panel_details (
   id uuid PRIMARY KEY,
-  panel_info_id uuid,
+  panel_info_id uuid REFERENCES panel_info(id),
   max_banners integer,
   panel_height numeric,
   panel_width numeric,
@@ -194,8 +194,8 @@ CREATE TYPE payment_method_enum AS ENUM (
 
 CREATE TABLE orders (
   id uuid PRIMARY KEY,
-  panel_info_id uuid,
-  panel_slot_usage_id uuid,
+  panel_info_id uuid REFERENCES panel_info(id),
+  panel_slot_usage_id uuid REFERENCES panel_slot_usage(id),
   panel_slot_snapshot jsonb,
   total_price numeric,
   depositor_name text,
@@ -219,7 +219,7 @@ CREATE TABLE orders (
 
 CREATE TABLE order_details (
   id uuid PRIMARY KEY,
-  order_id uuid,
+  order_id uuid REFERENCES orders(id),
   slot_order_quantity integer,
   display_start_date date,
   display_end_date date,
@@ -230,7 +230,7 @@ CREATE TABLE order_details (
 
 CREATE TABLE led_panel_details (
   id uuid PRIMARY KEY,
-  panel_info_id uuid,
+  panel_info_id uuid REFERENCES panel_info(id),
   exposure_count integer,
   panel_width integer,
   panel_height integer,
@@ -241,7 +241,7 @@ CREATE TABLE led_panel_details (
 
 CREATE TABLE led_slot_info (
   id uuid PRIMARY KEY,
-  panel_info_id uuid,
+  panel_info_id uuid REFERENCES panel_info(id),
   slot_name text,
   slot_width_px integer,
   slot_height_px integer,
@@ -265,8 +265,9 @@ CREATE TABLE led_slot_info (
 CREATE TABLE panel_popup_notices -- 게시판 팝업 안내, 구별, 게시판 종류별 
 (
   id uuid PRIMARY KEY,
-  display_category_id uuid,
-  notice_categories_id uuid, 
+  display_category_id uuid REFERENCES display_types(id),
+  notice_categories_id uuid REFERENCES notice_categories(id), 
+  region_gu_id uuid REFERENCES region_gu(id),
   title text,
   hide_oneday boolean,
   content json,
@@ -274,8 +275,7 @@ CREATE TABLE panel_popup_notices -- 게시판 팝업 안내, 구별, 게시판 �
   start_date date,
   end_date date,
   created_at timestamp,
-  updated_at timestamp,
-  region_gu_id uuid
+  updated_at timestamp 
 );
 
 
@@ -283,8 +283,8 @@ CREATE TABLE panel_popup_notices -- 게시판 팝업 안내, 구별, 게시판 �
 CREATE TABLE homepage_contents --랜딩페이지 섹션별 컨텐트
  (
   id uuid PRIMARY KEY,
-  homepage_menu_type uuid,
-  region_gu_id uuid,
+  homepage_menu_type uuid REFERENCES homepage_menu_types(id),
+  region_gu_id uuid REFERENCES region_gu(id),
   title text,
   subtitle text,
   description text,
@@ -355,8 +355,8 @@ CREATE TABLE display_types (
 CREATE TABLE region_gu_display_periods -- 구별 게시기간 정보
 (
   id uuid PRIMARY KEY,
-  display_type_id uuid,
-  region_gu_id uuid,
+  display_type_id uuid REFERENCES display_types(id),
+  region_gu_id uuid REFERENCES region_gu(id),
   first_half_from date,
   first_half_to date,
   first_half_closure_quantity integer,
@@ -383,7 +383,7 @@ CREATE TYPE guideline_category_enum AS ENUM (
 CREATE TABLE region_gu_guideline (
   id uuid PRIMARY KEY,
   region_gu_id uuid REFERENCES region_gu(id),
-  display_type display_type_enum NOT NULL,          -- 현수막 or LED
+  display_type display_type_enum NOT NULL,   -- 현수막 or LED
   category guideline_category_enum DEFAULT 'default', -- 추가 구분 (선택적)
   title text,
   description text,

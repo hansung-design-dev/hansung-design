@@ -16,6 +16,7 @@ import {
   DisplayBillboard,
 } from '@/src/types/displaydetail';
 import DistrictInfo from './districtInfo';
+import HalfPeriodTabs from './ui/HalfPeriodTabs';
 // import { BannerBillboard } from '@/src/types/displaydetail';
 
 const fadeInUp = {
@@ -74,6 +75,9 @@ export default function DisplayDetailPage({
   const [mapoFilter, setMapoFilter] = useState<'yeollip' | 'jeodan' | 'simin'>(
     'yeollip'
   );
+  const [selectedHalfPeriod, setSelectedHalfPeriod] = useState<
+    'first_half' | 'second_half'
+  >('first_half');
   const { dispatch } = useCart();
   const router = useRouter();
 
@@ -100,11 +104,21 @@ export default function DisplayDetailPage({
       ? filteredByMapo.filter((item) => item.district === selectedOption.option)
       : filteredByMapo;
 
+  // 상하반기에 따른 필터링
+  const filteredByHalfPeriod = filteredByDistrict.map((item) => ({
+    ...item,
+    // 선택된 상하반기에 따른 마감수 표시
+    faces:
+      selectedHalfPeriod === 'first_half'
+        ? item.first_half_closure_quantity || item.faces
+        : item.second_half_closure_quantity || item.faces,
+  }));
+
   const filteredBillboards = isAllDistrictsView
-    ? [...filteredByDistrict].sort((a, b) =>
+    ? [...filteredByHalfPeriod].sort((a, b) =>
         a.district.localeCompare(b.district)
       )
-    : filteredByDistrict;
+    : filteredByHalfPeriod;
 
   // 구분 컬럼에 표시할 값 계산 함수
   const getPanelTypeLabel = (panelType?: string) => {
@@ -174,6 +188,7 @@ export default function DisplayDetailPage({
           name: getCartItemName(item),
           district: item.district,
           price: priceForCart,
+          halfPeriod: selectedHalfPeriod,
         };
 
         console.log('🔍 Adding item to cart:', cartItem);
@@ -392,6 +407,18 @@ export default function DisplayDetailPage({
               </button>
             </div>
           </div>
+        )}
+        {/* 상하반기 탭 */}
+        {period && (
+          <HalfPeriodTabs
+            selectedPeriod={selectedHalfPeriod}
+            onPeriodChange={setSelectedHalfPeriod}
+            firstHalfFrom={period.first_half_from}
+            firstHalfTo={period.first_half_to}
+            secondHalfFrom={period.second_half_from}
+            secondHalfTo={period.second_half_to}
+            year={2025}
+          />
         )}
         {/* View Type Selector */}
         <div className="flex items-center gap-4 mb-8 border-b border-gray-200 pb-4">

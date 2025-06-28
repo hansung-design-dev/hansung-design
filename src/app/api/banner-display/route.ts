@@ -40,6 +40,8 @@ export interface BannerDisplayData {
     price_unit: string;
     is_premium: boolean;
     panel_slot_status: string;
+    first_half_closure_quantity: number;
+    second_half_closure_quantity: number;
   }[];
 }
 
@@ -88,7 +90,9 @@ async function getBannerDisplaysByDistrict(districtName: string) {
           banner_type,
           price_unit,
           is_premium,
-          panel_slot_status
+          panel_slot_status,
+          first_half_closure_quantity,
+          second_half_closure_quantity
         ),
         region_gu!inner (
           id,
@@ -142,7 +146,9 @@ async function getAllBannerDisplays() {
           banner_type,
           price_unit,
           is_premium,
-          panel_slot_status
+          panel_slot_status,
+          first_half_closure_quantity,
+          second_half_closure_quantity
         ),
         region_gu!inner (
           id,
