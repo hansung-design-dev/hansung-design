@@ -93,7 +93,10 @@ export default function DisplayDetailPage({
         } else if (mapoFilter === 'jeodan') {
           return item.panel_type === 'lower-panel';
         } else if (mapoFilter === 'simin') {
-          return item.panel_type === 'bulletin-board';
+          return (
+            item.panel_type === 'bulletin-board' ||
+            item.panel_type === 'citizen-board'
+          );
         }
         return true;
       })
@@ -130,6 +133,8 @@ export default function DisplayDetailPage({
       case 'lower-panel':
         return '저단형';
       case 'bulletin-board':
+        return '시민게시대';
+      case 'citizen-board':
         return '시민/문화게시판';
       default:
         return '현수막게시대';
