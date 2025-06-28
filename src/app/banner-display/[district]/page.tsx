@@ -143,7 +143,7 @@ export default function BannerDisplayPage() {
         icon: '/images/district-icon/all.svg',
         description: '모든 자치구',
         count: 0,
-
+        logo: '/images/district-icon/all.svg',
         src: '',
       }
     : districts.find((d) => d.code === district);
@@ -166,6 +166,12 @@ export default function BannerDisplayPage() {
     second_half_to: string;
   } | null>(null);
   const [bankInfo, setBankInfo] = useState<BankInfo | null>(null);
+  const [districtData, setDistrictData] = useState<{
+    id: string;
+    name: string;
+    code: string;
+    logo_image_url: string | null;
+  } | null>(null);
 
   // 신청기간 가져오기 함수
   async function getDisplayPeriod(districtName: string) {
@@ -183,18 +189,18 @@ export default function BannerDisplayPage() {
     }
   }
 
-  // 계좌번호 정보 가져오기 함수
-  async function getBankInfo(districtName: string) {
+  // 구 정보 가져오기 함수 (로고 + 계좌번호 포함)
+  async function getDistrictData(districtName: string) {
     try {
       const response = await fetch(
-        `/api/bank-info?action=getByDistrict&district=${encodeURIComponent(
+        `/api/region-gu?action=getByDistrict&district=${encodeURIComponent(
           districtName
         )}&displayType=banner_display`
       );
       const result = await response.json();
       return result.success ? result.data : null;
     } catch (err) {
-      console.warn(`Failed to fetch bank info for ${districtName}:`, err);
+      console.warn(`Failed to fetch district data for ${districtName}:`, err);
       return null;
     }
   }
@@ -299,10 +305,18 @@ export default function BannerDisplayPage() {
           setPeriod(periodData);
         }
 
-        // 3. 계좌번호 정보 가져오기 (전체보기가 아닌 경우에만)
+        // 3. 구 정보와 계좌번호 정보 가져오기 (전체보기가 아닌 경우에만)
         if (!isAllDistricts && districtObj?.name) {
-          const bankData = await getBankInfo(districtObj.name);
-          setBankInfo(bankData);
+          const districtDataResult = await getDistrictData(districtObj.name);
+          if (districtDataResult) {
+            setDistrictData({
+              id: districtDataResult.id,
+              name: districtDataResult.name,
+              code: districtDataResult.code,
+              logo_image_url: districtDataResult.logo_image_url,
+            });
+            setBankInfo(districtDataResult.bank_info);
+          }
         }
       } catch (err) {
         console.error('❌ Error fetching banner data:', err);
@@ -366,7 +380,22 @@ export default function BannerDisplayPage() {
   return (
     <DisplayDetailPage
       district={district}
-      districtObj={districtObj}
+      districtObj={
+        districtData
+          ? {
+              id: parseInt(districtData.id),
+              name: districtData.name,
+              code: districtData.code,
+              description: districtObj?.description || '',
+              count: districtObj?.count || 0,
+              logo:
+                districtData.logo_image_url ||
+                districtObj?.icon ||
+                '/images/district-icon/default.svg',
+              src: districtObj?.src || '',
+            }
+          : districtObj
+      }
       billboards={billboards}
       dropdownOptions={pageDropdownOptions}
       defaultView="list"

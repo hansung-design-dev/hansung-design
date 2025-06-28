@@ -13,7 +13,7 @@ import { useState } from 'react';
 import { useCart } from '../contexts/cartContext';
 import { District, DropdownOption } from '@/src/types/displaydetail';
 import { LEDBillboard } from '@/src/types/leddetail';
-import BannerPeriod from './bannerPeriod';
+import DistrictInfo from './districtInfo';
 
 const fadeInUp = {
   initial: { y: 60, opacity: 0 },
@@ -312,19 +312,7 @@ export default function LEDDisplayDetailPage({
           </div>
           {selectedOption && <div>{selectedOption.option}</div>}
 
-          {period && (
-            <div className="text-gray-600 mt-2">
-              <BannerPeriod {...period} />
-            </div>
-          )}
-          <p className="text-gray-600">
-            입금계좌
-            <span className="text-red">
-              {bankInfo
-                ? `${bankInfo.bank_name} ${bankInfo.account_number} ${bankInfo.depositor}`
-                : '데이터를 받아올 수 없습니다.'}
-            </span>
-          </p>
+          <DistrictInfo period={period} bankInfo={bankInfo} flexRow={true} />
         </div>
 
         {/* View Type Selector */}

@@ -24,7 +24,7 @@ const BannerPeriod: React.FC<BannerPeriodProps> = ({
   second_half_to,
 }) => {
   return (
-    <div className="flex gap-3">
+    <div className="flex gap-3 text-1 font-500 text-gray-600">
       <div>신청일</div>
       <div className="flex flex-col gap-1">
         <span>

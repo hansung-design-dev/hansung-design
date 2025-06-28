@@ -15,7 +15,7 @@ import {
   DropdownOption,
   DisplayBillboard,
 } from '@/src/types/displaydetail';
-import BannerPeriod from './bannerPeriod';
+import DistrictInfo from './districtInfo';
 // import { BannerBillboard } from '@/src/types/displaydetail';
 
 const fadeInUp = {
@@ -353,22 +353,8 @@ export default function DisplayDetailPage({
             </h2>
           </div>
           {selectedOption && <div>{selectedOption.option}</div>}
-          <p className="text-gray-600 mt-4">
-            2025년 상반기 신청: <span className="text-red"> 상시모집</span>
-          </p>
-          {period && (
-            <div className="text-gray-600 mt-2">
-              <BannerPeriod {...period} />
-            </div>
-          )}
-          <p className="text-gray-600">
-            입금계좌
-            <span className="text-red">
-              {bankInfo
-                ? `${bankInfo.bank_name} ${bankInfo.account_number} ${bankInfo.depositor}`
-                : '데이터를 받아올 수 없습니다.'}
-            </span>
-          </p>
+
+          <DistrictInfo period={period} bankInfo={bankInfo} flexRow={true} />
         </div>
         {/* 마포구 전용 filter */}
         {isMapoDistrict && (
