@@ -21,7 +21,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ko" jd-enabled="true">
+    <html lang="ko" jd-enabled="false">
       <body className="relative">
         <CartProvider>
           <Nav />

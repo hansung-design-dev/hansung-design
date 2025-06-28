@@ -14,23 +14,31 @@ interface District {
   name: string;
   description: string;
   count: number;
-  icon: string;
-  size: string;
-  sizeOfPeople: string;
+  logo: string;
   src: string;
   code: string;
+  period?: {
+    first_half_from: string;
+    first_half_to: string;
+    second_half_from: string;
+    second_half_to: string;
+  } | null;
 }
 
-// 구별 기본 정보 (정적 데이터)
+interface RegionLogo {
+  id: string;
+  name: string;
+  logo_image_url: string;
+}
+
+// 기본 districtInfo (로고 URL이 없는 경우 사용할 기본값)
 const districtInfo: Record<string, Omit<District, 'count'>> = {
   강동구: {
     id: 2,
     name: '강동구',
     code: 'gangdong',
     description: '울림픽대교 남단사거리 앞 외 3건',
-    icon: '/images/district-icon/gangdong-gu.png',
-    size: '1000x1000',
-    sizeOfPeople: '10000',
+    logo: '/images/district-icon/gangdong-gu.png',
     src: '/images/led/landing.png',
   },
   관악구: {
@@ -38,9 +46,7 @@ const districtInfo: Record<string, Omit<District, 'count'>> = {
     name: '관악구',
     code: 'gwanak',
     description: '서울대입구역 앞 외 3건',
-    icon: '/images/district-icon/gwanak-gu.png',
-    size: '1000x1000',
-    sizeOfPeople: '10000',
+    logo: '/images/district-icon/gwanak-gu.png',
     src: '/images/led/landing.png',
   },
   마포구: {
@@ -48,9 +54,7 @@ const districtInfo: Record<string, Omit<District, 'count'>> = {
     name: '마포구',
     code: 'mapo',
     description: '홍대입구역 앞 외 5건',
-    icon: '/images/district-icon/mapo-gu.png',
-    size: '1000x1000',
-    sizeOfPeople: '10000',
+    logo: '/images/district-icon/mapo-gu.png',
     src: '/images/led/landing.png',
   },
   서대문구: {
@@ -58,9 +62,7 @@ const districtInfo: Record<string, Omit<District, 'count'>> = {
     name: '서대문구',
     code: 'seodaemun',
     description: '울림픽대교 남단사거리 앞 외 3건',
-    icon: '/images/district-icon/seodaemun-gu.png',
-    size: '1000x1000',
-    sizeOfPeople: '10000',
+    logo: '/images/district-icon/seodaemun-gu.png',
     src: '/images/led/landing.png',
   },
   송파구: {
@@ -68,9 +70,7 @@ const districtInfo: Record<string, Omit<District, 'count'>> = {
     name: '송파구',
     code: 'songpa',
     description: '잠실종합운동장 앞 외 5건',
-    icon: '/images/district-icon/songpa-gu.png',
-    size: '1000x1000',
-    sizeOfPeople: '10000',
+    logo: '/images/district-icon/songpa-gu.png',
     src: '/images/led/landing.png',
   },
   용산구: {
@@ -78,9 +78,7 @@ const districtInfo: Record<string, Omit<District, 'count'>> = {
     name: '용산구',
     code: 'yongsan',
     description: '여의도공원 앞 외 6건',
-    icon: '/images/district-icon/yongsan-gu.png',
-    size: '1000x1000',
-    sizeOfPeople: '10000',
+    logo: '/images/district-icon/yongsan-gu.png',
     src: '/images/led/landing.png',
   },
   강북구: {
@@ -88,9 +86,7 @@ const districtInfo: Record<string, Omit<District, 'count'>> = {
     name: '강북구',
     code: 'gangbuk',
     description: '여의도공원 앞 외 6건',
-    icon: '/images/district-icon/gangbuk-gu.png',
-    size: '1000x1000',
-    sizeOfPeople: '10000',
+    logo: '/images/district-icon/gangbuk-gu.png',
     src: '/images/led/landing.png',
   },
   광진구: {
@@ -98,9 +94,7 @@ const districtInfo: Record<string, Omit<District, 'count'>> = {
     name: '광진구',
     code: 'gwangjin',
     description: '서울대입구역 앞 외 3건',
-    icon: '/images/district-icon/gwangjin-gu.png',
-    size: '1000x1000',
-    sizeOfPeople: '10000',
+    logo: '/images/district-icon/gwangjin-gu.png',
     src: '/images/led/landing.png',
   },
   동작구: {
@@ -108,9 +102,7 @@ const districtInfo: Record<string, Omit<District, 'count'>> = {
     name: '동작구',
     code: 'dongjak',
     description: '홍대입구역 앞 외 5건',
-    icon: '/images/district-icon/dongjak-gu.png',
-    size: '1000x1000',
-    sizeOfPeople: '10000',
+    logo: '/images/district-icon/dongjak-gu.png',
     src: '/images/led/landing.png',
   },
   동대문구: {
@@ -118,9 +110,7 @@ const districtInfo: Record<string, Omit<District, 'count'>> = {
     name: '동대문구',
     code: 'dongdaemun',
     description: '울림픽대교 남단사거리 앞 외 3건',
-    icon: '/images/district-icon/dongdaemun-gu.png',
-    size: '1000x1000',
-    sizeOfPeople: '10000',
+    logo: '/images/district-icon/dongdaemun-gu.png',
     src: '/images/led/landing.png',
   },
 };
@@ -130,23 +120,80 @@ export default function BannerDisplayPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // 모든 데이터를 한번에 로딩
   useEffect(() => {
-    const fetchDistrictCounts = async () => {
+    const fetchAllData = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        const response = await fetch('/api/banner-display?action=getCounts');
-        const result = await response.json();
+        // 1. 구별 로고 정보 가져오기
+        console.log('🔍 Fetching region logos...');
+        const logosResponse = await fetch('/api/region-gu?action=getLogos');
+        const logosResult = await logosResponse.json();
 
-        if (!result.success) {
-          throw new Error(result.error || 'Failed to fetch district counts');
+        if (!logosResult.success) {
+          console.warn('Failed to fetch region logos, using default logos');
         }
 
-        const counts: DistrictCounts = result.data;
+        const logosMap: Record<string, string> = {};
+        if (logosResult.success && logosResult.data) {
+          logosResult.data.forEach((region: RegionLogo) => {
+            logosMap[region.name] = region.logo_image_url;
+          });
+        }
+
+        // 2. 구별 카운트 정보 가져오기
+        console.log('🔍 Fetching district counts...');
+        const countsResponse = await fetch(
+          '/api/banner-display?action=getCounts'
+        );
+        const countsResult = await countsResponse.json();
+
+        if (!countsResult.success) {
+          throw new Error(
+            countsResult.error || 'Failed to fetch district counts'
+          );
+        }
+
+        const counts: DistrictCounts = countsResult.data;
         console.log('🔍 Banner Display: Fetched counts:', counts);
 
-        // 구별 데이터 생성
+        // 3. 구별 신청기간 정보 가져오기
+        console.log('🔍 Fetching display periods...');
+        const periodPromises = Object.keys(counts).map(async (districtName) => {
+          try {
+            const periodResponse = await fetch(
+              `/api/display-period?district=${encodeURIComponent(
+                districtName
+              )}&display_type=banner_display`
+            );
+            const periodResult = await periodResponse.json();
+            return {
+              districtName,
+              period: periodResult.success ? periodResult.data : null,
+            };
+          } catch (err) {
+            console.warn(`Failed to fetch period for ${districtName}:`, err);
+            return { districtName, period: null };
+          }
+        });
+
+        const periodResults = await Promise.all(periodPromises);
+        const periodMap: Record<
+          string,
+          {
+            first_half_from: string;
+            first_half_to: string;
+            second_half_from: string;
+            second_half_to: string;
+          } | null
+        > = {};
+        periodResults.forEach(({ districtName, period }) => {
+          periodMap[districtName] = period;
+        });
+
+        // 4. 모든 데이터를 조합하여 districts 배열 생성
         const districtData: District[] = [];
         let totalCount = 0;
 
@@ -154,9 +201,14 @@ export default function BannerDisplayPage() {
         Object.entries(counts).forEach(([districtName, count]) => {
           const districtInfoData = districtInfo[districtName];
           if (districtInfoData) {
+            // DB에서 가져온 로고 URL이 있으면 사용, 없으면 기본값 사용
+            const logoUrl = logosMap[districtName] || districtInfoData.logo;
+
             districtData.push({
               ...districtInfoData,
+              logo: logoUrl,
               count,
+              period: periodMap[districtName] || null,
             });
             totalCount += count;
           }
@@ -169,23 +221,22 @@ export default function BannerDisplayPage() {
           code: 'all',
           description: '모든 구 현수막 게시대',
           count: totalCount,
-          icon: '/images/district-icon/all.svg',
-          size: '1000x1000',
-          sizeOfPeople: '10000',
+          logo: '/images/district-icon/all.svg',
           src: '/images/led/landing.png',
         });
 
+        console.log('🔍 All data loaded successfully, setting districts...');
         setDistricts(districtData);
       } catch (err) {
-        console.error('Error fetching banner display counts:', err);
+        console.error('Error fetching data:', err);
         setError(err instanceof Error ? err.message : 'Failed to fetch data');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchDistrictCounts();
-  }, []);
+    fetchAllData();
+  }, []); // 한 번만 실행
 
   if (error) {
     return (
