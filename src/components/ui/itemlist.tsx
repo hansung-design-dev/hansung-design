@@ -123,7 +123,8 @@ const ItemList: React.FC<ItemTableProps> = ({
           {showHeader && (
             <thead>
               <tr className="border-b border-gray-200 h-[3rem] text-gray-500 font-medium">
-                {showCheckbox && <th className="w-10">no</th>}
+                {showCheckbox && <th className="w-10"></th>}
+                <th className="text-center pl-4">No</th>
                 <th className="text-left pl-4">게시대 명</th>
                 <th className="text-center pl-4"></th>
                 <th className="text-center pl-4">규격(cm)</th>
@@ -169,6 +170,9 @@ const ItemList: React.FC<ItemTableProps> = ({
                       />
                     </td>
                   )}
+                  <td className="text-center pl-4">
+                    {item.panel_code || item.id}
+                  </td>
                   <td className="pl-4">
                     <div
                       className="font-medium text-black cursor-pointer"
@@ -264,7 +268,7 @@ const ItemList: React.FC<ItemTableProps> = ({
             {Array.from({ length: ITEMS_PER_PAGE - paginatedItems.length }).map(
               (_, i) => (
                 <tr key={`empty-${i}`} className="h-[3.5rem]">
-                  <td colSpan={showCheckbox ? 9 : 8} />
+                  <td colSpan={showCheckbox ? 10 : 9} />
                 </tr>
               )
             )}
@@ -289,16 +293,25 @@ const ItemList: React.FC<ItemTableProps> = ({
                 }
               }}
             >
+              <div className="flex items-center gap-2 mb-1">
+                {showCheckbox && (
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(item.id)}
+                    onChange={(e) => onItemSelect?.(item.id, e.target.checked)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="mr-2"
+                  />
+                )}
+                <span className="text-sm text-gray-500 font-medium">
+                  No. {item.panel_code || item.id}
+                </span>
+              </div>
               {showCheckbox && (
                 <div
                   className="flex items-center gap-2"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.includes(item.id)}
-                    onChange={(e) => onItemSelect?.(item.id, e.target.checked)}
-                  />
                   <div className="font-medium text-black">{item.name}</div>
                 </div>
               )}

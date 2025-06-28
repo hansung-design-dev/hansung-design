@@ -83,7 +83,8 @@ const LEDItemList: React.FC<LEDItemTableProps> = ({
           {showHeader && (
             <thead>
               <tr className="border-b border-gray-200 h-[3rem] text-gray-500 font-medium">
-                {showCheckbox && <th className="w-10">no</th>}
+                {showCheckbox && <th className="w-10"></th>}
+                <th className="text-center pl-4">No</th>
                 <th className="text-left pl-4">게시대 명</th>
                 <th className="text-center pl-4"></th>
                 <th className="text-center pl-4">규격(px)</th>
@@ -124,6 +125,9 @@ const LEDItemList: React.FC<LEDItemTableProps> = ({
                       />
                     </td>
                   )}
+                  <td className="text-center pl-4">
+                    {item.panel_code || item.id}
+                  </td>
                   <td className="pl-4">
                     <div
                       className="font-medium text-black cursor-pointer"
@@ -215,6 +219,22 @@ const LEDItemList: React.FC<LEDItemTableProps> = ({
             >
               <div className="flex justify-between items-start mb-2">
                 <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    {showCheckbox && (
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(item.id)}
+                        onChange={(e) =>
+                          onItemSelect?.(item.id, e.target.checked)
+                        }
+                        onClick={(e) => e.stopPropagation()}
+                        className="mr-2"
+                      />
+                    )}
+                    <span className="text-sm text-gray-500 font-medium">
+                      No. {item.panel_code || item.id}
+                    </span>
+                  </div>
                   <div className="font-medium text-black">
                     {item.nickname && <span> {item.nickname} - </span>}
                     {item.address ? <span>{item.address}</span> : <></>}
@@ -225,15 +245,6 @@ const LEDItemList: React.FC<LEDItemTableProps> = ({
                     )}
                   </div>
                 </div>
-                {showCheckbox && (
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.includes(item.id)}
-                    onChange={(e) => onItemSelect?.(item.id, e.target.checked)}
-                    onClick={(e) => e.stopPropagation()}
-                    className="ml-2"
-                  />
-                )}
               </div>
               <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
                 <div>
