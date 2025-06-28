@@ -39,6 +39,8 @@ export interface BaseBillboard {
   nickname?: string | null; // null도 허용하도록 통일
   panel_code?: number;
   panel_type?: string;
+  first_half_closure_quantity?: number;
+  second_half_closure_quantity?: number;
 }
 
 // 현수막게시대 전용 타입

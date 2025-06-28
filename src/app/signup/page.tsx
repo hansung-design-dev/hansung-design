@@ -3,6 +3,8 @@ import Image from 'next/image';
 import { Button } from '@/src/components/button/button';
 import { useState } from 'react';
 import { getModalContent } from './modalContent';
+import { useAuth } from '@/src/contexts/authContext';
+import { useRouter } from 'next/navigation';
 
 export default function Signup() {
   const [agreements, setAgreements] = useState({
@@ -36,6 +38,19 @@ export default function Signup() {
     password: { isValid: false, message: '' },
     passwordConfirm: { isValid: false, message: '' },
   });
+
+  // API 연동 상태
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [usernameChecked, setUsernameChecked] = useState(false);
+  const [usernameCheckLoading, setUsernameCheckLoading] = useState(false);
+
+  // 비밀번호 보기/숨기기 상태
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
+
+  const { signUp } = useAuth();
+  const router = useRouter();
 
   const handleAgreementChange = (key: keyof typeof agreements) => {
     if (key === 'all') {
@@ -163,6 +178,10 @@ export default function Signup() {
   // 입력 필드 변경 핸들러
   const handleInputChange = (field: keyof typeof formData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    // 아이디가 변경되면 중복확인 상태 초기화
+    if (field === 'id') {
+      setUsernameChecked(false);
+    }
   };
 
   // 입력 필드 포커스 아웃 핸들러
@@ -200,8 +219,21 @@ export default function Signup() {
   const handleVerification = (type: 'ipin' | 'phone') => {
     // 실제 인증 로직은 여기에 구현
     console.log(`${type} 인증 시작`);
-    // 임시로 인증 완료 처리
-    setIsVerified(true);
+
+    // 임시로 인증 완료 처리 (실제로는 인증 API 호출)
+    if (type === 'ipin') {
+      // 아이핀 인증 시뮬레이션
+      setTimeout(() => {
+        setIsVerified(true);
+        setError(''); // 성공 시 에러 메시지 초기화
+      }, 1000);
+    } else if (type === 'phone') {
+      // 휴대폰 인증 시뮬레이션
+      setTimeout(() => {
+        setIsVerified(true);
+        setError(''); // 성공 시 에러 메시지 초기화
+      }, 1000);
+    }
   };
 
   // 회원가입 가능 여부 확인
@@ -212,7 +244,90 @@ export default function Signup() {
       agreements.privacy &&
       agreements.collection &&
       agreements.thirdParty;
-    return allFieldsValid && allRequiredAgreements && isVerified;
+
+    console.log('회원가입 조건 확인:', {
+      allFieldsValid,
+      allRequiredAgreements,
+      isVerified,
+      usernameChecked,
+      agreements,
+    });
+
+    return (
+      allFieldsValid && allRequiredAgreements && isVerified && usernameChecked
+    );
+  };
+
+  // 중복확인 함수
+  const handleUsernameCheck = async () => {
+    if (!formData.id) {
+      setError('아이디를 먼저 입력해주세요.');
+      return;
+    }
+
+    // 아이디 유효성 검사
+    const idValidation = validateId(formData.id);
+    if (!idValidation.isValid) {
+      setError(idValidation.message);
+      return;
+    }
+
+    setUsernameCheckLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/auth/check-username', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username: formData.id }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setUsernameChecked(true);
+        setError(''); // 성공 메시지는 validation 메시지로 표시
+      } else {
+        setError(data.error || '중복확인에 실패했습니다.');
+        setUsernameChecked(false);
+      }
+    } catch {
+      setError('중복확인 중 오류가 발생했습니다.');
+      setUsernameChecked(false);
+    } finally {
+      setUsernameCheckLoading(false);
+    }
+  };
+
+  const handleSignup = async () => {
+    if (!canSignup()) {
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const result = await signUp(
+        formData.email,
+        formData.password,
+        formData.name,
+        formData.id,
+        agreements
+      );
+
+      if (result.success) {
+        router.push('/signin'); // 회원가입 성공 시 로그인 페이지로 이동
+      } else {
+        setError(result.error || '회원가입에 실패했습니다.');
+      }
+    } catch {
+      setError('회원가입 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -222,6 +337,13 @@ export default function Signup() {
         <div className="text-1-400 mb-8">
           회원가입에 필요한 정보를 입력해주세요.
         </div>
+
+        {/* 에러 메시지 */}
+        {error && (
+          <div className="w-full mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded text-sm">
+            {error}
+          </div>
+        )}
 
         {/* 닉네임/성함 인풋 */}
         <div className="w-full mb-6">
@@ -269,13 +391,23 @@ export default function Signup() {
                 onBlur={(e) => handleInputBlur('id', e.target.value)}
               />
             </div>
-            <Button size="sm" className="text-0-75-500 h-[4rem]">
-              중복확인
+            <Button
+              size="sm"
+              className="text-0-75-500 h-[4rem]"
+              onClick={handleUsernameCheck}
+              disabled={usernameCheckLoading || !formData.id}
+            >
+              {usernameCheckLoading ? '확인중...' : '중복확인'}
             </Button>
           </div>
           {validation.id.message && (
             <div className="text-blue-500 text-0.75 mt-2 ml-2">
               {validation.id.message}
+            </div>
+          )}
+          {usernameChecked && !validation.id.message && (
+            <div className="text-green-500 text-0.75 mt-2 ml-2">
+              사용 가능한 아이디입니다.
             </div>
           )}
         </div>
@@ -317,13 +449,26 @@ export default function Signup() {
               className="h-[1.25rem] w-[1.25rem] pl-2"
             />
             <input
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               placeholder="  비밀번호를 적어주세요."
               className="flex-1 outline-none border-none font-200"
               value={formData.password}
               onChange={(e) => handleInputChange('password', e.target.value)}
               onBlur={(e) => handleInputBlur('password', e.target.value)}
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="px-3"
+            >
+              <Image
+                src={showPassword ? '/svg/eye_off.svg' : '/svg/eye_on.svg'}
+                alt={showPassword ? '비밀번호 숨기기' : '비밀번호 보기'}
+                width={20}
+                height={20}
+                className="h-[1.25rem] w-[1.25rem]"
+              />
+            </button>
           </div>
           {validation.password.message && (
             <div className="text-blue-500 text-0.75 mt-2 ml-2">
@@ -343,7 +488,7 @@ export default function Signup() {
               className="h-[1.25rem] w-[1.25rem] pl-2"
             />
             <input
-              type="password"
+              type={showPasswordConfirm ? 'text' : 'password'}
               placeholder="  비밀번호를 한 번 더 입력해주세요."
               className="flex-1 outline-none border-none font-200"
               value={formData.passwordConfirm}
@@ -352,6 +497,21 @@ export default function Signup() {
               }
               onBlur={(e) => handleInputBlur('passwordConfirm', e.target.value)}
             />
+            <button
+              type="button"
+              onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
+              className="px-3"
+            >
+              <Image
+                src={
+                  showPasswordConfirm ? '/svg/eye_off.svg' : '/svg/eye_on.svg'
+                }
+                alt={showPasswordConfirm ? '비밀번호 숨기기' : '비밀번호 보기'}
+                width={20}
+                height={20}
+                className="h-[1.25rem] w-[1.25rem]"
+              />
+            </button>
           </div>
           {validation.passwordConfirm.message && (
             <div className="text-blue-500 text-0.75 mt-2 ml-2">
@@ -471,6 +631,67 @@ export default function Signup() {
                 </button>
               </div>
             </div>
+
+            {/* 약관 동의 상태 표시 */}
+            <div className="mt-4 p-3 bg-gray-50 rounded text-sm">
+              <div className="font-medium mb-2">회원가입 조건 확인:</div>
+              <div className="space-y-1 text-xs">
+                <div
+                  className={`flex items-center gap-2 ${
+                    Object.values(validation).every((v) => v.isValid)
+                      ? 'text-green-600'
+                      : 'text-red-600'
+                  }`}
+                >
+                  <span>✓</span>
+                  <span>
+                    모든 필수 정보 입력:{' '}
+                    {Object.values(validation).every((v) => v.isValid)
+                      ? '완료'
+                      : '미완료'}
+                  </span>
+                </div>
+                <div
+                  className={`flex items-center gap-2 ${
+                    agreements.terms &&
+                    agreements.privacy &&
+                    agreements.collection &&
+                    agreements.thirdParty
+                      ? 'text-green-600'
+                      : 'text-red-600'
+                  }`}
+                >
+                  <span>✓</span>
+                  <span>
+                    약관 동의:{' '}
+                    {agreements.terms &&
+                    agreements.privacy &&
+                    agreements.collection &&
+                    agreements.thirdParty
+                      ? '완료'
+                      : '미완료'}
+                  </span>
+                </div>
+                <div
+                  className={`flex items-center gap-2 ${
+                    isVerified ? 'text-green-600' : 'text-red-600'
+                  }`}
+                >
+                  <span>✓</span>
+                  <span>본인인증: {isVerified ? '완료' : '미완료'}</span>
+                </div>
+                <div
+                  className={`flex items-center gap-2 ${
+                    usernameChecked ? 'text-green-600' : 'text-red-600'
+                  }`}
+                >
+                  <span>✓</span>
+                  <span>
+                    아이디 중복확인: {usernameChecked ? '완료' : '미완료'}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -502,8 +723,9 @@ export default function Signup() {
             canSignup() ? 'bg-black' : 'bg-gray-400 cursor-not-allowed'
           }`}
           disabled={!canSignup()}
+          onClick={handleSignup}
         >
-          회원가입
+          {loading ? '회원가입 중...' : '회원가입'}
         </button>
       </div>
 

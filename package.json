@@ -11,8 +11,10 @@
   "dependencies": {
     "@heroicons/react": "^2.2.0",
     "@supabase/supabase-js": "^2.49.8",
+    "@types/bcryptjs": "^2.4.6",
     "@types/uuid": "^10.0.0",
     "@unocss/postcss": "^66.1.0-beta.5",
+    "bcryptjs": "^3.0.2",
     "clsx": "^2.1.1",
     "framer-motion": "^12.5.0",
     "next": "15.2.2",

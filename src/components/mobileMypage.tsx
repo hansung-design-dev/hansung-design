@@ -10,9 +10,11 @@ const tabs = [
 export default function MobileMyPage({
   activeTab,
   setActiveTab,
+  userName,
 }: {
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  userName: string;
 }) {
   return (
     <div className="pt-[7rem] px-4">
@@ -27,7 +29,7 @@ export default function MobileMyPage({
               className="w-[1.5rem] h-[1.5rem]"
             />
           </Link>
-          <div className="text-1.5 font-500">사용자님</div>
+          <div className="text-1.5 font-500">{userName}님</div>
           <div className="grid grid-cols-2 gap-4">
             {/* 주문내역 카드 */}
             {[

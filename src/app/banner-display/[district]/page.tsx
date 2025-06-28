@@ -50,6 +50,8 @@ interface BannerDisplayData {
     notes: string;
     created_at: string;
     updated_at: string;
+    first_half_closure_quantity?: number;
+    second_half_closure_quantity?: number;
   }[];
   region_gu: {
     id: string;
@@ -239,6 +241,16 @@ export default function BannerDisplayPage() {
                   ? item.banner_slot_info[0].banner_type
                   : undefined;
 
+              // 상하반기별 마감수 정보
+              const firstHalfClosureQuantity =
+                item.banner_slot_info && item.banner_slot_info.length > 0
+                  ? item.banner_slot_info[0].first_half_closure_quantity
+                  : undefined;
+              const secondHalfClosureQuantity =
+                item.banner_slot_info && item.banner_slot_info.length > 0
+                  ? item.banner_slot_info[0].second_half_closure_quantity
+                  : undefined;
+
               return {
                 id: index + 1, // 단순한 인덱스 사용
                 type: 'banner',
@@ -262,6 +274,8 @@ export default function BannerDisplayPage() {
                 panel_code: item.panel_code,
                 banner_type: bannerType,
                 panel_type: item.panel_type,
+                first_half_closure_quantity: firstHalfClosureQuantity,
+                second_half_closure_quantity: secondHalfClosureQuantity,
               };
             }
           );
