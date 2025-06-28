@@ -43,10 +43,19 @@ CREATE TABLE region_gu (
   code text,
   name varchar,
   logo_image_url text,
-  bank_info text,
-  bank_depositor text,
   created_at timestamptz,
   updated_at timestamptz
+);
+
+CREATE TABLE bank_info (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    region_gu_id uuid REFERENCES region_gu(id),
+    display_type_id uuid REFERENCES display_types(id),
+    bank_name VARCHAR(50),
+    account_number VARCHAR(50),
+    depositor VARCHAR(50),
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
 );
 
 CREATE TABLE region_dong (

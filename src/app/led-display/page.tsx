@@ -6,6 +6,28 @@ import DistrictCardSkeleton from '@/src/components/skeleton/DistrictCardSkeleton
 import ledDistricts from '@/src/mock/led-district';
 import { useEffect, useState } from 'react';
 
+interface RegionLogo {
+  id: string;
+  name: string;
+  logo_image_url: string;
+}
+
+interface District {
+  id: number;
+  name: string;
+  description: string;
+  count: number;
+  logo: string;
+  src: string;
+  code: string;
+  period?: {
+    first_half_from: string;
+    first_half_to: string;
+    second_half_from: string;
+    second_half_to: string;
+  } | null;
+}
+
 // API 함수들
 async function getLEDDisplayCountsByDistrict() {
   try {
@@ -40,14 +62,13 @@ async function testSupabaseConnection() {
 }
 
 export default function LEDDisplayPage() {
-  const [districtCounts, setDistrictCounts] = useState<Record<string, number>>(
-    {}
-  );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [updatedDistricts, setUpdatedDistricts] = useState<District[]>([]);
 
+  // 모든 데이터를 한번에 로딩
   useEffect(() => {
-    async function fetchDistrictCounts() {
+    async function fetchAllData() {
       try {
         setIsLoading(true);
         setError(null);
@@ -61,17 +82,83 @@ export default function LEDDisplayPage() {
           throw new Error(`Connection failed: ${connectionTest.error}`);
         }
 
+        // 1. 구별 로고 정보 가져오기
+        console.log('🔍 Fetching region logos...');
+        const logosResponse = await fetch('/api/region-gu?action=getLogos');
+        const logosResult = await logosResponse.json();
+
+        const logosMap: Record<string, string> = {};
+        if (logosResult.success && logosResult.data) {
+          logosResult.data.forEach((region: RegionLogo) => {
+            logosMap[region.name] = region.logo_image_url;
+          });
+        }
+
+        // 2. LED 게시대 카운트 정보 가져오기
         console.log('🔍 Fetching LED district counts...');
         const counts = await getLEDDisplayCountsByDistrict();
         console.log('🔍 LED district counts:', counts);
-        setDistrictCounts(counts);
+
+        // 3. 구별 신청기간 정보 가져오기
+        console.log('🔍 Fetching display periods...');
+        const periodPromises = Object.keys(counts).map(async (districtName) => {
+          try {
+            const periodResponse = await fetch(
+              `/api/display-period?district=${encodeURIComponent(
+                districtName
+              )}&display_type=led_display`
+            );
+            const periodResult = await periodResponse.json();
+            return {
+              districtName,
+              period: periodResult.success ? periodResult.data : null,
+            };
+          } catch (err) {
+            console.warn(`Failed to fetch period for ${districtName}:`, err);
+            return { districtName, period: null };
+          }
+        });
+
+        const periodResults = await Promise.all(periodPromises);
+        const periodMap: Record<
+          string,
+          {
+            first_half_from: string;
+            first_half_to: string;
+            second_half_from: string;
+            second_half_to: string;
+          } | null
+        > = {};
+        periodResults.forEach(({ districtName, period }) => {
+          periodMap[districtName] = period;
+        });
+
+        // 4. 모든 데이터를 조합하여 districts 배열 생성
+        const districtsWithLogos = ledDistricts.map((district) => {
+          // DB에서 가져온 로고 URL이 있으면 사용, 없으면 기본값 사용
+          const logoUrl = logosMap[district.name] || district.icon;
+
+          return {
+            ...district,
+            logo: logoUrl, // icon을 logo로 변경
+            count:
+              district.code === 'all'
+                ? Object.values(counts).reduce(
+                    (sum: number, count: unknown) => sum + (count as number),
+                    0
+                  )
+                : counts[district.name] || 0,
+            period: periodMap[district.name] || null,
+          };
+        });
+
+        console.log('🔍 All data loaded successfully, setting districts...');
+        setUpdatedDistricts(districtsWithLogos);
       } catch (error) {
         console.error('Error fetching LED district counts:', error);
         setError(
           '데이터를 불러오는 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.'
         );
-        // 에러 발생 시 빈 객체로 설정하여 기본값 사용
-        setDistrictCounts({});
       } finally {
         setIsLoading(false);
       }
@@ -79,18 +166,9 @@ export default function LEDDisplayPage() {
 
     // 클라이언트 사이드에서만 실행
     if (typeof window !== 'undefined') {
-      fetchDistrictCounts();
+      fetchAllData();
     }
   }, []);
-
-  // 구별 개수를 업데이트한 districts 배열 생성
-  const updatedDistricts = ledDistricts.map((district) => ({
-    ...district,
-    count:
-      district.code === 'all'
-        ? Object.values(districtCounts).reduce((sum, count) => sum + count, 0)
-        : districtCounts[district.name] || 0,
-  }));
 
   return (
     <main className="min-h-screen bg-white ">
@@ -138,11 +216,7 @@ export default function LEDDisplayPage() {
         ) : (
           <div className="container grid lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-1 lg:gap-4 md:gap-[2rem] sm:gap-[2rem] ">
             {updatedDistricts.map((district) => (
-              <DistrictCard
-                key={district.id}
-                district={district}
-                display_type="led_display"
-              />
+              <DistrictCard key={district.id} district={district} />
             ))}
           </div>
         )}
