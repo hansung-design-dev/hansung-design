@@ -4,6 +4,7 @@ interface District {
   description: string;
   count: number;
   icon: string;
+  logo: string;
   size: string;
   sizeOfPeople: string;
   src: string;
@@ -18,6 +19,7 @@ const bannerDistricts: District[] = [
     description: '울림픽대교 남단사거리 앞 외 3건',
     count: 4,
     icon: '/images/district-icon/all.svg',
+    logo: '/images/district-icon/all.svg',
     size: '1000x1000',
     sizeOfPeople: '10000',
     src: '/images/led/landing.png',
@@ -29,6 +31,7 @@ const bannerDistricts: District[] = [
     description: '울림픽대교 남단사거리 앞 외 3건',
     count: 4,
     icon: '/images/district-icon/gangdong-gu.png',
+    logo: '/images/district-icon/gangdong-gu.png',
     size: '1000x1000',
     sizeOfPeople: '10000',
     src: '/images/led/landing.png',
@@ -40,6 +43,7 @@ const bannerDistricts: District[] = [
     description: '서울대입구역 앞 외 3건',
     count: 4,
     icon: '/images/district-icon/gwanak-gu.png',
+    logo: '/images/district-icon/gwanak-gu.png',
     size: '1000x1000',
     sizeOfPeople: '10000',
     src: '/images/led/landing.png',
@@ -51,6 +55,7 @@ const bannerDistricts: District[] = [
     description: '홍대입구역 앞 외 5건',
     count: 6,
     icon: '/images/district-icon/mapo-gu.png',
+    logo: '/images/district-icon/mapo-gu.png',
     size: '1000x1000',
     sizeOfPeople: '10000',
     src: '/images/led/landing.png',
@@ -62,6 +67,7 @@ const bannerDistricts: District[] = [
     description: '울림픽대교 남단사거리 앞 외 3건',
     count: 4,
     icon: '/images/district-icon/seodaemun-gu.png',
+    logo: '/images/district-icon/seodaemun-gu.png',
     size: '1000x1000',
     sizeOfPeople: '10000',
     src: '/images/led/landing.png',
@@ -73,6 +79,7 @@ const bannerDistricts: District[] = [
     description: '잠실종합운동장 앞 외 5건',
     count: 6,
     icon: '/images/district-icon/songpa-gu.png',
+    logo: '/images/district-icon/songpa-gu.png',
     size: '1000x1000',
     sizeOfPeople: '10000',
     src: '/images/led/landing.png',
@@ -84,6 +91,7 @@ const bannerDistricts: District[] = [
     description: '여의도공원 앞 외 6건',
     count: 7,
     icon: '/images/district-icon/yongsan-gu.png',
+    logo: '/images/district-icon/yongsan-gu.png',
     size: '1000x1000',
     sizeOfPeople: '10000',
     src: '/images/led/landing.png',
@@ -95,6 +103,7 @@ const bannerDistricts: District[] = [
     description: '여의도공원 앞 외 6건',
     count: 8,
     icon: '/images/district-icon/gangbuk-gu.png',
+    logo: '/images/district-icon/gangbuk-gu.png',
     size: '1000x1000',
     sizeOfPeople: '10000',
     src: '/images/led/landing.png',
@@ -106,6 +115,7 @@ const bannerDistricts: District[] = [
     description: '울림픽대교 남단사거리 앞 외 3건',
     count: 4,
     icon: '/images/district-icon/gangdong-gu.png',
+    logo: '/images/district-icon/gangdong-gu.png',
     size: '1000x1000',
     sizeOfPeople: '10000',
     src: '/images/led/landing.png',
@@ -117,6 +127,7 @@ const bannerDistricts: District[] = [
     description: '서울대입구역 앞 외 3건',
     count: 4,
     icon: '/images/district-icon/gwangjin-gu.png',
+    logo: '/images/district-icon/gwangjin-gu.png',
     size: '1000x1000',
     sizeOfPeople: '10000',
     src: '/images/led/landing.png',
@@ -129,6 +140,7 @@ const bannerDistricts: District[] = [
     description: '홍대입구역 앞 외 5건',
     count: 6,
     icon: '/images/district-icon/dongjak-gu.png',
+    logo: '/images/district-icon/dongjak-gu.png',
     size: '1000x1000',
     sizeOfPeople: '10000',
     src: '/images/led/landing.png',
@@ -140,6 +152,7 @@ const bannerDistricts: District[] = [
     description: '울림픽대교 남단사거리 앞 외 3건',
     count: 4,
     icon: '/images/district-icon/dongdaemun-gu.png',
+    logo: '/images/district-icon/dongdaemun-gu.png',
     size: '1000x1000',
     sizeOfPeople: '10000',
     src: '/images/led/landing.png',

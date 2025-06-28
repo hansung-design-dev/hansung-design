@@ -9,6 +9,12 @@ interface DistrictCounts {
   [key: string]: number;
 }
 
+interface RegionLogo {
+  id: string;
+  name: string;
+  logo_image_url: string;
+}
+
 interface District {
   id: number;
   name: string;
@@ -23,97 +29,21 @@ interface District {
     second_half_from: string;
     second_half_to: string;
   } | null;
+  bankInfo?: {
+    id: string;
+    bank_name: string;
+    account_number: string;
+    depositor: string;
+    region_gu: {
+      id: string;
+      name: string;
+    };
+    display_types: {
+      id: string;
+      name: string;
+    };
+  } | null;
 }
-
-interface RegionLogo {
-  id: string;
-  name: string;
-  logo_image_url: string;
-}
-
-// 기본 districtInfo (로고 URL이 없는 경우 사용할 기본값)
-const districtInfo: Record<string, Omit<District, 'count'>> = {
-  강동구: {
-    id: 2,
-    name: '강동구',
-    code: 'gangdong',
-    description: '울림픽대교 남단사거리 앞 외 3건',
-    logo: '/images/district-icon/gangdong-gu.png',
-    src: '/images/led/landing.png',
-  },
-  관악구: {
-    id: 3,
-    name: '관악구',
-    code: 'gwanak',
-    description: '서울대입구역 앞 외 3건',
-    logo: '/images/district-icon/gwanak-gu.png',
-    src: '/images/led/landing.png',
-  },
-  마포구: {
-    id: 4,
-    name: '마포구',
-    code: 'mapo',
-    description: '홍대입구역 앞 외 5건',
-    logo: '/images/district-icon/mapo-gu.png',
-    src: '/images/led/landing.png',
-  },
-  서대문구: {
-    id: 5,
-    name: '서대문구',
-    code: 'seodaemun',
-    description: '울림픽대교 남단사거리 앞 외 3건',
-    logo: '/images/district-icon/seodaemun-gu.png',
-    src: '/images/led/landing.png',
-  },
-  송파구: {
-    id: 6,
-    name: '송파구',
-    code: 'songpa',
-    description: '잠실종합운동장 앞 외 5건',
-    logo: '/images/district-icon/songpa-gu.png',
-    src: '/images/led/landing.png',
-  },
-  용산구: {
-    id: 7,
-    name: '용산구',
-    code: 'yongsan',
-    description: '여의도공원 앞 외 6건',
-    logo: '/images/district-icon/yongsan-gu.png',
-    src: '/images/led/landing.png',
-  },
-  강북구: {
-    id: 8,
-    name: '강북구',
-    code: 'gangbuk',
-    description: '여의도공원 앞 외 6건',
-    logo: '/images/district-icon/gangbuk-gu.png',
-    src: '/images/led/landing.png',
-  },
-  광진구: {
-    id: 10,
-    name: '광진구',
-    code: 'gwangjin',
-    description: '서울대입구역 앞 외 3건',
-    logo: '/images/district-icon/gwangjin-gu.png',
-    src: '/images/led/landing.png',
-  },
-  동작구: {
-    id: 11,
-    name: '동작구',
-    code: 'dongjak',
-    description: '홍대입구역 앞 외 5건',
-    logo: '/images/district-icon/dongjak-gu.png',
-    src: '/images/led/landing.png',
-  },
-  동대문구: {
-    id: 12,
-    name: '동대문구',
-    code: 'dongdaemun',
-    description: '울림픽대교 남단사거리 앞 외 3건',
-    logo: '/images/district-icon/dongdaemun-gu.png',
-    src: '/images/led/landing.png',
-  },
-};
 
 export default function BannerDisplayPage() {
   const [districts, setDistricts] = useState<District[]>([]);
@@ -159,62 +89,118 @@ export default function BannerDisplayPage() {
         const counts: DistrictCounts = countsResult.data;
         console.log('🔍 Banner Display: Fetched counts:', counts);
 
-        // 3. 구별 신청기간 정보 가져오기
-        console.log('🔍 Fetching display periods...');
-        const periodPromises = Object.keys(counts).map(async (districtName) => {
-          try {
-            const periodResponse = await fetch(
-              `/api/display-period?district=${encodeURIComponent(
-                districtName
-              )}&display_type=banner_display`
-            );
-            const periodResult = await periodResponse.json();
-            return {
-              districtName,
-              period: periodResult.success ? periodResult.data : null,
-            };
-          } catch (err) {
-            console.warn(`Failed to fetch period for ${districtName}:`, err);
-            return { districtName, period: null };
+        // 3. 구별 신청기간과 계좌번호 정보 가져오기
+        console.log('🔍 Fetching district info...');
+        const districtDataPromises = Object.keys(counts).map(
+          async (districtName) => {
+            try {
+              // 신청기간 가져오기
+              const periodResponse = await fetch(
+                `/api/display-period?district=${encodeURIComponent(
+                  districtName
+                )}&display_type=banner_display`
+              );
+              const periodResult = await periodResponse.json();
+              const period = periodResult.success ? periodResult.data : null;
+
+              // 구 정보와 계좌번호 가져오기
+              const districtResponse = await fetch(
+                `/api/region-gu?action=getByDistrict&district=${encodeURIComponent(
+                  districtName
+                )}&displayType=banner_display`
+              );
+              const districtResult = await districtResponse.json();
+              const bankInfo = districtResult.success
+                ? districtResult.data.bank_info
+                : null;
+
+              // 기본 districtInfo에서 정보 가져오기
+              const baseInfo = {
+                강동구: {
+                  id: 2,
+                  code: 'gangdong',
+                  description: '울림픽대교 남단사거리 앞 외 3건',
+                },
+                관악구: {
+                  id: 3,
+                  code: 'gwanak',
+                  description: '서울대입구역 앞 외 3건',
+                },
+                마포구: {
+                  id: 4,
+                  code: 'mapo',
+                  description: '홍대입구역 앞 외 5건',
+                },
+                서대문구: {
+                  id: 5,
+                  code: 'seodaemun',
+                  description: '울림픽대교 남단사거리 앞 외 3건',
+                },
+                송파구: {
+                  id: 6,
+                  code: 'songpa',
+                  description: '잠실종합운동장 앞 외 5건',
+                },
+                용산구: {
+                  id: 7,
+                  code: 'yongsan',
+                  description: '여의도공원 앞 외 6건',
+                },
+                강북구: {
+                  id: 8,
+                  code: 'gangbuk',
+                  description: '여의도공원 앞 외 6건',
+                },
+                광진구: {
+                  id: 10,
+                  code: 'gwangjin',
+                  description: '서울대입구역 앞 외 3건',
+                },
+                동작구: {
+                  id: 11,
+                  code: 'dongjak',
+                  description: '홍대입구역 앞 외 5건',
+                },
+                동대문구: {
+                  id: 12,
+                  code: 'dongdaemun',
+                  description: '울림픽대교 남단사거리 앞 외 3건',
+                },
+              }[districtName];
+
+              if (!baseInfo) {
+                throw new Error(`Unknown district: ${districtName}`);
+              }
+
+              return {
+                id: baseInfo.id,
+                name: districtName,
+                code: baseInfo.code,
+                description: baseInfo.description,
+                count: counts[districtName] || 0,
+                logo:
+                  logosMap[districtName] ||
+                  `/images/district-icon/${baseInfo.code}-gu.png`,
+                src: '/images/led/landing.png',
+                period,
+                bankInfo,
+              };
+            } catch (err) {
+              console.warn(`Failed to fetch data for ${districtName}:`, err);
+              return null;
+            }
           }
-        });
+        );
 
-        const periodResults = await Promise.all(periodPromises);
-        const periodMap: Record<
-          string,
-          {
-            first_half_from: string;
-            first_half_to: string;
-            second_half_from: string;
-            second_half_to: string;
-          } | null
-        > = {};
-        periodResults.forEach(({ districtName, period }) => {
-          periodMap[districtName] = period;
-        });
-
-        // 4. 모든 데이터를 조합하여 districts 배열 생성
-        const districtData: District[] = [];
-        let totalCount = 0;
-
-        // 각 구별로 데이터 생성
-        Object.entries(counts).forEach(([districtName, count]) => {
-          const districtInfoData = districtInfo[districtName];
-          if (districtInfoData) {
-            // DB에서 가져온 로고 URL이 있으면 사용, 없으면 기본값 사용
-            const logoUrl = logosMap[districtName] || districtInfoData.logo;
-
-            districtData.push({
-              ...districtInfoData,
-              logo: logoUrl,
-              count,
-              period: periodMap[districtName] || null,
-            });
-            totalCount += count;
-          }
-        });
+        const districtData = (await Promise.all(districtDataPromises)).filter(
+          Boolean
+        ) as District[];
 
         // "전체" 카드 추가 (모든 구의 합계)
+        const totalCount = Object.values(counts).reduce(
+          (sum, count) => sum + count,
+          0
+        );
         districtData.unshift({
           id: 1,
           name: '전체',

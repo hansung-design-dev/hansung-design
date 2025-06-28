@@ -15,6 +15,7 @@ import {
   DropdownOption,
   DisplayBillboard,
 } from '@/src/types/displaydetail';
+import DistrictInfo from './districtInfo';
 // import { BannerBillboard } from '@/src/types/displaydetail';
 
 const fadeInUp = {
@@ -31,14 +32,35 @@ export default function DisplayDetailPage({
   districtObj,
   billboards,
   dropdownOptions,
-
   defaultView = 'gallery',
+  period,
+  bankInfo,
 }: {
   district: string;
   districtObj: District | undefined;
   billboards: DisplayBillboard[];
   dropdownOptions: DropdownOption[];
   defaultView?: 'location' | 'gallery' | 'list';
+  period?: {
+    first_half_from: string;
+    first_half_to: string;
+    second_half_from: string;
+    second_half_to: string;
+  } | null;
+  bankInfo?: {
+    id: string;
+    bank_name: string;
+    account_number: string;
+    depositor: string;
+    region_gu: {
+      id: string;
+      name: string;
+    };
+    display_types: {
+      id: string;
+      name: string;
+    };
+  } | null;
 }) {
   // const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selectedOption, setSelectedOption] = useState<{
@@ -319,7 +341,7 @@ export default function DisplayDetailPage({
           <div className="flex gap-2 items-center">
             {districtObj && (
               <Image
-                src={districtObj.icon}
+                src={districtObj.logo}
                 alt={districtObj.name}
                 width={50}
                 height={50}
@@ -331,18 +353,8 @@ export default function DisplayDetailPage({
             </h2>
           </div>
           {selectedOption && <div>{selectedOption.option}</div>}
-          <p className="text-gray-600 mt-4">
-            2025년 상반기 신청: <span className="text-red"> 상시모집</span>
-          </p>
-          <p className="text-gray-600">
-            입금계좌
-            <span className="text-red">
-              우리은행 1005-602-397672 (주)한성디자인기획
-            </span>
-          </p>
 
-          <p className="text-gray-600">유동인구 : -명</p>
-          <p className="text-gray-600">소비자트렌드 : </p>
+          <DistrictInfo period={period} bankInfo={bankInfo} flexRow={true} />
         </div>
         {/* 마포구 전용 filter */}
         {isMapoDistrict && (

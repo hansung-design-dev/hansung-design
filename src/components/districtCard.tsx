@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState } from 'react';
-import BannerPeriod from './bannerPeriod';
+import DistrictInfo from './districtInfo';
 
 interface District {
   id: number;
@@ -16,6 +16,20 @@ interface District {
     first_half_to: string;
     second_half_from: string;
     second_half_to: string;
+  } | null;
+  bankInfo?: {
+    id: string;
+    bank_name: string;
+    account_number: string;
+    depositor: string;
+    region_gu: {
+      id: string;
+      name: string;
+    };
+    display_types: {
+      id: string;
+      name: string;
+    };
   } | null;
 }
 
@@ -45,11 +59,11 @@ export default function DistrictCard({
     <div className="flex items-center justify-center lg:pb-4">
       <Link
         href={href}
-        className="w-[25rem] lg:h-[29.5625rem] md:h-[20rem] bg-gray-4 rounded-[1.25rem] flex flex-col overflow-hidden"
+        className="w-full lg:h-[32rem] md:h-[22rem] bg-gray-4 rounded-[1.25rem] flex flex-col overflow-hidden"
         {...(isGangbuk && { target: '_blank', rel: 'noopener noreferrer' })}
       >
-        <div className="flex-1 flex flex-col lg:gap-[1rem] md:gap-[2rem] p-6 lg:py-10 ">
-          <div className="flex flex-col lg:gap-[2rem] md:gap-[2rem] sm:gap-6">
+        <div className="flex-1 flex flex-col lg:gap-[0.75rem] md:gap-[1.5rem] p-6 lg:py-8">
+          <div className="flex flex-col lg:gap-[1.5rem] md:gap-[1.5rem] sm:gap-4">
             <div className="flex gap-[1rem]">
               <Image
                 src={logoUrl}
@@ -63,7 +77,7 @@ export default function DistrictCard({
                 {district.name}
               </div>
             </div>
-            <div className="flex flex-col sm:gap-6 lg:gap-10 md:gap-6 sm:gap-2">
+            <div className="flex flex-col sm:gap-4 lg:gap-6 md:gap-4 sm:gap-2">
               <div className="lg:text-1 text-red md:text-0.75">
                 마감안내 및 안내내용 <br /> 최종 2줄
               </div>
@@ -74,9 +88,13 @@ export default function DistrictCard({
                     <br className="sm:inline lg:hidden md:hidden" /> 구별 카드를
                     클릭하세요.
                   </div>
-                ) : district.period ? (
-                  <BannerPeriod {...district.period} />
-                ) : null}
+                ) : (
+                  <DistrictInfo
+                    period={district.period}
+                    bankInfo={district.bankInfo}
+                    flexRow={false}
+                  />
+                )}
               </div>
             </div>
           </div>
