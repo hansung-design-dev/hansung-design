@@ -8,11 +8,11 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, name, username, agreements } =
+    const { email, password, name, username, phone, agreements } =
       await request.json();
 
     // 필수 필드 검증
-    if (!email || !password || !name || !username) {
+    if (!email || !password || !name || !username || !phone) {
       return NextResponse.json(
         { success: false, error: '모든 필수 정보를 입력해주세요.' },
         { status: 400 }
@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
         email,
         password, // 평문으로 저장
         name,
+        phone,
         terms_agreed: agreements.terms,
         privacy_agreed: agreements.privacy,
         collection_agreed: agreements.collection,
@@ -84,6 +85,7 @@ export async function POST(request: NextRequest) {
         username: user.username,
         email: user.email,
         name: user.name,
+        phone: user.phone,
       },
     });
   } catch (error) {

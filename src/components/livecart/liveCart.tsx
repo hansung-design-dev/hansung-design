@@ -1,6 +1,6 @@
-import { useCart } from '../contexts/cartContext';
-import { useAuth } from '../contexts/authContext';
-import { Button } from './button/button';
+import { useCart } from '@/src/contexts/cartContext';
+import { useAuth } from '@/src/contexts/authContext';
+import { Button } from '../button/button';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';

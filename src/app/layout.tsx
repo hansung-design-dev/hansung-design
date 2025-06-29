@@ -5,7 +5,7 @@ import Footer from '../components/layouts/footer';
 import ScrollToTopButton from '../components/scrollToTopButton';
 import { CartProvider } from '../contexts/cartContext';
 import { AuthProvider } from '../contexts/authContext';
-import LiveCartConditional from '../components/LiveCartConditional';
+import LiveCartConditional from '../components/livecart/LiveCartConditional';
 
 // export const API = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_KEY}&autoload=false`;
 
