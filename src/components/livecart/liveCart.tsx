@@ -1,11 +1,13 @@
-import { useCart } from '../contexts/cartContext';
-import { Button } from './button/button';
+import { useCart } from '@/src/contexts/cartContext';
+import { useAuth } from '@/src/contexts/authContext';
+import { Button } from '../button/button';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 
 export default function LiveCart() {
   const { cart, dispatch } = useCart();
+  const { user } = useAuth();
   const router = useRouter();
   const [timeLeft, setTimeLeft] = useState<string>('');
 
@@ -72,8 +74,13 @@ export default function LiveCart() {
   if (cart.length === 0) return null;
 
   const handleCartClick = () => {
-    // 라이브 장바구니를 일반 장바구니로 이동하지 않고,
-    // 현재 장바구니 상태를 유지한 채 장바구니 페이지로 이동
+    // 로그인하지 않은 경우 로그인 페이지로 이동
+    if (!user) {
+      router.push('/signin');
+      return;
+    }
+
+    // 로그인된 경우 장바구니 페이지로 이동
     router.push('/cart');
   };
 

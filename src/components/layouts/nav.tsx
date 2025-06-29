@@ -2,8 +2,10 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/src/contexts/authContext';
+import { useRouter } from 'next/navigation';
 
 interface MenuItem {
   name: string;
@@ -15,9 +17,11 @@ interface IconButtonProps {
   onClick?: () => void;
   iconPath: string;
   label: string;
-  href: string;
+  href?: string;
   TextInvert?: boolean;
   className?: string;
+  showDropdown?: boolean;
+  onToggleDropdown?: () => void;
 }
 
 interface NavProps {
@@ -41,40 +45,149 @@ const IconButton = ({
   href,
   TextInvert,
   className,
-}: IconButtonProps) => (
-  <Link href={href} className="relative z-50">
-    <button
-      onClick={onClick}
-      className="border-none p-2 rounded-full transition-colors hover:cursor-pointer"
-      aria-label={label}
-    >
-      <Image
-        src={iconPath}
-        alt={label}
-        width={30}
-        height={30}
-        className={`w-7 h-7 ${TextInvert ? 'invert' : ''} ${className}`}
-      />
-    </button>
-  </Link>
-);
+  showDropdown,
+  onToggleDropdown,
+}: IconButtonProps) => {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const { signOut, user } = useAuth();
+  const router = useRouter();
 
-const IconList = ({ TextInvert }: { TextInvert?: boolean }) => (
-  <div className="flex items-center gap-3 sm:gap-2">
-    <IconButton
-      iconPath="/svg/shopping-cart.svg"
-      label="장바구니"
-      href="/cart"
-      TextInvert={TextInvert}
-    />
-    <IconButton
-      iconPath="/svg/user.svg"
-      label="마이페이지"
-      href="/mypage"
-      TextInvert={TextInvert}
-    />
-  </div>
-);
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(event.target as Node)
+      ) {
+        onToggleDropdown?.();
+      }
+    };
+
+    if (showDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showDropdown, onToggleDropdown]);
+
+  const handleLogout = async () => {
+    try {
+      const result = await signOut();
+      if (result.success) {
+        router.push('/');
+      } else {
+        console.error('로그아웃 실패:', result.error);
+      }
+    } catch (error) {
+      console.error('로그아웃 중 오류 발생:', error);
+    }
+  };
+
+  if (label === '마이페이지') {
+    if (!user) {
+      return (
+        <Link href="/signin" className="relative z-50">
+          <button
+            className="border-none p-2 rounded-full transition-colors hover:cursor-pointer"
+            aria-label={label}
+          >
+            <Image
+              src={iconPath}
+              alt={label}
+              width={30}
+              height={30}
+              className={`w-7 h-7 ${TextInvert ? 'invert' : ''} ${className}`}
+            />
+          </button>
+        </Link>
+      );
+    }
+
+    return (
+      <div className="relative">
+        <button
+          ref={buttonRef}
+          onClick={onToggleDropdown}
+          className="border-none p-2 rounded-full transition-colors hover:cursor-pointer"
+          aria-label={label}
+        >
+          <Image
+            src={iconPath}
+            alt={label}
+            width={30}
+            height={30}
+            className={`w-7 h-7 ${TextInvert ? 'invert' : ''} ${className}`}
+          />
+        </button>
+
+        {showDropdown && (
+          <div
+            ref={dropdownRef}
+            className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200"
+          >
+            <Link
+              href="/mypage"
+              className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              onClick={onToggleDropdown}
+            >
+              마이페이지
+            </Link>
+            <button
+              onClick={handleLogout}
+              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+            >
+              로그아웃
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <Link href={href || '#'} className="relative z-50">
+      <button
+        onClick={onClick}
+        className="border-none p-2 rounded-full transition-colors hover:cursor-pointer"
+        aria-label={label}
+      >
+        <Image
+          src={iconPath}
+          alt={label}
+          width={30}
+          height={30}
+          className={`w-7 h-7 ${TextInvert ? 'invert' : ''} ${className}`}
+        />
+      </button>
+    </Link>
+  );
+};
+
+const IconList = ({ TextInvert }: { TextInvert?: boolean }) => {
+  const [showMyPageDropdown, setShowMyPageDropdown] = useState(false);
+
+  return (
+    <div className="flex items-center gap-3 sm:gap-2">
+      <IconButton
+        iconPath="/svg/shopping-cart.svg"
+        label="장바구니"
+        href="/cart"
+        TextInvert={TextInvert}
+      />
+      <IconButton
+        iconPath="/svg/user.svg"
+        label="마이페이지"
+        TextInvert={TextInvert}
+        showDropdown={showMyPageDropdown}
+        onToggleDropdown={() => setShowMyPageDropdown(!showMyPageDropdown)}
+      />
+    </div>
+  );
+};
 
 const Nav = ({ className = 'sm:px-[1.5rem]', isbg, TextInvert }: NavProps) => {
   const [isOpen, setIsOpen] = useState(false);

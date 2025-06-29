@@ -6,8 +6,8 @@ import Image from 'next/image';
 import { Button } from '@/src/components/button/button';
 import { CartItem } from '@/src/contexts/cartContext';
 import { useState, useMemo } from 'react';
-import OrderModificationModal from '@/src/components/OrderModificationModal';
-import ConsultationModal from '@/src/components/ConsultationModal';
+import UserProfileModal from '@/src/components/modal/UserProfileModal';
+import ConsultationModal from '@/src/components/modal/ConsultationModal';
 
 const fadeInUp = {
   initial: { y: 60, opacity: 0 },
@@ -82,14 +82,16 @@ function CartItemRow({
   isConsulting = false,
   onOrderModify,
   onConsultation,
+  onDelete,
 }: {
   item: CartItem;
-  user: { name: string; phone: string };
+  user: { name: string; phone: string; company_name?: string };
   isSelected?: boolean;
   onSelect?: (selected: boolean) => void;
   isConsulting?: boolean;
   onOrderModify?: () => void;
   onConsultation?: () => void;
+  onDelete?: () => void;
 }) {
   if (isConsulting) {
     return (
@@ -121,7 +123,7 @@ function CartItemRow({
         <div className="pr-20 flex flex-col ml-2 text-1 font-500 gap-2 text-gray-2">
           <div>담당자명: {user?.name}</div>
           <div>전화번호: {user?.phone}</div>
-          <div>회사이름: -</div>
+          <div>회사이름: {user?.company_name || '-'}</div>
           <Button
             size="xs"
             variant="outlinedBlack"
@@ -148,7 +150,7 @@ function CartItemRow({
   }
 
   return (
-    <div className=" flex items-center pl-[3rem] py-6 border-b border-gray-200 ">
+    <div className="relative flex items-center pl-[3rem] py-6">
       <input
         type="checkbox"
         className="w-5 h-5 mr-6"
@@ -176,7 +178,7 @@ function CartItemRow({
       <div className="flex-1 flex flex-col ml-2 text-1 font-500 gap-2 text-gray-2">
         <div>담당자명: {user?.name}</div>
         <div>전화번호: {user?.phone}</div>
-        <div>회사이름: -</div>
+        <div>회사이름: {user?.company_name || '-'}</div>
         <Button
           size="xs"
           variant="outlinedBlack"
@@ -196,12 +198,98 @@ function CartItemRow({
         <div className="text-1 font-500">게시대비용</div>
         <div className="text-1.25 font-700">100,000원</div>
       </div>
+      <button
+        className="absolute top-5 right-10 text-1.5 font-100 text-gray-2 hover:cursor-pointer"
+        onClick={onDelete}
+      >
+        x
+      </button>
+    </div>
+  );
+}
+
+// 삭제 확인 모달 컴포넌트
+function DeleteConfirmModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  itemName,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  itemName: string;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4 py-10">
+        <div className="text-center">
+          <h3 className="text-xl font-bold mb-4">상품 삭제</h3>
+          <p className="text-gray-600 mb-6">
+            &ldquo;{itemName}&rdquo; 상품을 <br />
+            정말 삭제하시겠습니까?
+          </p>
+          <div className="flex gap-4 justify-center">
+            <Button
+              size="md"
+              variant="filledBlack"
+              onClick={onClose}
+              className="w-[6.5rem] h-[2.5rem] text-0.875 font-200 hover:cursor-pointer"
+            >
+              아니오
+            </Button>
+            <Button
+              variant="filledBlack"
+              size="md"
+              onClick={onConfirm}
+              className="w-[6.5rem] h-[2.5rem] text-0.875 font-200 hover:cursor-pointer"
+            >
+              예
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 성공 모달 컴포넌트
+function SuccessModal({
+  isOpen,
+  onClose,
+  message,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  message: string;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
+      <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+        <div className="text-center">
+          <div className="text-green-500 text-4xl mb-4">✓</div>
+          <h3 className="text-xl font-bold mb-4">완료</h3>
+          <p className="text-gray-600 mb-6">{message}</p>
+          <Button
+            size="md"
+            variant="filledBlack"
+            onClick={onClose}
+            className="w-full"
+          >
+            확인
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
 
 export default function Cart() {
-  const { cart } = useCart();
+  const { cart, dispatch } = useCart();
   const { user } = useAuth();
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<'payment' | 'consulting'>(
@@ -210,6 +298,51 @@ export default function Cart() {
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [isConsultationModalOpen, setIsConsultationModalOpen] = useState(false);
   const [selectedProductName, setSelectedProductName] = useState('');
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<CartItem | null>(null);
+  const [isUpdateSuccessModalOpen, setIsUpdateSuccessModalOpen] =
+    useState(false);
+
+  // 선택된 프로필 정보 상태 추가 - 각 아이템별로 관리
+  const [selectedProfiles, setSelectedProfiles] = useState<
+    Map<
+      string,
+      {
+        name: string;
+        phone: string;
+        company_name: string;
+      }
+    >
+  >(new Map());
+
+  // 현재 주문수정 버튼을 클릭한 아이템 ID
+  const [currentModifyingItemId, setCurrentModifyingItemId] = useState<
+    string | null
+  >(null);
+
+  console.log('user', user);
+
+  // phone이 없을 때 기본값 설정
+  const userWithPhone = user
+    ? {
+        ...user,
+        phone: user.phone || '전화번호 없음',
+        company_name: '-',
+      }
+    : null;
+
+  // 특정 아이템의 사용자 정보를 가져오는 함수
+  const getItemUserInfo = (itemId: string) => {
+    const profileInfo = selectedProfiles.get(itemId);
+    return (
+      profileInfo ||
+      userWithPhone || {
+        name: '사용자',
+        phone: '전화번호 없음',
+        company_name: '-',
+      }
+    );
+  };
 
   const ledItems = cart.filter(
     (item) => item.type === 'led-display' && item.price !== 0
@@ -268,13 +401,58 @@ export default function Cart() {
     );
   };
 
-  const handleOrderModify = () => {
+  const handleOrderModify = (itemId: string) => {
+    setCurrentModifyingItemId(itemId);
     setIsOrderModalOpen(true);
+  };
+
+  const handleProfileConfirm = (
+    profileData: {
+      profile_title: string;
+      company_name: string;
+      business_registration_number: string;
+      phone: string;
+      email: string;
+      contact_person_name: string;
+      fax_number: string;
+      is_default: boolean;
+    },
+    itemId: string
+  ) => {
+    // 주문자 정보 업데이트 로직
+    console.log('주문자 정보 업데이트:', profileData, 'for item:', itemId);
+
+    // 선택한 프로필 정보로 상태 업데이트
+    setSelectedProfiles(
+      (prevProfiles) =>
+        new Map(
+          prevProfiles.set(itemId, {
+            name: profileData.contact_person_name,
+            phone: profileData.phone,
+            company_name: profileData.company_name || '-',
+          })
+        )
+    );
+
+    setIsUpdateSuccessModalOpen(true);
   };
 
   const handleConsultation = (productName: string) => {
     setSelectedProductName(productName);
     setIsConsultationModalOpen(true);
+  };
+
+  const handleDelete = (item: CartItem) => {
+    setItemToDelete(item);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (itemToDelete) {
+      dispatch({ type: 'REMOVE_ITEM', id: itemToDelete.id });
+      setItemToDelete(null);
+      setIsDeleteModalOpen(false);
+    }
   };
 
   return (
@@ -304,7 +482,7 @@ export default function Cart() {
         </div>
 
         <motion.div initial="initial" animate="animate" variants={fadeInUp}>
-          {user && activeTab === 'payment' && (
+          {userWithPhone && activeTab === 'payment' && (
             <>
               {ledItems.length > 0 && (
                 <CartGroupCard
@@ -317,12 +495,13 @@ export default function Cart() {
                     <CartItemRow
                       key={item.id}
                       item={item}
-                      user={user}
+                      user={getItemUserInfo(item.id)}
                       isSelected={selectedItems.has(String(item.id))}
                       onSelect={(selected) =>
                         handleItemSelect(String(item.id), selected)
                       }
-                      onOrderModify={handleOrderModify}
+                      onOrderModify={() => handleOrderModify(item.id)}
+                      onDelete={() => handleDelete(item)}
                     />
                   ))}
                 </CartGroupCard>
@@ -340,12 +519,13 @@ export default function Cart() {
                     <CartItemRow
                       key={item.id}
                       item={item}
-                      user={user}
+                      user={getItemUserInfo(item.id)}
                       isSelected={selectedItems.has(String(item.id))}
                       onSelect={(selected) =>
                         handleItemSelect(String(item.id), selected)
                       }
-                      onOrderModify={handleOrderModify}
+                      onOrderModify={() => handleOrderModify(item.id)}
+                      onDelete={() => handleDelete(item)}
                     />
                   ))}
                 </CartGroupCard>
@@ -364,7 +544,7 @@ export default function Cart() {
             </>
           )}
 
-          {user && activeTab === 'consulting' && (
+          {userWithPhone && activeTab === 'consulting' && (
             <CartGroupCard
               title="상담신청"
               isSelected={isGroupSelected(consultingItems)}
@@ -377,14 +557,15 @@ export default function Cart() {
                   <CartItemRow
                     key={item.id}
                     item={item}
-                    user={user}
+                    user={getItemUserInfo(item.id)}
                     isSelected={selectedItems.has(String(item.id))}
                     onSelect={(selected) =>
                       handleItemSelect(String(item.id), selected)
                     }
                     isConsulting={true}
-                    onOrderModify={handleOrderModify}
+                    onOrderModify={() => handleOrderModify(item.id)}
                     onConsultation={() => handleConsultation(item.name)}
+                    onDelete={() => handleDelete(item)}
                   />
                 ))
               ) : (
@@ -409,15 +590,32 @@ export default function Cart() {
       </div>
 
       {/* 모달들 */}
-      <OrderModificationModal
+      <UserProfileModal
         isOpen={isOrderModalOpen}
         onClose={() => setIsOrderModalOpen(false)}
+        mode="edit"
+        onConfirm={(profileData) =>
+          handleProfileConfirm(profileData, currentModifyingItemId || '')
+        }
       />
 
       <ConsultationModal
         isOpen={isConsultationModalOpen}
         onClose={() => setIsConsultationModalOpen(false)}
         productName={selectedProductName}
+      />
+
+      <DeleteConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        itemName={itemToDelete?.name || ''}
+      />
+
+      <SuccessModal
+        isOpen={isUpdateSuccessModalOpen}
+        onClose={() => setIsUpdateSuccessModalOpen(false)}
+        message="주문자 정보가 성공적으로 업데이트되었습니다."
       />
     </main>
   );

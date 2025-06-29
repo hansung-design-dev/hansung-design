@@ -36,7 +36,8 @@ export default function Signin() {
       const result = await signIn(formData.username, formData.password);
 
       if (result.success) {
-        router.push('/mypage'); // 로그인 성공 시 마이페이지로 이동
+        // 로그인 성공 시 장바구니로 이동
+        router.push('/cart');
       } else {
         setError(result.error || '로그인에 실패했습니다.');
       }

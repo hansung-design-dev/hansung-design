@@ -16,6 +16,7 @@ export default function MyPage() {
     { name: '주문내역', href: '/mypage/orders' },
     { name: '1:1상담', href: '/mypage/customer-service' },
     { name: '간편정보관리', href: '/mypage/info' },
+    { name: '로그아웃', href: '/' },
   ];
 
   useEffect(() => {

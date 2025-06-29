@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import ModalContainer from './ModalContainer';
-import { Button } from './button/button';
+import { Button } from '../button/button';
 
 interface ConsultationModalProps {
   isOpen: boolean;

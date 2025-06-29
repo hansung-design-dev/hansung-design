@@ -27,7 +27,9 @@ export async function POST(request: NextRequest) {
     console.log('DB에서 사용자 조회 중...');
     const { data: user, error: fetchError } = await supabase
       .from('user_auth')
-      .select('*')
+      .select(
+        'id, username, email, name, phone, password, is_active, is_verified'
+      )
       .eq('email', username) // username 대신 email로 조회
       .single();
 
@@ -51,6 +53,8 @@ export async function POST(request: NextRequest) {
     console.log('사용자 ID:', user.id);
     console.log('사용자명:', user.username);
     console.log('이메일:', user.email);
+    console.log('이름:', user.name);
+    console.log('전화번호:', user.phone);
     console.log('저장된 비밀번호:', user.password);
     console.log('계정 활성화:', user.is_active);
 
@@ -98,6 +102,7 @@ export async function POST(request: NextRequest) {
         username: user.username,
         email: user.email,
         name: user.name,
+        phone: user.phone,
         is_verified: user.is_verified,
       },
     });
