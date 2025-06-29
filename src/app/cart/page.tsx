@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useCart } from '@/src/contexts/cartContext';
 import { useState, useEffect } from 'react';
-import CartItemAccordion from './cart/cartItemAccordion';
+import CartItemAccordion from '@/src/components/cartItemAccordion';
 
 const fadeInUp = {
   initial: { y: 60, opacity: 0 },

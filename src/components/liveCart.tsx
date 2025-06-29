@@ -108,6 +108,13 @@ export default function LiveCart() {
                     <span className="font-bold mr-2">
                       ({getPanelTypeLabel(item.panel_type)})
                     </span>
+                    {item.halfPeriod && (
+                      <span className="ml-2 text-sm text-blue-600 font-medium">
+                        (
+                        {item.halfPeriod === 'first_half' ? '상반기' : '하반기'}
+                        )
+                      </span>
+                    )}
                   </div>
                   <span className="mr-2 text-gray-500">{item.district}</span>
                 </div>
