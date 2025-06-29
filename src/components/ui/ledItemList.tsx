@@ -55,7 +55,7 @@ const LEDItemList: React.FC<LEDItemTableProps> = ({
     }
   };
 
-  const handleRowClick = (e: React.MouseEvent, itemId: number) => {
+  const handleRowClick = (e: React.MouseEvent, itemId: string) => {
     if ((e.target as HTMLElement).tagName === 'INPUT') {
       return;
     }

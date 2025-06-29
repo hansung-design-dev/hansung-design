@@ -5,7 +5,7 @@ import { Map, MapMarker } from 'react-kakao-maps-sdk';
 import useKakaoLoader from './hooks/use-kakao-loader';
 
 export interface MarkerType {
-  id: number;
+  id: string;
   title: string;
   lat: number;
   lng: number;
@@ -15,8 +15,8 @@ export interface MarkerType {
 
 interface KakaoMapProps {
   markers: MarkerType[];
-  selectedIds: number[];
-  onSelect: (id: number) => void;
+  selectedIds: string[];
+  onSelect: (id: string) => void;
 }
 
 const KakaoMap: React.FC<KakaoMapProps> = ({

@@ -120,8 +120,10 @@ export default function LiveCart() {
                 </div>
 
                 <div className="flex flex-col items-center gap-2">
-                  <button
-                    className="ml-auto text-red-500"
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="ml-auto text-red-500 p-0 bg-transparent border-none"
                     onClick={() =>
                       dispatch({ type: 'REMOVE_ITEM', id: item.id })
                     }
@@ -132,7 +134,7 @@ export default function LiveCart() {
                       width={20}
                       height={20}
                     />
-                  </button>{' '}
+                  </Button>
                   <span className="mr-2">
                     {item.price === 0
                       ? '상담문의'

@@ -147,6 +147,20 @@ export default function LEDDisplayDetailPage({
     setSelectedIds(newSelectedIds);
   };
 
+  const handleRowClick = (e: React.MouseEvent, itemId: string) => {
+    if ((e.target as HTMLElement).tagName === 'INPUT') {
+      return;
+    }
+
+    // 아이콘 버튼 영역 클릭 시 아이템 선택 방지
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.tagName === 'BUTTON') {
+      return;
+    }
+
+    handleItemSelect(itemId, true);
+  };
+
   const renderGalleryView = () => (
     <div className="grid grid-cols-3 sm:grid-cols-1 md:grid-cols-4 lg:grid-cols-4 gap-6 ">
       {filteredBillboards.map((item, index) => {
@@ -156,7 +170,7 @@ export default function LEDDisplayDetailPage({
           <div
             key={uniqueKey}
             className={`flex flex-col cursor-pointer `}
-            onClick={() => handleItemSelect(item.id)}
+            onClick={(e) => handleRowClick(e, item.id)}
           >
             <div
               className={`relative aspect-[1/1] w-full overflow-hidden rounded-lg ${
@@ -213,7 +227,7 @@ export default function LEDDisplayDetailPage({
               <div
                 key={uniqueKey}
                 className={`flex flex-col cursor-pointer `}
-                onClick={() => handleItemSelect(item.id)}
+                onClick={(e) => handleRowClick(e, item.id)}
               >
                 <div
                   className={`relative aspect-[1/1] w-full overflow-hidden rounded-lg ${
