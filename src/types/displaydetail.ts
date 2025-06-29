@@ -9,7 +9,7 @@ export interface District {
 }
 
 export interface DistrictItem {
-  id: number;
+  id: string;
   title: string;
   subtitle: string;
   image: string;
@@ -21,7 +21,7 @@ export interface DistrictItem {
 
 // 공통 베이스 타입
 export interface BaseBillboard {
-  id: number;
+  id: string;
   district: string;
   name: string;
   neighborhood: string;
@@ -69,7 +69,7 @@ export interface LEDBillboard extends BaseBillboard {
 export type DisplayBillboard = BannerBillboard | LEDBillboard;
 
 export interface ListItem {
-  id: number;
+  id: string;
   title: string;
   subtitle?: string;
   location?: string;

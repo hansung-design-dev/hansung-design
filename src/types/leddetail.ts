@@ -1,5 +1,5 @@
 export interface LEDBillboard {
-  id: number;
+  id: string;
   type: 'led';
   district: string;
   name: string;

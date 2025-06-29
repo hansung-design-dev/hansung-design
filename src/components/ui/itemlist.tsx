@@ -31,8 +31,8 @@ interface ItemTableProps {
   showHeader?: boolean;
   showCheckbox?: boolean;
   renderAction?: (item: DisplayBillboard) => React.ReactNode;
-  onItemSelect?: (id: number, checked: boolean) => void;
-  selectedIds?: number[];
+  onItemSelect?: (id: string, checked: boolean) => void;
+  selectedIds?: string[];
   enableRowClick?: boolean;
 }
 
@@ -54,7 +54,7 @@ const ItemList: React.FC<ItemTableProps> = ({
     page * ITEMS_PER_PAGE
   );
 
-  const handleItemClick = (itemId: number) => {
+  const handleItemClick = (itemId: string) => {
     if (onItemSelect) {
       const isSelected = selectedIds.includes(itemId);
       onItemSelect(itemId, !isSelected);
@@ -72,7 +72,7 @@ const ItemList: React.FC<ItemTableProps> = ({
       return;
     }
 
-    handleItemClick(itemId);
+    handleItemClick(itemId.toString());
   };
 
   // 구분 컬럼에 표시할 값 계산 함수

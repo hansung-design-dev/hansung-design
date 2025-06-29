@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 
 export interface CartItem {
-  id: number;
+  id: string;
   type: 'led-display' | 'banner-display';
   name: string;
   district: string;
@@ -17,7 +17,7 @@ interface CartState {
 
 type CartAction =
   | { type: 'ADD_ITEM'; item: CartItem }
-  | { type: 'REMOVE_ITEM'; id: number }
+  | { type: 'REMOVE_ITEM'; id: string }
   | { type: 'CLEAR_CART' }
   | { type: 'LOAD_CART'; state: CartState };
 

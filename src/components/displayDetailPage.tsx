@@ -71,7 +71,7 @@ export default function DisplayDetailPage({
   const [viewType, setViewType] = useState<'location' | 'gallery' | 'list'>(
     defaultView
   );
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [mapoFilter, setMapoFilter] = useState<'yeollip' | 'jeodan' | 'simin'>(
     'yeollip'
   );
@@ -159,7 +159,7 @@ export default function DisplayDetailPage({
     }
   };
 
-  const handleItemSelect = (id: number, checked?: boolean) => {
+  const handleItemSelect = (id: string, checked?: boolean) => {
     const alreadySelected = selectedIds.includes(id);
     let newSelectedIds;
 
@@ -464,7 +464,7 @@ export default function DisplayDetailPage({
               showHeader
               showCheckbox
               selectedIds={selectedIds}
-              onItemSelect={(id) => handleItemSelect(id)}
+              onItemSelect={(id, checked) => handleItemSelect(id, checked)}
               enableRowClick={false}
             />
           ) : (

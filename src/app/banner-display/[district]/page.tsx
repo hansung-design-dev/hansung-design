@@ -224,7 +224,20 @@ export default function BannerDisplayPage() {
         console.log('🔍 Fetched data:', data);
 
         if (data && data.length > 0) {
-          const transformed = data.map(
+          // 구별 가나다순 정렬
+          const sortedData = [...data].sort((a, b) => {
+            const districtCompare = a.region_gu.name.localeCompare(
+              b.region_gu.name
+            );
+            if (districtCompare !== 0) return districtCompare;
+
+            // 같은 구 내에서는 panel_code로 정렬
+            const aCode = a.panel_code || 0;
+            const bCode = b.panel_code || 0;
+            return aCode - bCode;
+          });
+
+          const transformed = sortedData.map(
             (item: BannerDisplayData, index: number) => {
               const displayName =
                 item.address && item.address.trim() !== ''
@@ -251,8 +264,15 @@ export default function BannerDisplayPage() {
                   ? item.banner_slot_info[0].second_half_closure_quantity
                   : undefined;
 
+              // 구별 가나다순 ID 조합 (중복 방지)
+              const districtCode = item.region_gu.code;
+              const panelCode = item.panel_code || index + 1;
+              const combinedId = `${districtCode}-${panelCode
+                .toString()
+                .padStart(2, '0')}-${item.id}`; // UUID 추가로 고유성 보장
+
               return {
-                id: index + 1, // 단순한 인덱스 사용
+                id: combinedId, // "gwanak-01-uuid123", "mapo-01-uuid456" 등
                 type: 'banner',
                 district: item.region_gu.name,
                 name: displayName,
@@ -292,7 +312,7 @@ export default function BannerDisplayPage() {
             .filter((b) => b.location.split(' ')[0] === district)
             .map(
               (item): BannerBillboard => ({
-                id: Number(item.id),
+                id: `${district}-${item.id.toString().padStart(2, '0')}`, // string으로 변경
                 type: 'banner', // 타입을 'banner'로 설정
                 district: item.location.split(' ')[0],
                 name: item.title,

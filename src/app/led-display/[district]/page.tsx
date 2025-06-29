@@ -151,10 +151,29 @@ export default function LEDDisplayPage() {
 
   // LEDDisplayData를 LEDBillboard로 변환하는 함수
   function transformLEDData(ledData: LEDDisplayData[]): LEDBillboard[] {
-    return ledData.map((item) => {
+    // 구별 가나다순 정렬
+    const sortedData = [...ledData].sort((a, b) => {
+      const districtCompare = a.region_gu.name.localeCompare(b.region_gu.name);
+      if (districtCompare !== 0) return districtCompare;
+
+      // 같은 구 내에서는 panel_code로 정렬
+      const aCode = a.panel_code || 0;
+      const bCode = b.panel_code || 0;
+      return aCode - bCode;
+    });
+
+    return sortedData.map((item) => {
       const firstSlot = item.led_slot_info[0];
+
+      // 구별 가나다순 ID 조합 (중복 방지)
+      const districtCode = item.region_gu.code;
+      const panelCode = item.panel_code || 1;
+      const combinedId = `${districtCode}-${panelCode
+        .toString()
+        .padStart(2, '0')}-${item.id}`; // UUID 추가로 고유성 보장
+
       return {
-        id: parseInt(item.id),
+        id: combinedId, // "gangdong-01-uuid123", "gwanak-01-uuid456" 등
         type: 'led',
         district: item.region_gu.name,
         name: item.nickname || item.address,
@@ -266,7 +285,7 @@ export default function LEDDisplayPage() {
             .filter((b) => b.location.split(' ')[0] === district)
             .map(
               (item): LEDBillboard => ({
-                id: Number(item.id),
+                id: `${district}-${item.id.toString().padStart(2, '0')}`,
                 type: 'led',
                 district: item.location.split(' ')[0],
                 name: item.title,
