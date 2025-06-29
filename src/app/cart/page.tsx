@@ -82,6 +82,7 @@ function CartItemRow({
   isConsulting = false,
   onOrderModify,
   onConsultation,
+  onDelete,
 }: {
   item: CartItem;
   user: { name: string; phone: string };
@@ -90,6 +91,7 @@ function CartItemRow({
   isConsulting?: boolean;
   onOrderModify?: () => void;
   onConsultation?: () => void;
+  onDelete?: () => void;
 }) {
   if (isConsulting) {
     return (
@@ -148,7 +150,7 @@ function CartItemRow({
   }
 
   return (
-    <div className=" flex items-center pl-[3rem] py-6 border-b border-gray-200 ">
+    <div className="relative flex items-center pl-[3rem] py-6">
       <input
         type="checkbox"
         className="w-5 h-5 mr-6"
@@ -196,12 +198,65 @@ function CartItemRow({
         <div className="text-1 font-500">게시대비용</div>
         <div className="text-1.25 font-700">100,000원</div>
       </div>
+      <button
+        className="absolute top-5 right-10 text-1.5 font-100 text-gray-2 hover:cursor-pointer"
+        onClick={onDelete}
+      >
+        x
+      </button>
+    </div>
+  );
+}
+
+// 삭제 확인 모달 컴포넌트
+function DeleteConfirmModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  itemName,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  itemName: string;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4 py-10">
+        <div className="text-center">
+          <h3 className="text-xl font-bold mb-4">상품 삭제</h3>
+          <p className="text-gray-600 mb-6">
+            &ldquo;{itemName}&rdquo; 상품을 <br />
+            정말 삭제하시겠습니까?
+          </p>
+          <div className="flex gap-4 justify-center">
+            <Button
+              size="md"
+              variant="filledBlack"
+              onClick={onClose}
+              className="w-[6.5rem] h-[2.5rem] text-0.875 font-200 hover:cursor-pointer"
+            >
+              아니오
+            </Button>
+            <Button
+              variant="filledBlack"
+              size="md"
+              onClick={onConfirm}
+              className="w-[6.5rem] h-[2.5rem] text-0.875 font-200 hover:cursor-pointer"
+            >
+              예
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
 export default function Cart() {
-  const { cart } = useCart();
+  const { cart, dispatch } = useCart();
   const { user } = useAuth();
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<'payment' | 'consulting'>(
@@ -210,6 +265,8 @@ export default function Cart() {
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [isConsultationModalOpen, setIsConsultationModalOpen] = useState(false);
   const [selectedProductName, setSelectedProductName] = useState('');
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<CartItem | null>(null);
 
   const ledItems = cart.filter(
     (item) => item.type === 'led-display' && item.price !== 0
@@ -277,6 +334,19 @@ export default function Cart() {
     setIsConsultationModalOpen(true);
   };
 
+  const handleDelete = (item: CartItem) => {
+    setItemToDelete(item);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (itemToDelete) {
+      dispatch({ type: 'REMOVE_ITEM', id: itemToDelete.id });
+      setItemToDelete(null);
+      setIsDeleteModalOpen(false);
+    }
+  };
+
   return (
     <main className="pt-[3rem] bg-gray-100 min-h-screen lg:px-[1rem] pb-[12rem]">
       <div className="max-w-5xl mx-auto py-10">
@@ -323,6 +393,7 @@ export default function Cart() {
                         handleItemSelect(String(item.id), selected)
                       }
                       onOrderModify={handleOrderModify}
+                      onDelete={() => handleDelete(item)}
                     />
                   ))}
                 </CartGroupCard>
@@ -346,6 +417,7 @@ export default function Cart() {
                         handleItemSelect(String(item.id), selected)
                       }
                       onOrderModify={handleOrderModify}
+                      onDelete={() => handleDelete(item)}
                     />
                   ))}
                 </CartGroupCard>
@@ -385,6 +457,7 @@ export default function Cart() {
                     isConsulting={true}
                     onOrderModify={handleOrderModify}
                     onConsultation={() => handleConsultation(item.name)}
+                    onDelete={() => handleDelete(item)}
                   />
                 ))
               ) : (
@@ -418,6 +491,13 @@ export default function Cart() {
         isOpen={isConsultationModalOpen}
         onClose={() => setIsConsultationModalOpen(false)}
         productName={selectedProductName}
+      />
+
+      <DeleteConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        itemName={itemToDelete?.name || ''}
       />
     </main>
   );
