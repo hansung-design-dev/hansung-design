@@ -122,12 +122,14 @@ function CartItemRow({
           <div>담당자명: {user?.name}</div>
           <div>전화번호: {user?.phone}</div>
           <div>회사이름: -</div>
-          <button
-            className="mt-2 text-1 rounded-[0.25rem] w-[5rem] border-1 border-solid border-gray-1 px-2 py-1 text-gray-2"
+          <Button
+            size="xs"
+            variant="outlinedBlack"
+            className="w-[5rem] h-[2rem] text-1"
             onClick={onOrderModify}
           >
             주문수정
-          </button>
+          </Button>
         </div>
         <div className="flex flex-col items-center justify-center gap-4 p-4 border-solid border-1 border-gray-1 w-[20rem]">
           <div className="text-center text-0.875 font-500">
@@ -175,12 +177,14 @@ function CartItemRow({
         <div>담당자명: {user?.name}</div>
         <div>전화번호: {user?.phone}</div>
         <div>회사이름: -</div>
-        <button
-          className="mt-2 text-1 rounded-[0.25rem] w-[5rem] border-1 border-solid border-gray-1 px-2 py-1 text-gray-2"
+        <Button
+          size="xs"
+          variant="outlinedBlack"
+          className="w-[5rem] h-[2rem] text-1"
           onClick={onOrderModify}
         >
           주문수정
-        </button>
+        </Button>
       </div>
       {dividerVertical}
       <div className="w-35 text-left ml-5 flex flex-col gap-2">

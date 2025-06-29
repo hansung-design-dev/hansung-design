@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import ModalContainer from './ModalContainer';
 import { Button } from './button/button';
 
@@ -12,6 +13,7 @@ export default function OrderModificationModal({
   isOpen,
   onClose,
 }: OrderModificationModalProps) {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     company: '가입회원정보',
     title: '',
@@ -42,27 +44,38 @@ export default function OrderModificationModal({
     onClose();
   };
 
+  const handleGoToInfoPage = () => {
+    onClose();
+    router.push('/mypage/info');
+  };
+
   return (
     <ModalContainer isOpen={isOpen} onClose={onClose} title="간편정보 수정하기">
       <div className="space-y-6">
         {/* 회사 선택 드롭다운 */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           <label className="block text-1 text-gray-2 font-500 mb-2 w-30">
             회사 선택
           </label>
           <select
             value={formData.company}
             onChange={(e) => handleInputChange('company', e.target.value)}
-            className="w-full p-3 border-solid border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-none"
+            className="w-[80%] px-3 py-4  border-solid border-1 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-1"
           >
-            <option value="가입회원정보">가입회원정보</option>
-            <option value="한성디자인">한성디자인</option>
-            <option value="서울디자인">서울디자인</option>
+            <option className="text-gray-1" value="가입회원정보">
+              가입회원정보
+            </option>
+            <option className="text-gray-1" value="한성디자인">
+              한성디자인
+            </option>
+            <option className="text-gray-1" value="서울디자인">
+              서울디자인
+            </option>
           </select>
         </div>
 
         {/* 제목 */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           <label className="block text-1 text-gray-2 font-500 mb-2 w-30">
             제목<span className="text-red">*</span>
           </label>
@@ -70,13 +83,13 @@ export default function OrderModificationModal({
             type="text"
             value={formData.title}
             onChange={(e) => handleInputChange('title', e.target.value)}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-[80%] px-3 py-4  border-solid border-1 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-1"
             placeholder="제목을 입력하세요"
           />
         </div>
 
         {/* 담당자명 */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           <label className="block text-1 text-gray-2 font-500 mb-2 w-30">
             담당자명<span className="text-red">*</span>
           </label>
@@ -84,31 +97,42 @@ export default function OrderModificationModal({
             type="text"
             value={formData.managerName}
             onChange={(e) => handleInputChange('managerName', e.target.value)}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-[80%] px-3 py-4 border-solid border-1 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-1"
             placeholder="담당자명을 입력하세요"
           />
         </div>
 
         {/* 사업자등록증 */}
-        <div className="flex gap-2">
-          <label className="block text-1 text-gray-2 font-500 mb-2 w-24">
+        <div className="flex gap-2 items-center">
+          <label className="block text-1 text-gray-2 font-500 mb-2 w-29">
             사업자등록증<span className="text-red">*</span>
           </label>
-          <div className="flex gap-2">
+          <div className="relative w-[80%]">
             <input
+              id="fileInput"
               type="file"
               onChange={handleFileChange}
-              className="flex-1 p-3 border-solid border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-none"
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               accept=".pdf,.jpg,.jpeg,.png"
             />
-            <Button className="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600">
-              파일올리기
-            </Button>
+            <div className="w-full px-3 py-2 border-solid border-1 border-gray-300 rounded-lg bg-white flex items-center justify-between">
+              <span className="text-gray-500">
+                {formData.businessLicense
+                  ? formData.businessLicense.name
+                  : '파일을 선택해주세요'}
+              </span>
+              <Button
+                size="sm"
+                className="bg-gray-2 text-white rounded text-sm hover:bg-gray-600 pointer-events-none"
+              >
+                파일올리기
+              </Button>
+            </div>
           </div>
         </div>
 
         {/* 회사명 */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           <label className="block text-1 text-gray-2 font-500 mb-2 w-30">
             회사명
           </label>
@@ -116,13 +140,13 @@ export default function OrderModificationModal({
             type="text"
             value={formData.companyName}
             onChange={(e) => handleInputChange('companyName', e.target.value)}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-[80%] px-3 py-4  border-solid border-1 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-1"
             placeholder="회사명을 입력하세요"
           />
         </div>
 
         {/* 이메일 */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           <label className="block text-1 text-gray-2 font-500 mb-2 w-30">
             이메일<span className="text-red">*</span>
           </label>
@@ -130,22 +154,22 @@ export default function OrderModificationModal({
             type="email"
             value={formData.email}
             onChange={(e) => handleInputChange('email', e.target.value)}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-[80%] px-3 py-4  border-solid border-1 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-1"
             placeholder="이메일을 입력하세요"
           />
         </div>
 
         {/* 전화번호 */}
-        <div className="flex gap-2">
-          <label className="block text-1 text-gray-2 font-500 mb-2 w-24">
+        <div className="flex gap-2 items-center">
+          <label className="block text-1 text-gray-2 font-500 mb-2 w-29">
             전화번호<span className="text-red">*</span>
           </label>
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-[80%]">
             <input
               type="text"
               value={formData.phone1}
               onChange={(e) => handleInputChange('phone1', e.target.value)}
-              className="w-20 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+              className="w-[80%] px-3 py-4  border-solid border-1 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-1"
               placeholder="010"
               maxLength={3}
             />
@@ -153,7 +177,7 @@ export default function OrderModificationModal({
               type="text"
               value={formData.phone2}
               onChange={(e) => handleInputChange('phone2', e.target.value)}
-              className="w-20 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+              className="w-[80%] px-3 py-4  border-solid border-1 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-1"
               placeholder="0000"
               maxLength={4}
             />
@@ -161,7 +185,7 @@ export default function OrderModificationModal({
               type="text"
               value={formData.phone3}
               onChange={(e) => handleInputChange('phone3', e.target.value)}
-              className="w-20 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+              className="w-[80%] px-3 py-4  border-solid border-1 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-1"
               placeholder="0000"
               maxLength={4}
             />
@@ -169,8 +193,8 @@ export default function OrderModificationModal({
         </div>
 
         {/* 디자인유무 */}
-        <div className="flex gap-2">
-          <label className="block text-1 text-gray-2 font-500 mb-2 w-24">
+        <div className="flex gap-2 items-center">
+          <label className="block text-1 text-gray-2 font-500 mb-2 w-29">
             디자인유무
           </label>
           <div className="flex gap-4">
@@ -203,15 +227,23 @@ export default function OrderModificationModal({
           </div>
         </div>
 
-        {/* 저장 버튼 */}
-        <div className="flex justify-center pt-4">
+        {/* 버튼들 */}
+        <div className="flex justify-center gap-4 pt-4">
           <Button
             onClick={handleSubmit}
             size="lg"
             variant="filledBlack"
-            className=" text-white rounded-lg hover:bg-blue-700"
+            className="text-white rounded-lg hover:bg-gray-2 lg:text-1 lg:font-300"
           >
             저장
+          </Button>
+          <Button
+            onClick={handleGoToInfoPage}
+            size="lg"
+            variant="filledBlack"
+            className="text-white rounded-lg hover:bg-gray-2 lg:text-1 lg:font-300"
+          >
+            간편정보 페이지 가기
           </Button>
         </div>
       </div>
