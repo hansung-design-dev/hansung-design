@@ -17,6 +17,33 @@ export default function CartItemAccordion({ item }: CartItemAccordionProps) {
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const getPanelTypeLabel = (panelType?: string) => {
+    if (!panelType) return '현수막게시대';
+
+    switch (panelType) {
+      case 'multi-panel':
+        return '연립형';
+      case 'lower-panel':
+        return '저단형';
+      case 'bulletin-board':
+        return '시민게시대';
+      case 'citizen-board':
+        return '시민/문화게시대';
+      case 'with_lighting':
+        return '조명형';
+      case 'no_lighting':
+        return '비조명형';
+      case 'semi-auto':
+        return '반자동';
+      case 'panel':
+        return '패널형';
+      case 'led':
+        return 'LED전자게시대';
+      default:
+        return '현수막게시대';
+    }
+  };
+
   const handleFileInputClick = () => {
     if (!sendByEmail) fileInputRef.current?.click();
   };
@@ -41,6 +68,11 @@ export default function CartItemAccordion({ item }: CartItemAccordionProps) {
         {item.halfPeriod && (
           <span className="ml-2 text-sm text-blue-600 font-medium">
             ({item.halfPeriod === 'first_half' ? '상반기' : '하반기'})
+          </span>
+        )}
+        {item.panel_type && (
+          <span className="ml-2 text-sm text-gray-400 font-medium">
+            ({getPanelTypeLabel(item.panel_type)})
           </span>
         )}
       </div>

@@ -23,6 +23,7 @@ interface District {
   logo: string;
   src: string;
   code: string;
+  is_for_admin?: boolean; // 행정용 구분
   period?: {
     first_half_from: string;
     first_half_to: string;
@@ -121,35 +122,15 @@ export default function BannerDisplayPage() {
                   code: 'gangdong',
                   description: '울림픽대교 남단사거리 앞 외 3건',
                 },
-                관악구: {
-                  id: 3,
-                  code: 'gwanak',
-                  description: '서울대입구역 앞 외 3건',
-                },
-                마포구: {
-                  id: 4,
-                  code: 'mapo',
-                  description: '홍대입구역 앞 외 5건',
-                },
-                서대문구: {
-                  id: 5,
-                  code: 'seodaemun',
-                  description: '울림픽대교 남단사거리 앞 외 3건',
-                },
-                송파구: {
-                  id: 6,
-                  code: 'songpa',
-                  description: '잠실종합운동장 앞 외 5건',
-                },
-                용산구: {
-                  id: 7,
-                  code: 'yongsan',
-                  description: '여의도공원 앞 외 6건',
-                },
                 강북구: {
                   id: 8,
                   code: 'gangbuk',
                   description: '여의도공원 앞 외 6건',
+                },
+                관악구: {
+                  id: 3,
+                  code: 'gwanak',
+                  description: '서울대입구역 앞 외 3건',
                 },
                 광진구: {
                   id: 10,
@@ -165,6 +146,27 @@ export default function BannerDisplayPage() {
                   id: 12,
                   code: 'dongdaemun',
                   description: '울림픽대교 남단사거리 앞 외 3건',
+                },
+                마포구: {
+                  id: 4,
+                  code: 'mapo',
+                  description: '홍대입구역 앞 외 5건',
+                },
+                서대문구: {
+                  id: 5,
+                  code: 'seodaemun',
+                  description: '울림픽대교 남단사거리 앞 외 3건',
+                  is_for_admin: true, // 행정용 구분
+                },
+                송파구: {
+                  id: 6,
+                  code: 'songpa',
+                  description: '잠실종합운동장 앞 외 5건',
+                },
+                용산구: {
+                  id: 7,
+                  code: 'yongsan',
+                  description: '여의도공원 앞 외 6건',
                 },
               }[districtName];
 
@@ -182,6 +184,7 @@ export default function BannerDisplayPage() {
                   logosMap[districtName] ||
                   `/images/district-icon/${baseInfo.code}-gu.png`,
                 src: '/images/led/landing.png',
+                is_for_admin: baseInfo.is_for_admin || false,
                 period,
                 bankInfo,
               };
@@ -195,6 +198,9 @@ export default function BannerDisplayPage() {
         const districtData = (await Promise.all(districtDataPromises)).filter(
           Boolean
         ) as District[];
+
+        // 구별 가나다순 정렬
+        districtData.sort((a, b) => a.name.localeCompare(b.name));
 
         // "전체" 카드 추가 (모든 구의 합계)
         const totalCount = Object.values(counts).reduce(

@@ -71,7 +71,7 @@ export default function DisplayDetailPage({
   const [viewType, setViewType] = useState<'location' | 'gallery' | 'list'>(
     defaultView
   );
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [mapoFilter, setMapoFilter] = useState<'yeollip' | 'jeodan' | 'simin'>(
     'yeollip'
   );
@@ -135,7 +135,15 @@ export default function DisplayDetailPage({
       case 'bulletin-board':
         return '시민게시대';
       case 'citizen-board':
-        return '시민/문화게시판';
+        return '시민/문화게시대';
+      case 'with_lighting':
+        return '조명형';
+      case 'no_lighting':
+        return '비조명형';
+      case 'semi-auto':
+        return '반자동';
+      case 'panel':
+        return '패널형';
       default:
         return '현수막게시대';
     }
@@ -159,7 +167,7 @@ export default function DisplayDetailPage({
     }
   };
 
-  const handleItemSelect = (id: number, checked?: boolean) => {
+  const handleItemSelect = (id: string, checked?: boolean) => {
     const alreadySelected = selectedIds.includes(id);
     let newSelectedIds;
 
@@ -194,6 +202,7 @@ export default function DisplayDetailPage({
           district: item.district,
           price: priceForCart,
           halfPeriod: selectedHalfPeriod,
+          panel_type: item.panel_type,
         };
 
         console.log('🔍 Adding item to cart:', cartItem);
@@ -464,7 +473,7 @@ export default function DisplayDetailPage({
               showHeader
               showCheckbox
               selectedIds={selectedIds}
-              onItemSelect={(id) => handleItemSelect(id)}
+              onItemSelect={(id, checked) => handleItemSelect(id, checked)}
               enableRowClick={false}
             />
           ) : (

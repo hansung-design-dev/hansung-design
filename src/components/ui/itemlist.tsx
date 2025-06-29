@@ -31,8 +31,8 @@ interface ItemTableProps {
   showHeader?: boolean;
   showCheckbox?: boolean;
   renderAction?: (item: DisplayBillboard) => React.ReactNode;
-  onItemSelect?: (id: number, checked: boolean) => void;
-  selectedIds?: number[];
+  onItemSelect?: (id: string, checked: boolean) => void;
+  selectedIds?: string[];
   enableRowClick?: boolean;
 }
 
@@ -54,14 +54,14 @@ const ItemList: React.FC<ItemTableProps> = ({
     page * ITEMS_PER_PAGE
   );
 
-  const handleItemClick = (itemId: number) => {
+  const handleItemClick = (itemId: string) => {
     if (onItemSelect) {
       const isSelected = selectedIds.includes(itemId);
       onItemSelect(itemId, !isSelected);
     }
   };
 
-  const handleRowClick = (e: React.MouseEvent, itemId: number) => {
+  const handleRowClick = (e: React.MouseEvent, itemId: string) => {
     if ((e.target as HTMLElement).tagName === 'INPUT') {
       return;
     }
@@ -72,7 +72,7 @@ const ItemList: React.FC<ItemTableProps> = ({
       return;
     }
 
-    handleItemClick(itemId);
+    handleItemClick(itemId.toString());
   };
 
   // 구분 컬럼에 표시할 값 계산 함수
@@ -87,7 +87,15 @@ const ItemList: React.FC<ItemTableProps> = ({
       case 'bulletin-board':
         return '시민게시대';
       case 'citizen-board':
-        return '시민/문화게시판';
+        return '시민/문화게시대';
+      case 'with_lighting':
+        return '조명형';
+      case 'no_lighting':
+        return '비조명형';
+      case 'semi-auto':
+        return '반자동';
+      case 'panel':
+        return '패널형';
       default:
         return '현수막게시대';
     }
