@@ -9,6 +9,32 @@ export default function LiveCart() {
   const router = useRouter();
   const [timeLeft, setTimeLeft] = useState<string>('');
 
+  const getPanelTypeLabel = (panelType?: string) => {
+    if (!panelType) return '현수막게시대';
+
+    switch (panelType) {
+      case 'multi-panel':
+        return '연립형';
+      case 'lower-panel':
+        return '저단형';
+      case 'bulletin-board':
+        return '시민게시대';
+      case 'citizen-board':
+        return '시민/문화게시대';
+      case 'with_lighting':
+        return '조명형';
+      case 'no_lighting':
+        return '비조명형';
+      case 'semi-auto':
+        return '반자동';
+      case 'panel':
+        return '패널형';
+      case 'led':
+        return 'LED전자게시대';
+      default:
+        return '현수막게시대';
+    }
+  };
   // 디버깅용: cart 배열 상태 확인
   console.log('🔍 Cart state in LiveCart:', cart);
   console.log('🔍 Cart length in LiveCart:', cart.length);
@@ -80,7 +106,7 @@ export default function LiveCart() {
                   <div>
                     <span className="mr-2">{item.name}</span>
                     <span className="font-bold mr-2">
-                      ({item.type === 'led-display' ? 'LED' : '배너'})
+                      ({getPanelTypeLabel(item.panel_type)})
                     </span>
                   </div>
                   <span className="mr-2 text-gray-500">{item.district}</span>

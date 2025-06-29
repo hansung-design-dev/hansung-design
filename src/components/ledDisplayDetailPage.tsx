@@ -132,6 +132,7 @@ export default function LEDDisplayDetailPage({
           name: getCartItemName(item),
           district: item.district,
           price: priceForCart,
+          panel_type: item.panel_type,
         };
 
         console.log('🔍 Adding LED item to cart:', cartItem);

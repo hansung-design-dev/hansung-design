@@ -8,6 +8,7 @@ export interface CartItem {
   district: string;
   price: number;
   halfPeriod?: 'first_half' | 'second_half';
+  panel_type?: string;
 }
 
 interface CartState {

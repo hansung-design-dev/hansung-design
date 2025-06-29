@@ -136,6 +136,14 @@ export default function DisplayDetailPage({
         return '시민게시대';
       case 'citizen-board':
         return '시민/문화게시대';
+      case 'with_lighting':
+        return '조명형';
+      case 'no_lighting':
+        return '비조명형';
+      case 'semi-auto':
+        return '반자동';
+      case 'panel':
+        return '패널형';
       default:
         return '현수막게시대';
     }
@@ -194,6 +202,7 @@ export default function DisplayDetailPage({
           district: item.district,
           price: priceForCart,
           halfPeriod: selectedHalfPeriod,
+          panel_type: item.panel_type,
         };
 
         console.log('🔍 Adding item to cart:', cartItem);
