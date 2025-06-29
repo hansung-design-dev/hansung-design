@@ -2,18 +2,24 @@
 
 import { useState } from 'react';
 import Nav from '../../../components/layouts/nav';
+import { useAuth } from '@/src/contexts/authContext';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/src/components/button/button';
 import Image from 'next/image';
 import Link from 'next/link';
 import MypageContainer from '@/src/components/mypageContainer';
+
 export default function UserInfoPage() {
   const [activeTab, setActiveTab] = useState('간편정보관리');
+  const { signOut } = useAuth();
+  const router = useRouter();
 
   const tabs = [
     { name: '마이페이지', href: '/mypage' },
     { name: '주문내역', href: '/mypage/orders' },
     { name: '1:1상담', href: '/mypage/customer-service' },
     { name: '간편정보관리', href: '/mypage/info' },
+    { name: '로그아웃', href: '/' },
   ];
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -56,6 +62,19 @@ export default function UserInfoPage() {
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
+  };
+
+  const handleLogout = async () => {
+    try {
+      const result = await signOut();
+      if (result.success) {
+        router.push('/');
+      } else {
+        console.error('로그아웃 실패:', result.error);
+      }
+    } catch (error) {
+      console.error('로그아웃 중 오류 발생:', error);
+    }
   };
 
   return (
@@ -184,7 +203,7 @@ export default function UserInfoPage() {
                 variant="outlineGray"
                 size="md"
                 className="w-[10rem]"
-                onClick={() => console.log('로그아웃')}
+                onClick={handleLogout}
               >
                 로그아웃
               </Button>
