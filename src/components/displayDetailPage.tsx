@@ -135,7 +135,7 @@ export default function DisplayDetailPage({
       case 'bulletin-board':
         return '시민게시대';
       case 'citizen-board':
-        return '시민/문화게시판';
+        return '시민/문화게시대';
       default:
         return '현수막게시대';
     }

@@ -196,6 +196,9 @@ export default function BannerDisplayPage() {
           Boolean
         ) as District[];
 
+        // 구별 가나다순 정렬
+        districtData.sort((a, b) => a.name.localeCompare(b.name));
+
         // "전체" 카드 추가 (모든 구의 합계)
         const totalCount = Object.values(counts).reduce(
           (sum, count) => sum + count,
