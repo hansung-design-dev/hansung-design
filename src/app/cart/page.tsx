@@ -1,172 +1,377 @@
 'use client';
 import { motion } from 'framer-motion';
-import Link from 'next/link';
 import { useCart } from '@/src/contexts/cartContext';
-import { useState, useEffect } from 'react';
-import CartItemAccordion from '@/src/components/cartItemAccordion';
+import { useAuth } from '@/src/contexts/authContext';
+import Image from 'next/image';
+import { Button } from '@/src/components/button/button';
+import { CartItem } from '@/src/contexts/cartContext';
+import { useState, useMemo } from 'react';
 
 const fadeInUp = {
   initial: { y: 60, opacity: 0 },
-  animate: {
-    y: 0,
-    opacity: 1,
-    transition: { duration: 0.6, ease: 'easeOut' },
-  },
+  animate: { y: 0, opacity: 1, transition: { duration: 0.6, ease: 'easeOut' } },
 };
+const dividerVertical = (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="2"
+    height="128"
+    viewBox="0 0 2 128"
+    fill="none"
+  >
+    <path d="M1 0V128" stroke="#D9D9D9" />
+  </svg>
+);
+
+const dividerHorizontal = (
+  <div className="w-[95%] mx-auto">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="100%"
+      height="4"
+      viewBox="0 0 1441 4"
+      fill="none"
+    >
+      <path d="M0 2H1441" stroke="black" strokeWidth="4" />
+    </svg>
+  </div>
+);
+
+function CartGroupCard({
+  title,
+  children,
+  phoneList,
+  isSelected,
+  onSelect,
+}: {
+  title: string;
+  children: React.ReactNode;
+  phoneList?: string[];
+  isSelected?: boolean;
+  onSelect?: (selected: boolean) => void;
+}) {
+  return (
+    <div className="mb-8 bg-white rounded-lg overflow-hidden py-4">
+      <div className="flex items-center pt-4 pb-2 border-b border-black px-[3rem]">
+        <input
+          type="checkbox"
+          className="w-6 h-6 mr-4"
+          checked={isSelected}
+          onChange={(e) => onSelect?.(e.target.checked)}
+        />
+        <span className="text-xl font-semibold">{title}</span>
+        {phoneList && (
+          <span className="ml-4 text-sm text-gray-500">
+            상담전화: {phoneList.join(', ')}
+          </span>
+        )}
+      </div>
+      {dividerHorizontal}
+      <div>{children}</div>
+    </div>
+  );
+}
+
+function CartItemRow({
+  item,
+  user,
+  isSelected,
+  onSelect,
+  isConsulting = false,
+}: {
+  item: CartItem;
+  user: { name: string; phone: string };
+  isSelected?: boolean;
+  onSelect?: (selected: boolean) => void;
+  isConsulting?: boolean;
+}) {
+  if (isConsulting) {
+    return (
+      <div className=" flex items-center pl-[3rem] py-6 border-b border-gray-200 ">
+        <input
+          type="checkbox"
+          className="w-5 h-5 mr-6"
+          checked={isSelected}
+          onChange={(e) => onSelect?.(e.target.checked)}
+        />
+        <div className="flex items-center w-80">
+          <Image
+            src="/images/digital-signage-grid-example.jpeg"
+            alt="썸네일"
+            width={80}
+            height={80}
+            className="w-24 h-24  object-cover mr-4"
+          />
+          <div className="flex flex-col gap-3">
+            <div className="text-1 ">{item.name}</div>
+            <div className="text-1.25 font-semibold">
+              {item.price === 0
+                ? '상담문의'
+                : `${item.price?.toLocaleString()}원`}
+            </div>
+          </div>
+        </div>
+        {dividerVertical}
+        <div className="pr-20 flex flex-col ml-2 text-1 font-500 gap-2 text-gray-2">
+          <div>담당자명: {user?.name}</div>
+          <div>전화번호: {user?.phone}</div>
+          <div>회사이름: -</div>
+          <button className="mt-2 text-1 rounded-[0.25rem] w-[5rem] border-1 border-solid border-gray-1 px-2 py-1 text-gray-2">
+            주문수정
+          </button>
+        </div>
+        <div className="flex flex-col items-center justify-center gap-4 p-4 border-solid border-1 border-gray-1 w-[20rem]">
+          <div className="text-center text-0.875 font-500">
+            해당상품은 상담 진행 후 결제가 완료됩니다.
+            <br /> 상담문의가 어려우실 경우 고객센터에 문의 부탁드립니다.
+          </div>
+          <Button className="w-[15rem] h-[2rem] px-12 py-4 text-lg font-bold rounded bg-black text-white text-1">
+            상담문의
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className=" flex items-center pl-[3rem] py-6 border-b border-gray-200 ">
+      <input
+        type="checkbox"
+        className="w-5 h-5 mr-6"
+        checked={isSelected}
+        onChange={(e) => onSelect?.(e.target.checked)}
+      />
+      <div className="flex items-center w-80">
+        <Image
+          src="/images/digital-signage-grid-example.jpeg"
+          alt="썸네일"
+          width={80}
+          height={80}
+          className="w-24 h-24  object-cover mr-4"
+        />
+        <div className="flex flex-col gap-3">
+          <div className="text-1 ">{item.name}</div>
+          <div className="text-1.25 font-semibold">
+            {item.price === 0
+              ? '상담문의'
+              : `${item.price?.toLocaleString()}원`}
+          </div>
+        </div>
+      </div>
+      {dividerVertical}
+      <div className="flex-1 flex flex-col ml-2 text-1 font-500 gap-2 text-gray-2">
+        <div>담당자명: {user?.name}</div>
+        <div>전화번호: {user?.phone}</div>
+        <div>회사이름: -</div>
+        <button className="mt-2 text-1 rounded-[0.25rem] w-[5rem] border-1 border-solid border-gray-1 px-2 py-1 text-gray-2">
+          주문수정
+        </button>
+      </div>
+      {dividerVertical}
+      <div className="w-35 text-left ml-5 flex flex-col gap-2">
+        <div className="text-1 font-500">디자인비용</div>
+        <div className="text-1.25 font-700">100,000원</div>
+      </div>
+      {dividerVertical}
+      <div className="w-35 text-left ml-5 flex flex-col gap-2">
+        <div className="text-1 font-500">게시대비용</div>
+        <div className="text-1.25 font-700">100,000원</div>
+      </div>
+    </div>
+  );
+}
 
 export default function Cart() {
   const { cart } = useCart();
-  const [timeLeft, setTimeLeft] = useState<string>('');
+  const { user } = useAuth();
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [activeTab, setActiveTab] = useState<'payment' | 'consulting'>(
+    'payment'
+  );
 
-  // 디버깅용: cart 배열 상태 확인
-  console.log('🔍 Cart state in /cart page:', cart);
-  console.log('🔍 Cart length:', cart.length);
+  const ledItems = cart.filter(
+    (item) => item.type === 'led-display' && item.price !== 0
+  );
+  const bannerItems = cart.filter(
+    (item) => item.type === 'banner-display' && item.price !== 0
+  );
+  const consultingItems = cart.filter((item) => item.price === 0);
 
-  // 남은 시간 계산
-  useEffect(() => {
-    const calculateTimeLeft = () => {
-      const stored = localStorage.getItem('hansung_cart');
-      if (!stored) return;
+  // 선택된 아이템들의 총계 계산
+  const cartSummary = useMemo(() => {
+    const selectedCartItems = cart.filter((item) =>
+      selectedItems.has(String(item.id))
+    );
+    const totalQuantity = selectedCartItems.length;
+    const totalPrice = selectedCartItems.reduce((sum, item) => {
+      // 상담문의는 가격이 0이므로 제외
+      if (item.price === 0) return sum;
+      return sum + (item.price || 0);
+    }, 0);
 
-      try {
-        const cartState = JSON.parse(stored);
-        const now = Date.now();
-        const timeElapsed = now - cartState.lastUpdated;
-        const timeRemaining = 15 * 60 * 1000 - timeElapsed; // 15분 - 경과시간
+    // 추가금 (디자인비용 + 게시대비용) - 각 아이템당 200,000원으로 가정
+    const additionalCost = selectedCartItems.length * 200000;
 
-        if (timeRemaining <= 0) {
-          setTimeLeft('만료됨');
-          return;
-        }
-
-        const minutes = Math.floor(timeRemaining / (1000 * 60));
-        setTimeLeft(`${minutes}분`);
-      } catch (error) {
-        console.error('Error calculating time left:', error);
-      }
+    return {
+      quantity: totalQuantity,
+      additionalCost,
+      totalAmount: totalPrice + additionalCost,
     };
+  }, [cart, selectedItems]);
 
-    calculateTimeLeft();
-    const interval = setInterval(calculateTimeLeft, 60000); // 1분마다 업데이트
-
-    return () => clearInterval(interval);
-  }, [cart.length]);
-
-  const checkedTotal = cart.reduce((total, item) => {
-    if (typeof item.price === 'number') {
-      return total + item.price;
+  const handleItemSelect = (itemId: string, selected: boolean) => {
+    const newSelected = new Set(selectedItems);
+    if (selected) {
+      newSelected.add(itemId);
+    } else {
+      newSelected.delete(itemId);
     }
-    return total;
-  }, 0);
+    setSelectedItems(newSelected);
+  };
 
-  // 분류
-  const ledItems = cart.filter((item) => item.type === 'led-display');
-  const bannerItems = cart.filter((item) => item.type === 'banner-display');
+  const handleGroupSelect = (items: CartItem[], selected: boolean) => {
+    const newSelected = new Set(selectedItems);
+    if (selected) {
+      items.forEach((item) => newSelected.add(String(item.id)));
+    } else {
+      items.forEach((item) => newSelected.delete(String(item.id)));
+    }
+    setSelectedItems(newSelected);
+  };
+
+  const isGroupSelected = (items: CartItem[]) => {
+    return (
+      items.length > 0 &&
+      items.every((item) => selectedItems.has(String(item.id)))
+    );
+  };
 
   return (
-    <main className="pt-[5.5rem] bg-gray-100 min-h-screen lg:px-[10rem]">
-      <motion.div
-        initial="initial"
-        animate="animate"
-        variants={fadeInUp}
-        className="px-4 py-20"
-      >
-        {/* Layout: Items Left, Summary Right */}
-        <div className="w-full flex flex-col lg:flex-row gap-8">
-          {/* Left: Cart Items */}
-          <div className="flex-1 space-y-6">
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              {/* 남은 시간 표시 */}
-              {cart.length > 0 && (
-                <div className="text-sm text-red-500 font-medium mb-4">
-                  ⏰ 장바구니 만료까지: {timeLeft}
-                </div>
+    <main className="pt-[3rem] bg-gray-100 min-h-screen lg:px-[1rem] pb-[12rem]">
+      <div className="max-w-5xl mx-auto py-10">
+        {/* 탭 버튼들 */}
+        <div className="flex gap-5 py-10">
+          <Button
+            size="sm"
+            variant={activeTab === 'payment' ? 'outlinedBlack' : 'outlinedGray'}
+            className="rounded-full"
+            onClick={() => setActiveTab('payment')}
+          >
+            결제신청
+          </Button>
+
+          <Button
+            size="sm"
+            variant={
+              activeTab === 'consulting' ? 'outlinedBlack' : 'outlinedGray'
+            }
+            className="rounded-full"
+            onClick={() => setActiveTab('consulting')}
+          >
+            상담신청
+          </Button>
+        </div>
+
+        <motion.div initial="initial" animate="animate" variants={fadeInUp}>
+          {user && activeTab === 'payment' && (
+            <>
+              {ledItems.length > 0 && (
+                <CartGroupCard
+                  title="LED전자게시대"
+                  phoneList={['1533-0570', '1899-0596', '02-719-0083']}
+                  isSelected={isGroupSelected(ledItems)}
+                  onSelect={(selected) => handleGroupSelect(ledItems, selected)}
+                >
+                  {ledItems.map((item) => (
+                    <CartItemRow
+                      key={item.id}
+                      item={item}
+                      user={user}
+                      isSelected={selectedItems.has(String(item.id))}
+                      onSelect={(selected) =>
+                        handleItemSelect(String(item.id), selected)
+                      }
+                    />
+                  ))}
+                </CartGroupCard>
               )}
 
-              <div className="border-t border-gray-300 pt-4 space-y-4">
-                {/* LED전자게시대 그룹 */}
-                {ledItems.length > 0 && (
-                  <section className="mb-10">
-                    <div className="text-1.5 font-bold border-b-solid border-black border-b-[3px] mb-4">
-                      LED전자게시대
-                    </div>
-                    {ledItems.map((item) => (
-                      <CartItemAccordion key={item.id} item={item} />
-                    ))}
-                  </section>
-                )}
-                {/* 현수막게시대 그룹 */}
-                {bannerItems.length > 0 && (
-                  <section className="mb-10">
-                    <div className="text-1.25 font-500 border-b-solid border-black border-b-[3px] pb-4 mb-4">
-                      현수막게시대
-                    </div>
-                    {bannerItems.map((item) => (
-                      <CartItemAccordion key={item.id} item={item} />
-                    ))}
-                  </section>
-                )}
-              </div>
-            </div>
-          </div>
+              {bannerItems.length > 0 && (
+                <CartGroupCard
+                  title="현수막게시대"
+                  isSelected={isGroupSelected(bannerItems)}
+                  onSelect={(selected) =>
+                    handleGroupSelect(bannerItems, selected)
+                  }
+                >
+                  {bannerItems.map((item) => (
+                    <CartItemRow
+                      key={item.id}
+                      item={item}
+                      user={user}
+                      isSelected={selectedItems.has(String(item.id))}
+                      onSelect={(selected) =>
+                        handleItemSelect(String(item.id), selected)
+                      }
+                    />
+                  ))}
+                </CartGroupCard>
+              )}
 
-          {/* Right: Summary & Terms (기존 결제/요약 UI 그대로) */}
-          <div className="w-full lg:w-[24rem] space-y-6">
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h3 className="font-bold text-lg mb-4 border border-b-solid border-gray-1 pb-4 border-b-[2px]">
-                최종 결제 금액
-              </h3>
-              <div className="flex flex-col gap-[0.88rem] text-1 font-500 text-gray-2">
-                <div className="flex justify-between py-1 ">
-                  <span>주문금액</span>
-                  <span>{checkedTotal.toLocaleString()}원</span>
-                </div>
-                <div className="flex justify-between py-1">
-                  <span>기본할인금액</span>
-                  <span>-0원</span>
-                </div>
-                <div className="flex justify-between py-1">
-                  <span>쿠폰할인금액</span>
-                  <span>-0원</span>
-                </div>
-                <div className="flex justify-between py-1">
-                  <span>부가세</span>
-                  <span>-0원</span>
-                </div>
-              </div>
-              <div className="flex justify-between items-center mt-4 border-t-solid border-gray-1 border-t-[2px] pt-7">
-                <span className="text-1.25 font-900">최종 결제 금액</span>
-                <span className="text-1.875  font-900">
-                  {checkedTotal.toLocaleString()}원
-                </span>
-              </div>
-            </div>
+              {ledItems.length === 0 && bannerItems.length === 0 && (
+                <CartGroupCard
+                  title="결제신청"
+                  phoneList={['1533-0570', '1899-0596', '02-719-0083']}
+                >
+                  <div className="flex items-center justify-center py-12 text-gray-500">
+                    상품이 없습니다
+                  </div>
+                </CartGroupCard>
+              )}
+            </>
+          )}
 
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <label className="flex items-center  gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="mt-1 w-[1.3rem] h-[1.3rem] border border-solid border-gray-9 bg-gray-1"
-                />
-                <span className="text-1.25 font-700">
-                  구매조건 및 결제진행 동의
-                </span>
-              </label>
-              <ul className="text-sm text-gray-7 mt-2 list-disc list-inside">
-                <li>작업이 진행 된 후 환불이 불가한 상품입니다.</li>
-                <li>설 명절로 인해 2.1부터 진행됩니다.</li>
-                <li>기타 안내 사항이 들어가는 부분</li>
-              </ul>
-            </div>
+          {user && activeTab === 'consulting' && (
+            <CartGroupCard
+              title="상담신청"
+              isSelected={isGroupSelected(consultingItems)}
+              onSelect={(selected) =>
+                handleGroupSelect(consultingItems, selected)
+              }
+            >
+              {consultingItems.length > 0 ? (
+                consultingItems.map((item) => (
+                  <CartItemRow
+                    key={item.id}
+                    item={item}
+                    user={user}
+                    isSelected={selectedItems.has(String(item.id))}
+                    onSelect={(selected) =>
+                      handleItemSelect(String(item.id), selected)
+                    }
+                    isConsulting={true}
+                  />
+                ))
+              ) : (
+                <div className="flex items-center justify-center py-12 text-gray-500">
+                  상품이 없습니다
+                </div>
+              )}
+            </CartGroupCard>
+          )}
+        </motion.div>
+      </div>
 
-            <button className="w-full bg-black text-white py-6 rounded-lg hover:bg-gray-800 transition-colors">
-              <Link href="/payment" className="text-white text-1.25 sm:text-1">
-                결제하기
-              </Link>
-            </button>
-          </div>
+      <div className="fixed bottom-0 left-0 w-full h-[11rem] bg-white border-t border-gray-300 py-0 px-8 flex items-center justify-around gap-4">
+        <div className="flex space-x-6 text-lg font-semibold">
+          <div>선택수량 {cartSummary.quantity}개</div>
+          {/* <div>+ 추가금 {cartSummary.additionalCost.toLocaleString()}원</div> */}
+          <div>= 총 주문금액 {cartSummary.totalAmount.toLocaleString()}원</div>
         </div>
-      </motion.div>
+        <Button className="px-12 py-4 text-lg font-bold rounded bg-black text-white">
+          총 {cartSummary.quantity}건 결제하기
+        </Button>
+      </div>
     </main>
   );
 }

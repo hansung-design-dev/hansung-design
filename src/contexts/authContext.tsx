@@ -7,6 +7,7 @@ interface User {
   username: string;
   email: string;
   name: string;
+  phone: string;
   is_verified?: boolean;
 }
 
@@ -29,6 +30,7 @@ interface AuthContextType {
     password: string,
     name: string,
     username: string,
+    phone: string,
     agreements: Agreements
   ) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<{ success: boolean; error?: string }>;
@@ -80,6 +82,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     password: string,
     name: string,
     username: string,
+    phone: string,
     agreements: Agreements
   ) => {
     try {
@@ -88,7 +91,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password, name, username, agreements }),
+        body: JSON.stringify({
+          email,
+          password,
+          name,
+          username,
+          phone,
+          agreements,
+        }),
       });
 
       const data = await response.json();
