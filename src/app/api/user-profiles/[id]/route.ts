@@ -9,9 +9,10 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 // 프로필 수정
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const {
       profile_title,
       company_name,
@@ -36,7 +37,7 @@ export async function PUT(
       const { data: currentProfile } = await supabase
         .from('user_profiles')
         .select('user_auth_id')
-        .eq('id', params.id)
+        .eq('id', id)
         .single();
 
       if (currentProfile) {
@@ -62,7 +63,7 @@ export async function PUT(
         is_default,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single();
 
@@ -90,14 +91,16 @@ export async function PUT(
 // 프로필 삭제
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+
     // 기본 프로필은 삭제 불가
     const { data: profile } = await supabase
       .from('user_profiles')
       .select('is_default')
-      .eq('id', params.id)
+      .eq('id', id)
       .single();
 
     if (profile?.is_default) {
@@ -110,7 +113,7 @@ export async function DELETE(
     const { error } = await supabase
       .from('user_profiles')
       .delete()
-      .eq('id', params.id);
+      .eq('id', id);
 
     if (error) {
       console.error('프로필 삭제 에러:', error);
