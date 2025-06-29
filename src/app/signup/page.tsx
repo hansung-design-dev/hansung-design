@@ -27,6 +27,7 @@ export default function Signup() {
     id: '',
     email: '',
     password: '',
+    phone: '',
     passwordConfirm: '',
   });
 
@@ -315,6 +316,7 @@ export default function Signup() {
         formData.password,
         formData.name,
         formData.id,
+        formData.phone,
         agreements
       );
 
