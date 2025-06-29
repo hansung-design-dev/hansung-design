@@ -5,7 +5,7 @@ import Footer from '../components/layouts/footer';
 import ScrollToTopButton from '../components/scrollToTopButton';
 import { CartProvider } from '../contexts/cartContext';
 import { AuthProvider } from '../contexts/authContext';
-import LiveCartClientWrapper from '../components/liveCartClientWrapper';
+import LiveCartConditional from '../components/LiveCartConditional';
 
 // export const API = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_KEY}&autoload=false`;
 
@@ -28,7 +28,7 @@ export default function RootLayout({
           <CartProvider>
             <Nav />
             {children}
-            <LiveCartClientWrapper />
+            <LiveCartConditional />
             <ScrollToTopButton />
             <Footer />
           </CartProvider>

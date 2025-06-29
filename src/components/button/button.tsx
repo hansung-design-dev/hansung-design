@@ -37,15 +37,14 @@ export function Button({
         ? 'border-[#B8B8B8] border border-[0.1rem] border-solid'
         : 'border-none'
     }`,
-    filledBlack:
-      'w-[27rem] h-[4.2rem] rounded-[0.625rem] text-white bg-black font-bold text-1.25',
+    filledBlack: 'text-white bg-black font-bold text-1.25',
     outlinedGray:
-      'w-[27rem] h-[4.2rem] rounded-[0.625rem] border-solid border-[0.1rem] border-gray-14 text-gray-14 font-bold text-1.25 bg-white',
+      'border-solid border-[0.1rem] border-gray-14 text-gray-14 font-bold text-1.25 bg-white',
     outlinedBlack:
-      'w-[27rem] h-[4.2rem] rounded-[0.625rem] border-solid border-[0.1rem] border-black text-black font-bold text-1.25 bg-white',
+      ' border-solid border-[0.1rem] border-black text-black font-bold text-1.25 bg-white',
   };
   const sizes = {
-    xs: 'w-[7rem] px-3 py-2 text-sm',
+    xs: ' px-3 py-2 text-sm',
     sm: 'w-[7.5rem] px-3 py-2 text-sm',
     md: 'px-4 py-2 h-[3rem]',
     lg: 'w-[15rem] px-6 h-[3rem] text-1',
