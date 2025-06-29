@@ -6,6 +6,8 @@ import Image from 'next/image';
 import { Button } from '@/src/components/button/button';
 import { CartItem } from '@/src/contexts/cartContext';
 import { useState, useMemo } from 'react';
+import OrderModificationModal from '@/src/components/OrderModificationModal';
+import ConsultationModal from '@/src/components/ConsultationModal';
 
 const fadeInUp = {
   initial: { y: 60, opacity: 0 },
@@ -78,12 +80,16 @@ function CartItemRow({
   isSelected,
   onSelect,
   isConsulting = false,
+  onOrderModify,
+  onConsultation,
 }: {
   item: CartItem;
   user: { name: string; phone: string };
   isSelected?: boolean;
   onSelect?: (selected: boolean) => void;
   isConsulting?: boolean;
+  onOrderModify?: () => void;
+  onConsultation?: () => void;
 }) {
   if (isConsulting) {
     return (
@@ -116,7 +122,10 @@ function CartItemRow({
           <div>담당자명: {user?.name}</div>
           <div>전화번호: {user?.phone}</div>
           <div>회사이름: -</div>
-          <button className="mt-2 text-1 rounded-[0.25rem] w-[5rem] border-1 border-solid border-gray-1 px-2 py-1 text-gray-2">
+          <button
+            className="mt-2 text-1 rounded-[0.25rem] w-[5rem] border-1 border-solid border-gray-1 px-2 py-1 text-gray-2"
+            onClick={onOrderModify}
+          >
             주문수정
           </button>
         </div>
@@ -125,7 +134,10 @@ function CartItemRow({
             해당상품은 상담 진행 후 결제가 완료됩니다.
             <br /> 상담문의가 어려우실 경우 고객센터에 문의 부탁드립니다.
           </div>
-          <Button className="w-[15rem] h-[2rem] px-12 py-4 text-lg font-bold rounded bg-black text-white text-1">
+          <Button
+            className="w-[15rem] h-[2rem] px-12 py-4 text-lg font-bold rounded bg-black text-white text-1"
+            onClick={onConsultation}
+          >
             상담문의
           </Button>
         </div>
@@ -163,7 +175,10 @@ function CartItemRow({
         <div>담당자명: {user?.name}</div>
         <div>전화번호: {user?.phone}</div>
         <div>회사이름: -</div>
-        <button className="mt-2 text-1 rounded-[0.25rem] w-[5rem] border-1 border-solid border-gray-1 px-2 py-1 text-gray-2">
+        <button
+          className="mt-2 text-1 rounded-[0.25rem] w-[5rem] border-1 border-solid border-gray-1 px-2 py-1 text-gray-2"
+          onClick={onOrderModify}
+        >
           주문수정
         </button>
       </div>
@@ -188,6 +203,9 @@ export default function Cart() {
   const [activeTab, setActiveTab] = useState<'payment' | 'consulting'>(
     'payment'
   );
+  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+  const [isConsultationModalOpen, setIsConsultationModalOpen] = useState(false);
+  const [selectedProductName, setSelectedProductName] = useState('');
 
   const ledItems = cart.filter(
     (item) => item.type === 'led-display' && item.price !== 0
@@ -246,6 +264,15 @@ export default function Cart() {
     );
   };
 
+  const handleOrderModify = () => {
+    setIsOrderModalOpen(true);
+  };
+
+  const handleConsultation = (productName: string) => {
+    setSelectedProductName(productName);
+    setIsConsultationModalOpen(true);
+  };
+
   return (
     <main className="pt-[3rem] bg-gray-100 min-h-screen lg:px-[1rem] pb-[12rem]">
       <div className="max-w-5xl mx-auto py-10">
@@ -291,6 +318,7 @@ export default function Cart() {
                       onSelect={(selected) =>
                         handleItemSelect(String(item.id), selected)
                       }
+                      onOrderModify={handleOrderModify}
                     />
                   ))}
                 </CartGroupCard>
@@ -313,6 +341,7 @@ export default function Cart() {
                       onSelect={(selected) =>
                         handleItemSelect(String(item.id), selected)
                       }
+                      onOrderModify={handleOrderModify}
                     />
                   ))}
                 </CartGroupCard>
@@ -350,6 +379,8 @@ export default function Cart() {
                       handleItemSelect(String(item.id), selected)
                     }
                     isConsulting={true}
+                    onOrderModify={handleOrderModify}
+                    onConsultation={() => handleConsultation(item.name)}
                   />
                 ))
               ) : (
@@ -372,6 +403,18 @@ export default function Cart() {
           총 {cartSummary.quantity}건 결제하기
         </Button>
       </div>
+
+      {/* 모달들 */}
+      <OrderModificationModal
+        isOpen={isOrderModalOpen}
+        onClose={() => setIsOrderModalOpen(false)}
+      />
+
+      <ConsultationModal
+        isOpen={isConsultationModalOpen}
+        onClose={() => setIsConsultationModalOpen(false)}
+        productName={selectedProductName}
+      />
     </main>
   );
 }
