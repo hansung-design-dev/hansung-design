@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Nav from '../../../components/layouts/nav';
 // import CategoryFilter from '@/src/components/ui/categoryFilter';
 import OrderHeaderSection from '@/src/components/orderHeaderSection';
@@ -138,18 +138,7 @@ export default function OrdersPage() {
     { name: '로그아웃', href: '/' },
   ];
 
-  useEffect(() => {
-    if (authLoading) return;
-
-    if (!user) {
-      router.push('/signin');
-      return;
-    }
-
-    fetchOrders();
-  }, [user, authLoading, currentPage]);
-
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/orders?page=${currentPage}&limit=10`);
@@ -160,13 +149,25 @@ export default function OrdersPage() {
         setStatusSummary(data.statusSummary);
       } else {
         setError(data.error || '주문 내역을 불러오는데 실패했습니다.');
+        console.log(error);
       }
     } catch {
       setError('주문 내역을 불러오는데 실패했습니다.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, error]);
+
+  useEffect(() => {
+    if (authLoading) return;
+
+    if (!user) {
+      router.push('/signin');
+      return;
+    }
+
+    fetchOrders();
+  }, [user, authLoading, fetchOrders, router]);
 
   const handleOrderClick = async (orderNumber: string) => {
     console.log('주문 클릭됨:', orderNumber);

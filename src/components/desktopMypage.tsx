@@ -1,6 +1,6 @@
-import CategoryFilter from '@/src/components/ui/categoryFilter';
-import DateLocationFilter from '@/src/components/ui/datelocationfilter';
+import React from 'react';
 import MypageContainer from './mypageContainer';
+import DateLocationFilter from '@/src/components/ui/datelocationfilter';
 
 interface Props {
   tabs: { name: string; href: string }[];
