@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import ArrowLeft from '@/src/icons/arrow-left.svg';
 import ArrowRight from '@/src/icons/arrow-right.svg';
 import { useRouter } from 'next/navigation';
+import { Button } from './button/button';
 
 interface ListItem {
   id: number;
@@ -10,6 +11,7 @@ interface ListItem {
   location?: string;
   status: string;
   quantity?: number;
+  orderId?: string;
 }
 
 const statusColorMap: Record<string, string> = {
@@ -28,7 +30,6 @@ interface ItemTableProps {
   items: ListItem[];
   showHeader?: boolean;
   showCheckbox?: boolean;
-  renderAction?: (item: ListItem) => React.ReactNode;
   onItemSelect?: (id: number, checked: boolean) => void;
   selectedIds?: number[];
   enableRowClick?: boolean;
@@ -40,7 +41,6 @@ const OrderItemList: React.FC<ItemTableProps> = ({
   items,
   showHeader = true,
   showCheckbox = false,
-  renderAction,
   onItemSelect,
   selectedIds = [],
   enableRowClick = true,
@@ -53,27 +53,35 @@ const OrderItemList: React.FC<ItemTableProps> = ({
     page * ITEMS_PER_PAGE
   );
 
-  const handleItemClick = (itemId: number) => {
+  const handleItemClick = (itemId: number, orderId?: string) => {
     if (onItemSelect) {
       const isSelected = selectedIds.includes(itemId);
       onItemSelect(itemId, !isSelected);
     } else {
-      router.push(`/mypage/orders/${itemId}`);
+      if (orderId) {
+        router.push(`/mypage/orders/${orderId}`);
+      } else {
+        router.push(`/mypage/orders/${itemId}`);
+      }
     }
   };
 
-  const handleRowClick = (e: React.MouseEvent, itemId: number) => {
+  const handleRowClick = (
+    e: React.MouseEvent,
+    itemId: number,
+    orderId?: string
+  ) => {
     if ((e.target as HTMLElement).tagName === 'INPUT') {
       return;
     }
-    handleItemClick(itemId);
+    handleItemClick(itemId, orderId);
   };
 
   return (
     <>
       {/* ✅ 데스크탑/tablet 이상: table로 표시 */}
       <div className="overflow-x-auto hidden lg:block">
-        <table className="w-full  border-collapse border-t border-gray-200 text-0.875">
+        <table className="w-full border-collapse border-t border-gray-200 text-1.25 font-500">
           {showHeader && (
             <thead>
               <tr className="border-b border-gray-200 h-[3rem] text-gray-500 font-medium">
@@ -81,8 +89,7 @@ const OrderItemList: React.FC<ItemTableProps> = ({
                 <th className="text-left pl-10">게시대 명</th>
                 <th className="text-center">행정동</th>
                 <th className="text-center">마감여부</th>
-                <th className="text-center">남은수량</th>
-                {renderAction && <th className="text-center">작업</th>}
+                <th className="text-center">&nbsp;</th>
               </tr>
             </thead>
           )}
@@ -93,7 +100,7 @@ const OrderItemList: React.FC<ItemTableProps> = ({
                 className={`border-b border-gray-200 h-[3.5rem] hover:bg-gray-50 ${
                   enableRowClick ? 'cursor-pointer' : ''
                 }`}
-                onClick={(e) => handleRowClick(e, item.id)}
+                onClick={(e) => handleRowClick(e, item.id, item.orderId)}
               >
                 {showCheckbox && (
                   <td
@@ -109,7 +116,7 @@ const OrderItemList: React.FC<ItemTableProps> = ({
                     />
                   </td>
                 )}
-                <td className="px-4 text-left pl-10">
+                <td className="px-4 text-left pl-10 text-1.25 font-500">
                   <span className="font-medium text-black">
                     {item.title}
                     {item.subtitle && (
@@ -119,25 +126,35 @@ const OrderItemList: React.FC<ItemTableProps> = ({
                     )}
                   </span>
                 </td>
-                <td className="text-center">{item.location}</td>
+                <td className="text-center text-1.25 font-500">
+                  {item.location}
+                </td>
                 <td
-                  className={`text-center font-semibold ${getStatusClass(
+                  className={`text-center font-semibold text-1.25 font-500 ${getStatusClass(
                     item.status
                   )}`}
                 >
                   {item.status}
                 </td>
-                <td className="text-center">{item.quantity ?? '-'}</td>
-                {renderAction && (
-                  <td className="text-center">{renderAction(item)}</td>
-                )}
+                <td className="text-center">
+                  <Button
+                    size="xs"
+                    variant="outlinedGray"
+                    className={` px-4 py-1 rounded-full text-gray-700 font-200`}
+                    disabled={
+                      item.status === '마감' || item.status === '송출중'
+                    }
+                  >
+                    신청 취소
+                  </Button>
+                </td>
               </tr>
             ))}
             {/* 빈 row로 높이 맞추기 */}
             {Array.from({ length: ITEMS_PER_PAGE - paginatedItems.length }).map(
               (_, i) => (
                 <tr key={`empty-${i}`} className="h-[3.5rem]">
-                  <td colSpan={showCheckbox ? 6 : 5} />
+                  <td colSpan={showCheckbox ? 5 : 4} />
                 </tr>
               )
             )}
@@ -155,44 +172,37 @@ const OrderItemList: React.FC<ItemTableProps> = ({
             }`}
             onClick={() => {
               if (enableRowClick && !showCheckbox) {
-                handleItemClick(item.id);
+                handleItemClick(item.id, item.orderId);
               }
             }}
           >
-            {showCheckbox && (
-              <div
-                className="flex items-center gap-2"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedIds.includes(item.id)}
-                  onChange={(e) => onItemSelect?.(item.id, e.target.checked)}
-                />
-                <div className="font-medium text-black">{item.title}</div>
-              </div>
-            )}
-            {!showCheckbox && (
-              <div className="font-medium text-black">{item.title}</div>
-            )}
-
+            <div className="font-medium text-black text-1.25 font-500">
+              {item.title}
+            </div>
             {item.subtitle && (
               <div className="text-gray-500">{item.subtitle}</div>
             )}
-            <div className="text-0.875">행정동: {item.location}</div>
-            <div className="text-0.875">
+            <div className="text-1.25 font-500">행정동: {item.location}</div>
+            <div className="text-1.25 font-500">
               상태:&nbsp;
               <span
-                className={`text-0.875 ${getStatusClass(
+                className={`text-1.25 font-500 ${getStatusClass(
                   item.status
                 )} font-medium`}
               >
                 {item.status}
               </span>
             </div>
-
-            <div className="text-0.875">남은 수량: {item.quantity ?? '-'}</div>
-            {renderAction && <div>{renderAction(item)}</div>}
+            <button
+              className={`border px-4 py-1 rounded mt-2 ${
+                item.status === '마감' || item.status === '송출중'
+                  ? 'text-gray-400 border-gray-200 bg-gray-100 cursor-not-allowed'
+                  : 'text-black border-black hover:bg-gray-100'
+              }`}
+              disabled={item.status === '마감' || item.status === '송출중'}
+            >
+              신청 취소
+            </button>
           </div>
         ))}
       </div>

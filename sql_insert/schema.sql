@@ -28,10 +28,10 @@ CREATE TYPE panel_slot_status_enum AS ENUM ('available', 'maintenance', 'unavail
 CREATE TYPE order_status_enum AS ENUM ('draft_uploaded', 'submitted', 'awaiting_payment', 'paid', 'verified', 'completed');
 CREATE TYPE notice_priority_enum AS ENUM ('important', 'normal');
 CREATE TYPE guideline_category_enum AS ENUM (
-  'default',        -- 기본 가이드라인 = 상업용 (모든 구에 적용)
+  'default',        -- 기본 가이드라인 (모든 구에 적용)
   'admin',          -- 행정용 (서대문구 전용)
-  'top_fixed',      -- 상단광고 (마포구 전용)
-  'led'
+  'top_fixed',    -- 상단광고 (마포구 전용)
+  'led' -- led 가이드라인
 );
 
 CREATE TYPE panel_status_enum AS ENUM ('active', 'maintenance', 'inactive');
@@ -392,3 +392,46 @@ CREATE TABLE region_gu_guideline (
   created_at timestamp DEFAULT now(),
   updated_at timestamp DEFAULT now()
 );
+
+-- 1:1 상담문의 상태 enum
+CREATE TYPE inquiry_status_enum AS ENUM (
+  'pending',      -- 문의 접수 (답변 대기)
+  'answered',     -- 답변 완료
+  'closed'        -- 문의 종료
+);
+
+-- 1:1 상담문의 테이블
+CREATE TABLE customer_inquiries (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_auth_id uuid NOT NULL,                    -- 문의자 (auth_users.id)
+  title text NOT NULL,                           -- 문의 제목
+  content text NOT NULL,                         -- 문의 내용
+  product_name text,                             -- 관련 상품명 (선택사항)
+  inquiry_status inquiry_status_enum DEFAULT 'pending', -- 문의 상태
+  answer_content text,                           -- 답변 내용
+  answer_admin_id uuid,                          -- 답변자 ID (관리자)
+  created_at timestamptz DEFAULT now(),          -- 문의 작성 시간
+  updated_at timestamptz DEFAULT now(),          -- 문의 수정 시간
+  answered_at timestamptz,                       -- 답변 작성 시간
+  closed_at timestamptz                          -- 문의 종료 시간
+);
+
+-- 인덱스 추가 (성능 최적화)
+CREATE INDEX idx_customer_inquiries_user_auth_id ON customer_inquiries(user_auth_id);
+CREATE INDEX idx_customer_inquiries_status ON customer_inquiries(inquiry_status);
+CREATE INDEX idx_customer_inquiries_created_at ON customer_inquiries(created_at);
+
+-- updated_at 자동 업데이트를 위한 트리거 함수
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- customer_inquiries 테이블에 updated_at 트리거 적용
+CREATE TRIGGER update_customer_inquiries_updated_at 
+    BEFORE UPDATE ON customer_inquiries 
+    FOR EACH ROW 
+    EXECUTE FUNCTION update_updated_at_column();

@@ -2,14 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import Nav from '../../../components/layouts/nav';
-import CategoryFilter from '@/src/components/ui/categoryFilter';
-import DateLocationFilter from '@/src/components/ui/datelocationfilter';
+// import CategoryFilter from '@/src/components/ui/categoryFilter';
+import OrderHeaderSection from '@/src/components/orderHeaderSection';
 import OrderItemList from '@/src/components/orderItemList';
-import Image from 'next/image';
-import Link from 'next/link';
 import MypageContainer from '@/src/components/mypageContainer';
 import { useAuth } from '@/src/contexts/authContext';
 import { useRouter } from 'next/navigation';
+import OrderDetailExpanded from '@/src/components/orderDetailExpanded';
 
 interface OrderItem {
   id: string;
@@ -17,6 +16,9 @@ interface OrderItem {
     address: string;
     nickname?: string;
     panel_status: string;
+    max_banner?: number;
+    first_half_closure_quantity?: number;
+    second_half_closure_quantity?: number;
   };
   slot_info: {
     slot_name: string;
@@ -38,6 +40,7 @@ interface Order {
   status: string;
   payment_status: string;
   order_date: string;
+  year_month?: string;
   order_items: OrderItem[];
 }
 
@@ -55,14 +58,55 @@ interface OrdersResponse {
     pending: number;
     confirmed: number;
     completed: number;
-    cancelled: number;
   };
   error?: string;
 }
 
+interface OrderDetail {
+  id: string;
+  order_number: string;
+  title: string;
+  location: string;
+  status: string;
+  category: string;
+  customerName: string;
+  phone: string;
+  companyName: string;
+  productName: string;
+  price: number;
+  vat: number;
+  designFee: number;
+  roadUsageFee: number;
+  totalAmount: number;
+  paymentMethod: string;
+  depositorName: string;
+  orderDate: string;
+  canCancel: boolean;
+  daysSinceOrder: number;
+  panel_slot_snapshot?: {
+    id: string | null;
+    notes: string | null;
+    max_width: number | null;
+    slot_name: string | null;
+    tax_price: number | null;
+    created_at: string | null;
+    is_premium: boolean | null;
+    max_height: number | null;
+    price_unit: string | null;
+    updated_at: string | null;
+    banner_type: string | null;
+    slot_number: number | null;
+    total_price: number | null;
+    panel_info_id: string | null;
+    road_usage_fee: number | null;
+    advertising_fee: number | null;
+    panel_slot_status: string | null;
+  };
+  panel_slot_usage_id?: string;
+}
+
 export default function OrdersPage() {
   const [activeTab, setActiveTab] = useState('주문내역');
-  const [selectedCategory, setSelectedCategory] = useState('all');
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -72,14 +116,22 @@ export default function OrdersPage() {
     pending: 0,
     confirmed: 0,
     completed: 0,
-    cancelled: 0,
   });
+  // 날짜/위치 필터 state
+  const [startDate, setStartDate] = useState('2025.02.06');
+  const [endDate, setEndDate] = useState('2025.03.06');
+  const [searchLocation, setSearchLocation] = useState('방이동');
+
+  // 상세 정보 관련 state
+  const [selectedOrderDetail, setSelectedOrderDetail] =
+    useState<OrderDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
 
   const tabs = [
-    { name: '마이페이지', href: '/mypage' },
+    // { name: '마이페이지', href: '/mypage' },
     { name: '주문내역', href: '/mypage/orders' },
     { name: '1:1상담', href: '/mypage/customer-service' },
     { name: '간편정보관리', href: '/mypage/info' },
@@ -116,6 +168,32 @@ export default function OrdersPage() {
     }
   };
 
+  const handleOrderClick = async (orderNumber: string) => {
+    console.log('주문 클릭됨:', orderNumber);
+    try {
+      setDetailLoading(true);
+      const response = await fetch(`/api/orders/${orderNumber}`);
+      const data = await response.json();
+
+      if (data.success) {
+        console.log('주문 상세 정보 로드 성공:', data.orderDetail);
+        setSelectedOrderDetail(data.orderDetail);
+        console.log('selectedOrderDetail 상태 설정됨');
+      } else {
+        console.error('주문 상세 정보를 불러오는데 실패했습니다:', data.error);
+      }
+    } catch (error) {
+      console.error('주문 상세 정보를 불러오는데 실패했습니다:', error);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const handleCloseDetail = () => {
+    console.log('상세 정보 닫기');
+    setSelectedOrderDetail(null);
+  };
+
   // 주문 데이터를 OrderItemList 컴포넌트 형식으로 변환
   const transformOrdersForDisplay = () => {
     return orders.flatMap((order) =>
@@ -130,6 +208,7 @@ export default function OrdersPage() {
           item.price_display || order.total_amount.toLocaleString() + '원',
         startDate: item.start_date,
         endDate: item.end_date,
+        orderId: order.order_number, // 주문번호를 orderId로 설정
       }))
     );
   };
@@ -137,9 +216,9 @@ export default function OrdersPage() {
   const getStatusDisplay = (status: string) => {
     switch (status) {
       case 'pending':
-        return '진행중';
+        return '결제대기';
       case 'confirmed':
-        return '확정';
+        return '결제완료';
       case 'completed':
         return '완료';
       case 'cancelled':
@@ -149,13 +228,8 @@ export default function OrdersPage() {
     }
   };
 
-  // 필터링된 주문 목록
-  const filteredOrders =
-    selectedCategory === 'all'
-      ? transformOrdersForDisplay()
-      : transformOrdersForDisplay().filter(
-          (order) => order.category === selectedCategory
-        );
+  // 필터링된 주문 목록 (카테고리 필터 제거)
+  const filteredOrders = transformOrdersForDisplay();
 
   if (authLoading) {
     return <div>로딩 중...</div>;
@@ -173,85 +247,54 @@ export default function OrdersPage() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
       >
-        <div className="sm:flex sm:flex-col sm:gap-2 sm:px-0">
-          <Link href="/mypage" className="md:hidden lg:hidden sm:inline">
-            <Image
-              src="/svg/arrow-left.svg"
-              alt="orders"
-              width={20}
-              height={20}
-              className="w-[1.5rem] h-[1.5rem]"
-            />
-          </Link>
-          <h2 className="lg:text-2.25 md:text-1.75 font-500 mb-3 sm:text-2">
-            주문내역
-          </h2>
-
-          <div className="lg:text-sm md:text-0.75 text-gray-500 mb-6 ">
-            *송출이 시작된 주문은 취소/파일 교체가 불가하며,{' '}
-            <br className="lg:hidden md:hidden sm:block" /> 신청후 3일 이후
-            상태에서는 변경이 불가합니다.
-          </div>
-
-          {/* 주문 요약 정보 */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white p-4 rounded-lg text-center">
-              <div className="text-lg font-bold">{statusSummary.total}</div>
-              <div className="text-sm text-gray-600">전체</div>
-            </div>
-            <div className="bg-white p-4 rounded-lg text-center">
-              <div className="text-lg font-bold text-blue-600">
-                {statusSummary.pending}
-              </div>
-              <div className="text-sm text-gray-600">진행중</div>
-            </div>
-            <div className="bg-white p-4 rounded-lg text-center">
-              <div className="text-lg font-bold text-green-600">
-                {statusSummary.completed}
-              </div>
-              <div className="text-sm text-gray-600">완료</div>
-            </div>
-            <div className="bg-white p-4 rounded-lg text-center">
-              <div className="text-lg font-bold text-red-600">
-                {statusSummary.cancelled}
-              </div>
-              <div className="text-sm text-gray-600">취소</div>
-            </div>
-          </div>
-        </div>
-
-        {/* 에러 메시지 */}
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-            {error}
-          </div>
-        )}
-
-        {/* Filter Row */}
-        <div className="flex flex-col gap-2 items-center mb-6">
-          <DateLocationFilter
-            startDate="2025.02.06"
-            endDate="2025.03.06"
-            setStartDate={() => {}}
-            setEndDate={() => {}}
-            searchLocation="방이동"
-            setSearchLocation={() => {}}
-            showStartCalendar={false}
-            setShowStartCalendar={() => {}}
-            showEndCalendar={false}
-            setShowEndCalendar={() => {}}
-          />
-        </div>
-        <CategoryFilter
-          selectedCategory={selectedCategory}
-          onCategoryChange={setSelectedCategory}
+        <OrderHeaderSection
+          statusSummary={statusSummary}
+          startDate={startDate}
+          endDate={endDate}
+          setStartDate={setStartDate}
+          setEndDate={setEndDate}
+          searchLocation={searchLocation}
+          setSearchLocation={setSearchLocation}
         />
+        {/* 에러 메시지 */}
 
         {loading ? (
           <div className="text-center py-8">주문 내역을 불러오는 중...</div>
+        ) : filteredOrders.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            주문내역이 없습니다.
+          </div>
         ) : (
           <>
-            <OrderItemList items={filteredOrders} />
+            <OrderItemList
+              items={filteredOrders}
+              onItemSelect={(id) => {
+                console.log('onItemSelect 호출됨, id:', id);
+                const item = filteredOrders.find((item) => item.id === id);
+                console.log('찾은 아이템:', item);
+                if (item && item.orderId) {
+                  console.log('주문번호로 API 호출:', item.orderId);
+                  handleOrderClick(item.orderId);
+                } else {
+                  console.error('아이템을 찾을 수 없거나 orderId가 없음');
+                }
+              }}
+            />
+
+            {/* 상세 정보 표시 */}
+            {detailLoading && (
+              <div className="text-center py-8">
+                주문 상세 정보를 불러오는 중...
+              </div>
+            )}
+
+            <div>
+              <p>상세 정보가 로드되었습니다!</p>
+              <OrderDetailExpanded
+                orderDetail={selectedOrderDetail || ({} as OrderDetail)}
+                onClose={handleCloseDetail}
+              />
+            </div>
 
             {/* 페이지네이션 */}
             <div className="flex justify-center items-center mt-6 gap-2">

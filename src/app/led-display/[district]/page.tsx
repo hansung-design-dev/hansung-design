@@ -172,6 +172,16 @@ export default function LEDDisplayPage() {
         .toString()
         .padStart(2, '0')}-${item.id}`; // UUID 추가로 고유성 보장
 
+      const price =
+        item.led_slot_info && item.led_slot_info.length > 0
+          ? `${item.led_slot_info[0].total_price?.toLocaleString()}원`
+          : '문의';
+
+      const totalPrice =
+        item.led_slot_info && item.led_slot_info.length > 0
+          ? item.led_slot_info[0].total_price
+          : 0;
+
       return {
         id: combinedId, // "gangdong-01-uuid123", "gwanak-01-uuid456" 등
         type: 'led',
@@ -181,7 +191,7 @@ export default function LEDDisplayPage() {
         nickname: item.nickname,
         neighborhood: item.region_dong.name,
         period: '상시',
-        price: firstSlot?.total_price?.toString() || '0',
+        price: price,
         size: `${item.led_panel_details.panel_width}x${item.led_panel_details.panel_height}`,
         faces: item.led_panel_details.max_banners,
         lat: 37.5665, // 기본 좌표 (실제 데이터가 있다면 사용)
@@ -195,13 +205,14 @@ export default function LEDDisplayPage() {
         max_banners: item.led_panel_details.max_banners,
         slot_width_px: firstSlot?.slot_width_px || 0,
         slot_height_px: firstSlot?.slot_height_px || 0,
-        total_price: firstSlot?.total_price || 0,
+        total_price: totalPrice,
         tax_price: firstSlot?.tax_price || 0,
         advertising_fee: firstSlot?.advertising_fee || 0,
         road_usage_fee: firstSlot?.road_usage_fee || 0,
         administrative_fee: firstSlot?.administrative_fee || 0,
         price_unit: firstSlot?.price_unit || '',
         panel_slot_status: firstSlot?.panel_slot_status || '',
+        panel_info_id: item.id, // 원본 panel_info UUID
       };
     });
   }

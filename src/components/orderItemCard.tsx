@@ -1,25 +1,26 @@
 import { Button } from '@/src/components/button/button';
 
 interface OrderDetail {
-  id: number;
+  id: string;
+  order_number: string;
   title: string;
   location: string;
   status: string;
   category: string;
-  orderNumber: string;
-  fileName: string;
   customerName: string;
   phone: string;
+  companyName: string;
   productName: string;
-  fileSubmission: string;
-  memo: string;
   price: number;
   vat: number;
   designFee: number;
-  additionalFee: number;
+  roadUsageFee: number;
   totalAmount: number;
   paymentMethod: string;
   depositorName: string;
+  orderDate: string;
+  canCancel: boolean;
+  daysSinceOrder: number;
 }
 
 interface OrderItemCardProps {
@@ -36,7 +37,14 @@ export default function OrderItemCard({ orderDetail }: OrderItemCardProps) {
             <span className="">{orderDetail.location}</span>
             <span className="">{orderDetail.status}</span>
           </div>
-          <Button size="sm" variant="outlineGray" className="text-black">
+          <Button
+            size="sm"
+            variant="outlineGray"
+            className={`text-black ${
+              !orderDetail.canCancel ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+            disabled={!orderDetail.canCancel}
+          >
             신청 취소
           </Button>
         </div>
@@ -46,14 +54,14 @@ export default function OrderItemCard({ orderDetail }: OrderItemCardProps) {
         <div className="px-[1.9rem] border border-solid border-gray-3 bg-white flex flex-col gap-4 items-center justify-center w-full sm:px-4">
           <div className="w-full h-[6.125rem] bg-black text-white py-2 flex items-center text-1.5 font-700 gap-6 pl-[4rem] sm:h-[4rem] sm:text-1.25 sm:gap-4 sm:pl-4">
             <div>주문번호</div>
-            <div>{orderDetail.orderNumber}</div>
+            <div>{orderDetail.order_number}</div>
           </div>
           <div className="w-full">
             <div className="flex flex-col gap-4 items-start justify-center">
               <div className="flex flex-col text-start gap-2 pt-4 sm:pt-2">
                 <div className="text-1.25 font-500 sm:text-1">파일이름</div>
                 <div className="text-1.75 font-700 mb-4 sm:text-1.5">
-                  {orderDetail.fileName}
+                  {orderDetail.companyName || '기본정보'}
                 </div>
               </div>
 
@@ -102,16 +110,6 @@ export default function OrderItemCard({ orderDetail }: OrderItemCardProps) {
                   {orderDetail.title}
                 </div>
 
-                <div className="text-gray-600 mb-2">파일</div>
-                <div className="font-700 text-1.25 sm:text-1">
-                  {orderDetail.fileSubmission}
-                </div>
-
-                <div className="text-gray-600">메모</div>
-                <div className="font-700 text-1.25 sm:text-1">
-                  {orderDetail.memo}
-                </div>
-
                 <div className="col-span-2 border-t border-gray-3 my-2 sm:col-span-2">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -126,22 +124,22 @@ export default function OrderItemCard({ orderDetail }: OrderItemCardProps) {
                 </div>
                 <div className="text-gray-600 mb-2">상품가</div>
                 <div className="text-1.25 sm:text-1">
-                  {orderDetail.price.toLocaleString()}
+                  {orderDetail.price.toLocaleString()}원
                 </div>
 
                 <div className="text-gray-600 mb-2">부가세</div>
                 <div className="text-1.25 sm:text-1">
-                  {orderDetail.vat.toLocaleString()}
+                  {orderDetail.vat.toLocaleString()}원
                 </div>
 
                 <div className="text-gray-600 mb-2">디자인비</div>
                 <div className="text-1.25 sm:text-1">
-                  {orderDetail.designFee.toLocaleString()}
+                  {orderDetail.designFee.toLocaleString()}원
                 </div>
 
-                <div className="text-gray-600 mb-2">추가금</div>
+                <div className="text-gray-600 mb-2">도로사용료</div>
                 <div className="text-1.25 sm:text-1">
-                  {orderDetail.additionalFee.toLocaleString()}
+                  {orderDetail.roadUsageFee.toLocaleString()}원
                 </div>
 
                 <div className="font-bold text-gray-600">총액</div>
@@ -174,7 +172,12 @@ export default function OrderItemCard({ orderDetail }: OrderItemCardProps) {
                 <Button
                   variant="outlineGray"
                   size="xs"
-                  className="text-black sm:text-0.75"
+                  className={`text-black sm:text-0.75 ${
+                    !orderDetail.canCancel
+                      ? 'opacity-50 cursor-not-allowed'
+                      : ''
+                  }`}
+                  disabled={!orderDetail.canCancel}
                 >
                   신청 취소
                 </Button>
@@ -200,11 +203,12 @@ export default function OrderItemCard({ orderDetail }: OrderItemCardProps) {
                   목록
                 </Button>
               </div>
-              <p className="text-1.125 text-[#2E2E2E] mt-4 sm:text-1 sm:px-4 sm:text-center">
-                * 신청취소는 신청후 3일이내만 취소 가능합니다.{' '}
-                <br className="lg:hidden md:hidden sm:block" /> 3일 이후 취소시
-                고객센터에 문의 부탁드립니다.
-              </p>
+              {!orderDetail.canCancel && (
+                <div className="text-sm text-gray-500 text-center mt-2">
+                  * 신청취소는 신청후 3일이내만 취소 가능합니다. 3일 이후 취소시
+                  고객센터에 문의 부탁드립니다.
+                </div>
+              )}
             </div>
           </div>
         </div>

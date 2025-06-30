@@ -84,7 +84,7 @@ export default function DesktopMyPage({
             showEndCalendar={false}
             setShowEndCalendar={() => {}}
           />
-          <CategoryFilter selectedCategory="전체" onCategoryChange={() => {}} />
+          {/* <CategoryFilter selectedCategory="전체" onCategoryChange={() => {}} /> */}
         </div>
       </div>
     </MypageContainer>

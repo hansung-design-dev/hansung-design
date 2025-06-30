@@ -121,18 +121,27 @@ export default function LEDDisplayDetailPage({
       newSelectedIds = [...selectedIds, id];
       const item = billboards.find((item) => item.id === id);
       if (item) {
-        const priceString = String(item.price || '').replace(/,|원/g, '');
-        const priceNumber = parseInt(priceString, 10);
-
-        const priceForCart = !isNaN(priceNumber) ? priceNumber : 0;
+        // total_price가 있으면 사용, 없으면 기존 로직 사용
+        const priceForCart =
+          item.total_price !== undefined
+            ? item.total_price
+            : (() => {
+                const priceString = String(item.price || '').replace(
+                  /,|원/g,
+                  ''
+                );
+                const priceNumber = parseInt(priceString, 10);
+                return !isNaN(priceNumber) ? priceNumber : 0;
+              })();
 
         const cartItem = {
-          id: item.id,
+          id: item.id, // 복합 ID (gwanak-03-uuid)
           type: 'led-display' as const,
           name: getCartItemName(item),
           district: item.district,
           price: priceForCart,
           panel_type: item.panel_type,
+          panel_info_id: item.panel_info_id, // 원본 UUID
         };
 
         console.log('🔍 Adding LED item to cart:', cartItem);
