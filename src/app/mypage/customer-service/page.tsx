@@ -54,7 +54,7 @@ export default function CustomerServicePage() {
   const router = useRouter();
 
   const tabs = [
-    { name: '마이페이지', href: '/mypage' },
+    // { name: '마이페이지', href: '/mypage' },
     { name: '주문내역', href: '/mypage/orders' },
     { name: '1:1상담', href: '/mypage/customer-service' },
     { name: '간편정보관리', href: '/mypage/info' },
@@ -143,7 +143,7 @@ export default function CustomerServicePage() {
             <div className="grid grid-cols-2 gap-4">
               {/* 주문내역 카드 */}
               <div
-                className="flex items-center rounded-lg p-4 md:p-6 cursor-pointer hover:bg-gray-50 transition-colors"
+                className="flex items-center rounded-lg p-4 md:p-6 cursor-pointer hover:bg-gray-50 transition-colors "
                 onClick={() => router.push('/mypage/orders')}
               >
                 <div className="w-12 h-12 md:w-10 md:h-10 bg-gray-200 rounded-full" />
@@ -201,10 +201,10 @@ export default function CustomerServicePage() {
                   {inquiries.map((item) => (
                     <React.Fragment key={item.id}>
                       <tr
-                        className="last:border-none border-black border-b-[2px] md:border-b-[3px] text-sm md:text-1.25 font-500 cursor-pointer"
+                        className="last:border-none border-black border-b-[2px] md:border-b-[3px] lg:text-1 sm:text-sm md:text-1 font-500 cursor-pointer text-0.875"
                         onClick={() => toggleItem(item.id)}
                       >
-                        <td className="px-4 md:px-[2rem] py-3 md:py-4 text-center border-b border-gray-200">
+                        <td className="px-4 md:px-[2rem] py-3 md:py-4 text-center border-b-solid border-b-1 border-gray-200">
                           {item.id.slice(0, 8)}
                         </td>
                         <td className="px-2 md:px-4 py-3 md:py-8 border-b border-gray-200">
@@ -257,7 +257,14 @@ export default function CustomerServicePage() {
                               />
                               <div>
                                 {item.answer ? (
-                                  <p>{item.answer}</p>
+                                  <div>
+                                    <p>{item.answer}</p>
+                                    {item.answered_at && (
+                                      <p className="text-sm text-gray-500 mt-2">
+                                        답변일: {formatDate(item.answered_at)}
+                                      </p>
+                                    )}
+                                  </div>
                                 ) : (
                                   <p className="text-gray-500">
                                     아직 답변이 없습니다.

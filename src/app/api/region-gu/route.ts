@@ -126,44 +126,34 @@ export async function GET(request: NextRequest) {
 
       // 상하반기별 마감수 정보 가져오기
       let halfPeriodInfo = null;
-      if (displayType === 'banner_display') {
-        const { data: slotData, error: slotError } = await supabase
-          .from('banner_slot_info')
+      if (displayType === 'banner_display' || displayType === 'led_display') {
+        const { data: panelData, error: panelError } = await supabase
+          .from('panel_info')
           .select(
             `
             first_half_closure_quantity,
             second_half_closure_quantity
           `
           )
-          .eq('panel_info_id', regionData.id)
-          .limit(1);
-
-        if (!slotError && slotData && slotData.length > 0) {
-          halfPeriodInfo = {
-            first_half_closure_quantity:
-              slotData[0].first_half_closure_quantity || 0,
-            second_half_closure_quantity:
-              slotData[0].second_half_closure_quantity || 0,
-          };
-        }
-      } else if (displayType === 'led_display') {
-        const { data: slotData, error: slotError } = await supabase
-          .from('led_slot_info')
-          .select(
-            `
-            first_half_closure_quantity,
-            second_half_closure_quantity
-          `
+          .eq('region_gu_id', regionData.id)
+          .eq(
+            'display_type_id',
+            (
+              await supabase
+                .from('display_types')
+                .select('id')
+                .eq('name', displayType)
+                .single()
+            ).data?.id
           )
-          .eq('panel_info_id', regionData.id)
           .limit(1);
 
-        if (!slotError && slotData && slotData.length > 0) {
+        if (!panelError && panelData && panelData.length > 0) {
           halfPeriodInfo = {
             first_half_closure_quantity:
-              slotData[0].first_half_closure_quantity || 0,
+              panelData[0].first_half_closure_quantity || 0,
             second_half_closure_quantity:
-              slotData[0].second_half_closure_quantity || 0,
+              panelData[0].second_half_closure_quantity || 0,
           };
         }
       }

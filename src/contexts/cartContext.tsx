@@ -9,6 +9,27 @@ export interface CartItem {
   price: number;
   halfPeriod?: 'first_half' | 'second_half';
   panel_type?: string;
+  panel_info_id?: string; // panel_info 테이블의 실제 ID
+  panel_slot_snapshot?: {
+    id: string | null;
+    notes: string | null;
+    max_width: number | null;
+    slot_name: string | null;
+    tax_price: number | null;
+    created_at: string | null;
+    is_premium: boolean | null;
+    max_height: number | null;
+    price_unit: string | null;
+    updated_at: string | null;
+    banner_type: string | null;
+    slot_number: number | null;
+    total_price: number | null;
+    panel_info_id: string | null;
+    road_usage_fee: number | null;
+    advertising_fee: number | null;
+    panel_slot_status: string | null;
+  };
+  panel_slot_usage_id?: string;
 }
 
 interface CartState {
@@ -48,11 +69,18 @@ const loadCartFromStorage = (): CartState => {
     const cartState: CartState = JSON.parse(stored);
     const now = Date.now();
 
-    // 15분이 지났으면 장바구니 리셋
+    // 상담신청 아이템(price가 0인 아이템)과 일반 아이템 분리
+    const consultingItems = cartState.items.filter((item) => item.price === 0);
+
+    // 15분이 지났으면 일반 아이템만 리셋, 상담신청 아이템은 유지
     if (now - cartState.lastUpdated > CART_EXPIRY_TIME) {
-      console.log('🔍 Cart expired, clearing...');
-      localStorage.removeItem(CART_STORAGE_KEY);
-      return { items: [], lastUpdated: now };
+      console.log('🔍 Regular cart items expired, clearing...');
+      const updatedState = {
+        items: consultingItems, // 상담신청 아이템만 유지
+        lastUpdated: now,
+      };
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(updatedState));
+      return updatedState;
     }
 
     console.log('🔍 Cart loaded from storage:', cartState);
@@ -90,6 +118,12 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         );
         return state;
       }
+      console.log('🔍 Adding item to cart:', {
+        id: action.item.id,
+        panel_info_id: action.item.panel_info_id,
+        name: action.item.name,
+        price: action.item.price,
+      });
       newState = {
         items: [...state.items, action.item],
         lastUpdated: Date.now(),
@@ -139,8 +173,15 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     const checkExpiry = () => {
       const now = Date.now();
       if (now - state.lastUpdated > CART_EXPIRY_TIME) {
-        console.log('🔍 Cart expired during session, clearing...');
-        dispatch({ type: 'CLEAR_CART' });
+        console.log(
+          '🔍 Regular cart items expired during session, clearing...'
+        );
+        // 상담신청 아이템만 유지하고 일반 아이템 제거
+        const consultingItems = state.items.filter((item) => item.price === 0);
+        dispatch({
+          type: 'LOAD_CART',
+          state: { items: consultingItems, lastUpdated: now },
+        });
       }
     };
 

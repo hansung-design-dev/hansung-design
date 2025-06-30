@@ -5,9 +5,11 @@ import { useAuth } from '@/src/contexts/authContext';
 import Image from 'next/image';
 import { Button } from '@/src/components/button/button';
 import { CartItem } from '@/src/contexts/cartContext';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import UserProfileModal from '@/src/components/modal/UserProfileModal';
 import ConsultationModal from '@/src/components/modal/ConsultationModal';
+// import CartItemAccordion from '@/src/components/cartItemAccordion';
+//import { useRouter } from 'next/navigation';
 
 const fadeInUp = {
   initial: { y: 60, opacity: 0 },
@@ -25,19 +27,19 @@ const dividerVertical = (
   </svg>
 );
 
-const dividerHorizontal = (
-  <div className="w-[95%] mx-auto">
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="100%"
-      height="4"
-      viewBox="0 0 1441 4"
-      fill="none"
-    >
-      <path d="M0 2H1441" stroke="black" strokeWidth="4" />
-    </svg>
-  </div>
-);
+// const dividerHorizontal = (
+//   <div className="w-[95%] mx-auto">
+//     <svg
+//       xmlns="http://www.w3.org/2000/svg"
+//       width="100%"
+//       height="4"
+//       viewBox="0 0 1441 4"
+//       fill="none"
+//     >
+//       <path d="M0 2H1441" stroke="black" strokeWidth="4" />
+//     </svg>
+//   </div>
+// );
 
 function CartGroupCard({
   title,
@@ -68,10 +70,28 @@ function CartGroupCard({
           </span>
         )}
       </div>
-      {dividerHorizontal}
+      <div className="w-[95%] mx-auto">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="100%"
+          height="4"
+          viewBox="0 0 1441 4"
+          fill="none"
+        >
+          <path d="M0 2H1441" stroke="black" strokeWidth="4" />
+        </svg>
+      </div>
       <div>{children}</div>
     </div>
   );
+}
+
+interface InquiryStatus {
+  [productId: string]: {
+    status: string;
+    answer_content?: string;
+    answered_at?: string;
+  };
 }
 
 function CartItemRow({
@@ -83,6 +103,7 @@ function CartItemRow({
   onOrderModify,
   onConsultation,
   onDelete,
+  inquiryStatus,
 }: {
   item: CartItem;
   user: { name: string; phone: string; company_name?: string };
@@ -92,26 +113,29 @@ function CartItemRow({
   onOrderModify?: () => void;
   onConsultation?: () => void;
   onDelete?: () => void;
+  inquiryStatus?: {
+    status: string;
+    answer_content?: string;
+    answered_at?: string;
+  };
 }) {
   if (isConsulting) {
+    const hasInquiry = inquiryStatus && inquiryStatus.status;
+    const isPending = hasInquiry && inquiryStatus.status === 'pending';
+    const isAnswered = hasInquiry && inquiryStatus.status === 'answered';
+
     return (
-      <div className=" flex items-center pl-[3rem] py-6 border-b border-gray-200 ">
-        <input
-          type="checkbox"
-          className="w-5 h-5 mr-6"
-          checked={isSelected}
-          onChange={(e) => onSelect?.(e.target.checked)}
-        />
-        <div className="flex items-center w-80">
+      <div className="flex items-center pl-[3rem] py-6 border-b border-gray-200">
+        <div className="flex items-center w-2/3 min-w-0">
           <Image
             src="/images/digital-signage-grid-example.jpeg"
             alt="썸네일"
             width={80}
             height={80}
-            className="w-24 h-24  object-cover mr-4"
+            className="w-24 h-24 object-cover mr-4 flex-shrink-0"
           />
-          <div className="flex flex-col gap-3">
-            <div className="text-1 ">{item.name}</div>
+          <div className="flex flex-col gap-3 min-w-0 flex-1">
+            <div className="text-1 truncate">{item.name}</div>
             <div className="text-1.25 font-semibold">
               {item.price === 0
                 ? '상담문의'
@@ -120,7 +144,7 @@ function CartItemRow({
           </div>
         </div>
         {dividerVertical}
-        <div className="pr-20 flex flex-col ml-2 text-1 font-500 gap-2 text-gray-2">
+        <div className="flex flex-col ml-2 text-1 font-500 gap-2 text-gray-2 w-1/3">
           <div>담당자명: {user?.name}</div>
           <div>전화번호: {user?.phone}</div>
           <div>회사이름: {user?.company_name || '-'}</div>
@@ -139,12 +163,33 @@ function CartItemRow({
             <br /> 상담문의가 어려우실 경우 고객센터에 문의 부탁드립니다.
           </div>
           <Button
-            className="w-[15rem] h-[2rem] px-12 py-4 text-lg font-bold rounded bg-black text-white text-1"
+            className={`w-[15rem] h-[2rem] px-12 py-4 text-lg font-bold rounded text-1 ${
+              isPending
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-black text-white hover:bg-gray-800'
+            }`}
             onClick={onConsultation}
+            disabled={!!isPending}
           >
-            상담문의
+            {isPending ? (
+              <>
+                상담문의
+                <br />
+                <span className="text-0.75">*답변대기중입니다.</span>
+              </>
+            ) : isAnswered ? (
+              '답변완료'
+            ) : (
+              '상담문의'
+            )}
           </Button>
         </div>
+        <button
+          className="absolute top-5 right-10 text-1.5 font-100 text-gray-2 hover:cursor-pointer"
+          onClick={onDelete}
+        >
+          x
+        </button>
       </div>
     );
   }
@@ -153,20 +198,20 @@ function CartItemRow({
     <div className="relative flex items-center pl-[3rem] py-6">
       <input
         type="checkbox"
-        className="w-5 h-5 mr-6"
+        className="w-5 h-5 mr-6 flex-shrink-0"
         checked={isSelected}
         onChange={(e) => onSelect?.(e.target.checked)}
       />
-      <div className="flex items-center w-80">
+      <div className="flex items-center w-2/3 min-w-0">
         <Image
           src="/images/digital-signage-grid-example.jpeg"
           alt="썸네일"
           width={80}
           height={80}
-          className="w-24 h-24  object-cover mr-4"
+          className="w-24 h-24 object-cover mr-4 flex-shrink-0"
         />
-        <div className="flex flex-col gap-3">
-          <div className="text-1 ">{item.name}</div>
+        <div className="flex flex-col gap-3 min-w-0 flex-1">
+          <div className="text-1 truncate">{item.name}</div>
           <div className="text-1.25 font-semibold">
             {item.price === 0
               ? '상담문의'
@@ -175,7 +220,7 @@ function CartItemRow({
         </div>
       </div>
       {dividerVertical}
-      <div className="flex-1 flex flex-col ml-2 text-1 font-500 gap-2 text-gray-2">
+      <div className="flex flex-col ml-2 text-1 font-500 gap-2 text-gray-2 w-1/3">
         <div>담당자명: {user?.name}</div>
         <div>전화번호: {user?.phone}</div>
         <div>회사이름: {user?.company_name || '-'}</div>
@@ -187,16 +232,6 @@ function CartItemRow({
         >
           주문수정
         </Button>
-      </div>
-      {dividerVertical}
-      <div className="w-35 text-left ml-5 flex flex-col gap-2">
-        <div className="text-1 font-500">디자인비용</div>
-        <div className="text-1.25 font-700">100,000원</div>
-      </div>
-      {dividerVertical}
-      <div className="w-35 text-left ml-5 flex flex-col gap-2">
-        <div className="text-1 font-500">게시대비용</div>
-        <div className="text-1.25 font-700">100,000원</div>
       </div>
       <button
         className="absolute top-5 right-10 text-1.5 font-100 text-gray-2 hover:cursor-pointer"
@@ -298,10 +333,12 @@ export default function Cart() {
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [isConsultationModalOpen, setIsConsultationModalOpen] = useState(false);
   const [selectedProductName, setSelectedProductName] = useState('');
+  const [selectedProductId, setSelectedProductId] = useState('');
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<CartItem | null>(null);
   const [isUpdateSuccessModalOpen, setIsUpdateSuccessModalOpen] =
     useState(false);
+  const [inquiryStatuses, setInquiryStatuses] = useState<InquiryStatus>({});
 
   // 선택된 프로필 정보 상태 추가 - 각 아이템별로 관리
   const [selectedProfiles, setSelectedProfiles] = useState<
@@ -319,6 +356,14 @@ export default function Cart() {
   const [currentModifyingItemId, setCurrentModifyingItemId] = useState<
     string | null
   >(null);
+
+  // alert를 모달로 교체하기 위한 상태들
+  const [isPaymentSuccessModalOpen, setIsPaymentSuccessModalOpen] =
+    useState(false);
+  const [isPaymentErrorModalOpen, setIsPaymentErrorModalOpen] = useState(false);
+  const [isValidationErrorModalOpen, setIsValidationErrorModalOpen] =
+    useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   console.log('user', user);
 
@@ -344,13 +389,54 @@ export default function Cart() {
     );
   };
 
-  const ledItems = cart.filter(
-    (item) => item.type === 'led-display' && item.price !== 0
-  );
   const bannerItems = cart.filter(
     (item) => item.type === 'banner-display' && item.price !== 0
   );
   const consultingItems = cart.filter((item) => item.price === 0);
+  const ledConsultingItems = cart.filter(
+    (item) => item.type === 'led-display' && item.price !== 0
+  );
+
+  // 상담신청 아이템들을 타입별로 분리
+  const bannerConsultingItems = consultingItems.filter(
+    (item) => item.type === 'banner-display'
+  );
+  const ledConsultingItemsOnly = consultingItems.filter(
+    (item) => item.type === 'led-display'
+  );
+
+  // 상담신청 아이템들의 문의 상태 확인
+  useEffect(() => {
+    if (user && consultingItems.length > 0) {
+      fetchInquiryStatuses();
+    }
+  }, [user, consultingItems.length]);
+
+  const fetchInquiryStatuses = async () => {
+    try {
+      const statuses: InquiryStatus = {};
+
+      for (const item of consultingItems) {
+        const response = await fetch(
+          `/api/customer-service?product_id=${item.id}`
+        );
+        const data = await response.json();
+
+        if (data.success && data.inquiries && data.inquiries.length > 0) {
+          const latestInquiry = data.inquiries[0];
+          statuses[item.id] = {
+            status: latestInquiry.status,
+            answer_content: latestInquiry.answer,
+            answered_at: latestInquiry.answered_at,
+          };
+        }
+      }
+
+      setInquiryStatuses(statuses);
+    } catch (error) {
+      console.error('문의 상태 확인 실패:', error);
+    }
+  };
 
   // 선택된 아이템들의 총계 계산
   const cartSummary = useMemo(() => {
@@ -364,13 +450,9 @@ export default function Cart() {
       return sum + (item.price || 0);
     }, 0);
 
-    // 추가금 (디자인비용 + 게시대비용) - 각 아이템당 200,000원으로 가정
-    const additionalCost = selectedCartItems.length * 200000;
-
     return {
       quantity: totalQuantity,
-      additionalCost,
-      totalAmount: totalPrice + additionalCost,
+      totalAmount: totalPrice,
     };
   }, [cart, selectedItems]);
 
@@ -437,9 +519,15 @@ export default function Cart() {
     setIsUpdateSuccessModalOpen(true);
   };
 
-  const handleConsultation = (productName: string) => {
+  const handleConsultation = (productName: string, productId: string) => {
     setSelectedProductName(productName);
+    setSelectedProductId(productId);
     setIsConsultationModalOpen(true);
+  };
+
+  const handleConsultationSuccess = () => {
+    // 문의 성공 후 상태 다시 확인
+    fetchInquiryStatuses();
   };
 
   const handleDelete = (item: CartItem) => {
@@ -452,6 +540,141 @@ export default function Cart() {
       dispatch({ type: 'REMOVE_ITEM', id: itemToDelete.id });
       setItemToDelete(null);
       setIsDeleteModalOpen(false);
+    }
+  };
+
+  // 결제 처리 함수
+  const handlePayment = async () => {
+    if (selectedItems.size === 0) {
+      setErrorMessage('선택된 상품이 없습니다.');
+      setIsValidationErrorModalOpen(true);
+      return;
+    }
+
+    if (!user) {
+      setErrorMessage('로그인이 필요합니다.');
+      setIsValidationErrorModalOpen(true);
+      return;
+    }
+
+    try {
+      // 선택된 아이템들 가져오기 (상담신청 제외)
+      const selectedCartItems = cart.filter(
+        (item) => selectedItems.has(String(item.id)) && item.price !== 0
+      );
+
+      if (selectedCartItems.length === 0) {
+        setErrorMessage('결제 가능한 상품이 없습니다.');
+        setIsValidationErrorModalOpen(true);
+        return;
+      }
+
+      // 주문 생성 API 호출
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: selectedCartItems.map((item) => {
+            // 복합 ID에서 원본 UUID 추출
+            let panelInfoId;
+
+            // UUID 패턴: 8-4-4-4-12 형식 (예: 298a1257-f68f-4f64-b918-bdd8db37fb79)
+            const uuidPattern =
+              /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+            if (item.panel_info_id) {
+              if (uuidPattern.test(item.panel_info_id)) {
+                // 이미 UUID인 경우
+                panelInfoId = item.panel_info_id;
+              } else if (item.panel_info_id.includes('-')) {
+                // 복합 ID인 경우: district-panel-uuid
+                const parts = item.panel_info_id.split('-');
+                if (parts.length >= 5) {
+                  // UUID 부분 추출 (3번째 요소부터 끝까지)
+                  const uuidPart = parts.slice(2).join('-');
+                  if (uuidPattern.test(uuidPart)) {
+                    panelInfoId = uuidPart;
+                  } else {
+                    console.error('❌ 잘못된 UUID 형식:', uuidPart);
+                    throw new Error('잘못된 패널 정보 ID 형식입니다.');
+                  }
+                } else {
+                  console.error('❌ 복합 ID 형식 오류:', item.panel_info_id);
+                  throw new Error('잘못된 패널 정보 ID 형식입니다.');
+                }
+              } else {
+                console.error('❌ 알 수 없는 ID 형식:', item.panel_info_id);
+                throw new Error('잘못된 패널 정보 ID 형식입니다.');
+              }
+            } else if (item.id) {
+              if (uuidPattern.test(item.id)) {
+                // 이미 UUID인 경우
+                panelInfoId = item.id;
+              } else if (item.id.includes('-')) {
+                // 복합 ID인 경우
+                const parts = item.id.split('-');
+                if (parts.length >= 5) {
+                  const uuidPart = parts.slice(2).join('-');
+                  if (uuidPattern.test(uuidPart)) {
+                    panelInfoId = uuidPart;
+                  } else {
+                    console.error('❌ 잘못된 UUID 형식:', uuidPart);
+                    throw new Error('잘못된 패널 정보 ID 형식입니다.');
+                  }
+                } else {
+                  console.error('❌ 복합 ID 형식 오류:', item.id);
+                  throw new Error('잘못된 패널 정보 ID 형식입니다.');
+                }
+              } else {
+                console.error('❌ 알 수 없는 ID 형식:', item.id);
+                throw new Error('잘못된 패널 정보 ID 형식입니다.');
+              }
+            } else {
+              throw new Error('패널 정보 ID가 없습니다.');
+            }
+
+            console.log('🔍 원본 ID:', item.id, '추출된 UUID:', panelInfoId);
+
+            return {
+              id: item.id,
+              name: item.name,
+              price: item.price,
+              quantity: 1,
+              panel_info_id: panelInfoId,
+              panel_slot_snapshot: item.panel_slot_snapshot,
+              panel_slot_usage_id: item.panel_slot_usage_id,
+              startDate: new Date().toISOString().split('T')[0],
+              endDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
+                .toISOString()
+                .split('T')[0],
+            };
+          }),
+          paymentMethod: 'card',
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || '주문 생성에 실패했습니다.');
+      }
+
+      // 성공 시 선택된 아이템들을 장바구니에서 제거
+      selectedCartItems.forEach((item) => {
+        dispatch({ type: 'REMOVE_ITEM', id: item.id });
+      });
+
+      // 선택 상태 초기화
+      setSelectedItems(new Set());
+
+      // 성공 모달 표시
+      setIsPaymentSuccessModalOpen(true);
+    } catch (error) {
+      console.error('Payment error:', error);
+      setErrorMessage('결제 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+      setIsPaymentErrorModalOpen(true);
     }
   };
 
@@ -484,29 +707,6 @@ export default function Cart() {
         <motion.div initial="initial" animate="animate" variants={fadeInUp}>
           {userWithPhone && activeTab === 'payment' && (
             <>
-              {ledItems.length > 0 && (
-                <CartGroupCard
-                  title="LED전자게시대"
-                  phoneList={['1533-0570', '1899-0596', '02-719-0083']}
-                  isSelected={isGroupSelected(ledItems)}
-                  onSelect={(selected) => handleGroupSelect(ledItems, selected)}
-                >
-                  {ledItems.map((item) => (
-                    <CartItemRow
-                      key={item.id}
-                      item={item}
-                      user={getItemUserInfo(item.id)}
-                      isSelected={selectedItems.has(String(item.id))}
-                      onSelect={(selected) =>
-                        handleItemSelect(String(item.id), selected)
-                      }
-                      onOrderModify={() => handleOrderModify(item.id)}
-                      onDelete={() => handleDelete(item)}
-                    />
-                  ))}
-                </CartGroupCard>
-              )}
-
               {bannerItems.length > 0 && (
                 <CartGroupCard
                   title="현수막게시대"
@@ -531,7 +731,7 @@ export default function Cart() {
                 </CartGroupCard>
               )}
 
-              {ledItems.length === 0 && bannerItems.length === 0 && (
+              {bannerItems.length === 0 && (
                 <CartGroupCard
                   title="결제신청"
                   phoneList={['1533-0570', '1899-0596', '02-719-0083']}
@@ -545,35 +745,77 @@ export default function Cart() {
           )}
 
           {userWithPhone && activeTab === 'consulting' && (
-            <CartGroupCard
-              title="상담신청"
-              isSelected={isGroupSelected(consultingItems)}
-              onSelect={(selected) =>
-                handleGroupSelect(consultingItems, selected)
-              }
-            >
-              {consultingItems.length > 0 ? (
-                consultingItems.map((item) => (
-                  <CartItemRow
-                    key={item.id}
-                    item={item}
-                    user={getItemUserInfo(item.id)}
-                    isSelected={selectedItems.has(String(item.id))}
-                    onSelect={(selected) =>
-                      handleItemSelect(String(item.id), selected)
-                    }
-                    isConsulting={true}
-                    onOrderModify={() => handleOrderModify(item.id)}
-                    onConsultation={() => handleConsultation(item.name)}
-                    onDelete={() => handleDelete(item)}
-                  />
-                ))
-              ) : (
-                <div className="flex items-center justify-center py-12 text-gray-500">
-                  상품이 없습니다
-                </div>
+            <>
+              {bannerConsultingItems.length > 0 && (
+                <CartGroupCard title="현수막게시대">
+                  {bannerConsultingItems.map((item) => (
+                    <CartItemRow
+                      key={item.id}
+                      item={item}
+                      user={getItemUserInfo(item.id)}
+                      isConsulting={true}
+                      onOrderModify={() => handleOrderModify(item.id)}
+                      onConsultation={() =>
+                        handleConsultation(item.name, item.id)
+                      }
+                      onDelete={() => handleDelete(item)}
+                      inquiryStatus={inquiryStatuses[item.id]}
+                    />
+                  ))}
+                </CartGroupCard>
               )}
-            </CartGroupCard>
+
+              {ledConsultingItemsOnly.length > 0 && (
+                <CartGroupCard title="LED전자게시대">
+                  {ledConsultingItemsOnly.map((item) => (
+                    <CartItemRow
+                      key={item.id}
+                      item={item}
+                      user={getItemUserInfo(item.id)}
+                      isConsulting={true}
+                      onOrderModify={() => handleOrderModify(item.id)}
+                      onConsultation={() =>
+                        handleConsultation(item.name, item.id)
+                      }
+                      onDelete={() => handleDelete(item)}
+                      inquiryStatus={inquiryStatuses[item.id]}
+                    />
+                  ))}
+                </CartGroupCard>
+              )}
+
+              {ledConsultingItems.length > 0 && (
+                <CartGroupCard
+                  title="LED전자게시대"
+                  phoneList={['1533-0570', '1899-0596', '02-719-0083']}
+                >
+                  {ledConsultingItems.map((item) => (
+                    <CartItemRow
+                      key={item.id}
+                      item={item}
+                      user={getItemUserInfo(item.id)}
+                      isConsulting={true}
+                      onOrderModify={() => handleOrderModify(item.id)}
+                      onConsultation={() =>
+                        handleConsultation(item.name, item.id)
+                      }
+                      onDelete={() => handleDelete(item)}
+                      inquiryStatus={inquiryStatuses[item.id]}
+                    />
+                  ))}
+                </CartGroupCard>
+              )}
+
+              {bannerConsultingItems.length === 0 &&
+                ledConsultingItemsOnly.length === 0 &&
+                ledConsultingItems.length === 0 && (
+                  <CartGroupCard title="상담신청">
+                    <div className="flex items-center justify-center py-12 text-gray-500">
+                      상품이 없습니다
+                    </div>
+                  </CartGroupCard>
+                )}
+            </>
           )}
         </motion.div>
       </div>
@@ -581,10 +823,12 @@ export default function Cart() {
       <div className="fixed bottom-0 left-0 w-full h-[11rem] bg-white border-t border-gray-300 py-0 px-8 flex items-center justify-around gap-4">
         <div className="flex space-x-6 text-lg font-semibold">
           <div>선택수량 {cartSummary.quantity}개</div>
-          {/* <div>+ 추가금 {cartSummary.additionalCost.toLocaleString()}원</div> */}
           <div>= 총 주문금액 {cartSummary.totalAmount.toLocaleString()}원</div>
         </div>
-        <Button className="px-12 py-4 text-lg font-bold rounded bg-black text-white">
+        <Button
+          className="px-12 py-4 text-lg font-bold rounded bg-black text-white"
+          onClick={handlePayment}
+        >
           총 {cartSummary.quantity}건 결제하기
         </Button>
       </div>
@@ -603,6 +847,8 @@ export default function Cart() {
         isOpen={isConsultationModalOpen}
         onClose={() => setIsConsultationModalOpen(false)}
         productName={selectedProductName}
+        productId={selectedProductId}
+        onSuccess={handleConsultationSuccess}
       />
 
       <DeleteConfirmModal
@@ -616,6 +862,31 @@ export default function Cart() {
         isOpen={isUpdateSuccessModalOpen}
         onClose={() => setIsUpdateSuccessModalOpen(false)}
         message="주문자 정보가 성공적으로 업데이트되었습니다."
+      />
+
+      {/* 결제 성공 모달 */}
+      <SuccessModal
+        isOpen={isPaymentSuccessModalOpen}
+        onClose={() => {
+          setIsPaymentSuccessModalOpen(false);
+          // 마이페이지 주문내역으로 이동
+          window.location.href = '/mypage/orders';
+        }}
+        message="주문이 성공적으로 완료되었습니다!"
+      />
+
+      {/* 결제 오류 모달 */}
+      <SuccessModal
+        isOpen={isPaymentErrorModalOpen}
+        onClose={() => setIsPaymentErrorModalOpen(false)}
+        message={errorMessage}
+      />
+
+      {/* 유효성 검사 오류 모달 */}
+      <SuccessModal
+        isOpen={isValidationErrorModalOpen}
+        onClose={() => setIsValidationErrorModalOpen(false)}
+        message={errorMessage}
       />
     </main>
   );

@@ -67,6 +67,8 @@ interface BannerDisplayData {
   price_unit?: string;
   panel_width?: number;
   panel_height?: number;
+  first_half_closure_quantity?: number;
+  second_half_closure_quantity?: number;
 }
 
 // BankInfo 타입 정의
@@ -249,20 +251,20 @@ export default function BannerDisplayPage() {
                   ? `${item.banner_slot_info[0].total_price?.toLocaleString()}원`
                   : '문의';
 
+              const totalPrice =
+                item.banner_slot_info && item.banner_slot_info.length > 0
+                  ? item.banner_slot_info[0].total_price
+                  : 0;
+
               const bannerType =
                 item.banner_slot_info && item.banner_slot_info.length > 0
                   ? item.banner_slot_info[0].banner_type
                   : undefined;
 
-              // 상하반기별 마감수 정보
-              const firstHalfClosureQuantity =
-                item.banner_slot_info && item.banner_slot_info.length > 0
-                  ? item.banner_slot_info[0].first_half_closure_quantity
-                  : undefined;
+              // 상하반기별 마감수 정보 (panel_info에서 가져오기)
+              const firstHalfClosureQuantity = item.first_half_closure_quantity;
               const secondHalfClosureQuantity =
-                item.banner_slot_info && item.banner_slot_info.length > 0
-                  ? item.banner_slot_info[0].second_half_closure_quantity
-                  : undefined;
+                item.second_half_closure_quantity;
 
               // 구별 가나다순 ID 조합 (중복 방지)
               const districtCode = item.region_gu.code;
@@ -281,6 +283,7 @@ export default function BannerDisplayPage() {
                 neighborhood: item.region_dong.name,
                 period: '상시',
                 price: price,
+                total_price: totalPrice,
                 size:
                   `${item.banner_panel_details.panel_width}x${item.banner_panel_details.panel_height}` ||
                   'no size',
@@ -296,6 +299,7 @@ export default function BannerDisplayPage() {
                 panel_type: item.panel_type,
                 first_half_closure_quantity: firstHalfClosureQuantity,
                 second_half_closure_quantity: secondHalfClosureQuantity,
+                panel_info_id: item.id, // 원본 panel_info UUID
               };
             }
           );

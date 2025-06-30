@@ -186,23 +186,26 @@ export default function DisplayDetailPage({
         const isSpecialDistrict =
           item.district === '송파구' || item.district === '용산구';
 
-        const priceString = String(item.price || '').replace(/,|원/g, '');
-        const priceNumber = parseInt(priceString, 10);
-
+        // total_price가 있으면 사용, 없으면 기존 로직 사용
         const priceForCart = isSpecialDistrict
           ? 0 // '상담문의'는 string이라 타입 에러가 발생하여 0으로 설정
-          : !isNaN(priceNumber)
-          ? priceNumber
-          : 0;
+          : item.total_price !== undefined
+          ? item.total_price
+          : (() => {
+              const priceString = String(item.price || '').replace(/,|원/g, '');
+              const priceNumber = parseInt(priceString, 10);
+              return !isNaN(priceNumber) ? priceNumber : 0;
+            })();
 
         const cartItem = {
-          id: item.id,
+          id: item.id, // 복합 ID (gwanak-03-uuid)
           type: 'banner-display' as const,
           name: getCartItemName(item),
           district: item.district,
           price: priceForCart,
           halfPeriod: selectedHalfPeriod,
           panel_type: item.panel_type,
+          panel_info_id: item.panel_info_id, // 원본 UUID
         };
 
         console.log('🔍 Adding item to cart:', cartItem);

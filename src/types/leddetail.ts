@@ -28,4 +28,5 @@ export interface LEDBillboard {
   administrative_fee: number;
   price_unit: string;
   panel_slot_status: string;
+  panel_info_id?: string;
 }

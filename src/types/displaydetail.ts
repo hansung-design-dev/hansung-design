@@ -41,6 +41,8 @@ export interface BaseBillboard {
   panel_type?: string;
   first_half_closure_quantity?: number;
   second_half_closure_quantity?: number;
+  total_price?: number; // 실제 가격 (숫자)
+  panel_info_id?: string; // panel_info 테이블의 실제 ID
 }
 
 // 현수막게시대 전용 타입

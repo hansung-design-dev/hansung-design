@@ -11,6 +11,10 @@ export default function LiveCart() {
   const router = useRouter();
   const [timeLeft, setTimeLeft] = useState<string>('');
 
+  // 상담신청 아이템과 일반 아이템 분리
+  const regularItems = cart.filter((item) => item.price !== 0);
+  const hasRegularItems = regularItems.length > 0;
+
   const getPanelTypeLabel = (panelType?: string) => {
     if (!panelType) return '현수막게시대';
 
@@ -41,8 +45,13 @@ export default function LiveCart() {
   console.log('🔍 Cart state in LiveCart:', cart);
   console.log('🔍 Cart length in LiveCart:', cart.length);
 
-  // 남은 시간 계산
+  // 남은 시간 계산 (일반 아이템이 있을 때만)
   useEffect(() => {
+    if (!hasRegularItems) {
+      setTimeLeft('');
+      return;
+    }
+
     const calculateTimeLeft = () => {
       const stored = localStorage.getItem('hansung_cart');
       if (!stored) return;
@@ -69,7 +78,7 @@ export default function LiveCart() {
     const interval = setInterval(calculateTimeLeft, 60000); // 1분마다 업데이트
 
     return () => clearInterval(interval);
-  }, [cart.length]);
+  }, [cart.length, hasRegularItems]);
 
   if (cart.length === 0) return null;
 
@@ -100,10 +109,12 @@ export default function LiveCart() {
         {/* 장바구니 */}
         <div className="h-[7rem] sm:h-auto p-6 sm:p-3 overflow-y-auto py-[3rem] sm:py-2 flex items-center sm:items-start ">
           <div className="lg:w-[30rem] sm:w-full flex flex-col gap-2 max-h-[13rem] sm:max-h-[10rem] overflow-y-auto py-6 sm:py-4 sm:px-4 ">
-            {/* 남은 시간 표시 */}
-            <div className="text-sm text-red-500 font-medium mb-2">
-              ⏰ 장바구니 만료까지: {timeLeft}
-            </div>
+            {/* 남은 시간 표시 (일반 아이템이 있을 때만) */}
+            {hasRegularItems && (
+              <div className="text-sm text-red-500 font-medium mb-2">
+                ⏰ 장바구니 만료까지: {timeLeft}
+              </div>
+            )}
             {cart.map((item) => (
               <div
                 key={item.id}

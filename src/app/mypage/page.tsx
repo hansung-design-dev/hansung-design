@@ -12,7 +12,7 @@ export default function MyPage() {
   const { user } = useAuth();
 
   const tabs = [
-    { name: '마이페이지', href: '/mypage' },
+    // { name: '마이페이지', href: '/mypage' },
     { name: '주문내역', href: '/mypage/orders' },
     { name: '1:1상담', href: '/mypage/customer-service' },
     { name: '간편정보관리', href: '/mypage/info' },

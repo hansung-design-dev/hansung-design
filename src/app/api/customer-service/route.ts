@@ -9,26 +9,35 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 // 1:1 상담 내역 조회
 export async function GET(request: NextRequest) {
   try {
-    // 임시 사용자 ID 사용
-    const userId = 'temp-user-id';
+    // 임시 사용자 ID 사용 (실제로는 인증된 사용자 ID를 사용해야 함)
+    // UUID 형식으로 변경
+    const userId = '00000000-0000-0000-0000-000000000000';
 
-    // URL 파라미터에서 페이지네이션 정보 가져오기
+    // URL 파라미터에서 페이지네이션 정보와 product_id 가져오기
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
+    const productId = searchParams.get('product_id');
     const offset = (page - 1) * limit;
+
+    // 쿼리 빌더 시작
+    let query = supabase
+      .from('customer_inquiries')
+      .select('*', { count: 'exact' })
+      .eq('user_auth_id', userId)
+      .order('created_at', { ascending: false });
+
+    // product_id가 있으면 필터링 추가
+    if (productId) {
+      query = query.eq('product_name', productId);
+    }
 
     // 1:1 상담 내역 조회
     const {
       data: inquiries,
       error: inquiriesError,
       count,
-    } = await supabase
-      .from('customer_service')
-      .select('*', { count: 'exact' })
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+    } = await query.range(offset, offset + limit - 1);
 
     if (inquiriesError) {
       console.error('Inquiries fetch error:', inquiriesError);
@@ -40,21 +49,36 @@ export async function GET(request: NextRequest) {
 
     // 상태별 개수 계산
     const { data: statusCounts } = await supabase
-      .from('customer_service')
-      .select('status')
-      .eq('user_id', userId);
+      .from('customer_inquiries')
+      .select('inquiry_status')
+      .eq('user_auth_id', userId);
 
     const statusSummary = {
       total: statusCounts?.length || 0,
-      pending: statusCounts?.filter((i) => i.status === 'pending').length || 0,
+      pending:
+        statusCounts?.filter((i) => i.inquiry_status === 'pending').length || 0,
       answered:
-        statusCounts?.filter((i) => i.status === 'answered').length || 0,
-      closed: statusCounts?.filter((i) => i.status === 'closed').length || 0,
+        statusCounts?.filter((i) => i.inquiry_status === 'answered').length ||
+        0,
+      closed:
+        statusCounts?.filter((i) => i.inquiry_status === 'closed').length || 0,
     };
+
+    // 응답 데이터 변환 (새로운 스키마에 맞게)
+    const transformedInquiries =
+      inquiries?.map((inquiry) => ({
+        id: inquiry.id,
+        title: inquiry.title,
+        content: inquiry.content,
+        status: inquiry.inquiry_status,
+        answer: inquiry.answer_content,
+        answered_at: inquiry.answered_at,
+        created_at: inquiry.created_at,
+      })) || [];
 
     return NextResponse.json({
       success: true,
-      inquiries: inquiries || [],
+      inquiries: transformedInquiries,
       pagination: {
         page,
         limit,
@@ -75,10 +99,11 @@ export async function GET(request: NextRequest) {
 // 1:1 상담 문의 생성
 export async function POST(request: NextRequest) {
   try {
-    // 임시 사용자 ID 사용
-    const userId = 'temp-user-id';
+    // 임시 사용자 ID 사용 (실제로는 인증된 사용자 ID를 사용해야 함)
+    // UUID 형식으로 변경
+    const userId = '00000000-0000-0000-0000-000000000000';
 
-    const { title, content } = await request.json();
+    const { title, content, product_name, product_id } = await request.json();
 
     if (!title || !content) {
       return NextResponse.json(
@@ -87,14 +112,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 1:1 상담 문의 생성
+    // 1:1 상담 문의 생성 (새로운 스키마 사용)
     const { data: inquiry, error: inquiryError } = await supabase
-      .from('customer_service')
+      .from('customer_inquiries')
       .insert({
-        user_id: userId,
+        user_auth_id: userId,
         title,
         content,
-        status: 'pending',
+        product_name: product_name || product_id, // product_id를 product_name으로 저장
+        inquiry_status: 'pending',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
@@ -109,10 +135,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 응답 데이터 변환
+    const transformedInquiry = {
+      id: inquiry.id,
+      title: inquiry.title,
+      content: inquiry.content,
+      status: inquiry.inquiry_status,
+      answer_content: inquiry.answer_content,
+      answered_at: inquiry.answered_at,
+      created_at: inquiry.created_at,
+    };
+
     return NextResponse.json({
       success: true,
       message: '문의가 성공적으로 등록되었습니다.',
-      inquiry,
+      inquiry: transformedInquiry,
     });
   } catch (error) {
     console.error('Inquiry creation error:', error);
