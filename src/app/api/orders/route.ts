@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
       return acc;
     }, {} as Record<string, string>);
 
-    console.log('🔍 쿠키 정보:', cookies);
+    // console.log('🔍 쿠키 정보:', cookies);
 
     const userId = cookies['user_id'];
 
@@ -358,6 +358,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 첫 번째 아이템의 panel_slot_snapshot 가져오기 (가격 정보용)
+    const firstItemSnapshot = items[0]?.panel_slot_snapshot;
+
     // 하나의 주문 생성 (주문 메타데이터만 포함)
     const { data: order, error: orderError } = await supabase
       .from('orders')
@@ -370,6 +373,7 @@ export async function POST(request: NextRequest) {
         payment_method: paymentMethod || 'card', // 기본값 설정
         year_month: yearMonth,
         half_period: halfPeriod, // 상반기/하반기 정보 추가
+        panel_slot_snapshot: firstItemSnapshot, // 가격 정보 저장
       })
       .select()
       .single();
@@ -412,7 +416,7 @@ export async function POST(request: NextRequest) {
       console.error('🔍 주문번호 업데이트 오류:', updateError);
     }
 
-    // 각 아이템별로 order_details 생성
+    // 각 아이템별로 panel_slot_usage 생성 및 order_details 생성
     const orderDetails = [];
 
     for (const item of items) {
@@ -464,11 +468,51 @@ export async function POST(request: NextRequest) {
             .split('T')[0];
       }
 
-      // order_details 생성 (panel_info_id, panel_slot_usage_id, half_period 포함)
+      // 1. panel_slot_usage 레코드 생성 (order_details_id는 나중에 업데이트)
+      let panelSlotUsageId = item.panel_slot_usage_id;
+
+      if (!panelSlotUsageId && item.panel_slot_snapshot) {
+        // panel_slot_snapshot에서 banner_slot_info 찾기
+        const { data: bannerSlotInfo, error: bannerError } = await supabase
+          .from('banner_slot_info')
+          .select('id')
+          .eq('panel_info_id', item.panel_info_id)
+          .eq('slot_number', item.panel_slot_snapshot.slot_number)
+          .single();
+
+        if (bannerError) {
+          console.error('🔍 banner_slot_info 조회 오류:', bannerError);
+        } else if (bannerSlotInfo) {
+          // panel_slot_usage 레코드 생성 (order_details_id는 나중에 설정)
+          const { data: newPanelSlotUsage, error: usageError } = await supabase
+            .from('panel_slot_usage')
+            .insert({
+              panel_info_id: item.panel_info_id,
+              slot_number: item.panel_slot_snapshot.slot_number,
+              banner_slot_info_id: bannerSlotInfo.id,
+              usage_type: 'banner_display',
+              attach_date_from: displayStartDate,
+              is_active: true,
+              is_closed: false,
+              banner_type: item.panel_slot_snapshot.banner_type || 'panel',
+            })
+            .select('id')
+            .single();
+
+          if (usageError) {
+            console.error('🔍 panel_slot_usage 생성 오류:', usageError);
+          } else {
+            panelSlotUsageId = newPanelSlotUsage.id;
+            console.log('🔍 생성된 panel_slot_usage_id:', panelSlotUsageId);
+          }
+        }
+      }
+
+      // 2. order_details 생성
       const orderDetail = {
         order_id: order.id,
         panel_info_id: item.panel_info_id,
-        panel_slot_usage_id: item.panel_slot_usage_id,
+        panel_slot_usage_id: panelSlotUsageId,
         slot_order_quantity: item.quantity,
         display_start_date: displayStartDate,
         display_end_date: displayEndDate,
@@ -483,7 +527,8 @@ export async function POST(request: NextRequest) {
     // order_details 일괄 생성
     const orderDetailsResult = await supabase
       .from('order_details')
-      .insert(orderDetails);
+      .insert(orderDetails)
+      .select('id, panel_slot_usage_id');
 
     console.log('🔍 주문 상세 정보 생성 결과:', orderDetailsResult);
 
@@ -493,6 +538,30 @@ export async function POST(request: NextRequest) {
         { error: '주문 상세 정보 생성에 실패했습니다.' },
         { status: 500 }
       );
+    }
+
+    // 생성된 order_details의 panel_slot_usage_id 업데이트
+    if (orderDetailsResult.data) {
+      for (const orderDetail of orderDetailsResult.data) {
+        if (orderDetail.panel_slot_usage_id) {
+          const { error: updateError } = await supabase
+            .from('panel_slot_usage')
+            .update({ order_details_id: orderDetail.id })
+            .eq('id', orderDetail.panel_slot_usage_id);
+
+          if (updateError) {
+            console.error(
+              '🔍 panel_slot_usage order_details_id 업데이트 오류:',
+              updateError
+            );
+          } else {
+            console.log(
+              '🔍 panel_slot_usage order_details_id 업데이트 성공:',
+              orderDetail.id
+            );
+          }
+        }
+      }
     }
 
     console.log('🔍 주문 생성 성공:', {

@@ -87,7 +87,27 @@ export async function GET(
       .eq('user_auth_id', userId)
       .single();
 
-    console.log('🔍 주문 상세 조회 결과:', { order, orderError });
+    console.log('🔍 주문 상세 조회 결과:', {
+      orderId: order?.id,
+      orderNumber: order?.order_number,
+      orderError,
+    });
+
+    // order_details 데이터 자세히 로그
+    if (order?.order_details) {
+      console.log('🔍 order_details 상세 데이터:');
+      // @ts-ignore
+      order.order_details.forEach((detail, index: number) => {
+        console.log(`  [${index}] order_detail:`, {
+          id: detail.id,
+          panel_info_id: detail.panel_info_id,
+          panel_slot_usage_id: detail.panel_slot_usage_id,
+          panel_info: detail.panel_info,
+          panel_slot_usage: detail.panel_slot_usage,
+          banner_slot_info: detail.panel_slot_usage?.banner_slot_info,
+        });
+      });
+    }
 
     if (orderError) {
       console.error('Order detail fetch error:', orderError);
@@ -156,6 +176,32 @@ export async function GET(
       return order.is_checked ? '송출중' : '진행중';
     };
 
+    // 가격 정보 결정 (banner_slot_info 우선, 없으면 panel_slot_snapshot 사용)
+    let vat = 0;
+    let designFee = 0;
+    let roadUsageFee = 0;
+    let totalAmount = order.total_price;
+
+    if (bannerSlotInfo) {
+      // banner_slot_info에서 가격 정보 가져오기 (우선순위)
+      vat = bannerSlotInfo.tax_price || 0;
+      designFee = bannerSlotInfo.advertising_fee || 0;
+      roadUsageFee = bannerSlotInfo.road_usage_fee || 0;
+      totalAmount = bannerSlotInfo.total_price || order.total_price;
+    } else if (order.panel_slot_snapshot) {
+      // panel_slot_snapshot에서 가격 정보 가져오기 (백업)
+      const snapshot = order.panel_slot_snapshot as {
+        tax_price?: number;
+        advertising_fee?: number;
+        road_usage_fee?: number;
+        total_price?: number;
+      };
+      vat = snapshot.tax_price || 0;
+      designFee = snapshot.advertising_fee || 0;
+      roadUsageFee = snapshot.road_usage_fee || 0;
+      totalAmount = snapshot.total_price || order.total_price;
+    }
+
     const orderDetail = {
       id: order.id,
       order_number: order.order_number,
@@ -167,10 +213,10 @@ export async function GET(
       phone: order.user_profiles?.phone || '',
       companyName: order.user_profiles?.company_name || '',
       productName: getProductName(panelInfo?.panel_type || ''),
-      vat: bannerSlotInfo?.tax_price || 0,
-      designFee: bannerSlotInfo?.advertising_fee || 0,
-      roadUsageFee: bannerSlotInfo?.road_usage_fee || 0,
-      totalAmount: bannerSlotInfo?.total_price || order.total_price,
+      vat: vat,
+      designFee: designFee,
+      roadUsageFee: roadUsageFee,
+      totalAmount: totalAmount,
       paymentMethod:
         order.payment_method === 'card' ? '카드결제' : '무통장입금',
       depositorName: order.user_profiles?.contact_person_name || '',
