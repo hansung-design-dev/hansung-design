@@ -92,108 +92,89 @@ export default function BannerDisplayPage() {
 
         // 3. 구별 신청기간과 계좌번호 정보 가져오기
         console.log('🔍 Fetching district info...');
-        const districtDataPromises = Object.keys(counts).map(
-          async (districtName) => {
-            try {
-              // 신청기간 가져오기
+
+        // 강북구는 데이터가 없어도 카드로 표시해야 하므로 별도 처리
+        const allDistricts = [...Object.keys(counts)];
+        if (!allDistricts.includes('강북구')) {
+          allDistricts.push('강북구');
+        }
+
+        const districtDataPromises = allDistricts.map(async (districtName) => {
+          try {
+            // 신청기간 가져오기 (강북구는 기본값 사용)
+            let period = null;
+            if (districtName !== '강북구') {
+              console.log(`🔍 Fetching period for ${districtName}...`);
               const periodResponse = await fetch(
                 `/api/display-period?district=${encodeURIComponent(
                   districtName
                 )}&display_type=banner_display`
               );
               const periodResult = await periodResponse.json();
-              const period = periodResult.success ? periodResult.data : null;
-
-              // 구 정보와 계좌번호 가져오기
-              const districtResponse = await fetch(
-                `/api/region-gu?action=getByDistrict&district=${encodeURIComponent(
-                  districtName
-                )}&displayType=banner_display`
+              console.log(
+                `🔍 Period result for ${districtName}:`,
+                periodResult
               );
-              const districtResult = await districtResponse.json();
-              const bankInfo = districtResult.success
-                ? districtResult.data.bank_info
-                : null;
-
-              // 기본 districtInfo에서 정보 가져오기
-              const baseInfo = {
-                강동구: {
-                  id: 2,
-                  code: 'gangdong',
-                  description: '울림픽대교 남단사거리 앞 외 3건',
-                },
-                강북구: {
-                  id: 8,
-                  code: 'gangbuk',
-                  description: '여의도공원 앞 외 6건',
-                },
-                관악구: {
-                  id: 3,
-                  code: 'gwanak',
-                  description: '서울대입구역 앞 외 3건',
-                },
-                광진구: {
-                  id: 10,
-                  code: 'gwangjin',
-                  description: '서울대입구역 앞 외 3건',
-                },
-                동작구: {
-                  id: 11,
-                  code: 'dongjak',
-                  description: '홍대입구역 앞 외 5건',
-                },
-                동대문구: {
-                  id: 12,
-                  code: 'dongdaemun',
-                  description: '울림픽대교 남단사거리 앞 외 3건',
-                },
-                마포구: {
-                  id: 4,
-                  code: 'mapo',
-                  description: '홍대입구역 앞 외 5건',
-                },
-                서대문구: {
-                  id: 5,
-                  code: 'seodaemun',
-                  description: '울림픽대교 남단사거리 앞 외 3건',
-                  is_for_admin: true, // 행정용 구분
-                },
-                송파구: {
-                  id: 6,
-                  code: 'songpa',
-                  description: '잠실종합운동장 앞 외 5건',
-                },
-                용산구: {
-                  id: 7,
-                  code: 'yongsan',
-                  description: '여의도공원 앞 외 6건',
-                },
-              }[districtName];
-
-              if (!baseInfo) {
-                throw new Error(`Unknown district: ${districtName}`);
-              }
-
-              return {
-                id: baseInfo.id,
-                name: districtName,
-                code: baseInfo.code,
-                description: baseInfo.description,
-                count: counts[districtName] || 0,
-                logo:
-                  logosMap[districtName] ||
-                  `/images/district-icon/${baseInfo.code}-gu.png`,
-                src: '/images/led/landing.png',
-                is_for_admin: baseInfo.is_for_admin || false,
-                period,
-                bankInfo,
-              };
-            } catch (err) {
-              console.warn(`Failed to fetch data for ${districtName}:`, err);
-              return null;
+              period = periodResult.success ? periodResult.data : null;
             }
+
+            // 구 정보와 계좌번호 가져오기
+            // 구 정보와 계좌번호 가져오기
+            const districtResponse = await fetch(
+              `/api/region-gu?action=getByDistrict&district=${encodeURIComponent(
+                districtName
+              )}&displayType=banner_display`
+            );
+            const districtResult = await districtResponse.json();
+
+            // 강북구는 데이터가 없어도 카드로 표시
+            if (!districtResult.success && districtName !== '강북구') {
+              throw new Error(
+                `Failed to fetch district data for ${districtName}`
+              );
+            }
+
+            // 강북구의 경우 기본 정보로 카드 생성
+            if (districtName === '강북구' && !districtResult.success) {
+              return {
+                id: 8,
+                name: '강북구',
+                code: 'gangbuk',
+                description: '강북구 현수막게시대',
+                count: 0,
+                logo: '/images/district-icon/gangbuk-gu.png',
+                src: '/images/led/landing.png',
+                is_for_admin: false,
+                period: null,
+                bankInfo: null,
+              };
+            }
+
+            const districtData = districtResult.data;
+            const bankInfo = districtData.bank_info;
+
+            return {
+              id: parseInt(
+                districtData.id.replace(/-/g, '').substring(0, 8),
+                16
+              ), // UUID를 숫자로 변환
+              name: districtName,
+              code: districtData.code,
+              description: `${districtName} 현수막게시대`,
+              count: counts[districtName] || 0,
+              logo:
+                logosMap[districtName] ||
+                `/images/district-icon/${districtData.code}-gu.png`,
+              src: '/images/led/landing.png',
+              is_for_admin: districtName === '서대문구', // 서대문구만 행정용
+              period,
+              bankInfo,
+            };
+          } catch (err) {
+            console.warn(`Failed to fetch data for ${districtName}:`, err);
+            return null;
           }
-        );
+        });
 
         const districtData = (await Promise.all(districtDataPromises)).filter(
           Boolean
@@ -218,6 +199,7 @@ export default function BannerDisplayPage() {
         });
 
         console.log('🔍 All data loaded successfully, setting districts...');
+        console.log('🔍 Final districts data:', districtData);
         setDistricts(districtData);
       } catch (err) {
         console.error('Error fetching data:', err);

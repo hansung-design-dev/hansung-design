@@ -170,7 +170,7 @@ async function getAllBannerDisplays() {
   }
 }
 
-// 구별 현수막 게시대 개수 조회
+// 구별 현수막 게시대 개수 조회 (is_active인 구만)
 async function getBannerDisplayCountsByDistrict() {
   try {
     const { data, error } = await supabase
@@ -180,12 +180,14 @@ async function getBannerDisplayCountsByDistrict() {
         region_gu!inner (
           id,
           name,
-          code
+          code,
+          is_active
         )
       `
       )
       .eq('display_type_id', (await getBannerDisplayTypeId()).id)
-      .eq('panel_status', 'active');
+      .eq('panel_status', 'active')
+      .eq('region_gu.is_active', true);
 
     if (error) {
       throw error;

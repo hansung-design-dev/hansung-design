@@ -56,7 +56,30 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ success: true, data: periodData });
+    // 이번달 전/하반기 계산
+    const now = new Date();
+
+    // 상반기: 1일 ~ 15일
+    const firstHalfStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const firstHalfEnd = new Date(now.getFullYear(), now.getMonth(), 15);
+
+    // 하반기: 16일 ~ 말일
+    const secondHalfStart = new Date(now.getFullYear(), now.getMonth(), 16);
+    const secondHalfEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    // 날짜를 YYYY-MM-DD 형식으로 변환
+    const formatDate = (date: Date) => {
+      return date.toISOString().split('T')[0];
+    };
+
+    const currentPeriodData = {
+      first_half_from: formatDate(firstHalfStart),
+      first_half_to: formatDate(firstHalfEnd),
+      second_half_from: formatDate(secondHalfStart),
+      second_half_to: formatDate(secondHalfEnd),
+    };
+
+    return NextResponse.json({ success: true, data: currentPeriodData });
   } catch {
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
