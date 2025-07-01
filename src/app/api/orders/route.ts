@@ -25,9 +25,14 @@ export async function GET(request: NextRequest) {
       return acc;
     }, {} as Record<string, string>);
 
+    console.log('🔍 쿠키 정보:', cookies);
+
     const userId = cookies['user_id'];
 
+    console.log('🔍 추출된 userId:', userId);
+
     if (!userId) {
+      console.log('🔍 userId가 없음. 쿠키 헤더:', cookieHeader);
       return NextResponse.json(
         { success: false, error: '로그인이 필요합니다.' },
         { status: 401 }
@@ -75,7 +80,7 @@ export async function GET(request: NextRequest) {
       `,
         { count: 'exact' }
       )
-      .or(`user_auth_id.eq.${userId},user_profile_id.eq.${userId}`)
+      .eq('user_auth_id', userId)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -98,7 +103,7 @@ export async function GET(request: NextRequest) {
     const { data: statusCounts } = await supabase
       .from('orders')
       .select('is_paid, is_checked')
-      .or(`user_auth_id.eq.${userId},user_profile_id.eq.${userId}`);
+      .eq('user_auth_id', userId);
 
     const statusSummary = {
       total: statusCounts?.length || 0,

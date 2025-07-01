@@ -46,7 +46,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const savedUser = sessionStorage.getItem('user');
     if (savedUser) {
-      setUser(JSON.parse(savedUser));
+      const user = JSON.parse(savedUser);
+      setUser(user);
+      // 새로고침 시에도 쿠키 재설정
+      document.cookie = `user_id=${user.id}; path=/; max-age=86400`; // 24시간
     }
     setLoading(false);
   }, []);

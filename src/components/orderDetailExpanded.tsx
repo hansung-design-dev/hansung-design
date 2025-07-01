@@ -45,24 +45,15 @@ interface OrderDetail {
 
 interface OrderDetailExpandedProps {
   orderDetail: OrderDetail;
-  onClose: () => void;
 }
 
 const OrderDetailExpanded: React.FC<OrderDetailExpandedProps> = ({
   orderDetail,
-  onClose,
 }) => {
   console.log('OrderDetailExpanded 렌더링:', orderDetail);
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-6 mt-4 shadow-sm">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold">주문 상세 정보</h3>
-        <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-          ✕
-        </button>
-      </div>
-
+    <div className="bg-white rounded-lg  mt-4 shadow-sm">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* 기본 정보 */}
         <div>
@@ -80,11 +71,11 @@ const OrderDetailExpanded: React.FC<OrderDetailExpandedProps> = ({
               <span className="text-gray-600">상태:</span>
               <span
                 className={`font-medium ${
-                  orderDetail.status === '결제완료'
+                  orderDetail.status === '송출중'
                     ? 'text-green-600'
-                    : orderDetail.status === '결제대기'
+                    : orderDetail.status === '진행중'
                     ? 'text-blue-600'
-                    : orderDetail.status === '완료'
+                    : orderDetail.status === '입금확인 중...'
                     ? 'text-orange-600'
                     : 'text-gray-600'
                 }`}
@@ -93,7 +84,7 @@ const OrderDetailExpanded: React.FC<OrderDetailExpandedProps> = ({
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">상품명:</span>
+              <span className="text-gray-600">상품 분류:</span>
               <span>{orderDetail.productName}</span>
             </div>
             <div className="flex justify-between">
@@ -133,19 +124,15 @@ const OrderDetailExpanded: React.FC<OrderDetailExpandedProps> = ({
         <div className="bg-gray-50 p-4 rounded-lg">
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-600">기본 가격:</span>
-              <span>{(orderDetail.price || 0).toLocaleString()}원</span>
-            </div>
-            <div className="flex justify-between">
               <span className="text-gray-600">부가세:</span>
               <span>{(orderDetail.vat || 0).toLocaleString()}원</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">디자인비:</span>
+              <span className="text-gray-600">광고대행료:</span>
               <span>{(orderDetail.designFee || 0).toLocaleString()}원</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">도로점용료:</span>
+              <span className="text-gray-600">도로사용료:</span>
               <span>{(orderDetail.roadUsageFee || 0).toLocaleString()}원</span>
             </div>
             <div className="flex justify-between border-t pt-2 font-semibold">
@@ -166,6 +153,21 @@ const OrderDetailExpanded: React.FC<OrderDetailExpandedProps> = ({
             <span className="text-gray-600">결제 방법:</span>
             <span>{orderDetail.paymentMethod}</span>
           </div>
+          {orderDetail.paymentMethod === '카드결제' && (
+            <div className="flex justify-between">
+              <span className="text-gray-600">카드 정보:</span>
+              <span className="text-gray-500">추후 카드 정보 표시 예정</span>
+            </div>
+          )}
+          {orderDetail.paymentMethod === '무통장입금' &&
+            orderDetail.status === '입금확인 중...' && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">입금 상태:</span>
+                <span className="text-orange-600 font-medium">
+                  입금 확인 중...
+                </span>
+              </div>
+            )}
         </div>
       </div>
 

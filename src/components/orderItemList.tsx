@@ -33,6 +33,9 @@ interface ItemTableProps {
   onItemSelect?: (id: number, checked: boolean) => void;
   selectedIds?: number[];
   enableRowClick?: boolean;
+  expandedItemId?: number | null;
+  onExpandItem?: (itemId: number | null) => void;
+  expandedContent?: React.ReactNode;
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -44,6 +47,9 @@ const OrderItemList: React.FC<ItemTableProps> = ({
   onItemSelect,
   selectedIds = [],
   enableRowClick = true,
+  expandedItemId,
+  onExpandItem,
+  expandedContent,
 }) => {
   const [page, setPage] = useState(1);
   const router = useRouter();
@@ -74,7 +80,17 @@ const OrderItemList: React.FC<ItemTableProps> = ({
     if ((e.target as HTMLElement).tagName === 'INPUT') {
       return;
     }
-    handleItemClick(itemId, orderId);
+
+    // 확장 기능이 있으면 확장 처리
+    if (onExpandItem) {
+      if (expandedItemId === itemId) {
+        onExpandItem(null); // 이미 확장된 아이템이면 닫기
+      } else {
+        onExpandItem(itemId); // 새로운 아이템 확장
+      }
+    } else {
+      handleItemClick(itemId, orderId);
+    }
   };
 
   return (
@@ -150,6 +166,17 @@ const OrderItemList: React.FC<ItemTableProps> = ({
                 </td>
               </tr>
             ))}
+            {/* 확장된 상세 정보 표시 */}
+            {expandedItemId && expandedContent && (
+              <tr>
+                <td colSpan={showCheckbox ? 5 : 4} className="p-0">
+                  <div className="border-solid border-gray-1">
+                    {expandedContent}
+                  </div>
+                </td>
+              </tr>
+            )}
+
             {/* 빈 row로 높이 맞추기 */}
             {Array.from({ length: ITEMS_PER_PAGE - paginatedItems.length }).map(
               (_, i) => (
@@ -172,7 +199,16 @@ const OrderItemList: React.FC<ItemTableProps> = ({
             }`}
             onClick={() => {
               if (enableRowClick && !showCheckbox) {
-                handleItemClick(item.id, item.orderId);
+                // 확장 기능이 있으면 확장 처리
+                if (onExpandItem) {
+                  if (expandedItemId === item.id) {
+                    onExpandItem(null); // 이미 확장된 아이템이면 닫기
+                  } else {
+                    onExpandItem(item.id); // 새로운 아이템 확장
+                  }
+                } else {
+                  handleItemClick(item.id, item.orderId);
+                }
               }
             }}
           >
@@ -203,6 +239,13 @@ const OrderItemList: React.FC<ItemTableProps> = ({
             >
               신청 취소
             </button>
+
+            {/* 모바일에서 확장된 상세 정보 표시 */}
+            {expandedItemId === item.id && expandedContent && (
+              <div className="mt-4 p-4 bg-gray-50 rounded border-t border-gray-200">
+                {expandedContent}
+              </div>
+            )}
           </div>
         ))}
       </div>
