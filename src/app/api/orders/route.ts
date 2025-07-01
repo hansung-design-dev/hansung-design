@@ -18,17 +18,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 쿠키에서 사용자 ID 추출 (간단한 방식)
+    // 쿠키에서 사용자 ID 추출
     const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
       const [key, value] = cookie.trim().split('=');
       acc[key] = value;
       return acc;
     }, {} as Record<string, string>);
 
-    // 실제로는 JWT 토큰을 디코드해서 사용자 ID를 가져와야 함
-    // 여기서는 임시로 쿠키에서 사용자 ID를 가져오는 방식 사용
-    const userId =
-      cookies['user_auth_id'] || '6301322c-7813-459e-aedc-791d92bd8fb2';
+    const userId = cookies['user_id'];
+
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: '로그인이 필요합니다.' },
+        { status: 401 }
+      );
+    }
 
     console.log('🔍 사용자 ID:', userId);
 
@@ -40,8 +44,7 @@ export async function GET(request: NextRequest) {
 
     console.log('🔍 주문 목록 조회 시작 - 사용자 ID:', userId);
 
-    // 주문 내역 조회 (새로운 스키마에 맞게 수정)
-    // 기존 주문들(00000000-0000-0000-0000-000000000000)과 새로운 주문들(6301322c-7813-459e-aedc-791d92bd8fb2) 모두 조회
+    // 주문 내역 조회
     const {
       data: orders,
       error: ordersError,
@@ -54,9 +57,11 @@ export async function GET(request: NextRequest) {
         order_details (
           id,
           panel_info_id,
+          panel_slot_usage_id,
           slot_order_quantity,
           display_start_date,
           display_end_date,
+          half_period,
           panel_info:panel_info_id (
             nickname,
             address,
@@ -70,9 +75,7 @@ export async function GET(request: NextRequest) {
       `,
         { count: 'exact' }
       )
-      .or(
-        `user_auth_id.eq.6301322c-7813-459e-aedc-791d92bd8fb2,user_auth_id.eq.00000000-0000-0000-0000-000000000000,user_profile_id.eq.6301322c-7813-459e-aedc-791d92bd8fb2,user_profile_id.eq.00000000-0000-0000-0000-000000000000`
-      )
+      .or(`user_auth_id.eq.${userId},user_profile_id.eq.${userId}`)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -95,9 +98,7 @@ export async function GET(request: NextRequest) {
     const { data: statusCounts } = await supabase
       .from('orders')
       .select('is_paid, is_checked')
-      .or(
-        `user_auth_id.eq.6301322c-7813-459e-aedc-791d92bd8fb2,user_auth_id.eq.00000000-0000-0000-0000-000000000000,user_profile_id.eq.6301322c-7813-459e-aedc-791d92bd8fb2,user_profile_id.eq.00000000-0000-0000-0000-000000000000`
-      );
+      .or(`user_auth_id.eq.${userId},user_profile_id.eq.${userId}`);
 
     const statusSummary = {
       total: statusCounts?.length || 0,
@@ -122,14 +123,17 @@ export async function GET(request: NextRequest) {
         payment_status: order.is_paid ? 'paid' : 'pending',
         order_date: order.created_at,
         year_month: order.year_month,
+        half_period: order.half_period,
         order_items:
           order.order_details?.map(
             (detail: {
               id: string;
               panel_info_id: string;
+              panel_slot_usage_id?: string;
               slot_order_quantity: number;
               display_start_date: string;
               display_end_date: string;
+              half_period?: string;
               panel_info?: {
                 address: string;
                 nickname: string;
@@ -147,8 +151,10 @@ export async function GET(request: NextRequest) {
                 panel_status: detail.panel_info?.panel_status || '',
               },
               slot_info: {
-                slot_name: '기본 슬롯',
-                banner_type: 'panel',
+                slot_name: detail.panel_slot_usage_id
+                  ? '선택된 슬롯'
+                  : '기본 슬롯',
+                banner_type: detail.panel_info?.panel_type || 'panel',
                 price_unit: '15 days',
               },
               quantity: detail.slot_order_quantity,
@@ -260,8 +266,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 실제 사용자 ID 사용 (테스트용 하드코딩)
-    const userId = '6301322c-7813-459e-aedc-791d92bd8fb2'; // 테스트용 하드코딩
+    // 쿠키에서 사용자 ID 추출
+    const cookieHeader = request.headers.get('cookie');
+    if (!cookieHeader) {
+      return NextResponse.json(
+        { error: '로그인이 필요합니다.' },
+        { status: 401 }
+      );
+    }
+
+    const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
+      const [key, value] = cookie.trim().split('=');
+      acc[key] = value;
+      return acc;
+    }, {} as Record<string, string>);
+
+    const userId = cookies['user_id'];
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: '로그인이 필요합니다.' },
+        { status: 401 }
+      );
+    }
 
     console.log('🔍 사용자 ID:', userId);
 
@@ -271,17 +298,73 @@ export async function POST(request: NextRequest) {
     }, 0);
     console.log('🔍 총 가격:', totalPrice);
 
-    // 하나의 주문 생성 (panel_info_id 없음)
+    // 모든 아이템의 상반기/하반기 정보가 일치하는지 확인
+    const firstItem = items[0];
+    if (!firstItem) {
+      return NextResponse.json(
+        { error: '주문할 상품이 없습니다.' },
+        { status: 400 }
+      );
+    }
+
+    const allItemsHaveSamePeriod = items.every(
+      (item) =>
+        item.halfPeriod === firstItem.halfPeriod &&
+        item.selectedYear === firstItem.selectedYear &&
+        item.selectedMonth === firstItem.selectedMonth
+    );
+
+    if (!allItemsHaveSamePeriod) {
+      return NextResponse.json(
+        {
+          error:
+            '모든 상품은 같은 기간(년월, 상반기/하반기)을 선택해야 합니다.',
+        },
+        { status: 400 }
+      );
+    }
+
+    const halfPeriod = firstItem.halfPeriod;
+    const selectedYear = firstItem.selectedYear;
+    const selectedMonth = firstItem.selectedMonth;
+
+    // year_month 계산 (선택된 년월이 있으면 사용, 없으면 현재 년월)
+    const yearMonth =
+      selectedYear && selectedMonth
+        ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`
+        : new Date().toISOString().slice(0, 7);
+
+    // 사용자의 기본 프로필 ID 가져오기
+    const { data: userProfile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('id')
+      .eq('user_auth_id', userId)
+      .eq('is_default', true)
+      .single();
+
+    if (profileError || !userProfile) {
+      console.error('🔍 사용자 프로필 조회 오류:', profileError);
+      return NextResponse.json(
+        {
+          error:
+            '사용자 프로필을 찾을 수 없습니다. 마이페이지에서 프로필을 설정해주세요.',
+        },
+        { status: 400 }
+      );
+    }
+
+    // 하나의 주문 생성 (주문 메타데이터만 포함)
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
-        user_profile_id: userId,
+        user_profile_id: userProfile.id, // 기본 프로필 ID 사용
         user_auth_id: userId,
         total_price: totalPrice,
-        is_paid: true, // 테스트용으로 즉시 결제 완료
+        is_paid: true, // 임시로 즉시 결제 완료
         is_checked: false,
-        payment_method: paymentMethod,
-        year_month: new Date().toISOString().slice(0, 7), // YYYY-MM 형식
+        payment_method: paymentMethod || 'card', // 기본값 설정
+        year_month: yearMonth,
+        half_period: halfPeriod, // 상반기/하반기 정보 추가
       })
       .select()
       .single();
@@ -376,13 +459,15 @@ export async function POST(request: NextRequest) {
             .split('T')[0];
       }
 
-      // order_details 생성
+      // order_details 생성 (panel_info_id, panel_slot_usage_id, half_period 포함)
       const orderDetail = {
         order_id: order.id,
         panel_info_id: item.panel_info_id,
+        panel_slot_usage_id: item.panel_slot_usage_id,
         slot_order_quantity: item.quantity,
         display_start_date: displayStartDate,
         display_end_date: displayEndDate,
+        half_period: item.halfPeriod, // 상반기/하반기 정보 추가
       };
 
       orderDetails.push(orderDetail);

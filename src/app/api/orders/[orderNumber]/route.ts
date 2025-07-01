@@ -31,8 +31,14 @@ export async function GET(
       return acc;
     }, {} as Record<string, string>);
 
-    const userId =
-      cookies['user_auth_id'] || '6301322c-7813-459e-aedc-791d92bd8fb2';
+    const userId = cookies['user_id'];
+
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: '로그인이 필요합니다.' },
+        { status: 401 }
+      );
+    }
 
     console.log('🔍 사용자 ID:', userId);
 
@@ -45,9 +51,11 @@ export async function GET(
         order_details (
           id,
           panel_info_id,
+          panel_slot_usage_id,
           slot_order_quantity,
           display_start_date,
           display_end_date,
+          half_period,
           panel_info:panel_info_id (
             id,
             nickname,
@@ -65,9 +73,7 @@ export async function GET(
       `
       )
       .eq('order_number', orderNumber)
-      .or(
-        `user_auth_id.eq.6301322c-7813-459e-aedc-791d92bd8fb2,user_auth_id.eq.00000000-0000-0000-0000-000000000000,user_profile_id.eq.6301322c-7813-459e-aedc-791d92bd8fb2,user_profile_id.eq.00000000-0000-0000-0000-000000000000`
-      )
+      .or(`user_auth_id.eq.${userId},user_profile_id.eq.${userId}`)
       .single();
 
     console.log('🔍 주문 상세 조회 결과:', { order, orderError });
@@ -124,11 +130,13 @@ export async function GET(
         order.payment_method === 'card' ? '카드결제' : '무통장입금',
       depositorName: order.user_profiles?.contact_person_name || '',
       orderDate: order.created_at,
+      year_month: order.year_month,
+      half_period: order.half_period,
       canCancel: canCancel,
       daysSinceOrder: daysDiff,
       // panel_slot_snapshot 데이터 추가
       panel_slot_snapshot: order.panel_slot_snapshot,
-      panel_slot_usage_id: order.panel_slot_usage_id,
+      panel_slot_usage_id: firstOrderDetail?.panel_slot_usage_id,
     };
 
     return NextResponse.json({
