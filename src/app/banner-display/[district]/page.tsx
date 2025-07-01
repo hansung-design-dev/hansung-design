@@ -5,7 +5,6 @@ import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import districts from '@/src/mock/banner-district';
 import { BannerBillboard } from '@/src/types/displaydetail';
-import { ledItems } from '@/src/mock/billboards';
 
 // BannerDisplayData 타입 정의
 interface BannerDisplayData {
@@ -153,7 +152,14 @@ export default function BannerDisplayPage() {
     : districts.find((d) => d.code === district);
 
   const pageDropdownOptions = isAllDistricts
-    ? districts.slice(0, 5).map((d, i) => ({ id: i + 1, option: d.name }))
+    ? [
+        { id: 0, option: '전체' },
+        { id: 1, option: '관악구' },
+        { id: 2, option: '마포구' },
+        { id: 3, option: '서대문구' },
+        { id: 4, option: '송파구' },
+        { id: 5, option: '용산구' },
+      ]
     : dropdownOptions;
 
   console.log('🔍 District code from URL:', district);
@@ -170,12 +176,6 @@ export default function BannerDisplayPage() {
     second_half_to: string;
   } | null>(null);
   const [bankInfo, setBankInfo] = useState<BankInfo | null>(null);
-  const [districtData, setDistrictData] = useState<{
-    id: string;
-    name: string;
-    code: string;
-    logo_image_url: string | null;
-  } | null>(null);
 
   // 신청기간 가져오기 함수
   async function getDisplayPeriod(districtName: string) {
@@ -347,12 +347,6 @@ export default function BannerDisplayPage() {
         if (!isAllDistricts && districtObj?.name) {
           const districtDataResult = await getDistrictData(districtObj.name);
           if (districtDataResult) {
-            setDistrictData({
-              id: districtDataResult.id,
-              name: districtDataResult.name,
-              code: districtDataResult.code,
-              logo_image_url: districtDataResult.logo_image_url,
-            });
             setBankInfo(districtDataResult.bank_info);
           }
         }
@@ -418,22 +412,7 @@ export default function BannerDisplayPage() {
   return (
     <DisplayDetailPage
       district={district}
-      districtObj={
-        districtData
-          ? {
-              id: parseInt(districtData.id),
-              name: districtData.name,
-              code: districtData.code,
-              description: districtObj?.description || '',
-              count: districtObj?.count || 0,
-              logo:
-                districtData.logo_image_url ||
-                districtObj?.icon ||
-                '/images/district-icon/default.svg',
-              src: districtObj?.src || '',
-            }
-          : districtObj
-      }
+      districtObj={districtObj}
       billboards={billboards}
       dropdownOptions={pageDropdownOptions}
       defaultView="list"

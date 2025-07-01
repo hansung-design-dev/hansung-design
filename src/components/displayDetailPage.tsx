@@ -78,6 +78,12 @@ export default function DisplayDetailPage({
   const [selectedHalfPeriod, setSelectedHalfPeriod] = useState<
     'first_half' | 'second_half'
   >('first_half');
+  const [selectedDistrictPeriod, setSelectedDistrictPeriod] = useState<{
+    first_half_from: string;
+    first_half_to: string;
+    second_half_from: string;
+    second_half_to: string;
+  } | null>(null);
   const { dispatch } = useCart();
   const router = useRouter();
 
@@ -160,10 +166,32 @@ export default function DisplayDetailPage({
     return '';
   };
 
-  const handleDropdownChange = (item: { id: number; option: string }) => {
+  const handleDropdownChange = async (item: { id: number; option: string }) => {
     setSelectedOption(item);
     if (item.option === '전체보기' && !isAllDistrictsView) {
       router.push('/banner-display/all');
+    }
+
+    // 전체보기에서 특정 구를 선택했을 때 해당 구의 상하반기 기간 가져오기
+    if (isAllDistrictsView && item.option !== '전체') {
+      try {
+        const response = await fetch(
+          `/api/display-period?district=${encodeURIComponent(
+            item.option
+          )}&display_type=banner_display`
+        );
+        const result = await response.json();
+        if (result.success) {
+          setSelectedDistrictPeriod(result.data);
+          console.log('Selected district period:', result.data);
+        }
+      } catch (err) {
+        console.warn(`Failed to fetch period for ${item.option}:`, err);
+      }
+    } else if (isAllDistrictsView && item.option === '전체') {
+      // 전체로 돌아갈 때 상하반기 기간 초기화하고 selectedOption도 null로 설정
+      setSelectedDistrictPeriod(null);
+      setSelectedOption(null);
     }
   };
 
@@ -395,7 +423,7 @@ export default function DisplayDetailPage({
               {districtObj?.name}
             </h2>
           </div>
-          {selectedOption && <div>{selectedOption.option}</div>}
+          {/* {selectedOption && <div>{selectedOption.option}</div>} */}
 
           <DistrictInfo period={period} bankInfo={bankInfo} flexRow={true} />
         </div>
@@ -436,15 +464,35 @@ export default function DisplayDetailPage({
             </div>
           </div>
         )}
-        {/* 상하반기 탭 - 개별 구 페이지에서만 표시 */}
-        {period && !isAllDistrictsView && (
+        {/* 상하반기 탭 - 개별 구 페이지에서만 표시하거나, 전체보기에서 특정 구를 선택했을 때만 표시 */}
+        {((period && !isAllDistrictsView) ||
+          (isAllDistrictsView &&
+            selectedOption &&
+            selectedOption.option !== '전체' &&
+            selectedDistrictPeriod)) && (
           <HalfPeriodTabs
             selectedPeriod={selectedHalfPeriod}
             onPeriodChange={setSelectedHalfPeriod}
-            firstHalfFrom={period.first_half_from}
-            firstHalfTo={period.first_half_to}
-            secondHalfFrom={period.second_half_from}
-            secondHalfTo={period.second_half_to}
+            firstHalfFrom={
+              selectedDistrictPeriod?.first_half_from ||
+              period?.first_half_from ||
+              ''
+            }
+            firstHalfTo={
+              selectedDistrictPeriod?.first_half_to ||
+              period?.first_half_to ||
+              ''
+            }
+            secondHalfFrom={
+              selectedDistrictPeriod?.second_half_from ||
+              period?.second_half_from ||
+              ''
+            }
+            secondHalfTo={
+              selectedDistrictPeriod?.second_half_to ||
+              period?.second_half_to ||
+              ''
+            }
             year={2025}
           />
         )}
@@ -485,7 +533,10 @@ export default function DisplayDetailPage({
             <ItemList
               items={filteredBillboards}
               showHeader
-              showCheckbox
+              showCheckbox={
+                !isAllDistrictsView ||
+                !!(selectedOption && selectedOption.option !== '전체')
+              }
               selectedIds={selectedIds}
               onItemSelect={(id, checked) => handleItemSelect(id, checked)}
               enableRowClick={false}

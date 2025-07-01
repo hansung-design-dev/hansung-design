@@ -19,15 +19,13 @@ interface BankInfoProps {
 export default function BankInfo({ bankInfo, flexRow = false }: BankInfoProps) {
   return (
     <div className={`text-1 font-500 text-gray-600 flex gap-2 pt-2`}>
-      <span>입금계좌:</span>
+      <span> {bankInfo ? `입금계좌` : ''}</span>
 
       <div
         className={`flex text-red  ${flexRow ? 'flex-row' : 'flex-col'} gap-1`}
       >
         <span>
-          {bankInfo
-            ? `${bankInfo.bank_name} ${bankInfo.account_number} `
-            : '데이터를 받아올 수 없습니다.'}
+          {bankInfo ? `${bankInfo.bank_name} ${bankInfo.account_number} ` : ''}
         </span>
 
         <span>{bankInfo?.depositor}</span>
