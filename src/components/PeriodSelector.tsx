@@ -21,16 +21,14 @@ export default function PeriodSelector({
   const currentMonth = new Date().getMonth() + 1;
 
   // 다음달 계산
-  const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
-  const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
 
   const [period, setPeriod] = useState<'first_half' | 'second_half'>(
     halfPeriod || 'first_half'
   );
 
   useEffect(() => {
-    onPeriodChange(nextYear, nextMonth, period);
-  }, [nextYear, nextMonth, period, onPeriodChange]);
+    onPeriodChange(currentYear, currentMonth, period);
+  }, [currentYear, currentMonth, period, onPeriodChange]);
 
   const getPeriodText = (period: 'first_half' | 'second_half') => {
     return period === 'first_half' ? '상반기 (1-15일)' : '하반기 (16-31일)';
@@ -41,9 +39,8 @@ export default function PeriodSelector({
       <div className="text-sm font-semibold text-gray-700">게시 기간 선택</div>
 
       <div className="text-sm text-gray-600">
-        선택 가능한 기간:{' '}
         <span className="font-semibold">
-          {nextYear}년 {nextMonth}월
+          {currentYear}년 {currentMonth}월
         </span>
       </div>
 
@@ -72,7 +69,7 @@ export default function PeriodSelector({
       </div>
 
       <div className="text-xs text-gray-500 mt-2">
-        선택된 기간: {nextYear}년 {nextMonth}월 {getPeriodText(period)}
+        선택된 기간: {currentYear}년 {currentMonth}월 {getPeriodText(period)}
       </div>
     </div>
   );
