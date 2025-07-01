@@ -128,20 +128,26 @@ export default function LiveCart() {
                     </span>
                     {item.halfPeriod && (
                       <span className="ml-2 text-sm text-blue-600 font-medium">
-                        (
                         {item.halfPeriod === 'first_half' ? '상반기' : '하반기'}
-                        )
                       </span>
                     )}
                   </div>
-                  <span className="mr-2 text-gray-500">{item.district}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500">{item.district}</span>
+                    {item.halfPeriod &&
+                      item.selectedYear &&
+                      item.selectedMonth && (
+                        <span className="text-xs text-gray-400">
+                          {item.selectedYear}년 {item.selectedMonth}월
+                        </span>
+                      )}
+                  </div>
                 </div>
 
                 <div className="flex flex-col items-center gap-2">
                   <Button
-                    variant="default"
                     size="sm"
-                    className="ml-auto text-red-500 p-0 bg-transparent border-none"
+                    className="ml-auto text-red-500 p-0 bg-transparent border-none hover:cursor-pointer"
                     onClick={() =>
                       dispatch({ type: 'REMOVE_ITEM', id: item.id })
                     }

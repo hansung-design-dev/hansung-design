@@ -54,7 +54,7 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
       {/* 상반기 탭 */}
       <button
         onClick={() => onPeriodChange('first_half')}
-        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+        className={`hover:cursor-pointer px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
           selectedPeriod === 'first_half'
             ? 'bg-blue-500 text-white'
             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -67,7 +67,7 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
       {/* 하반기 탭 */}
       <button
         onClick={() => onPeriodChange('second_half')}
-        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+        className={`hover:cursor-pointer px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
           selectedPeriod === 'second_half'
             ? 'bg-blue-500 text-white'
             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'

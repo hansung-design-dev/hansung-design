@@ -42,21 +42,22 @@ export async function GET(
       .select(
         `
         *,
-        panel_info:panel_info_id (
-          id,
-          nickname,
-          address,
-          panel_status,
-          panel_type,
-          region_gu:region_gu_id (
-            name
-          )
-        ),
         order_details (
           id,
+          panel_info_id,
           slot_order_quantity,
           display_start_date,
-          display_end_date
+          display_end_date,
+          panel_info:panel_info_id (
+            id,
+            nickname,
+            address,
+            panel_status,
+            panel_type,
+            region_gu:region_gu_id (
+              name
+            )
+          )
         ),
         user_profiles (
           *
@@ -95,25 +96,29 @@ export async function GET(
     const canCancel = daysDiff <= 3 && !order.is_paid;
 
     // 주문 상세 데이터 변환
+    const firstOrderDetail = order.order_details?.[0];
     const orderDetail = {
       id: order.id,
       order_number: order.order_number,
-      title: order.panel_info?.nickname || order.panel_info?.address || '',
-      location: order.panel_info?.region_gu?.name || '',
+      title:
+        firstOrderDetail?.panel_info?.nickname ||
+        firstOrderDetail?.panel_info?.address ||
+        '',
+      location: firstOrderDetail?.panel_info?.region_gu?.name || '',
       status: order.is_paid
         ? order.is_checked
           ? '송출중'
           : '진행중'
         : '대기중',
-      category: order.panel_info?.panel_type || '',
+      category: firstOrderDetail?.panel_info?.panel_type || '',
       customerName: order.user_profiles?.contact_person_name || '',
       phone: order.user_profiles?.phone || '',
       companyName: order.user_profiles?.company_name || '',
-      productName: order.panel_info?.panel_type || '',
+      productName: firstOrderDetail?.panel_info?.panel_type || '',
       price: order.total_price,
       vat: Math.floor(order.total_price * 0.1), // 부가세 10%
       designFee: 0, // 디자인비 (필요시 추가)
-      roadUsageFee: order.panel_slot_snapshot?.road_usage_fee || 0, // 도로사용료
+      roadUsageFee: 0, // 도로사용료
       totalAmount: order.total_price,
       paymentMethod:
         order.payment_method === 'card' ? '카드결제' : '무통장입금',

@@ -72,6 +72,7 @@ export default function CustomerServicePage() {
     }
 
     fetchInquiries();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, authLoading, currentPage]);
 
   const fetchInquiries = async () => {
@@ -136,8 +137,8 @@ export default function CustomerServicePage() {
       activeTab={activeTab}
       setActiveTab={setActiveTab}
     >
-      <div className="mb-12">
-        <div className="mb-12">
+      <div>
+        <div>
           <div className="flex flex-col md:flex-row lg:items-start md:items-center lg:justify-between lg:gap-6 md:gap-2">
             <h2 className="md:text-1.75 lg:text-2.25 font-500">1:1 상담</h2>
             <div className="grid grid-cols-2 gap-4">
@@ -191,35 +192,35 @@ export default function CustomerServicePage() {
           </div>
         )}
 
-        <div className="mt-8 md:mt-12 w-full overflow-x-auto">
+        <div className="w-full overflow-x-auto">
           {loading ? (
             <div className="text-center py-8">상담 내역을 불러오는 중...</div>
           ) : (
             <>
-              <table className="w-full min-w-[600px] md:min-w-[800px] pb-[2rem]">
+              <table className="">
                 <tbody>
                   {inquiries.map((item) => (
                     <React.Fragment key={item.id}>
                       <tr
-                        className="last:border-none border-black border-b-[2px] md:border-b-[3px] lg:text-1 sm:text-sm md:text-1 font-500 cursor-pointer text-0.875"
+                        className="border-b-solid border-b-1 border-b-black md:border-b-[3px] text-1 font-500 cursor-pointer"
                         onClick={() => toggleItem(item.id)}
                       >
-                        <td className="px-4 md:px-[2rem] py-3 md:py-4 text-center border-b-solid border-b-1 border-gray-200">
+                        <td className=" py-3 md:py-4 text-center ">
                           {item.id.slice(0, 8)}
                         </td>
                         <td className="px-2 md:px-4 py-3 md:py-8 border-b border-gray-200">
                           {item.title}
                         </td>
-                        <td className="px-2 md:px-4 py-3 md:py-4 text-center border-b border-gray-200">
+                        <td className=" py-3 md:py-4 text-center border-b border-gray-200">
                           {formatDate(item.created_at)}
                         </td>
-                        <td className="px-4 md:pr-[2rem] py-3 md:py-4 text-end font-semibold border-b border-gray-200">
+                        <td className="px-4 py-3 md:py-4 text-end font-semibold border-b border-gray-200">
                           <div className="flex items-center justify-end gap-4">
                             <span
                               className={
                                 item.status === 'answered'
                                   ? 'text-[#1C9133]'
-                                  : 'text-black'
+                                  : 'text-gray-2'
                               }
                             >
                               {getStatusDisplay(item.status)}

@@ -14,6 +14,7 @@ import { useCart } from '../contexts/cartContext';
 import { District, DropdownOption } from '@/src/types/displaydetail';
 import { LEDBillboard } from '@/src/types/leddetail';
 import DistrictInfo from './districtInfo';
+import HalfPeriodTabs from './ui/HalfPeriodTabs';
 
 const fadeInUp = {
   initial: { y: 60, opacity: 0 },
@@ -67,21 +68,31 @@ export default function LEDDisplayDetailPage({
     defaultView
   );
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectedHalfPeriod, setSelectedHalfPeriod] = useState<
+    'first_half' | 'second_half'
+  >('first_half');
   const { dispatch } = useCart();
   const router = useRouter();
 
   const isAllDistrictsView = district === 'all';
 
   const filteredByDistrict =
-    isAllDistrictsView && selectedOption && selectedOption.option !== '전체보기'
+    isAllDistrictsView && selectedOption
       ? billboards.filter((item) => item.district === selectedOption.option)
       : billboards;
 
+  // 상하반기에 따른 필터링
+  const filteredByHalfPeriod = filteredByDistrict.map((item) => ({
+    ...item,
+    // LED는 상하반기 구분이 없으므로 기본값 사용
+    faces: item.faces,
+  }));
+
   const filteredBillboards = isAllDistrictsView
-    ? [...filteredByDistrict].sort((a, b) =>
+    ? [...filteredByHalfPeriod].sort((a, b) =>
         a.district.localeCompare(b.district)
       )
-    : filteredByDistrict;
+    : filteredByHalfPeriod;
 
   // LED 전용 구분 컬럼에 표시할 값 계산 함수
   const getLEDPanelTypeLabel = (panelType?: string) => {
@@ -140,11 +151,23 @@ export default function LEDDisplayDetailPage({
           name: getCartItemName(item),
           district: item.district,
           price: priceForCart,
+          // 기본 기간 설정: 다음달
+          selectedYear: new Date().getFullYear(),
+          selectedMonth: new Date().getMonth() + 2, // 다음달
+          halfPeriod: 'first_half' as const,
           panel_type: item.panel_type,
           panel_info_id: item.panel_info_id, // 원본 UUID
         };
 
         console.log('🔍 Adding LED item to cart:', cartItem);
+        console.log('🔍 LED 상하반기 정보:', {
+          halfPeriod: cartItem.halfPeriod,
+          selectedYear: cartItem.selectedYear,
+          selectedMonth: cartItem.selectedMonth,
+          displayPeriod: `${cartItem.selectedYear}년 ${
+            cartItem.selectedMonth
+          }월 ${cartItem.halfPeriod === 'first_half' ? '상반기' : '하반기'}`,
+        });
         dispatch({
           type: 'ADD_ITEM',
           item: cartItem,
@@ -338,6 +361,19 @@ export default function LEDDisplayDetailPage({
 
           <DistrictInfo period={period} bankInfo={bankInfo} flexRow={true} />
         </div>
+
+        {/* 상하반기 탭 - 개별 구 페이지에서만 표시 */}
+        {period && !isAllDistrictsView && (
+          <HalfPeriodTabs
+            selectedPeriod={selectedHalfPeriod}
+            onPeriodChange={setSelectedHalfPeriod}
+            firstHalfFrom={period.first_half_from}
+            firstHalfTo={period.first_half_to}
+            secondHalfFrom={period.second_half_from}
+            secondHalfTo={period.second_half_to}
+            year={2025}
+          />
+        )}
 
         {/* View Type Selector */}
         <div className="flex items-center gap-4 mb-8 border-b border-gray-200 pb-4">

@@ -51,17 +51,21 @@ export async function GET(request: NextRequest) {
       .select(
         `
         *,
-        panel_info:panel_info_id (
-          nickname,
-          address,
-          panel_status,
-          panel_type,
-          region_gu:region_gu_id (
-            name
-          )
-        ),
         order_details (
-          *
+          id,
+          panel_info_id,
+          slot_order_quantity,
+          display_start_date,
+          display_end_date,
+          panel_info:panel_info_id (
+            nickname,
+            address,
+            panel_status,
+            panel_type,
+            region_gu:region_gu_id (
+              name
+            )
+          )
         )
       `,
         { count: 'exact' }
@@ -122,15 +126,25 @@ export async function GET(request: NextRequest) {
           order.order_details?.map(
             (detail: {
               id: string;
+              panel_info_id: string;
               slot_order_quantity: number;
               display_start_date: string;
               display_end_date: string;
+              panel_info?: {
+                address: string;
+                nickname: string;
+                panel_status: string;
+                panel_type: string;
+                region_gu?: {
+                  name: string;
+                };
+              };
             }) => ({
               id: detail.id,
               panel_info: {
-                address: order.panel_info?.address || '',
-                nickname: order.panel_info?.nickname || '',
-                panel_status: order.panel_info?.panel_status || '',
+                address: detail.panel_info?.address || '',
+                nickname: detail.panel_info?.nickname || '',
+                panel_status: detail.panel_info?.panel_status || '',
               },
               slot_info: {
                 slot_name: '기본 슬롯',
@@ -138,15 +152,17 @@ export async function GET(request: NextRequest) {
                 price_unit: '15 days',
               },
               quantity: detail.slot_order_quantity,
-              unit_price: order.total_price,
-              total_price: order.total_price,
+              unit_price:
+                order.total_price / (order.order_details?.length || 1),
+              total_price:
+                order.total_price / (order.order_details?.length || 1),
               start_date: detail.display_start_date,
               end_date: detail.display_end_date,
               // 특별한 가격 표시 로직
               price_display: (() => {
                 if (order.total_price === 0) {
-                  const panelType = order.panel_info?.panel_type;
-                  const regionName = order.panel_info?.region_gu?.name;
+                  const panelType = detail.panel_info?.panel_type;
+                  const regionName = detail.panel_info?.region_gu?.name;
 
                   // 마포구 시민게시대 (bulletin-board)
                   if (
@@ -163,7 +179,9 @@ export async function GET(request: NextRequest) {
 
                   return '상담문의';
                 }
-                return `${order.total_price.toLocaleString()}원`;
+                return `${(
+                  order.total_price / (order.order_details?.length || 1)
+                ).toLocaleString()}원`;
               })(),
             })
           ) || [],
@@ -195,6 +213,9 @@ interface OrderItem {
   price: number;
   quantity: number;
   panel_info_id: string;
+  halfPeriod?: 'first_half' | 'second_half';
+  selectedYear?: number; // 선택한 년도
+  selectedMonth?: number; // 선택한 월
   startDate?: string;
   endDate?: string;
   panel_slot_snapshot?: {
@@ -250,139 +271,155 @@ export async function POST(request: NextRequest) {
     }, 0);
     console.log('🔍 총 가격:', totalPrice);
 
-    console.log('🔍 첫 번째 아이템의 panel_info_id:', items[0].panel_info_id);
+    // 하나의 주문 생성 (panel_info_id 없음)
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .insert({
+        user_profile_id: userId,
+        user_auth_id: userId,
+        total_price: totalPrice,
+        is_paid: true, // 테스트용으로 즉시 결제 완료
+        is_checked: false,
+        payment_method: paymentMethod,
+        year_month: new Date().toISOString().slice(0, 7), // YYYY-MM 형식
+      })
+      .select()
+      .single();
 
-    // 각 아이템별로 주문 생성 (여러 주문이 있을 수 있음)
-    const createdOrders = [];
-
-    for (const item of items) {
-      console.log('🔍 주문 생성 중:', item);
-
-      // panel_slot_snapshot 데이터 준비
-      const panelSlotSnapshot = item.panel_slot_snapshot || {
-        id: null,
-        notes: null,
-        max_width: null,
-        slot_name: null,
-        tax_price: null,
-        created_at: null,
-        is_premium: null,
-        max_height: null,
-        price_unit: null,
-        updated_at: null,
-        banner_type: null,
-        slot_number: null,
-        total_price: null,
-        panel_info_id: null,
-        road_usage_fee: null,
-        advertising_fee: null,
-        panel_slot_status: null,
-      };
-
-      // 주문 생성
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          panel_info_id: item.panel_info_id,
-          user_profile_id: userId, // user_profile_id 추가
-          user_auth_id: userId,
-          panel_slot_usage_id: item.panel_slot_usage_id || null,
-          panel_slot_snapshot: panelSlotSnapshot,
-          total_price: item.price * item.quantity,
-          is_paid: true, // 테스트용으로 즉시 결제 완료
-          is_checked: false,
-          payment_method: paymentMethod,
-          year_month: new Date().toISOString().slice(0, 7), // YYYY-MM 형식
-        })
-        .select()
-        .single();
-
-      if (orderError) {
-        console.error('🔍 주문 생성 오류:', orderError);
-        throw new Error('주문 생성에 실패했습니다.');
-      }
-
-      // 주문번호 생성 (YYYYMMDD + 4자리 순번)
-      const today = new Date();
-      const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
-
-      // 오늘 날짜의 주문 개수 조회 (order_number가 있는 주문들만)
-      const { count: todayOrderCount } = await supabase
-        .from('orders')
-        .select('*', { count: 'exact', head: true })
-        .not('order_number', 'is', null)
-        .gte('created_at', today.toISOString().slice(0, 10))
-        .lt(
-          'created_at',
-          new Date(today.getTime() + 24 * 60 * 60 * 1000)
-            .toISOString()
-            .slice(0, 10)
-        );
-
-      const orderNumber = `${dateStr}${String(
-        (todayOrderCount || 0) + 1
-      ).padStart(4, '0')}`;
-
-      console.log('🔍 생성된 주문번호:', orderNumber);
-
-      // 주문번호 업데이트
-      const { error: updateError } = await supabase
-        .from('orders')
-        .update({ order_number: orderNumber })
-        .eq('id', order.id);
-
-      if (updateError) {
-        console.error('🔍 주문번호 업데이트 오류:', updateError);
-      }
-
-      console.log('🔍 주문 생성 결과:', {
-        orderId: order.id,
-        orderNumber: orderNumber,
-        totalPrice: item.price * item.quantity,
-      });
-
-      // 주문 상세 정보 생성
-      const orderDetails = [
-        {
-          order_id: order.id,
-          slot_order_quantity: item.quantity,
-          display_start_date:
-            item.startDate || new Date().toISOString().split('T')[0],
-          display_end_date:
-            item.endDate ||
-            new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
-              .toISOString()
-              .split('T')[0],
-        },
-      ];
-
-      console.log('🔍 주문 상세 정보:', orderDetails);
-
-      const orderDetailsResult = await supabase
-        .from('order_details')
-        .insert(orderDetails);
-
-      console.log('🔍 주문 상세 정보 생성 결과:', orderDetailsResult);
-
-      if (orderDetailsResult.error) {
-        console.error('🔍 주문 상세 정보 생성 오류:', orderDetailsResult.error);
-        return NextResponse.json(
-          { error: '주문 상세 정보 생성에 실패했습니다.' },
-          { status: 500 }
-        );
-      }
-
-      createdOrders.push({
-        orderId: order.id,
-        orderNumber: orderNumber,
-        totalPrice: item.price * item.quantity,
-      });
+    if (orderError) {
+      console.error('🔍 주문 생성 오류:', orderError);
+      throw new Error('주문 생성에 실패했습니다.');
     }
 
-    console.log('🔍 모든 주문 생성 성공:', createdOrders);
+    // 주문번호 생성 (YYYYMMDD + 4자리 순번)
+    const today = new Date();
+    const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
+
+    // 오늘 날짜의 주문 개수 조회 (order_number가 있는 주문들만)
+    const { count: todayOrderCount } = await supabase
+      .from('orders')
+      .select('*', { count: 'exact', head: true })
+      .not('order_number', 'is', null)
+      .gte('created_at', today.toISOString().slice(0, 10))
+      .lt(
+        'created_at',
+        new Date(today.getTime() + 24 * 60 * 60 * 1000)
+          .toISOString()
+          .slice(0, 10)
+      );
+
+    const orderNumber = `${dateStr}${String(
+      (todayOrderCount || 0) + 1
+    ).padStart(4, '0')}`;
+
+    console.log('🔍 생성된 주문번호:', orderNumber);
+
+    // 주문번호 업데이트
+    const { error: updateError } = await supabase
+      .from('orders')
+      .update({ order_number: orderNumber })
+      .eq('id', order.id);
+
+    if (updateError) {
+      console.error('🔍 주문번호 업데이트 오류:', updateError);
+    }
+
+    // 각 아이템별로 order_details 생성
+    const orderDetails = [];
+
+    for (const item of items) {
+      console.log('🔍 주문 상세 생성 중:', item);
+
+      // 선택한 기간에 따른 시작/종료 날짜 계산
+      let displayStartDate: string;
+      let displayEndDate: string;
+
+      if (item.selectedYear && item.selectedMonth && item.halfPeriod) {
+        // 사용자가 선택한 년월과 상반기/하반기로 날짜 계산
+        const year = item.selectedYear;
+        const month = item.selectedMonth;
+
+        // 다음달 검증
+        const currentDate = new Date();
+        const currentYear = currentDate.getFullYear();
+        const currentMonth = currentDate.getMonth() + 1;
+        const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+        const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+
+        if (year !== nextYear || month !== nextMonth) {
+          throw new Error(
+            `다음달(${nextYear}년 ${nextMonth}월)만 선택 가능합니다.`
+          );
+        }
+
+        if (item.halfPeriod === 'first_half') {
+          // 상반기: 1일-15일
+          displayStartDate = `${year}-${String(month).padStart(2, '0')}-01`;
+          displayEndDate = `${year}-${String(month).padStart(2, '0')}-15`;
+        } else {
+          // 하반기: 16일-마지막일
+          const lastDay = new Date(year, month, 0).getDate();
+          displayStartDate = `${year}-${String(month).padStart(2, '0')}-16`;
+          displayEndDate = `${year}-${String(month).padStart(
+            2,
+            '0'
+          )}-${lastDay}`;
+        }
+      } else {
+        // 기존 로직 (기본값)
+        displayStartDate =
+          item.startDate || new Date().toISOString().split('T')[0];
+        displayEndDate =
+          item.endDate ||
+          new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
+            .toISOString()
+            .split('T')[0];
+      }
+
+      // order_details 생성
+      const orderDetail = {
+        order_id: order.id,
+        panel_info_id: item.panel_info_id,
+        slot_order_quantity: item.quantity,
+        display_start_date: displayStartDate,
+        display_end_date: displayEndDate,
+      };
+
+      orderDetails.push(orderDetail);
+    }
+
+    console.log('🔍 주문 상세 정보:', orderDetails);
+
+    // order_details 일괄 생성
+    const orderDetailsResult = await supabase
+      .from('order_details')
+      .insert(orderDetails);
+
+    console.log('🔍 주문 상세 정보 생성 결과:', orderDetailsResult);
+
+    if (orderDetailsResult.error) {
+      console.error('🔍 주문 상세 정보 생성 오류:', orderDetailsResult.error);
+      return NextResponse.json(
+        { error: '주문 상세 정보 생성에 실패했습니다.' },
+        { status: 500 }
+      );
+    }
+
+    console.log('🔍 주문 생성 성공:', {
+      orderId: order.id,
+      orderNumber: orderNumber,
+      totalPrice: totalPrice,
+      itemCount: items.length,
+    });
+
     return NextResponse.json({
       success: true,
-      orders: createdOrders,
+      order: {
+        orderId: order.id,
+        orderNumber: orderNumber,
+        totalPrice: totalPrice,
+        itemCount: items.length,
+      },
       message: '주문이 성공적으로 생성되었습니다.',
     });
   } catch (error) {

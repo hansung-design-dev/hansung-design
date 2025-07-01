@@ -109,7 +109,7 @@ const Section = ({
               >
                 <Link
                   href={href}
-                  className="bg-black text-white w-[8rem] lg:h-[1.75rem] md:h-[2rem] md:w-[10rem] sm:h-[1.7rem] sm:w-[6rem] lg:py-[1.625rem] md:py-[1.5rem] sm:py-[0.75rem] lg:w-[11rem] md:px-[6rem] sm:px-[2rem] rounded-full hover:bg-gray-800 transition-colors mobile-subtitle font-bold lg:text-1.5 md:text-1.5 sm:text-1 sm:font-weight-500 underline-none flex justify-center items-center"
+                  className="bg-black text-white w-[8rem] lg:h-[1.75rem] md:h-[2rem] md:w-[10rem] sm:h-[1.7rem] sm:w-[6rem] lg:py-[1.625rem] md:py-[1.5rem] sm:py-[0.75rem] lg:w-[11rem] md:px-[6rem] sm:px-[2rem] rounded-full transition-colors mobile-subtitle font-bold lg:text-1.5 md:text-1.5 sm:text-1 sm:font-weight-500 underline-none flex justify-center items-center"
                 >
                   {buttonText}
                 </Link>

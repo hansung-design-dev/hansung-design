@@ -62,7 +62,7 @@ export default function DesktopMyPage({
       </div>
 
       {/* 필터 리스트 */}
-      <div className="mb-12">
+      <div className="">
         <h2 className="lg:text-2 md:text-1.75 font-500 pt-3">주문내역</h2>
 
         <div className="lg:text-sm md:text-0.75 text-gray-500 mb-6">

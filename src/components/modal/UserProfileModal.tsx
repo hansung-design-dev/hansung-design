@@ -179,6 +179,7 @@ export default function UserProfileModal({
     if (isOpen) {
       fetchUserProfiles();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, user]);
 
   const handleInputChange = (field: string, value: string | boolean) => {

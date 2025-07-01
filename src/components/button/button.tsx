@@ -25,9 +25,9 @@ export function Button({
   ...props
 }: ButtonProps) {
   const base =
-    'inline-flex items-center justify-center font-medium rounded transition';
+    'inline-flex items-center justify-center font-medium rounded transition hover:cursor-pointer';
   const variants = {
-    default: 'bg-black text-white hover:bg-gray-800',
+    default: 'bg-black text-white',
     outline:
       'w-[7.5rem] py-[0.3125rem] px-[1rem] border border-[#000] text-gray-800 rounded-full border-[0.1q]',
     outlineGray:
