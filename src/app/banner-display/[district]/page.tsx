@@ -312,29 +312,29 @@ export default function BannerDisplayPage() {
             '🔍 No data found, using mock data for district:',
             district
           );
-          const mockBillboards = ledItems
-            .filter((b) => b.location.split(' ')[0] === district)
-            .map(
-              (item): BannerBillboard => ({
-                id: `${district}-${item.id.toString().padStart(2, '0')}`, // string으로 변경
-                type: 'banner', // 타입을 'banner'로 설정
-                district: item.location.split(' ')[0],
-                name: item.title,
-                address: item.title,
-                nickname: item.location.split(' ')[1],
-                neighborhood: item.location.split(' ')[1],
-                period: '상시',
-                price: item.price.toString(),
-                size: `${item.width}x${item.height}`,
-                faces: item.slots,
-                lat: 37.5665, // Default coordinates
-                lng: 126.978,
-                status: '진행중',
-                panel_width: item.width,
-                panel_height: item.height,
-              })
-            );
-          setBillboards(mockBillboards);
+          // const mockBillboards = ledItems
+          //   .filter((b) => b.location.split(' ')[0] === district)
+          //   .map(
+          //     (item): BannerBillboard => ({
+          //       id: `${district}-${item.id.toString().padStart(2, '0')}`, // string으로 변경
+          //       type: 'banner', // 타입을 'banner'로 설정
+          //       district: item.location.split(' ')[0],
+          //       name: item.title,
+          //       address: item.title,
+          //       nickname: item.location.split(' ')[1],
+          //       neighborhood: item.location.split(' ')[1],
+          //       period: '상시',
+          //       price: item.price.toString(),
+          //       size: `${item.width}x${item.height}`,
+          //       faces: item.slots,
+          //       lat: 37.5665, // Default coordinates
+          //       lng: 126.978,
+          //       status: '진행중',
+          //       panel_width: item.width,
+          //       panel_height: item.height,
+          //     })
+          //   );
+          // setBillboards(mockBillboards);
         }
 
         // 2. 신청기간 가져오기 (전체보기가 아닌 경우에만)

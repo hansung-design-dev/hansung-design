@@ -8,6 +8,8 @@ export interface CartItem {
   district: string;
   price: number;
   halfPeriod?: 'first_half' | 'second_half';
+  selectedYear?: number; // 선택한 년도 (예: 2025)
+  selectedMonth?: number; // 선택한 월 (예: 7)
   panel_type?: string;
   panel_info_id?: string; // panel_info 테이블의 실제 ID
   panel_slot_snapshot?: {
@@ -123,6 +125,17 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         panel_info_id: action.item.panel_info_id,
         name: action.item.name,
         price: action.item.price,
+        halfPeriod: action.item.halfPeriod,
+        selectedYear: action.item.selectedYear,
+        selectedMonth: action.item.selectedMonth,
+        displayPeriod:
+          action.item.selectedYear &&
+          action.item.selectedMonth &&
+          action.item.halfPeriod
+            ? `${action.item.selectedYear}년 ${action.item.selectedMonth}월 ${
+                action.item.halfPeriod === 'first_half' ? '상반기' : '하반기'
+              }`
+            : '기간 미설정',
       });
       newState = {
         items: [...state.items, action.item],
@@ -196,4 +209,27 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-export const useCart = () => useContext(CartContext);
+export const useCart = () => {
+  const context = useContext(CartContext);
+
+  const addToCart = (
+    item: Omit<CartItem, 'id'>,
+    halfPeriod?: 'first_half' | 'second_half',
+    selectedYear?: number,
+    selectedMonth?: number
+  ) => {
+    const newItem: CartItem = {
+      ...item,
+      id: Math.random().toString(36).substr(2, 9),
+      halfPeriod,
+      selectedYear,
+      selectedMonth,
+    };
+    context.dispatch({ type: 'ADD_ITEM', item: newItem });
+  };
+
+  return {
+    ...context,
+    addToCart,
+  };
+};

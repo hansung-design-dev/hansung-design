@@ -204,11 +204,22 @@ export default function DisplayDetailPage({
           district: item.district,
           price: priceForCart,
           halfPeriod: selectedHalfPeriod,
+          // 기본 기간 설정: 다음달
+          selectedYear: new Date().getFullYear(),
+          selectedMonth: new Date().getMonth() + 2, // 다음달
           panel_type: item.panel_type,
           panel_info_id: item.panel_info_id, // 원본 UUID
         };
 
         console.log('🔍 Adding item to cart:', cartItem);
+        console.log('🔍 상하반기 정보:', {
+          halfPeriod: cartItem.halfPeriod,
+          selectedYear: cartItem.selectedYear,
+          selectedMonth: cartItem.selectedMonth,
+          displayPeriod: `${cartItem.selectedYear}년 ${
+            cartItem.selectedMonth
+          }월 ${cartItem.halfPeriod === 'first_half' ? '상반기' : '하반기'}`,
+        });
         dispatch({
           type: 'ADD_ITEM',
           item: cartItem,
@@ -425,8 +436,8 @@ export default function DisplayDetailPage({
             </div>
           </div>
         )}
-        {/* 상하반기 탭 */}
-        {period && (
+        {/* 상하반기 탭 - 개별 구 페이지에서만 표시 */}
+        {period && !isAllDistrictsView && (
           <HalfPeriodTabs
             selectedPeriod={selectedHalfPeriod}
             onPeriodChange={setSelectedHalfPeriod}

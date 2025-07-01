@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { Button } from '../button/button';
 
 interface HalfPeriodTabsProps {
   selectedPeriod: 'first_half' | 'second_half';
@@ -52,7 +53,7 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
       <div className="text-sm font-medium text-gray-700 mr-4">신청기간:</div>
 
       {/* 상반기 탭 */}
-      <button
+      <Button
         onClick={() => onPeriodChange('first_half')}
         className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
           selectedPeriod === 'first_half'
@@ -62,10 +63,10 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
       >
         {year}년 {firstHalfMonth}월 상반기 ({firstHalfStartDay}.
         {firstHalfStartDay}-{firstHalfEndDay})
-      </button>
+      </Button>
 
       {/* 하반기 탭 */}
-      <button
+      <Button
         onClick={() => onPeriodChange('second_half')}
         className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
           selectedPeriod === 'second_half'
@@ -75,7 +76,7 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
       >
         {year}년 {secondHalfMonth}월 하반기 ({secondHalfStartDay}.
         {secondHalfStartDay}-{secondHalfEndDay})
-      </button>
+      </Button>
     </div>
   );
 };

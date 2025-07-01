@@ -8,6 +8,7 @@ import { CartItem } from '@/src/contexts/cartContext';
 import { useState, useMemo, useEffect } from 'react';
 import UserProfileModal from '@/src/components/modal/UserProfileModal';
 import ConsultationModal from '@/src/components/modal/ConsultationModal';
+import PeriodSelector from '@/src/components/PeriodSelector';
 // import CartItemAccordion from '@/src/components/cartItemAccordion';
 //import { useRouter } from 'next/navigation';
 
@@ -103,6 +104,7 @@ function CartItemRow({
   onOrderModify,
   onConsultation,
   onDelete,
+  onPeriodChange,
   inquiryStatus,
 }: {
   item: CartItem;
@@ -113,6 +115,12 @@ function CartItemRow({
   onOrderModify?: () => void;
   onConsultation?: () => void;
   onDelete?: () => void;
+  onPeriodChange?: (
+    itemId: string,
+    year: number,
+    month: number,
+    halfPeriod: 'first_half' | 'second_half'
+  ) => void;
   inquiryStatus?: {
     status: string;
     answer_content?: string;
@@ -217,6 +225,17 @@ function CartItemRow({
               ? '상담문의'
               : `${item.price?.toLocaleString()}원`}
           </div>
+          {/* 기간 선택 UI - 상담이 아닌 경우에만 표시 */}
+          {!isConsulting && item.price !== 0 && (
+            <div className="mt-2">
+              <PeriodSelector
+                halfPeriod={item.halfPeriod}
+                onPeriodChange={(year, month, halfPeriod) => {
+                  onPeriodChange?.(item.id, year, month, halfPeriod);
+                }}
+              />
+            </div>
+          )}
         </div>
       </div>
       {dividerVertical}
@@ -526,8 +545,44 @@ export default function Cart() {
   };
 
   const handleConsultationSuccess = () => {
+    setIsConsultationModalOpen(false);
     // 문의 성공 후 상태 다시 확인
     fetchInquiryStatuses();
+  };
+
+  // 기간 변경 핸들러 추가
+  const handlePeriodChange = (
+    itemId: string,
+    year: number,
+    month: number,
+    halfPeriod: 'first_half' | 'second_half'
+  ) => {
+    console.log('🔍 기간 변경 요청:', {
+      itemId,
+      year,
+      month,
+      halfPeriod,
+      displayPeriod: `${year}년 ${month}월 ${
+        halfPeriod === 'first_half' ? '상반기' : '하반기'
+      }`,
+    });
+
+    const updatedCart = cart.map((item) => {
+      if (item.id === itemId) {
+        return {
+          ...item,
+          selectedYear: year,
+          selectedMonth: month,
+          halfPeriod: halfPeriod,
+        };
+      }
+      return item;
+    });
+
+    // 카트 상태 업데이트
+    updatedCart.forEach((item) => {
+      dispatch({ type: 'ADD_ITEM', item });
+    });
   };
 
   const handleDelete = (item: CartItem) => {
@@ -645,6 +700,9 @@ export default function Cart() {
               panel_info_id: panelInfoId,
               panel_slot_snapshot: item.panel_slot_snapshot,
               panel_slot_usage_id: item.panel_slot_usage_id,
+              halfPeriod: item.halfPeriod,
+              selectedYear: item.selectedYear,
+              selectedMonth: item.selectedMonth,
               startDate: new Date().toISOString().split('T')[0],
               endDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
                 .toISOString()
@@ -726,6 +784,7 @@ export default function Cart() {
                       }
                       onOrderModify={() => handleOrderModify(item.id)}
                       onDelete={() => handleDelete(item)}
+                      onPeriodChange={handlePeriodChange}
                     />
                   ))}
                 </CartGroupCard>

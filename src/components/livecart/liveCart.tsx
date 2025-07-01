@@ -139,9 +139,8 @@ export default function LiveCart() {
 
                 <div className="flex flex-col items-center gap-2">
                   <Button
-                    variant="default"
                     size="sm"
-                    className="ml-auto text-red-500 p-0 bg-transparent border-none"
+                    className="ml-auto text-red-500 p-0 bg-transparent border-none hover:cursor-pointer"
                     onClick={() =>
                       dispatch({ type: 'REMOVE_ITEM', id: item.id })
                     }
