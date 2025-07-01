@@ -96,8 +96,29 @@ export async function GET(
     // order_details 데이터 자세히 로그
     if (order?.order_details) {
       console.log('🔍 order_details 상세 데이터:');
-      // @ts-ignore
-      order.order_details.forEach((detail, index: number) => {
+      (
+        order.order_details as Array<{
+          id: string;
+          panel_info_id: string;
+          panel_slot_usage_id?: string;
+          panel_info?: {
+            id: string;
+            nickname?: string;
+            address?: string;
+            panel_type?: string;
+            region_gu?: { name: string };
+          };
+          panel_slot_usage?: {
+            id: string;
+            banner_slot_info?: {
+              tax_price?: number;
+              advertising_fee?: number;
+              road_usage_fee?: number;
+              total_price?: number;
+            };
+          };
+        }>
+      ).forEach((detail, index: number) => {
         console.log(`  [${index}] order_detail:`, {
           id: detail.id,
           panel_info_id: detail.panel_info_id,
