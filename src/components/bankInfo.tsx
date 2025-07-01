@@ -17,6 +17,9 @@ interface BankInfoProps {
 }
 
 export default function BankInfo({ bankInfo, flexRow = false }: BankInfoProps) {
+  // 디버깅용 로그
+  console.log('🔍 BankInfo props:', { bankInfo, flexRow });
+
   return (
     <div className={`text-1 font-500 text-gray-600 flex gap-2 pt-2`}>
       <span> {bankInfo ? `입금계좌` : ''}</span>
