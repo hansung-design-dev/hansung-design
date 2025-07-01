@@ -5,7 +5,7 @@ import { useAuth } from '@/src/contexts/authContext';
 import Image from 'next/image';
 import { Button } from '@/src/components/button/button';
 import { CartItem } from '@/src/contexts/cartContext';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import UserProfileModal from '@/src/components/modal/UserProfileModal';
 import ConsultationModal from '@/src/components/modal/ConsultationModal';
 import PeriodSelector from '@/src/components/PeriodSelector';
@@ -425,13 +425,7 @@ export default function Cart() {
   );
 
   // 상담신청 아이템들의 문의 상태 확인
-  useEffect(() => {
-    if (user && consultingItems.length > 0) {
-      fetchInquiryStatuses();
-    }
-  }, [user, consultingItems.length]);
-
-  const fetchInquiryStatuses = async () => {
+  const fetchInquiryStatuses = useCallback(async () => {
     try {
       const statuses: InquiryStatus = {};
 
@@ -455,7 +449,13 @@ export default function Cart() {
     } catch (error) {
       console.error('문의 상태 확인 실패:', error);
     }
-  };
+  }, [consultingItems]);
+
+  useEffect(() => {
+    if (user && consultingItems.length > 0) {
+      fetchInquiryStatuses();
+    }
+  }, [user, consultingItems.length, fetchInquiryStatuses]);
 
   // 선택된 아이템들의 총계 계산
   const cartSummary = useMemo(() => {

@@ -200,7 +200,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
 
     const interval = setInterval(checkExpiry, 60000); // 1분마다 체크
     return () => clearInterval(interval);
-  }, [state.lastUpdated]);
+  }, [state.lastUpdated, state.items]);
 
   return (
     <CartContext.Provider value={{ cart: state.items, dispatch }}>

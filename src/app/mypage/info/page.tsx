@@ -189,6 +189,7 @@ export default function UserInfoPage() {
 
   useEffect(() => {
     fetchProfiles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const totalPages = Math.ceil(profiles.length / itemsPerPage);

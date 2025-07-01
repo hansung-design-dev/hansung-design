@@ -132,6 +132,7 @@ export default function ConsultationModal({
     if (isOpen && productId && user) {
       checkExistingInquiry();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, productId, user]);
 
   const checkExistingInquiry = async () => {
