@@ -20,10 +20,11 @@ export async function GET(request: NextRequest) {
     });
 
     if (action === 'getLogos') {
-      // 모든 구의 로고 정보 가져오기
+      // 활성화된 구의 로고 정보 가져오기
       const { data, error } = await supabase
         .from('region_gu')
         .select('id, name, logo_image_url')
+        .eq('is_active', true)
         .not('logo_image_url', 'is', null);
 
       if (error) {

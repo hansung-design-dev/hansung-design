@@ -44,10 +44,18 @@ export default function DistrictCard({
 }: DistrictCardProps) {
   const isGangbuk = district.code === 'gangbuk';
   const href = isGangbuk
-    ? 'https://gangbuk.uriad.com/sub01-01.jsp'
+    ? 'https://gangbuk.uriad.com/sub03-01.jsp'
     : `/${basePath}/${encodeURIComponent(district.code)}`;
 
   const [imageError, setImageError] = useState(false);
+
+  // 디버깅용 로그
+  console.log(`🔍 DistrictCard ${district.name}:`, {
+    period: district.period,
+    bankInfo: district.bankInfo,
+    code: district.code,
+    isGangbuk,
+  });
 
   // 기본 로고 이미지 (fallback용)
   const defaultLogo = `/images/district-icon/${

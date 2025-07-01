@@ -30,6 +30,9 @@ export default function DistrictInfo({
   bankInfo,
   flexRow = false,
 }: DistrictInfoProps) {
+  // 디버깅용 로그
+  console.log('🔍 DistrictInfo:', { period, bankInfo, flexRow });
+
   return (
     <div className="text-gray-600">
       {period && (

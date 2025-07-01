@@ -23,6 +23,14 @@ const BannerPeriod: React.FC<BannerPeriodProps> = ({
   second_half_from,
   second_half_to,
 }) => {
+  // 디버깅용 로그
+  console.log('🔍 BannerPeriod props:', {
+    first_half_from,
+    first_half_to,
+    second_half_from,
+    second_half_to,
+  });
+
   return (
     <div className="flex gap-3 text-1 font-500 text-gray-600">
       <div>신청일</div>
