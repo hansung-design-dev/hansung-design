@@ -197,7 +197,7 @@ export default function CustomerServicePage() {
             <div className="text-center py-8">상담 내역을 불러오는 중...</div>
           ) : (
             <>
-              <table className="">
+              <table className="w-full">
                 <tbody>
                   {inquiries.map((item) => (
                     <React.Fragment key={item.id}>
