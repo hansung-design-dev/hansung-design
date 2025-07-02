@@ -111,7 +111,7 @@ async function getLEDDisplaysByDistrict(districtName: string) {
       throw error;
     }
 
-    return data as LEDDisplayData[];
+    return NextResponse.json({ success: true, data: data as LEDDisplayData[] });
   } catch (error) {
     throw error;
   }
@@ -164,7 +164,7 @@ async function getAllLEDDisplays() {
       throw error;
     }
 
-    return data as LEDDisplayData[];
+    return NextResponse.json({ success: true, data: data as LEDDisplayData[] });
   } catch (error) {
     throw error;
   }
@@ -199,7 +199,7 @@ async function getLEDDisplayCountsByDistrict() {
       counts[districtName] = (counts[districtName] || 0) + 1;
     });
 
-    return counts;
+    return NextResponse.json({ success: true, data: counts });
   } catch (error) {
     throw error;
   }
@@ -207,40 +207,115 @@ async function getLEDDisplayCountsByDistrict() {
 
 // GET 요청 처리
 export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const action = searchParams.get('action');
+  const district = searchParams.get('district');
+
+  console.log('🔍 LED Display API called with action:', action);
+
   try {
-    const { searchParams } = new URL(request.url);
-    const action = searchParams.get('action');
-    const district = searchParams.get('district');
-
     switch (action) {
-      case 'getAll':
-        const allData = await getAllLEDDisplays();
-        return NextResponse.json({ success: true, data: allData });
-
-      case 'getByDistrict':
-        if (!district) {
-          return NextResponse.json(
-            { success: false, error: 'District parameter is required' },
-            { status: 400 }
-          );
-        }
-        const districtData = await getLEDDisplaysByDistrict(district);
-        return NextResponse.json({ success: true, data: districtData });
-
+      case 'getAllDistrictsData':
+        return await getAllDistrictsData();
       case 'getCounts':
-        const counts = await getLEDDisplayCountsByDistrict();
-        return NextResponse.json({ success: true, data: counts });
-
+        return await getLEDDisplayCountsByDistrict();
+      case 'getByDistrict':
+        return await getLEDDisplaysByDistrict(district!);
+      case 'getAll':
+        return await getAllLEDDisplays();
       default:
         return NextResponse.json(
-          { success: false, error: 'Invalid action parameter' },
+          { success: false, error: 'Invalid action' },
           { status: 400 }
         );
     }
-  } catch {
+  } catch (error) {
+    console.error('❌ LED Display API error:', error);
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
     );
+  }
+}
+
+// 새로운 통합 API - 모든 구 데이터를 한번에 가져오기
+async function getAllDistrictsData() {
+  try {
+    console.log('🔍 Fetching all districts data for LED display...');
+
+    // 1. 기본 구 정보와 카운트를 한번에 가져오기
+    const { data: panelData, error: panelError } = await supabase
+      .from('panel_info')
+      .select(
+        `
+        region_gu!inner(
+          id,
+          name,
+          code,
+          logo_image_url
+        )
+      `
+      )
+      .eq('display_type_id', (await getLEDDisplayTypeId()).id)
+      .eq('panel_status', 'active');
+
+    if (panelError) {
+      console.error('❌ Error fetching panel data:', panelError);
+      throw panelError;
+    }
+
+    // 2. 카운트 집계
+    const countMap: Record<string, number> = {};
+    const districtsMap: Record<
+      string,
+      {
+        id: string;
+        name: string;
+        code: string;
+        logo_image_url: string | null;
+      }
+    > = {};
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    panelData?.forEach((item: any) => {
+      const districtName = item.region_gu.name;
+      countMap[districtName] = (countMap[districtName] || 0) + 1;
+
+      if (!districtsMap[districtName]) {
+        districtsMap[districtName] = {
+          id: item.region_gu.id,
+          name: item.region_gu.name,
+          code: item.region_gu.code,
+          logo_image_url: item.region_gu.logo_image_url,
+        };
+      }
+    });
+
+    // 3. 기본 구 목록 생성
+    const basicDistricts = Object.values(districtsMap);
+
+    // 4. 상세 정보는 필요할 때만 로딩하도록 기본 구조만 반환
+    const processedDistricts = basicDistricts.map((district) => ({
+      id: district.id,
+      name: district.name,
+      code: district.code,
+      logo_image_url: district.logo_image_url,
+      period: null, // 필요시 별도 API로 로딩
+      bank_info: null, // 필요시 별도 API로 로딩
+    }));
+
+    console.log('🔍 Processed LED districts data:', processedDistricts);
+    console.log('🔍 LED counts data:', countMap);
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        districts: processedDistricts,
+        counts: countMap,
+      },
+    });
+  } catch (error) {
+    console.error('❌ Error in getAllDistrictsData:', error);
+    throw error;
   }
 }
