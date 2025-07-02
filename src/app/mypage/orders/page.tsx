@@ -126,6 +126,7 @@ export default function OrdersPage() {
   const [selectedOrderDetail, setSelectedOrderDetail] =
     useState<OrderDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [expandedItemId, setExpandedItemId] = useState<number | null>(null);
 
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -190,9 +191,27 @@ export default function OrdersPage() {
     }
   };
 
+  const handleExpandItem = async (itemId: number | null) => {
+    if (itemId === null) {
+      // 닫기
+      setExpandedItemId(null);
+      setSelectedOrderDetail(null);
+      return;
+    }
+
+    // 해당 아이템의 주문 정보 찾기
+    const item = filteredOrders.find((item) => item.id === itemId);
+    if (item && item.orderId) {
+      console.log('아이템 확장:', itemId, '주문번호:', item.orderId);
+      await handleOrderClick(item.orderId);
+      setExpandedItemId(itemId);
+    }
+  };
+
   const handleCloseDetail = () => {
     console.log('상세 정보 닫기');
     setSelectedOrderDetail(null);
+    setExpandedItemId(null);
   };
 
   // 주문 데이터를 OrderItemList 컴포넌트 형식으로 변환
@@ -217,7 +236,7 @@ export default function OrdersPage() {
   const getStatusDisplay = (status: string) => {
     switch (status) {
       case 'pending':
-        return '결제대기';
+        return '입금확인 중';
       case 'confirmed':
         return '결제완료';
       case 'completed':
@@ -269,33 +288,33 @@ export default function OrdersPage() {
           <>
             <OrderItemList
               items={filteredOrders}
-              onItemSelect={(id) => {
-                console.log('onItemSelect 호출됨, id:', id);
-                const item = filteredOrders.find((item) => item.id === id);
-                console.log('찾은 아이템:', item);
-                if (item && item.orderId) {
-                  console.log('주문번호로 API 호출:', item.orderId);
-                  handleOrderClick(item.orderId);
-                } else {
-                  console.error('아이템을 찾을 수 없거나 orderId가 없음');
-                }
-              }}
+              expandedItemId={expandedItemId}
+              onExpandItem={handleExpandItem}
+              expandedContent={
+                detailLoading ? (
+                  <div className="text-center py-8">
+                    주문 상세 정보를 불러오는 중...
+                  </div>
+                ) : selectedOrderDetail ? (
+                  <div>
+                    <div className="flex justify-between items-center mb-4 bg-black text-white">
+                      <h3 className="text-lg font-semibold pl-5">
+                        주문 상세 정보
+                      </h3>
+                      <button
+                        onClick={handleCloseDetail}
+                        className="text-gray-1 hover:cursor-pointer pr-5 text-1.25"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <div className="p-3">
+                      <OrderDetailExpanded orderDetail={selectedOrderDetail} />
+                    </div>
+                  </div>
+                ) : null
+              }
             />
-
-            {/* 상세 정보 표시 */}
-            {detailLoading && (
-              <div className="text-center py-8">
-                주문 상세 정보를 불러오는 중...
-              </div>
-            )}
-
-            <div>
-              <p>상세 정보가 로드되었습니다!</p>
-              <OrderDetailExpanded
-                orderDetail={selectedOrderDetail || ({} as OrderDetail)}
-                onClose={handleCloseDetail}
-              />
-            </div>
 
             {/* 페이지네이션 */}
             <div className="flex justify-center items-center mt-6 gap-2">
