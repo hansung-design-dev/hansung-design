@@ -203,6 +203,7 @@ export default function BannerDisplayPage() {
                   key={district.id}
                   district={district}
                   basePath="banner-display"
+                  isLEDDisplay={false}
                 />
               ))}
         </div>

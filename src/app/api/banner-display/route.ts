@@ -309,17 +309,101 @@ async function getAllDistrictsData() {
       };
     }
 
-    // 4. 기본 구 목록 생성
+    // 4. 현수막게시대 하드코딩된 신청기간과 계좌번호 정보
+    const bannerPeriodInfo = {
+      마포구: {
+        first_half_from: '2025-07-05',
+        first_half_to: '2025-07-20',
+        second_half_from: '2025-07-21',
+        second_half_to: '2025-08-04',
+      },
+      관악구: {
+        first_half_from: '2025-07-01',
+        first_half_to: '2025-07-15',
+        second_half_from: '2025-07-16',
+        second_half_to: '2025-07-31',
+      },
+      송파구: {
+        first_half_from: '2025-07-01',
+        first_half_to: '2025-07-15',
+        second_half_from: '2025-07-16',
+        second_half_to: '2025-07-31',
+      },
+      서대문구: {
+        first_half_from: '2025-07-01',
+        first_half_to: '2025-07-15',
+        second_half_from: '2025-07-16',
+        second_half_to: '2025-07-31',
+      },
+      용산구: {
+        first_half_from: '2025-07-01',
+        first_half_to: '2025-07-15',
+        second_half_from: '2025-07-16',
+        second_half_to: '2025-07-31',
+      },
+    };
+
+    const bannerBankInfo = {
+      관악구: {
+        bank_name: '우리',
+        account_number: '1005-103-367439',
+        depositor: '(주)한성디자인기획',
+      },
+      송파구: {
+        bank_name: '우리',
+        account_number: '1005-303-618971',
+        depositor: '(주)한성디자인기획',
+      },
+      서대문구: {
+        bank_name: '기업',
+        account_number: '049-039964-01-096',
+        depositor: '(주)한성디자인기획',
+      },
+      용산구: {
+        bank_name: '기업',
+        account_number: '049-039964-04-128',
+        depositor: '(주)한성디자인기획',
+      },
+      마포구: {
+        bank_name: '기업',
+        account_number: '049-039964-04-135',
+        depositor: '(주)한성디자인기획',
+      },
+    };
+
+    // 5. 기본 구 목록 생성
     const basicDistricts = Object.values(districtsMap);
 
-    // 5. 상세 정보는 필요할 때만 로딩하도록 기본 구조만 반환
+    // 6. 하드코딩된 신청기간과 계좌번호 정보 추가
     const processedDistricts = basicDistricts.map((district) => ({
       id: district.id,
       name: district.name,
       code: district.code,
       logo_image_url: district.logo_image_url,
-      period: null, // 필요시 별도 API로 로딩
-      bank_info: null, // 필요시 별도 API로 로딩
+      period:
+        bannerPeriodInfo[district.name as keyof typeof bannerPeriodInfo] ||
+        null,
+      bank_info: bannerBankInfo[district.name as keyof typeof bannerBankInfo]
+        ? {
+            bank_name:
+              bannerBankInfo[district.name as keyof typeof bannerBankInfo]
+                .bank_name,
+            account_number:
+              bannerBankInfo[district.name as keyof typeof bannerBankInfo]
+                .account_number,
+            depositor:
+              bannerBankInfo[district.name as keyof typeof bannerBankInfo]
+                .depositor,
+            region_gu: {
+              id: district.id,
+              name: district.name,
+            },
+            display_types: {
+              id: '',
+              name: 'banner_display',
+            },
+          }
+        : null,
     }));
 
     console.log('🔍 Processed districts data:', processedDistricts);
