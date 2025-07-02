@@ -60,7 +60,7 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
         }`}
       >
-        {year}년 {firstHalfMonth}월 상반기 ({firstHalfStartDay}.
+        {year}년 {firstHalfMonth}월 상반기 (0{firstHalfMonth}.
         {firstHalfStartDay}-{firstHalfEndDay})
       </button>
 
@@ -73,7 +73,7 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
         }`}
       >
-        {year}년 {secondHalfMonth}월 하반기 ({secondHalfStartDay}.
+        {year}년 {secondHalfMonth}월 하반기 (0{secondHalfMonth}.
         {secondHalfStartDay}-{secondHalfEndDay})
       </button>
     </div>

@@ -36,11 +36,13 @@ interface District {
 interface DistrictCardProps {
   district: District;
   basePath?: string;
+  isLEDDisplay?: boolean;
 }
 
 export default function DistrictCard({
   district,
   basePath = 'led-display',
+  isLEDDisplay = false,
 }: DistrictCardProps) {
   const isGangbuk = district.code === 'gangbuk';
   const href = isGangbuk
@@ -55,6 +57,7 @@ export default function DistrictCard({
     bankInfo: district.bankInfo,
     code: district.code,
     isGangbuk,
+    isLEDDisplay,
   });
 
   // 기본 로고 이미지 (fallback용)
@@ -101,6 +104,7 @@ export default function DistrictCard({
                     period={district.period}
                     bankInfo={district.bankInfo}
                     flexRow={false}
+                    isLEDDisplay={isLEDDisplay}
                   />
                 )}
               </div>

@@ -126,7 +126,8 @@ export default function LiveCart() {
                     <span className="font-bold mr-2">
                       ({getPanelTypeLabel(item.panel_type)})
                     </span>
-                    {item.halfPeriod && (
+                    {/* LED 전자게시대가 아닌 경우에만 상하반기 정보 표시 */}
+                    {item.halfPeriod && item.type !== 'led-display' && (
                       <span className="ml-2 text-sm text-blue-600 font-medium">
                         {item.halfPeriod === 'first_half' ? '상반기' : '하반기'}
                       </span>
@@ -134,13 +135,15 @@ export default function LiveCart() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-gray-500">{item.district}</span>
-                    {item.halfPeriod &&
+                    {/* LED 전자게시대가 아닌 경우에만 년월 정보 표시 */}
+                    {/* {item.halfPeriod &&
                       item.selectedYear &&
-                      item.selectedMonth && (
+                      item.selectedMonth &&
+                      item.type !== 'led-display' && (
                         <span className="text-xs text-gray-400">
                           {item.selectedYear}년 {item.selectedMonth}월
                         </span>
-                      )}
+                      )} */}
                   </div>
                 </div>
 

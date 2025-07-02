@@ -200,6 +200,7 @@ export default function LEDDisplayPage() {
                   key={district.id}
                   district={district}
                   basePath="led-display"
+                  isLEDDisplay={true}
                 />
               ))}
         </div>

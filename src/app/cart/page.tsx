@@ -133,7 +133,7 @@ function CartItemRow({
     const isAnswered = hasInquiry && inquiryStatus.status === 'answered';
 
     return (
-      <div className="flex items-center pl-[3rem] py-6 border-b border-gray-200">
+      <div className="relative flex items-center pl-[3rem] py-6 border-b border-gray-200">
         <div className="flex items-center w-2/3 min-w-0">
           <Image
             src="/images/digital-signage-grid-example.jpeg"
@@ -142,6 +142,7 @@ function CartItemRow({
             height={80}
             className="w-24 h-24 object-cover mr-4 flex-shrink-0"
           />
+
           <div className="flex flex-col gap-3 min-w-0 flex-1">
             <div className="text-1 truncate">{item.name}</div>
             <div className="text-1.25 font-semibold">
@@ -165,7 +166,7 @@ function CartItemRow({
             주문수정
           </Button>
         </div>
-        <div className="flex flex-col items-center justify-center gap-4 p-4 border-solid border-1 border-gray-1 w-[20rem]">
+        <div className="flex flex-col items-center justify-center gap-4 p-4 border-solid border-1 border-gray-1 w-[20rem] mt-4">
           <div className="text-center text-0.875 font-500">
             해당상품은 상담 진행 후 결제가 완료됩니다.
             <br /> 상담문의가 어려우실 경우 고객센터에 문의 부탁드립니다.
@@ -193,7 +194,7 @@ function CartItemRow({
           </Button>
         </div>
         <button
-          className="absolute top-5 right-10 text-1.5 font-100 text-gray-2 hover:cursor-pointer"
+          className="absolute top-1 right-10 text-1.5 font-100 text-gray-2 hover:cursor-pointer"
           onClick={onDelete}
         >
           x
@@ -225,8 +226,8 @@ function CartItemRow({
               ? '상담문의'
               : `${item.price?.toLocaleString()}원`}
           </div>
-          {/* 기간 선택 UI - 상담이 아닌 경우에만 표시 */}
-          {!isConsulting && item.price !== 0 && (
+          {/* 기간 선택 UI - 상담이 아닌 경우에만 표시, LED 전자게시대는 제외 */}
+          {!isConsulting && item.price !== 0 && item.type !== 'led-display' && (
             <div className="mt-2">
               <PeriodSelector
                 halfPeriod={item.halfPeriod}
@@ -412,17 +413,14 @@ export default function Cart() {
     (item) => item.type === 'banner-display' && item.price !== 0
   );
   const consultingItems = cart.filter((item) => item.price === 0);
-  const ledConsultingItems = cart.filter(
-    (item) => item.type === 'led-display' && item.price !== 0
-  );
+  // LED 전자게시대는 모두 상담신청 탭에 들어감
+  const ledItems = cart.filter((item) => item.type === 'led-display');
 
   // 상담신청 아이템들을 타입별로 분리
   const bannerConsultingItems = consultingItems.filter(
     (item) => item.type === 'banner-display'
   );
-  const ledConsultingItemsOnly = consultingItems.filter(
-    (item) => item.type === 'led-display'
-  );
+  const ledConsultingItemsOnly = ledItems; // LED 전자게시대는 모두 상담신청
 
   // 상담신청 아이템들의 문의 상태 확인
   const fetchInquiryStatuses = useCallback(async () => {
@@ -843,12 +841,12 @@ export default function Cart() {
                 </CartGroupCard>
               )}
 
-              {ledConsultingItems.length > 0 && (
+              {ledItems.length > 0 && (
                 <CartGroupCard
                   title="LED전자게시대"
                   phoneList={['1533-0570', '1899-0596', '02-719-0083']}
                 >
-                  {ledConsultingItems.map((item) => (
+                  {ledItems.map((item) => (
                     <CartItemRow
                       key={item.id}
                       item={item}
@@ -867,7 +865,7 @@ export default function Cart() {
 
               {bannerConsultingItems.length === 0 &&
                 ledConsultingItemsOnly.length === 0 &&
-                ledConsultingItems.length === 0 && (
+                ledItems.length === 0 && (
                   <CartGroupCard title="상담신청">
                     <div className="flex items-center justify-center py-12 text-gray-500">
                       상품이 없습니다

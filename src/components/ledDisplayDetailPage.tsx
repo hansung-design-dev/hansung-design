@@ -14,7 +14,7 @@ import { useCart } from '../contexts/cartContext';
 import { District, DropdownOption } from '@/src/types/displaydetail';
 import { LEDBillboard } from '@/src/types/leddetail';
 import DistrictInfo from './districtInfo';
-import HalfPeriodTabs from './ui/HalfPeriodTabs';
+//import HalfPeriodTabs from './ui/HalfPeriodTabs';
 
 const fadeInUp = {
   initial: { y: 60, opacity: 0 },
@@ -31,7 +31,7 @@ export default function LEDDisplayDetailPage({
   billboards,
   dropdownOptions,
   defaultView = 'gallery',
-  period,
+
   bankInfo,
 }: {
   district: string;
@@ -68,9 +68,9 @@ export default function LEDDisplayDetailPage({
     defaultView
   );
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [selectedHalfPeriod, setSelectedHalfPeriod] = useState<
-    'first_half' | 'second_half'
-  >('first_half');
+  // const [selectedHalfPeriod, setSelectedHalfPeriod] = useState<
+  //   'first_half' | 'second_half'
+  // >('first_half');
   const { dispatch } = useCart();
   const router = useRouter();
 
@@ -151,22 +151,17 @@ export default function LEDDisplayDetailPage({
           name: getCartItemName(item),
           district: item.district,
           price: priceForCart,
-          // 기본 기간 설정: 다음달
-          selectedYear: new Date().getFullYear(),
-          selectedMonth: new Date().getMonth() + 2, // 다음달
-          halfPeriod: 'first_half' as const,
+          // LED 전자게시대는 상시접수이므로 상하반기 정보 제거
           panel_type: item.panel_type,
           panel_info_id: item.panel_info_id, // 원본 UUID
         };
 
         console.log('🔍 Adding LED item to cart:', cartItem);
-        console.log('🔍 LED 상하반기 정보:', {
-          halfPeriod: cartItem.halfPeriod,
-          selectedYear: cartItem.selectedYear,
-          selectedMonth: cartItem.selectedMonth,
-          displayPeriod: `${cartItem.selectedYear}년 ${
-            cartItem.selectedMonth
-          }월 ${cartItem.halfPeriod === 'first_half' ? '상반기' : '하반기'}`,
+        console.log('🔍 LED 상담신청 아이템:', {
+          name: cartItem.name,
+          district: cartItem.district,
+          price: cartItem.price,
+          type: cartItem.type,
         });
         dispatch({
           type: 'ADD_ITEM',
@@ -359,10 +354,9 @@ export default function LEDDisplayDetailPage({
           </div>
           {selectedOption && <div>{selectedOption.option}</div>}
 
-          <DistrictInfo period={period} bankInfo={bankInfo} flexRow={true} />
+          <DistrictInfo bankInfo={bankInfo} flexRow={true} />
         </div>
-
-        {/* 상하반기 탭 - 개별 구 페이지에서만 표시 */}
+        {/* 상하반기 탭 - 개별 구 페이지에서만 표시
         {period && !isAllDistrictsView && (
           <HalfPeriodTabs
             selectedPeriod={selectedHalfPeriod}
@@ -373,8 +367,7 @@ export default function LEDDisplayDetailPage({
             secondHalfTo={period.second_half_to}
             year={2025}
           />
-        )}
-
+        )} */}
         {/* View Type Selector */}
         <div className="flex items-center gap-4 mb-8 border-b border-gray-200 pb-4">
           <ViewTypeButton
@@ -403,7 +396,6 @@ export default function LEDDisplayDetailPage({
             />
           </div>
         </div>
-
         {/* Content Section */}
         <motion.div initial="initial" animate="animate" variants={fadeInUp}>
           {viewType === 'location' ? (

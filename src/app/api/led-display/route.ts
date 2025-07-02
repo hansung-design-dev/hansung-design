@@ -291,17 +291,64 @@ async function getAllDistrictsData() {
       }
     });
 
-    // 3. 기본 구 목록 생성
+    // 3. LED 전자게시대 하드코딩된 계좌번호 정보
+    const ledBankInfo = {
+      강동구: {
+        bank_name: '우리',
+        account_number: '1005-602-397672',
+        depositor: '(주)한성디자인기획',
+      },
+      광진구: {
+        bank_name: '기업',
+        account_number: '049-039964-04-103',
+        depositor: '(주)한성디자인기획',
+      },
+      관악구: {
+        bank_name: '기업',
+        account_number: '049-039964-04-150',
+        depositor: '(주)한성디자인기획',
+      },
+      동작구: {
+        bank_name: '기업',
+        account_number: '049-039964-04-111',
+        depositor: '(주)한성디자인기획',
+      },
+      동대문구: {
+        bank_name: '기업',
+        account_number: '049-039964-04-167',
+        depositor: '(주)한성디자인기획',
+      },
+    };
+
+    // 4. 기본 구 목록 생성
     const basicDistricts = Object.values(districtsMap);
 
-    // 4. 상세 정보는 필요할 때만 로딩하도록 기본 구조만 반환
+    // 5. LED 전자게시대는 상시접수이므로 period는 null, 계좌번호는 하드코딩
     const processedDistricts = basicDistricts.map((district) => ({
       id: district.id,
       name: district.name,
       code: district.code,
       logo_image_url: district.logo_image_url,
-      period: null, // 필요시 별도 API로 로딩
-      bank_info: null, // 필요시 별도 API로 로딩
+      period: null, // LED 전자게시대는 상시접수
+      bank_info: ledBankInfo[district.name as keyof typeof ledBankInfo]
+        ? {
+            bank_name:
+              ledBankInfo[district.name as keyof typeof ledBankInfo].bank_name,
+            account_number:
+              ledBankInfo[district.name as keyof typeof ledBankInfo]
+                .account_number,
+            depositor:
+              ledBankInfo[district.name as keyof typeof ledBankInfo].depositor,
+            region_gu: {
+              id: district.id,
+              name: district.name,
+            },
+            display_types: {
+              id: '',
+              name: 'led_display',
+            },
+          }
+        : null,
     }));
 
     console.log('🔍 Processed LED districts data:', processedDistricts);
