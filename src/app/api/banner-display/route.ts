@@ -111,7 +111,10 @@ async function getBannerDisplaysByDistrict(districtName: string) {
       throw error;
     }
 
-    return data as BannerDisplayData[];
+    return NextResponse.json({
+      success: true,
+      data: data as BannerDisplayData[],
+    });
   } catch (error) {
     throw error;
   }
@@ -164,7 +167,10 @@ async function getAllBannerDisplays() {
       throw error;
     }
 
-    return data as BannerDisplayData[];
+    return NextResponse.json({
+      success: true,
+      data: data as BannerDisplayData[],
+    });
   } catch (error) {
     throw error;
   }
@@ -201,7 +207,7 @@ async function getBannerDisplayCountsByDistrict() {
       counts[districtName] = (counts[districtName] || 0) + 1;
     });
 
-    return counts;
+    return NextResponse.json({ success: true, data: counts });
   } catch (error) {
     throw error;
   }
@@ -278,6 +284,7 @@ async function getAllDistrictsData() {
       }
     > = {};
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     panelData?.forEach((item: any) => {
       const districtName = item.region_gu.name;
       countMap[districtName] = (countMap[districtName] || 0) + 1;

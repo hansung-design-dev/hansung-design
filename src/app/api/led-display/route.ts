@@ -111,7 +111,7 @@ async function getLEDDisplaysByDistrict(districtName: string) {
       throw error;
     }
 
-    return data as LEDDisplayData[];
+    return NextResponse.json({ success: true, data: data as LEDDisplayData[] });
   } catch (error) {
     throw error;
   }
@@ -164,7 +164,7 @@ async function getAllLEDDisplays() {
       throw error;
     }
 
-    return data as LEDDisplayData[];
+    return NextResponse.json({ success: true, data: data as LEDDisplayData[] });
   } catch (error) {
     throw error;
   }
@@ -199,7 +199,7 @@ async function getLEDDisplayCountsByDistrict() {
       counts[districtName] = (counts[districtName] || 0) + 1;
     });
 
-    return counts;
+    return NextResponse.json({ success: true, data: counts });
   } catch (error) {
     throw error;
   }
@@ -276,7 +276,8 @@ async function getAllDistrictsData() {
       }
     > = {};
 
-    panelData?.forEach((item) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    panelData?.forEach((item: any) => {
       const districtName = item.region_gu.name;
       countMap[districtName] = (countMap[districtName] || 0) + 1;
 
