@@ -36,6 +36,7 @@ interface District {
       name: string;
     };
   } | null;
+  panel_status?: string;
 }
 
 export default function BannerDisplayPage() {
@@ -72,6 +73,7 @@ export default function BannerDisplayPage() {
             name: string;
             code: string;
             logo_image_url?: string;
+            panel_status?: string;
             period?: {
               first_half_from: string;
               first_half_to: string;
@@ -92,20 +94,28 @@ export default function BannerDisplayPage() {
                 name: string;
               };
             } | null;
-          }) => ({
-            id: parseInt(district.id.replace(/-/g, '').substring(0, 8), 16),
-            name: district.name,
-            code: district.code,
-            description: `${district.name} 현수막게시대`,
-            count: (data.counts as Record<string, number>)[district.name] || 0,
-            logo:
-              district.logo_image_url ||
-              `/images/district-icon/${district.code}-gu.png`,
-            src: '/images/led/landing.png',
-            is_for_admin: district.name === '서대문구',
-            period: district.period || null,
-            bankInfo: district.bank_info || null,
-          })
+          }) => {
+            // panel_status가 maintenance인지 확인
+            const isMaintenance = district.panel_status === 'maintenance';
+
+            return {
+              id: parseInt(district.id.replace(/-/g, '').substring(0, 8), 16),
+              name: district.name,
+              code: district.code,
+              description: isMaintenance
+                ? `${district.name} 현수막게시대 (준비 중)`
+                : `${district.name} 현수막게시대`,
+              count:
+                (data.counts as Record<string, number>)[district.name] || 0,
+              logo:
+                district.logo_image_url ||
+                `/images/district-icon/${district.code}-gu.png`,
+              src: '/images/banner-display/landing.png',
+              panel_status: district.panel_status,
+              period: district.period || null,
+              bankInfo: district.bank_info || null,
+            };
+          }
         );
 
         // 구별 가나다순 정렬

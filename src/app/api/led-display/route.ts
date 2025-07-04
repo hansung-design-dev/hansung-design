@@ -253,11 +253,12 @@ async function getAllDistrictsData() {
           name,
           code,
           logo_image_url
-        )
+        ),
+        panel_status
       `
       )
       .eq('display_type_id', (await getLEDDisplayTypeId()).id)
-      .eq('panel_status', 'active');
+      .in('panel_status', ['active', 'maintenance']); // active와 maintenance 상태 모두 포함
 
     if (panelError) {
       console.error('❌ Error fetching panel data:', panelError);
@@ -273,6 +274,7 @@ async function getAllDistrictsData() {
         name: string;
         code: string;
         logo_image_url: string | null;
+        panel_status: string;
       }
     > = {};
 
@@ -287,6 +289,7 @@ async function getAllDistrictsData() {
           name: item.region_gu.name,
           code: item.region_gu.code,
           logo_image_url: item.region_gu.logo_image_url,
+          panel_status: item.panel_status,
         };
       }
     });
@@ -329,6 +332,7 @@ async function getAllDistrictsData() {
       name: district.name,
       code: district.code,
       logo_image_url: district.logo_image_url,
+      panel_status: district.panel_status,
       period: null, // LED 전자게시대는 상시접수
       bank_info: ledBankInfo[district.name as keyof typeof ledBankInfo]
         ? {

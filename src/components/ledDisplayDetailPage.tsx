@@ -398,7 +398,18 @@ export default function LEDDisplayDetailPage({
         </div>
         {/* Content Section */}
         <motion.div initial="initial" animate="animate" variants={fadeInUp}>
-          {viewType === 'location' ? (
+          {billboards.length === 0 ? (
+            // 준비 중인 경우 메시지 표시
+            <div className="flex flex-col items-center justify-center py-20">
+              <div className="text-2xl font-bold text-gray-600 mb-4">
+                현재 준비 중입니다
+              </div>
+              <div className="text-gray-500 text-center">
+                서비스 준비 중입니다. <br />
+                조금만 기다려 주세요.
+              </div>
+            </div>
+          ) : viewType === 'location' ? (
             renderLocationView()
           ) : viewType === 'list' ? (
             <LEDItemList

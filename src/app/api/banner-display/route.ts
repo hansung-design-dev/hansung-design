@@ -9,6 +9,7 @@ export interface BannerDisplayData {
   address: string;
   panel_status: string;
   panel_type: string;
+  max_banner: number; // panel_info에서 가져오는 max_banner
   region_gu: {
     id: string;
     name: string;
@@ -21,9 +22,6 @@ export interface BannerDisplayData {
   };
   banner_panel_details: {
     id: string;
-    max_banners: number;
-    panel_width: number;
-    panel_height: number;
     is_for_admin: boolean;
   };
   banner_slot_info: {
@@ -69,12 +67,17 @@ async function getBannerDisplayTypeId() {
 // 특정 구의 현수막 게시대 데이터 조회
 async function getBannerDisplaysByDistrict(districtName: string) {
   try {
+    console.log('🔍 조회 중인 구:', districtName);
+
     const { data, error } = await supabase
       .from('panel_info')
       .select(
         `
         *,
-        banner_panel_details (*),
+        banner_panel_details (
+          id,
+          is_for_admin
+        ),
         banner_slot_info (
           id,
           slot_number,
@@ -111,6 +114,17 @@ async function getBannerDisplaysByDistrict(districtName: string) {
       throw error;
     }
 
+    console.log('🔍 조회 결과:', {
+      district: districtName,
+      totalCount: data?.length || 0,
+      panelTypes:
+        data?.map((item) => ({
+          panel_code: item.panel_code,
+          panel_type: item.panel_type,
+          nickname: item.nickname,
+        })) || [],
+    });
+
     return NextResponse.json({
       success: true,
       data: data as BannerDisplayData[],
@@ -131,7 +145,10 @@ async function getAllBannerDisplays() {
       .select(
         `
         *,
-        banner_panel_details (*),
+        banner_panel_details (
+          id,
+          is_for_admin
+        ),
         banner_slot_info (
           id,
           slot_number,
@@ -261,11 +278,12 @@ async function getAllDistrictsData() {
           name,
           code,
           logo_image_url
-        )
+        ),
+        panel_status
       `
       )
       .eq('display_type_id', (await getBannerDisplayTypeId()).id)
-      .eq('panel_status', 'active');
+      .in('panel_status', ['active', 'maintenance']); // active와 maintenance 상태 모두 포함
 
     if (panelError) {
       console.error('❌ Error fetching panel data:', panelError);
@@ -281,6 +299,7 @@ async function getAllDistrictsData() {
         name: string;
         code: string;
         logo_image_url: string | null;
+        panel_status: string;
       }
     > = {};
 
@@ -295,6 +314,7 @@ async function getAllDistrictsData() {
           name: item.region_gu.name,
           code: item.region_gu.code,
           logo_image_url: item.region_gu.logo_image_url,
+          panel_status: item.panel_status,
         };
       }
     });
@@ -306,105 +326,101 @@ async function getAllDistrictsData() {
         name: '강북구',
         code: 'gangbuk',
         logo_image_url: null,
+        panel_status: 'active',
       };
     }
 
-    // 4. 현수막게시대 하드코딩된 신청기간과 계좌번호 정보
-    const bannerPeriodInfo = {
-      마포구: {
-        first_half_from: '2025-07-05',
-        first_half_to: '2025-07-20',
-        second_half_from: '2025-07-21',
-        second_half_to: '2025-08-04',
-      },
-      관악구: {
-        first_half_from: '2025-07-01',
-        first_half_to: '2025-07-15',
-        second_half_from: '2025-07-16',
-        second_half_to: '2025-07-31',
-      },
-      송파구: {
-        first_half_from: '2025-07-01',
-        first_half_to: '2025-07-15',
-        second_half_from: '2025-07-16',
-        second_half_to: '2025-07-31',
-      },
-      서대문구: {
-        first_half_from: '2025-07-01',
-        first_half_to: '2025-07-15',
-        second_half_from: '2025-07-16',
-        second_half_to: '2025-07-31',
-      },
-      용산구: {
-        first_half_from: '2025-07-01',
-        first_half_to: '2025-07-15',
-        second_half_from: '2025-07-16',
-        second_half_to: '2025-07-31',
-      },
-    };
-
-    const bannerBankInfo = {
-      관악구: {
-        bank_name: '우리',
-        account_number: '1005-103-367439',
-        depositor: '(주)한성디자인기획',
-      },
-      송파구: {
-        bank_name: '우리',
-        account_number: '1005-303-618971',
-        depositor: '(주)한성디자인기획',
-      },
-      서대문구: {
-        bank_name: '기업',
-        account_number: '049-039964-01-096',
-        depositor: '(주)한성디자인기획',
-      },
-      용산구: {
-        bank_name: '기업',
-        account_number: '049-039964-04-128',
-        depositor: '(주)한성디자인기획',
-      },
-      마포구: {
-        bank_name: '기업',
-        account_number: '049-039964-04-135',
-        depositor: '(주)한성디자인기획',
-      },
-    };
-
-    // 5. 기본 구 목록 생성
+    // 4. 기본 구 목록 생성
     const basicDistricts = Object.values(districtsMap);
 
-    // 6. 하드코딩된 신청기간과 계좌번호 정보 추가
-    const processedDistricts = basicDistricts.map((district) => ({
-      id: district.id,
-      name: district.name,
-      code: district.code,
-      logo_image_url: district.logo_image_url,
-      period:
-        bannerPeriodInfo[district.name as keyof typeof bannerPeriodInfo] ||
-        null,
-      bank_info: bannerBankInfo[district.name as keyof typeof bannerBankInfo]
-        ? {
-            bank_name:
-              bannerBankInfo[district.name as keyof typeof bannerBankInfo]
-                .bank_name,
-            account_number:
-              bannerBankInfo[district.name as keyof typeof bannerBankInfo]
-                .account_number,
-            depositor:
-              bannerBankInfo[district.name as keyof typeof bannerBankInfo]
-                .depositor,
-            region_gu: {
-              id: district.id,
-              name: district.name,
-            },
-            display_types: {
-              id: '',
-              name: 'banner_display',
-            },
-          }
-        : null,
-    }));
+    // 5. 각 구별로 신청기간과 계좌번호 정보를 가져와서 조합
+    const processedDistricts = await Promise.all(
+      basicDistricts.map(async (district) => {
+        // 신청기간 가져오기 (DB에 없어도 이번달 기간으로 계산)
+        const { data: periodData, error: periodError } = await supabase
+          .from('region_gu_display_periods')
+          .select('*')
+          .eq('region_gu_id', district.id)
+          .eq('display_type_id', (await getBannerDisplayTypeId()).id)
+          .single();
+
+        // DB에 데이터가 없어도 에러를 반환하지 않고 이번달 기간으로 계산
+        console.log(`🔍 Period data for ${district.name}:`, {
+          periodData,
+          periodError,
+        });
+
+        // 이번달 16일~말일 계산 (2차는 항상 고정)
+        const now = new Date();
+        const secondHalfStart = new Date(now.getFullYear(), now.getMonth(), 16);
+        const secondHalfEnd = new Date(
+          now.getFullYear(),
+          now.getMonth() + 1,
+          0
+        );
+
+        // 날짜를 YYYY-MM-DD 형식으로 변환 (로컬 시간 기준)
+        const formatDate = (date: Date) => {
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        };
+
+        let currentPeriodData;
+
+        if (periodData && !periodError) {
+          // DB에 데이터가 있으면 1차는 DB값 사용, 2차는 이번달 16일~말일 고정
+          currentPeriodData = {
+            first_half_from: periodData.first_half_from,
+            first_half_to: periodData.first_half_to,
+            second_half_from: formatDate(secondHalfStart),
+            second_half_to: formatDate(secondHalfEnd),
+          };
+        } else {
+          // DB에 데이터가 없으면 둘 다 이번달 계산값 사용
+          const firstHalfStart = new Date(now.getFullYear(), now.getMonth(), 1);
+          const firstHalfEnd = new Date(now.getFullYear(), now.getMonth(), 15);
+
+          currentPeriodData = {
+            first_half_from: formatDate(firstHalfStart),
+            first_half_to: formatDate(firstHalfEnd),
+            second_half_from: formatDate(secondHalfStart),
+            second_half_to: formatDate(secondHalfEnd),
+          };
+        }
+
+        // 계좌번호 정보 가져오기
+        const { data: bankData } = await supabase
+          .from('bank_info')
+          .select(
+            `
+            *,
+            region_gu!inner(
+              id,
+              name
+            ),
+            display_types!inner(
+              id,
+              name
+            )
+          `
+          )
+          .eq('region_gu_id', district.id)
+          .eq('display_types.name', 'banner_display')
+          .single();
+
+        return {
+          id: district.id,
+          name: district.name,
+          code: district.code,
+          logo_image_url: district.logo_image_url,
+          panel_status: district.panel_status,
+          period: currentPeriodData || null,
+          bank_info: bankData || null,
+        };
+      })
+    );
 
     console.log('🔍 Processed districts data:', processedDistricts);
     console.log('🔍 Counts data:', countMap);

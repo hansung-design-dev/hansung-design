@@ -409,25 +409,35 @@ export default function Cart() {
     );
   };
 
-  const bannerItems = cart.filter(
-    (item) => item.type === 'banner-display' && item.price !== 0
-  );
-  const consultingItems = cart.filter((item) => item.price === 0);
-  // LED 전자게시대는 모두 상담신청 탭에 들어감
-  const ledItems = cart.filter((item) => item.type === 'led-display');
+  // 상단광고와 현수막게시대를 구분하여 그룹화
+  const groupedItems = useMemo(() => {
+    const consultingItems = cart.filter(
+      (item) => item.price === 0 || item.isTopFixed
+    );
+    const regularItems = cart.filter(
+      (item) => item.price > 0 && !item.isTopFixed
+    );
+
+    return {
+      consulting: consultingItems,
+      regular: regularItems,
+    };
+  }, [cart]);
 
   // 상담신청 아이템들을 타입별로 분리
-  const bannerConsultingItems = consultingItems.filter(
+  const bannerConsultingItems = groupedItems.consulting.filter(
     (item) => item.type === 'banner-display'
   );
-  const ledConsultingItemsOnly = ledItems; // LED 전자게시대는 모두 상담신청
+  const ledConsultingItemsOnly = groupedItems.consulting.filter(
+    (item) => item.type === 'led-display'
+  ); // LED 전자게시대는 모두 상담신청
 
   // 상담신청 아이템들의 문의 상태 확인
   const fetchInquiryStatuses = useCallback(async () => {
     try {
       const statuses: InquiryStatus = {};
 
-      for (const item of consultingItems) {
+      for (const item of groupedItems.consulting) {
         const response = await fetch(
           `/api/customer-service?product_id=${item.id}`
         );
@@ -447,13 +457,13 @@ export default function Cart() {
     } catch (error) {
       console.error('문의 상태 확인 실패:', error);
     }
-  }, [consultingItems]);
+  }, [groupedItems.consulting]);
 
   useEffect(() => {
-    if (user && consultingItems.length > 0) {
+    if (user && groupedItems.consulting.length > 0) {
       fetchInquiryStatuses();
     }
-  }, [user, consultingItems.length, fetchInquiryStatuses]);
+  }, [user, groupedItems.consulting.length, fetchInquiryStatuses]);
 
   // 선택된 아이템들의 총계 계산
   const cartSummary = useMemo(() => {
@@ -763,22 +773,19 @@ export default function Cart() {
         <motion.div initial="initial" animate="animate" variants={fadeInUp}>
           {userWithPhone && activeTab === 'payment' && (
             <>
-              {bannerItems.length > 0 && (
+              {groupedItems.regular.length > 0 && (
                 <CartGroupCard
                   title="현수막게시대"
-                  isSelected={isGroupSelected(bannerItems)}
-                  onSelect={(selected) =>
-                    handleGroupSelect(bannerItems, selected)
-                  }
+                  phoneList={['1533-0570', '1899-0596', '02-719-0083']}
                 >
-                  {bannerItems.map((item) => (
+                  {groupedItems.regular.map((item) => (
                     <CartItemRow
                       key={item.id}
                       item={item}
-                      user={getItemUserInfo(item.id)}
-                      isSelected={selectedItems.has(String(item.id))}
+                      user={userWithPhone}
+                      isSelected={selectedItems.has(item.id)}
                       onSelect={(selected) =>
-                        handleItemSelect(String(item.id), selected)
+                        handleItemSelect(item.id, selected)
                       }
                       onOrderModify={() => handleOrderModify(item.id)}
                       onDelete={() => handleDelete(item)}
@@ -788,13 +795,13 @@ export default function Cart() {
                 </CartGroupCard>
               )}
 
-              {bannerItems.length === 0 && (
+              {groupedItems.regular.length === 0 && (
                 <CartGroupCard
-                  title="결제신청"
+                  title="현수막게시대"
                   phoneList={['1533-0570', '1899-0596', '02-719-0083']}
                 >
                   <div className="flex items-center justify-center py-12 text-gray-500">
-                    상품이 없습니다
+                    결제신청할 상품이 없습니다.
                   </div>
                 </CartGroupCard>
               )}
@@ -804,12 +811,19 @@ export default function Cart() {
           {userWithPhone && activeTab === 'consulting' && (
             <>
               {bannerConsultingItems.length > 0 && (
-                <CartGroupCard title="현수막게시대">
+                <CartGroupCard
+                  title="상단광고"
+                  phoneList={['1533-0570', '1899-0596', '02-719-0083']}
+                >
                   {bannerConsultingItems.map((item) => (
                     <CartItemRow
                       key={item.id}
                       item={item}
-                      user={getItemUserInfo(item.id)}
+                      user={userWithPhone}
+                      isSelected={selectedItems.has(item.id)}
+                      onSelect={(selected) =>
+                        handleItemSelect(item.id, selected)
+                      }
                       isConsulting={true}
                       onOrderModify={() => handleOrderModify(item.id)}
                       onConsultation={() =>
@@ -823,34 +837,19 @@ export default function Cart() {
               )}
 
               {ledConsultingItemsOnly.length > 0 && (
-                <CartGroupCard title="LED전자게시대">
-                  {ledConsultingItemsOnly.map((item) => (
-                    <CartItemRow
-                      key={item.id}
-                      item={item}
-                      user={getItemUserInfo(item.id)}
-                      isConsulting={true}
-                      onOrderModify={() => handleOrderModify(item.id)}
-                      onConsultation={() =>
-                        handleConsultation(item.name, item.id)
-                      }
-                      onDelete={() => handleDelete(item)}
-                      inquiryStatus={inquiryStatuses[item.id]}
-                    />
-                  ))}
-                </CartGroupCard>
-              )}
-
-              {ledItems.length > 0 && (
                 <CartGroupCard
                   title="LED전자게시대"
                   phoneList={['1533-0570', '1899-0596', '02-719-0083']}
                 >
-                  {ledItems.map((item) => (
+                  {ledConsultingItemsOnly.map((item) => (
                     <CartItemRow
                       key={item.id}
                       item={item}
-                      user={getItemUserInfo(item.id)}
+                      user={userWithPhone}
+                      isSelected={selectedItems.has(item.id)}
+                      onSelect={(selected) =>
+                        handleItemSelect(item.id, selected)
+                      }
                       isConsulting={true}
                       onOrderModify={() => handleOrderModify(item.id)}
                       onConsultation={() =>
@@ -864,11 +863,10 @@ export default function Cart() {
               )}
 
               {bannerConsultingItems.length === 0 &&
-                ledConsultingItemsOnly.length === 0 &&
-                ledItems.length === 0 && (
+                ledConsultingItemsOnly.length === 0 && (
                   <CartGroupCard title="상담신청">
                     <div className="flex items-center justify-center py-12 text-gray-500">
-                      상품이 없습니다
+                      상담신청할 상품이 없습니다.
                     </div>
                   </CartGroupCard>
                 )}

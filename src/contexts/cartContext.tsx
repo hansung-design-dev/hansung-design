@@ -12,6 +12,7 @@ export interface CartItem {
   selectedMonth?: number; // 선택한 월 (예: 7)
   panel_type?: string;
   panel_info_id?: string; // panel_info 테이블의 실제 ID
+  isTopFixed?: boolean; // 상단광고 여부
   panel_slot_snapshot?: {
     id: string | null;
     notes: string | null;
