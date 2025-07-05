@@ -50,6 +50,21 @@ export interface BannerBillboard extends BaseBillboard {
   type: 'banner';
   is_for_admin?: boolean;
   banner_type?: string;
+  banner_slot_info?: {
+    id: string;
+    slot_number: number;
+    slot_name: string;
+    max_width: number;
+    max_height: number;
+    total_price?: number;
+    tax_price?: number;
+    advertising_fee?: number;
+    road_usage_fee?: number;
+    banner_type: string;
+    price_unit?: string;
+    is_premium: boolean;
+    panel_slot_status: string;
+  }[];
 }
 
 // LED 전자게시대 전용 타입

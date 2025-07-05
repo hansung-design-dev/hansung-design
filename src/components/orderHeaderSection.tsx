@@ -1,5 +1,5 @@
 import DateLocationFilter from '@/src/components/ui/datelocationfilter';
-import React from 'react';
+import React, { useState } from 'react';
 
 interface StatusSummary {
   total: number;
@@ -17,9 +17,12 @@ interface OrderHeaderSectionProps {
   setEndDate: (date: string) => void;
   searchLocation: string;
   setSearchLocation: (loc: string) => void;
+  onShowAll?: () => void;
+  onPeriodSearch?: () => void;
+  onLocationSearch?: () => void;
 }
 
-const orderHeaderSection: React.FC<OrderHeaderSectionProps> = ({
+const OrderHeaderSection: React.FC<OrderHeaderSectionProps> = ({
   title = '주문내역',
   statusSummary,
   startDate,
@@ -28,7 +31,12 @@ const orderHeaderSection: React.FC<OrderHeaderSectionProps> = ({
   setEndDate,
   searchLocation,
   setSearchLocation,
+  onShowAll,
+  onPeriodSearch,
+  onLocationSearch,
 }) => {
+  const [showStartCalendar, setShowStartCalendar] = useState(false);
+  const [showEndCalendar, setShowEndCalendar] = useState(false);
   return (
     <div className="sm:flex sm:flex-col sm:gap-2 sm:px-0">
       <h2 className="lg:text-2.25 md:text-1.75 font-500 mb-3 sm:text-2">
@@ -73,14 +81,17 @@ const orderHeaderSection: React.FC<OrderHeaderSectionProps> = ({
           setEndDate={setEndDate}
           searchLocation={searchLocation}
           setSearchLocation={setSearchLocation}
-          showStartCalendar={false}
-          setShowStartCalendar={() => {}}
-          showEndCalendar={false}
-          setShowEndCalendar={() => {}}
+          showStartCalendar={showStartCalendar}
+          setShowStartCalendar={setShowStartCalendar}
+          showEndCalendar={showEndCalendar}
+          setShowEndCalendar={setShowEndCalendar}
+          onPeriodSearch={onPeriodSearch}
+          onLocationSearch={onLocationSearch}
+          onShowAll={onShowAll}
         />
       </div>
     </div>
   );
 };
 
-export default orderHeaderSection;
+export default OrderHeaderSection;
