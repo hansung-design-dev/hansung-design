@@ -2,7 +2,7 @@
 import LEDDisplayDetailPage from '@/src/components/ledDisplayDetailPage';
 import SkeletonLoader from '@/src/components/layouts/skeletonLoader';
 import { useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import bannerDistricts from '@/src/mock/banner-district';
 import { LEDBillboard } from '@/src/types/leddetail';
 import { ledItems } from '@/src/mock/billboards';
@@ -115,38 +115,38 @@ export default function LEDDisplayPage() {
   const encodedDistrict = params.district as string;
   const district = decodeURIComponent(encodedDistrict);
   const isAllDistricts = district === 'all';
-  const districtObj = isAllDistricts
-    ? {
-        id: 0,
-        name: '전체 보기',
-        code: 'all',
-        icon: '/images/district-icon/all.svg',
-        description: '모든 자치구',
-        count: 0,
-        size: '',
-        led_count: 0,
-        banner_count: 0,
-        sizeOfPeople: '',
-        logo: '/images/district-icon/all.svg',
-        src: '',
-      }
-    : bannerDistricts.find((d) => d.code === district);
+  const districtObj = useMemo(
+    () =>
+      isAllDistricts
+        ? {
+            id: 0,
+            name: '전체 보기',
+            code: 'all',
+            icon: '/images/district-icon/all.svg',
+            description: '모든 자치구',
+            count: 0,
+            size: '',
+            led_count: 0,
+            banner_count: 0,
+            sizeOfPeople: '',
+            logo: '/images/district-icon/all.svg',
+            src: '',
+          }
+        : bannerDistricts.find((d) => d.code === district),
+    [isAllDistricts, district]
+  );
 
   const [billboards, setBillboards] = useState<LEDBillboard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [period, setPeriod] = useState<{
-    first_half_from: string;
-    first_half_to: string;
-    second_half_from: string;
-    second_half_to: string;
-  } | null>(null);
+  // LED 전자게시대는 항상 상시접수이므로 period 상태 불필요
   const [bankInfo, setBankInfo] = useState<BankInfo | null>(null);
   const [districtData, setDistrictData] = useState<{
     id: string;
     name: string;
     code: string;
-    logo_image_url: string | null;
+    logo_image_url?: string;
+    panel_status?: string;
   } | null>(null);
 
   // LEDDisplayData를 LEDBillboard로 변환하는 함수
@@ -243,22 +243,6 @@ export default function LEDDisplayPage() {
   console.log('🔍 District object found:', districtObj);
   console.log('🔍 District name to pass to API:', districtObj?.name);
 
-  // 신청기간 가져오기 함수
-  async function getDisplayPeriod(districtName: string) {
-    try {
-      const response = await fetch(
-        `/api/display-period?district=${encodeURIComponent(
-          districtName
-        )}&display_type=led_display`
-      );
-      const result = await response.json();
-      return result.success ? result.data : null;
-    } catch (err) {
-      console.warn(`Failed to fetch period for ${districtName}:`, err);
-      return null;
-    }
-  }
-
   // 구 정보 가져오기 함수 (로고 + 계좌번호 포함)
   async function getDistrictData(districtName: string) {
     try {
@@ -291,49 +275,53 @@ export default function LEDDisplayPage() {
         } else if (isAllDistricts) {
           setBillboards([]);
         } else {
-          // DB에 데이터가 없으면 목업 데이터를 사용
-          const mockBillboards = ledItems
-            .filter((b) => b.location.split(' ')[0] === district)
-            .map(
-              (item): LEDBillboard => ({
-                id: `${district}-${item.id.toString().padStart(2, '0')}`,
-                type: 'led',
-                district: item.location.split(' ')[0],
-                name: item.title,
-                address: item.title,
-                nickname: item.location.split(' ')[1],
-                neighborhood: item.location.split(' ')[1],
-                period: '상시',
-                price: item.price.toString(),
-                size: `${item.width}x${item.height}`,
-                faces: item.slots,
-                lat: 37.5665, // Default coordinates
-                lng: 126.978,
-                status: '진행중',
-                panel_width: item.width,
-                panel_height: item.height,
-                panel_code: Number(item.id),
-                panel_type: 'led',
-                exposure_count: 50000,
-                max_banners: item.slots,
-                slot_width_px: item.width,
-                slot_height_px: item.height,
-                total_price: item.price,
-                tax_price: Math.floor(item.price * 0.1),
-                advertising_fee: Math.floor(item.price * 0.8),
-                road_usage_fee: Math.floor(item.price * 0.05),
-                administrative_fee: Math.floor(item.price * 0.05),
-                price_unit: '1 month',
-                panel_slot_status: 'available',
-              })
-            );
-          setBillboards(mockBillboards);
-        }
+          // panel_status가 maintenance인 구들만 준비 중으로 처리
+          const isMaintenanceDistrict =
+            (districtObj as { panel_status?: string })?.panel_status ===
+            'maintenance';
 
-        // 2. 신청기간 가져오기 (전체보기가 아닌 경우에만)
-        if (!isAllDistricts && districtObj?.name) {
-          const periodData = await getDisplayPeriod(districtObj.name);
-          setPeriod(periodData);
+          if (isMaintenanceDistrict) {
+            // 준비 중인 구는 빈 배열로 설정 (상세페이지에서 "준비 중" 메시지 표시)
+            setBillboards([]);
+          } else {
+            // DB에 데이터가 없으면 목업 데이터를 사용
+            const mockBillboards = ledItems
+              .filter((b) => b.location.split(' ')[0] === district)
+              .map(
+                (item): LEDBillboard => ({
+                  id: `${district}-${item.id.toString().padStart(2, '0')}`,
+                  type: 'led',
+                  district: item.location.split(' ')[0],
+                  name: item.title,
+                  address: item.title,
+                  nickname: item.location.split(' ')[1],
+                  neighborhood: item.location.split(' ')[1],
+                  period: '상시',
+                  price: item.price.toString(),
+                  size: `${item.width}x${item.height}`,
+                  faces: item.slots,
+                  lat: 37.5665, // Default coordinates
+                  lng: 126.978,
+                  status: '진행중',
+                  panel_width: item.width,
+                  panel_height: item.height,
+                  panel_code: Number(item.id),
+                  panel_type: 'led',
+                  exposure_count: 50000,
+                  max_banners: item.slots,
+                  slot_width_px: item.width,
+                  slot_height_px: item.height,
+                  total_price: item.price,
+                  tax_price: Math.floor(item.price * 0.1),
+                  advertising_fee: Math.floor(item.price * 0.8),
+                  road_usage_fee: Math.floor(item.price * 0.05),
+                  administrative_fee: Math.floor(item.price * 0.05),
+                  price_unit: '1 month',
+                  panel_slot_status: 'available',
+                })
+              );
+            setBillboards(mockBillboards);
+          }
         }
 
         // 3. 구 정보와 계좌번호 정보 가져오기 (전체보기가 아닌 경우에만)
@@ -345,6 +333,7 @@ export default function LEDDisplayPage() {
               name: districtDataResult.name,
               code: districtDataResult.code,
               logo_image_url: districtDataResult.logo_image_url,
+              panel_status: districtDataResult.panel_status,
             });
             setBankInfo(districtDataResult.bank_info);
           }
@@ -360,7 +349,7 @@ export default function LEDDisplayPage() {
     if (district) {
       fetchLEDData();
     }
-  }, [district, districtObj?.name, isAllDistricts]);
+  }, [district, districtObj, isAllDistricts]);
 
   if (loading) {
     return (
@@ -430,7 +419,7 @@ export default function LEDDisplayPage() {
       billboards={billboards}
       dropdownOptions={pageDropdownOptions}
       defaultView="gallery"
-      period={period}
+      period={null}
       bankInfo={bankInfo}
     />
   );

@@ -96,6 +96,8 @@ const ItemList: React.FC<ItemTableProps> = ({
         return '반자동';
       case 'panel':
         return '패널형';
+      case 'top_fixed':
+        return '상단광고';
       default:
         return '현수막게시대';
     }
@@ -255,7 +257,11 @@ const ItemList: React.FC<ItemTableProps> = ({
                     {item.faces ? `${item.faces}` : '-'}
                   </td>
                   <td className="text-center pl-4">
-                    {isSpecialDistrict ? '-' : item.price}
+                    {isSpecialDistrict && item.panel_type === 'top_fixed'
+                      ? '상담문의'
+                      : isSpecialDistrict
+                      ? '-'
+                      : item.price}
                   </td>
                   <td className="text-center pl-4">{categoryDisplay}</td>
                   <td className="text-center pl-4">
