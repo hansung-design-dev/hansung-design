@@ -265,7 +265,9 @@ const ItemList: React.FC<ItemTableProps> = ({
                     </td>
                   )}
                   <td className="text-center pl-4">
-                    {isSpecialDistrict && item.banner_type === 'top-fixed'
+                    {isSpecialDistrict &&
+                    item.type === 'banner' &&
+                    item.banner_type === 'top-fixed'
                       ? '상담문의'
                       : item.price}
                   </td>

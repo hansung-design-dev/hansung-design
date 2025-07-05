@@ -125,12 +125,26 @@ export async function GET(request: NextRequest) {
           orderNumber: order.order_number,
           createdAt: order.created_at,
           totalPrice: order.total_price,
-          orderDetails: order.order_details?.map((d) => ({
-            id: d.id,
-            displayStartDate: d.display_start_date,
-            displayEndDate: d.display_end_date,
-            panelInfo: d.panel_info,
-          })),
+          orderDetails: order.order_details?.map(
+            (d: {
+              id: string;
+              display_start_date: string;
+              display_end_date: string;
+              panel_info: {
+                address: string;
+                nickname: string;
+                panel_status: string;
+                panel_type: string;
+                region_gu?: { name: string };
+                region_dong?: { name: string };
+              };
+            }) => ({
+              id: d.id,
+              displayStartDate: d.display_start_date,
+              displayEndDate: d.display_end_date,
+              panelInfo: d.panel_info,
+            })
+          ),
         });
 
         return {
