@@ -146,7 +146,7 @@ export default function BannerDisplayPage({
   const [bankInfo, setBankInfo] = useState<BankInfo | null>(null);
 
   // 송파구, 용산구 탭 필터 추가 (DisplayDetailPage에서 사용)
-  const [panelTypeFilter, setPanelTypeFilter] = useState<'panel' | 'top_fixed'>(
+  const [panelTypeFilter, setPanelTypeFilter] = useState<'panel' | 'top-fixed'>(
     'panel'
   );
 
@@ -323,13 +323,14 @@ export default function BannerDisplayPage({
                   (slot) =>
                     slot.banner_type === 'panel' && slot.slot_number === 1
                 );
-                console.log('panelSlot', panelSlot);
+
                 return { topFixedSlot, panelSlot };
               };
 
               const slots = findSlotByType();
-              // panel_type이 'top_fixed'인 경우에만 상단광고로 처리
-              const isTopFixed = item.panel_type === 'top_fixed';
+              // panelTypeFilter가 'top-fixed'인 경우 상단광고로 처리
+              const isTopFixed = panelTypeFilter === 'top-fixed';
+              console.log('isTopFixed', isTopFixed);
 
               // 디버깅 로그 추가
               console.log('🔍 슬롯 정보:', {
@@ -516,7 +517,7 @@ export default function BannerDisplayPage({
     if (district) {
       fetchBannerData();
     }
-  }, [district, districtObj, isAllDistrictsView]);
+  }, [district, districtObj, isAllDistrictsView, panelTypeFilter]);
 
   if (loading) {
     return (

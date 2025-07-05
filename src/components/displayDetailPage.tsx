@@ -64,9 +64,9 @@ export default function DisplayDetailPage({
       name: string;
     };
   } | null;
-  panelTypeFilter?: 'panel' | 'top_fixed';
+  panelTypeFilter?: 'panel' | 'top-fixed';
   setPanelTypeFilter?: React.Dispatch<
-    React.SetStateAction<'panel' | 'top_fixed'>
+    React.SetStateAction<'panel' | 'top-fixed'>
   >;
 }) {
   const [selectedOption, setSelectedOption] = useState<{
@@ -92,7 +92,7 @@ export default function DisplayDetailPage({
 
   // 송파구, 용산구 탭 필터 추가
   const [internalPanelTypeFilter, setInternalPanelTypeFilter] = useState<
-    'panel' | 'top_fixed'
+    'panel' | 'top-fixed'
   >('panel');
 
   // props로 받은 panelTypeFilter가 있으면 사용, 없으면 내부 상태 사용
@@ -132,17 +132,16 @@ export default function DisplayDetailPage({
     ? filteredByMapo.filter((item) => {
         // banner_slot_info에서 banner_type 확인
         if (item.type === 'banner' && item.banner_slot_info) {
-          const hasTopFixed = item.banner_slot_info.some(
-            (slot) => slot.banner_type === 'top-fixed'
-          );
-          const hasPanel = item.banner_slot_info.some(
-            (slot) => slot.banner_type === 'panel'
-          );
-
-          if (currentPanelTypeFilter === 'top_fixed') {
-            return hasTopFixed;
+          if (currentPanelTypeFilter === 'top-fixed') {
+            // 상단광고 탭: banner_type이 'top-fixed'인 슬롯이 있는 아이템만
+            return item.banner_slot_info.some(
+              (slot) => slot.banner_type === 'top-fixed'
+            );
           } else if (currentPanelTypeFilter === 'panel') {
-            return hasPanel;
+            // 현수막게시대 탭: banner_type이 'panel'인 슬롯이 있는 아이템만
+            return item.banner_slot_info.some(
+              (slot) => slot.banner_type === 'panel'
+            );
           }
         }
         return true;
@@ -201,26 +200,42 @@ export default function DisplayDetailPage({
       )
     : filteredByHalfPeriod;
 
-  // 구분 컬럼에 표시할 값 계산 함수 (banner_slot_info의 banner_type 우선 사용)
+  // 구분 컬럼에 표시할 값 계산 함수 (탭에 따라 다른 로직 적용)
   const getPanelTypeLabel = (item: DisplayBillboard) => {
-    // banner_slot_info에서 banner_type 확인 (송파구, 용산구)
-    if (
-      item.type === 'banner' &&
-      item.banner_slot_info &&
-      item.banner_slot_info.length > 0
-    ) {
-      const firstSlot = item.banner_slot_info[0];
-      switch (firstSlot.banner_type) {
-        case 'top-fixed':
-          return '상단광고';
-        case 'panel':
-          return '현수막게시대';
-        default:
-          return '현수막게시대';
+    // 송파구, 용산구의 경우 탭에 따라 다른 로직 적용
+    if (isSongpaOrYongsan && item.type === 'banner') {
+      if (currentPanelTypeFilter === 'top-fixed') {
+        // 상단광고 탭: banner_type에서 값 가져오기
+        if (item.banner_slot_info && item.banner_slot_info.length > 0) {
+          const topFixedSlot = item.banner_slot_info.find(
+            (slot) => slot.banner_type === 'top-fixed'
+          );
+          if (topFixedSlot) {
+            return '상단광고';
+          }
+        }
+        return '상단광고';
+      } else {
+        // 현수막게시대 탭: panel_type에서 값 가져오기
+        const panelType = item.panel_type;
+        if (!panelType) return '현수막게시대';
+
+        switch (panelType) {
+          case 'with_lighting':
+            return '조명형';
+          case 'no_lighting':
+            return '비조명형';
+          case 'semi-auto':
+            return '반자동';
+          case 'panel':
+            return '패널형';
+          default:
+            return '현수막게시대';
+        }
       }
     }
 
-    // 기존 panel_type 사용 (다른 구들)
+    // 다른 구들은 기존 panel_type 사용
     const panelType = item.panel_type;
     if (!panelType) return '현수막게시대';
 
@@ -611,9 +626,9 @@ export default function DisplayDetailPage({
                 현수막게시대
               </button>
               <button
-                onClick={() => currentSetPanelTypeFilter('top_fixed')}
+                onClick={() => currentSetPanelTypeFilter('top-fixed')}
                 className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-6 font-medium ${
-                  currentPanelTypeFilter === 'top_fixed'
+                  currentPanelTypeFilter === 'top-fixed'
                     ? 'text-white bg-black rounded-full '
                     : 'text-gray-600 hover:text-gray-800'
                 }`}
@@ -630,7 +645,7 @@ export default function DisplayDetailPage({
             selectedOption &&
             selectedOption.option !== '전체' &&
             selectedDistrictPeriod)) &&
-          !(isSongpaOrYongsan && currentPanelTypeFilter === 'top_fixed') && (
+          !(isSongpaOrYongsan && currentPanelTypeFilter === 'top-fixed') && (
             <HalfPeriodTabs
               selectedPeriod={selectedHalfPeriod}
               onPeriodChange={setSelectedHalfPeriod}
@@ -713,7 +728,7 @@ export default function DisplayDetailPage({
               onItemSelect={(id, checked) => handleItemSelect(id, checked)}
               enableRowClick={false}
               hideQuantityColumns={
-                isSongpaOrYongsan && currentPanelTypeFilter === 'top_fixed'
+                isSongpaOrYongsan && currentPanelTypeFilter === 'top-fixed'
               }
             />
           ) : (

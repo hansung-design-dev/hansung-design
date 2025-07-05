@@ -19,7 +19,7 @@ const bannerTypeDisplayMap: { [key: string]: string } = {
   'semi-auto': '반자동',
   with_lighting: '조명용',
   no_lighting: '비조명용',
-  top_fixed: '상단고정',
+  'top-fixed': '상단광고',
 };
 
 const getStatusClass = (status: string) => {
@@ -98,7 +98,7 @@ const ItemList: React.FC<ItemTableProps> = ({
         return '반자동';
       case 'panel':
         return '패널형';
-      case 'top_fixed':
+      case 'top-fixed':
         return '상단광고';
       default:
         return '현수막게시대';
