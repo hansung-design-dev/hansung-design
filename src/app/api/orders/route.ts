@@ -74,6 +74,9 @@ export async function GET(request: NextRequest) {
             panel_type,
             region_gu:region_gu_id (
               name
+            ),
+            region_dong:region_dong_id (
+              name
             )
           )
         )
@@ -116,87 +119,106 @@ export async function GET(request: NextRequest) {
 
     // 주문 데이터를 프론트엔드 형식으로 변환
     const transformedOrders =
-      orders?.map((order) => ({
-        id: order.id,
-        order_number: order.order_number || order.id.slice(0, 8), // 간단한 주문번호 생성
-        total_amount: order.total_price,
-        status: order.is_paid
-          ? order.is_checked
-            ? 'completed'
-            : 'confirmed'
-          : 'pending',
-        payment_status: order.is_paid ? 'paid' : 'pending',
-        order_date: order.created_at,
-        year_month: order.year_month,
-        half_period: order.half_period,
-        order_items:
-          order.order_details?.map(
-            (detail: {
-              id: string;
-              panel_info_id: string;
-              panel_slot_usage_id?: string;
-              slot_order_quantity: number;
-              display_start_date: string;
-              display_end_date: string;
-              half_period?: string;
-              panel_info?: {
-                address: string;
-                nickname: string;
-                panel_status: string;
-                panel_type: string;
-                region_gu?: {
-                  name: string;
+      orders?.map((order) => {
+        console.log('🔍 주문 데이터 변환:', {
+          orderId: order.id,
+          orderNumber: order.order_number,
+          createdAt: order.created_at,
+          totalPrice: order.total_price,
+          orderDetails: order.order_details?.map((d) => ({
+            id: d.id,
+            displayStartDate: d.display_start_date,
+            displayEndDate: d.display_end_date,
+            panelInfo: d.panel_info,
+          })),
+        });
+
+        return {
+          id: order.id,
+          order_number: order.order_number || order.id.slice(0, 8), // 간단한 주문번호 생성
+          total_amount: order.total_price,
+          status: order.is_paid
+            ? order.is_checked
+              ? 'completed'
+              : 'confirmed'
+            : 'pending',
+          payment_status: order.is_paid ? 'paid' : 'pending',
+          order_date: order.created_at,
+          year_month: order.year_month,
+          half_period: order.half_period,
+          order_items:
+            order.order_details?.map(
+              (detail: {
+                id: string;
+                panel_info_id: string;
+                panel_slot_usage_id?: string;
+                slot_order_quantity: number;
+                display_start_date: string;
+                display_end_date: string;
+                half_period?: string;
+                panel_info?: {
+                  address: string;
+                  nickname: string;
+                  panel_status: string;
+                  panel_type: string;
+                  region_gu?: {
+                    name: string;
+                  };
+                  region_dong?: {
+                    name: string;
+                  };
                 };
-              };
-            }) => ({
-              id: detail.id,
-              panel_info: {
-                address: detail.panel_info?.address || '',
-                nickname: detail.panel_info?.nickname || '',
-                panel_status: detail.panel_info?.panel_status || '',
-              },
-              slot_info: {
-                slot_name: detail.panel_slot_usage_id
-                  ? '선택된 슬롯'
-                  : '기본 슬롯',
-                banner_type: detail.panel_info?.panel_type || 'panel',
-                price_unit: '15 days',
-              },
-              quantity: detail.slot_order_quantity,
-              unit_price:
-                order.total_price / (order.order_details?.length || 1),
-              total_price:
-                order.total_price / (order.order_details?.length || 1),
-              start_date: detail.display_start_date,
-              end_date: detail.display_end_date,
-              // 특별한 가격 표시 로직
-              price_display: (() => {
-                if (order.total_price === 0) {
-                  const panelType = detail.panel_info?.panel_type;
-                  const regionName = detail.panel_info?.region_gu?.name;
+              }) => ({
+                id: detail.id,
+                panel_info: {
+                  address: detail.panel_info?.address || '',
+                  nickname: detail.panel_info?.nickname || '',
+                  panel_status: detail.panel_info?.panel_status || '',
+                  region_dong: detail.panel_info?.region_dong?.name || '',
+                },
+                slot_info: {
+                  slot_name: detail.panel_slot_usage_id
+                    ? '선택된 슬롯'
+                    : '기본 슬롯',
+                  banner_type: detail.panel_info?.panel_type || 'panel',
+                  price_unit: '15 days',
+                },
+                quantity: detail.slot_order_quantity,
+                unit_price:
+                  order.total_price / (order.order_details?.length || 1),
+                total_price:
+                  order.total_price / (order.order_details?.length || 1),
+                start_date: detail.display_start_date,
+                end_date: detail.display_end_date,
+                // 특별한 가격 표시 로직
+                price_display: (() => {
+                  if (order.total_price === 0) {
+                    const panelType = detail.panel_info?.panel_type;
+                    const regionName = detail.panel_info?.region_gu?.name;
 
-                  // 마포구 시민게시대 (bulletin-board)
-                  if (
-                    panelType === 'bulletin-board' &&
-                    regionName === '마포구'
-                  ) {
-                    return '포스터 지참 후 방문 신청';
-                  }
+                    // 마포구 시민게시대 (bulletin-board)
+                    if (
+                      panelType === 'bulletin-board' &&
+                      regionName === '마포구'
+                    ) {
+                      return '포스터 지참 후 방문 신청';
+                    }
 
-                  // 송파구, 용산구 상담문의
-                  if (regionName === '송파구' || regionName === '용산구') {
+                    // 송파구, 용산구 상담문의
+                    if (regionName === '송파구' || regionName === '용산구') {
+                      return '상담문의';
+                    }
+
                     return '상담문의';
                   }
-
-                  return '상담문의';
-                }
-                return `${(
-                  order.total_price / (order.order_details?.length || 1)
-                ).toLocaleString()}원`;
-              })(),
-            })
-          ) || [],
-      })) || [];
+                  return `${(
+                    order.total_price / (order.order_details?.length || 1)
+                  ).toLocaleString()}원`;
+                })(),
+              })
+            ) || [],
+        };
+      }) || [];
 
     return NextResponse.json({
       success: true,

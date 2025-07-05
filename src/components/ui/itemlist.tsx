@@ -34,6 +34,7 @@ interface ItemTableProps {
   onItemSelect?: (id: string, checked: boolean) => void;
   selectedIds?: string[];
   enableRowClick?: boolean;
+  hideQuantityColumns?: boolean; // 상단광고 탭에서 면수/수량 컬럼 숨김
 }
 
 const ITEMS_PER_PAGE = 20;
@@ -46,6 +47,7 @@ const ItemList: React.FC<ItemTableProps> = ({
   onItemSelect,
   selectedIds = [],
   enableRowClick = true,
+  hideQuantityColumns = false,
 }) => {
   const [page, setPage] = useState(1);
   const totalPages = Math.ceil(items.length / ITEMS_PER_PAGE);
@@ -140,10 +142,14 @@ const ItemList: React.FC<ItemTableProps> = ({
                 <th className="text-left pl-4">게시대 명</th>
                 <th className="text-center pl-4"></th>
                 <th className="text-center pl-4">규격(cm)</th>
-                <th className="text-center pl-4">면수</th>
+                {!hideQuantityColumns && (
+                  <th className="text-center pl-4">면수</th>
+                )}
                 <th className="text-center pl-4">가격</th>
                 <th className="text-center pl-4">구분</th>
-                <th className="text-center pl-4">수량</th>
+                {!hideQuantityColumns && (
+                  <th className="text-center pl-4">수량</th>
+                )}
                 <th className="text-center pl-4">상태</th>
                 {renderAction && <th className="text-center">작업</th>}
               </tr>
@@ -253,20 +259,22 @@ const ItemList: React.FC<ItemTableProps> = ({
                       ? `${item.panel_width} x ${item.panel_height}`
                       : '-'}
                   </td>
+                  {!hideQuantityColumns && (
+                    <td className="text-center pl-4">
+                      {item.faces ? `${item.faces}` : '-'}
+                    </td>
+                  )}
                   <td className="text-center pl-4">
-                    {item.faces ? `${item.faces}` : '-'}
-                  </td>
-                  <td className="text-center pl-4">
-                    {isSpecialDistrict && item.panel_type === 'top_fixed'
+                    {isSpecialDistrict && item.banner_type === 'top-fixed'
                       ? '상담문의'
-                      : isSpecialDistrict
-                      ? '-'
                       : item.price}
                   </td>
                   <td className="text-center pl-4">{categoryDisplay}</td>
-                  <td className="text-center pl-4">
-                    {item.faces ? `${item.faces}` : '-'}
-                  </td>
+                  {!hideQuantityColumns && (
+                    <td className="text-center pl-4">
+                      {item.faces ? `${item.faces}` : '-'}
+                    </td>
+                  )}
                   <td
                     className={`text-center font-semibold pl-4 ${getStatusClass(
                       displayStatus
@@ -282,11 +290,20 @@ const ItemList: React.FC<ItemTableProps> = ({
             })}
             {/* 빈 row로 높이 맞추기 */}
             {Array.from({ length: ITEMS_PER_PAGE - paginatedItems.length }).map(
-              (_, i) => (
-                <tr key={`empty-${i}`} className="h-[3.5rem]">
-                  <td colSpan={showCheckbox ? 10 : 9} />
-                </tr>
-              )
+              (_, i) => {
+                const baseCols = showCheckbox ? 1 : 0; // checkbox
+                const dataCols = 7; // No, 게시대명, 아이콘, 규격, 가격, 구분, 상태
+                const quantityCols = hideQuantityColumns ? 0 : 2; // 면수, 수량
+                const actionCols = renderAction ? 1 : 0; // 작업
+                const totalCols =
+                  baseCols + dataCols + quantityCols + actionCols;
+
+                return (
+                  <tr key={`empty-${i}`} className="h-[3.5rem]">
+                    <td colSpan={totalCols} />
+                  </tr>
+                );
+              }
             )}
           </tbody>
         </table>
@@ -351,7 +368,9 @@ const ItemList: React.FC<ItemTableProps> = ({
               </div>
 
               <div className="text-0.875">구분: {categoryDisplay}</div>
-              <div className="text-0.875">수량: {item.faces ?? '-'}</div>
+              {!hideQuantityColumns && (
+                <div className="text-0.875">수량: {item.faces ?? '-'}</div>
+              )}
               {renderAction && <div>{renderAction(item)}</div>}
             </div>
           );

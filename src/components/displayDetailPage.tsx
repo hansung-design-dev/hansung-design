@@ -127,15 +127,22 @@ export default function DisplayDetailPage({
       })
     : billboards;
 
-  // 송파구, 용산구 필터에 따른 데이터 필터링 (banner_type 사용)
+  // 송파구, 용산구 필터에 따른 데이터 필터링 (banner_slot_info의 banner_type 사용)
   const filteredByPanelType = isSongpaOrYongsan
     ? filteredByMapo.filter((item) => {
-        // banner_type은 BannerBillboard 타입에만 존재하므로 타입 가드 사용
-        if (item.type === 'banner') {
+        // banner_slot_info에서 banner_type 확인
+        if (item.type === 'banner' && item.banner_slot_info) {
+          const hasTopFixed = item.banner_slot_info.some(
+            (slot) => slot.banner_type === 'top-fixed'
+          );
+          const hasPanel = item.banner_slot_info.some(
+            (slot) => slot.banner_type === 'panel'
+          );
+
           if (currentPanelTypeFilter === 'top_fixed') {
-            return item.banner_type === 'top-fixed'; // banner_type 사용
+            return hasTopFixed;
           } else if (currentPanelTypeFilter === 'panel') {
-            return item.banner_type === 'panel'; // banner_type 사용
+            return hasPanel;
           }
         }
         return true;
@@ -157,12 +164,15 @@ export default function DisplayDetailPage({
       })),
     });
 
-    // 모든 아이템의 banner_type 확인
+    // 모든 아이템의 banner_slot_info 확인
     console.log(
-      '🔍 모든 아이템의 banner_type:',
+      '🔍 모든 아이템의 banner_slot_info:',
       filteredByMapo.map((item) => ({
         panel_code: item.panel_code,
-        banner_type: item.type === 'banner' ? item.banner_type : 'N/A',
+        banner_slot_info:
+          item.type === 'banner'
+            ? item.banner_slot_info?.map((slot) => slot.banner_type)
+            : 'N/A',
         nickname: item.nickname,
       }))
     );
@@ -191,11 +201,16 @@ export default function DisplayDetailPage({
       )
     : filteredByHalfPeriod;
 
-  // 구분 컬럼에 표시할 값 계산 함수 (banner_type 우선 사용)
+  // 구분 컬럼에 표시할 값 계산 함수 (banner_slot_info의 banner_type 우선 사용)
   const getPanelTypeLabel = (item: DisplayBillboard) => {
-    // banner_type이 있으면 우선 사용 (송파구, 용산구)
-    if (item.type === 'banner' && item.banner_type) {
-      switch (item.banner_type) {
+    // banner_slot_info에서 banner_type 확인 (송파구, 용산구)
+    if (
+      item.type === 'banner' &&
+      item.banner_slot_info &&
+      item.banner_slot_info.length > 0
+    ) {
+      const firstSlot = item.banner_slot_info[0];
+      switch (firstSlot.banner_type) {
         case 'top-fixed':
           return '상단광고';
         case 'panel':
@@ -697,6 +712,9 @@ export default function DisplayDetailPage({
               selectedIds={selectedIds}
               onItemSelect={(id, checked) => handleItemSelect(id, checked)}
               enableRowClick={false}
+              hideQuantityColumns={
+                isSongpaOrYongsan && currentPanelTypeFilter === 'top_fixed'
+              }
             />
           ) : (
             renderGalleryView()

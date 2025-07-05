@@ -69,7 +69,7 @@ async function getBannerDisplaysByDistrict(districtName: string) {
   try {
     console.log('🔍 조회 중인 구:', districtName);
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('panel_info')
       .select(
         `
@@ -107,8 +107,24 @@ async function getBannerDisplaysByDistrict(districtName: string) {
       )
       .eq('region_gu.name', districtName)
       .eq('display_type_id', (await getBannerDisplayTypeId()).id)
-      .eq('panel_status', 'active')
-      .order('panel_code', { ascending: true });
+      .eq('panel_status', 'active');
+
+    // 송파구: panel_type = 'panel'인 것만 조회
+    if (districtName === '송파구') {
+      query = query.eq('panel_type', 'panel');
+    }
+    // 용산구: panel_type = 'with_lighting', 'no_lighting', 'semi-auto', 'panel'인 것만 조회
+    else if (districtName === '용산구') {
+      query = query.in('panel_type', [
+        'with_lighting',
+        'no_lighting',
+        'semi-auto',
+      ]);
+    }
+
+    const { data, error } = await query.order('panel_code', {
+      ascending: true,
+    });
 
     if (error) {
       throw error;

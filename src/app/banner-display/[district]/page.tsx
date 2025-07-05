@@ -43,7 +43,8 @@ interface BannerDisplayData {
       | '돌출형'
       | '지정게시대'
       | '자율게시대'
-      | 'top-fixed';
+      | 'top-fixed'
+      | 'panel';
     price_unit?: '15 days' | 'month';
     is_premium: boolean;
     panel_slot_status: string;
@@ -292,28 +293,92 @@ export default function BannerDisplayPage({
                   ? item.address
                   : item.address;
 
-              // 상단광고는 항상 상담문의로 표시 (banner_type 사용)
-              const isTopFixed =
-                item.banner_slot_info && item.banner_slot_info.length > 0
-                  ? item.banner_slot_info[0].banner_type === 'top-fixed'
-                  : false;
+              // banner_slot_info에서 slot_number에 따라 적절한 슬롯 찾기
+              const findSlotByType = () => {
+                if (
+                  !item.banner_slot_info ||
+                  item.banner_slot_info.length === 0
+                ) {
+                  return null;
+                }
+
+                // 디버깅: 모든 슬롯 정보 출력
+                console.log(
+                  '🔍 모든 슬롯:',
+                  item.banner_slot_info.map((slot) => ({
+                    slot_number: slot.slot_number,
+                    banner_type: slot.banner_type,
+                    total_price: slot.total_price,
+                  }))
+                );
+
+                // 상단광고 슬롯 찾기 (slot_number = 0)
+                const topFixedSlot = item.banner_slot_info.find(
+                  (slot) =>
+                    slot.banner_type === 'top-fixed' && slot.slot_number === 0
+                );
+
+                // 현수막게시대 슬롯 찾기 (첫 번째 panel 슬롯 - slot_number = 1)
+                const panelSlot = item.banner_slot_info.find(
+                  (slot) =>
+                    slot.banner_type === 'panel' && slot.slot_number === 1
+                );
+                console.log('panelSlot', panelSlot);
+                return { topFixedSlot, panelSlot };
+              };
+
+              const slots = findSlotByType();
+              // panel_type이 'top_fixed'인 경우에만 상단광고로 처리
+              const isTopFixed = item.panel_type === 'top_fixed';
+
+              // 디버깅 로그 추가
+              console.log('🔍 슬롯 정보:', {
+                panelCode: item.panel_code,
+                nickname: item.nickname,
+                bannerSlotInfo: item.banner_slot_info?.map((slot) => ({
+                  slot_number: slot.slot_number,
+                  banner_type: slot.banner_type,
+                  total_price: slot.total_price,
+                })),
+                foundSlots: slots,
+                isTopFixed,
+              });
 
               const price = isTopFixed
                 ? '상담문의'
-                : item.banner_slot_info && item.banner_slot_info.length > 0
-                ? `${item.banner_slot_info[0].total_price?.toLocaleString()}원`
+                : slots?.panelSlot
+                ? `${slots.panelSlot.total_price?.toLocaleString()}원`
                 : '문의';
 
               const totalPrice = isTopFixed
                 ? 0 // 상단광고는 상담신청으로 처리
-                : item.banner_slot_info && item.banner_slot_info.length > 0
-                ? item.banner_slot_info[0].total_price
-                : 0;
+                : slots?.panelSlot?.total_price || 0;
 
-              const bannerType =
-                item.banner_slot_info && item.banner_slot_info.length > 0
-                  ? item.banner_slot_info[0].banner_type
-                  : undefined;
+              // 가격 디버깅 로그
+              console.log('🔍 가격 정보:', {
+                panelCode: item.panel_code,
+                nickname: item.nickname,
+                isTopFixed,
+                panelSlot: slots?.panelSlot,
+                panelSlotTotalPrice: slots?.panelSlot?.total_price,
+                calculatedPrice: price,
+                calculatedTotalPrice: totalPrice,
+              });
+
+              // 가격 디버깅 로그
+              console.log('🔍 가격 정보:', {
+                panelCode: item.panel_code,
+                nickname: item.nickname,
+                isTopFixed,
+                panelSlot: slots?.panelSlot,
+                panelSlotTotalPrice: slots?.panelSlot?.total_price,
+                calculatedPrice: price,
+                calculatedTotalPrice: totalPrice,
+              });
+
+              const bannerType = isTopFixed
+                ? 'top-fixed'
+                : slots?.panelSlot?.banner_type || undefined;
 
               // 상하반기별 마감수 정보 (panel_info에서 가져오기)
               const firstHalfClosureQuantity = item.first_half_closure_quantity;
@@ -334,14 +399,25 @@ export default function BannerDisplayPage({
               // panel_info에서 max_banner 가져오기
               const maxBanners = item.max_banner || 0;
 
-              // banner_slot_info에서 첫 번째 슬롯의 크기 정보 가져오기
-              const firstSlot =
-                item.banner_slot_info && item.banner_slot_info.length > 0
-                  ? item.banner_slot_info[0]
-                  : null;
+              // banner_slot_info에서 적절한 슬롯의 크기 정보 가져오기
+              const getSlotSize = () => {
+                if (isTopFixed && slots?.topFixedSlot) {
+                  return {
+                    width: slots.topFixedSlot.max_width || 0,
+                    height: slots.topFixedSlot.max_height || 0,
+                  };
+                } else if (slots?.panelSlot) {
+                  return {
+                    width: slots.panelSlot.max_width || 0,
+                    height: slots.panelSlot.max_height || 0,
+                  };
+                }
+                return { width: 0, height: 0 };
+              };
 
-              const slotWidth = firstSlot?.max_width || 0;
-              const slotHeight = firstSlot?.max_height || 0;
+              const slotSize = getSlotSize();
+              const slotWidth = slotSize.width;
+              const slotHeight = slotSize.height;
 
               return {
                 id: combinedId, // "gwanak-01-uuid123", "mapo-01-uuid456" 등
@@ -368,6 +444,7 @@ export default function BannerDisplayPage({
                 first_half_closure_quantity: firstHalfClosureQuantity,
                 second_half_closure_quantity: secondHalfClosureQuantity,
                 panel_info_id: item.id, // 원본 panel_info UUID
+                banner_slot_info: item.banner_slot_info, // banner_slot_info 보존
               };
             }
           );
