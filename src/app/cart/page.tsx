@@ -361,16 +361,16 @@ export default function Cart() {
   const [inquiryStatuses, setInquiryStatuses] = useState<InquiryStatus>({});
 
   // 선택된 프로필 정보 상태 추가 - 각 아이템별로 관리
-  const [selectedProfiles, setSelectedProfiles] = useState<
-    Map<
-      string,
-      {
-        name: string;
-        phone: string;
-        company_name: string;
-      }
-    >
-  >(new Map());
+  // const [selectedProfiles, setSelectedProfiles] = useState<
+  //   Map<
+  //     string,
+  //     {
+  //       name: string;
+  //       phone: string;
+  //       company_name: string;
+  //     }
+  //   >
+  // >(new Map());
 
   // 현재 주문수정 버튼을 클릭한 아이템 ID
   const [currentModifyingItemId, setCurrentModifyingItemId] = useState<
@@ -397,17 +397,17 @@ export default function Cart() {
     : null;
 
   // 특정 아이템의 사용자 정보를 가져오는 함수
-  const getItemUserInfo = (itemId: string) => {
-    const profileInfo = selectedProfiles.get(itemId);
-    return (
-      profileInfo ||
-      userWithPhone || {
-        name: '사용자',
-        phone: '전화번호 없음',
-        company_name: '-',
-      }
-    );
-  };
+  // const getItemUserInfo = (itemId: string) => {
+  //   const profileInfo = selectedProfiles.get(itemId);
+  //   return (
+  //     profileInfo ||
+  //     userWithPhone || {
+  //       name: '사용자',
+  //       phone: '전화번호 없음',
+  //       company_name: '-',
+  //     }
+  //   );
+  // };
 
   // 상단광고와 현수막게시대를 구분하여 그룹화
   const groupedItems = useMemo(() => {
@@ -493,22 +493,22 @@ export default function Cart() {
     setSelectedItems(newSelected);
   };
 
-  const handleGroupSelect = (items: CartItem[], selected: boolean) => {
-    const newSelected = new Set(selectedItems);
-    if (selected) {
-      items.forEach((item) => newSelected.add(String(item.id)));
-    } else {
-      items.forEach((item) => newSelected.delete(String(item.id)));
-    }
-    setSelectedItems(newSelected);
-  };
+  // const handleGroupSelect = (items: CartItem[], selected: boolean) => {
+  //   const newSelected = new Set(selectedItems);
+  //   if (selected) {
+  //     items.forEach((item) => newSelected.add(String(item.id)));
+  //   } else {
+  //     items.forEach((item) => newSelected.delete(String(item.id)));
+  //   }
+  //   setSelectedItems(newSelected);
+  // };
 
-  const isGroupSelected = (items: CartItem[]) => {
-    return (
-      items.length > 0 &&
-      items.every((item) => selectedItems.has(String(item.id)))
-    );
-  };
+  // const isGroupSelected = (items: CartItem[]) => {
+  //   return (
+  //     items.length > 0 &&
+  //     items.every((item) => selectedItems.has(String(item.id)))
+  //   );
+  // };
 
   const handleOrderModify = (itemId: string) => {
     setCurrentModifyingItemId(itemId);
@@ -532,16 +532,16 @@ export default function Cart() {
     console.log('주문자 정보 업데이트:', profileData, 'for item:', itemId);
 
     // 선택한 프로필 정보로 상태 업데이트
-    setSelectedProfiles(
-      (prevProfiles) =>
-        new Map(
-          prevProfiles.set(itemId, {
-            name: profileData.contact_person_name,
-            phone: profileData.phone,
-            company_name: profileData.company_name || '-',
-          })
-        )
-    );
+    // setSelectedProfiles(
+    //   (prevProfiles) =>
+    //     new Map(
+    //       prevProfiles.set(itemId, {
+    //         name: profileData.contact_person_name,
+    //         phone: profileData.phone,
+    //         company_name: profileData.company_name || '-',
+    //       })
+    //     )
+    // );
 
     setIsUpdateSuccessModalOpen(true);
   };

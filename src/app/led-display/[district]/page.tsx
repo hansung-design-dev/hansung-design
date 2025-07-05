@@ -2,7 +2,7 @@
 import LEDDisplayDetailPage from '@/src/components/ledDisplayDetailPage';
 import SkeletonLoader from '@/src/components/layouts/skeletonLoader';
 import { useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import bannerDistricts from '@/src/mock/banner-district';
 import { LEDBillboard } from '@/src/types/leddetail';
 import { ledItems } from '@/src/mock/billboards';
@@ -115,32 +115,31 @@ export default function LEDDisplayPage() {
   const encodedDistrict = params.district as string;
   const district = decodeURIComponent(encodedDistrict);
   const isAllDistricts = district === 'all';
-  const districtObj = isAllDistricts
-    ? {
-        id: 0,
-        name: '전체 보기',
-        code: 'all',
-        icon: '/images/district-icon/all.svg',
-        description: '모든 자치구',
-        count: 0,
-        size: '',
-        led_count: 0,
-        banner_count: 0,
-        sizeOfPeople: '',
-        logo: '/images/district-icon/all.svg',
-        src: '',
-      }
-    : bannerDistricts.find((d) => d.code === district);
+  const districtObj = useMemo(
+    () =>
+      isAllDistricts
+        ? {
+            id: 0,
+            name: '전체 보기',
+            code: 'all',
+            icon: '/images/district-icon/all.svg',
+            description: '모든 자치구',
+            count: 0,
+            size: '',
+            led_count: 0,
+            banner_count: 0,
+            sizeOfPeople: '',
+            logo: '/images/district-icon/all.svg',
+            src: '',
+          }
+        : bannerDistricts.find((d) => d.code === district),
+    [isAllDistricts, district]
+  );
 
   const [billboards, setBillboards] = useState<LEDBillboard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [period, setPeriod] = useState<{
-    first_half_from: string;
-    first_half_to: string;
-    second_half_from: string;
-    second_half_to: string;
-  } | null>(null);
+  // LED 전자게시대는 항상 상시접수이므로 period 상태 불필요
   const [bankInfo, setBankInfo] = useState<BankInfo | null>(null);
   const [districtData, setDistrictData] = useState<{
     id: string;
@@ -244,22 +243,6 @@ export default function LEDDisplayPage() {
   console.log('🔍 District object found:', districtObj);
   console.log('🔍 District name to pass to API:', districtObj?.name);
 
-  // 신청기간 가져오기 함수
-  async function getDisplayPeriod(districtName: string) {
-    try {
-      const response = await fetch(
-        `/api/display-period?district=${encodeURIComponent(
-          districtName
-        )}&display_type=led_display`
-      );
-      const result = await response.json();
-      return result.success ? result.data : null;
-    } catch (err) {
-      console.warn(`Failed to fetch period for ${districtName}:`, err);
-      return null;
-    }
-  }
-
   // 구 정보 가져오기 함수 (로고 + 계좌번호 포함)
   async function getDistrictData(districtName: string) {
     try {
@@ -341,12 +324,6 @@ export default function LEDDisplayPage() {
           }
         }
 
-        // 2. 신청기간 가져오기 (전체보기가 아닌 경우에만)
-        if (!isAllDistricts && districtObj?.name) {
-          const periodData = await getDisplayPeriod(districtObj.name);
-          setPeriod(periodData);
-        }
-
         // 3. 구 정보와 계좌번호 정보 가져오기 (전체보기가 아닌 경우에만)
         if (!isAllDistricts && districtObj?.name) {
           const districtDataResult = await getDistrictData(districtObj.name);
@@ -372,7 +349,7 @@ export default function LEDDisplayPage() {
     if (district) {
       fetchLEDData();
     }
-  }, [district, districtObj?.name, isAllDistricts]);
+  }, [district, districtObj, isAllDistricts]);
 
   if (loading) {
     return (
@@ -442,7 +419,7 @@ export default function LEDDisplayPage() {
       billboards={billboards}
       dropdownOptions={pageDropdownOptions}
       defaultView="gallery"
-      period={period}
+      period={null}
       bankInfo={bankInfo}
     />
   );

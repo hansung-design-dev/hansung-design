@@ -5,8 +5,8 @@ import DisplayDetailPage from '@/src/components/displayDetailPage';
 import TableSkeleton from '@/src/components/skeleton/TableSkeleton';
 import districts from '@/src/mock/banner-district';
 import { BannerBillboard } from '@/src/types/displaydetail';
-import { useCart } from '@/src/contexts/cartContext';
-import { useRouter } from 'next/navigation';
+// import { useCart } from '@/src/contexts/cartContext';
+// import { useRouter } from 'next/navigation';
 
 // BannerDisplayData 타입 정의
 interface BannerDisplayData {
@@ -38,7 +38,12 @@ interface BannerDisplayData {
     max_height: number;
     total_price?: number;
     tax_price?: number;
-    banner_type: '일반형' | '돌출형' | '지정게시대' | '자율게시대';
+    banner_type:
+      | '일반형'
+      | '돌출형'
+      | '지정게시대'
+      | '자율게시대'
+      | 'top-fixed';
     price_unit?: '15 days' | 'month';
     is_premium: boolean;
     panel_slot_status: string;
@@ -126,7 +131,7 @@ async function getAllBannerDisplays(): Promise<BannerDisplayData[]> {
 export default function BannerDisplayPage({
   params,
 }: {
-  params: { district: string };
+  params: Promise<{ district: string }>;
 }) {
   const [billboards, setBillboards] = useState<BannerBillboard[]>([]);
   const [loading, setLoading] = useState(true);
@@ -144,34 +149,52 @@ export default function BannerDisplayPage({
     'panel'
   );
 
-  const { dispatch } = useCart();
-  const router = useRouter();
+  // const { dispatch } = useCart();
+  // const router = useRouter();
 
-  const encodedDistrict = params.district;
-  const district = decodeURIComponent(encodedDistrict);
-  const isAllDistrictsView = district === 'all';
-  const districtObj = isAllDistrictsView
-    ? {
-        id: 0,
-        name: '전체',
-        code: 'all',
-        icon: '/images/district-icon/all.svg',
-        description: '모든 구 현수막 게시대',
-        count: 0,
-        size: '전체',
-        led_count: 0,
-        banner_count: 0,
-        sizeOfPeople: '전체',
-        logo: '/images/district-icon/all.svg',
-        src: '/images/led/landing.png',
-      }
-    : districts.find((d) => d.code === district);
+  const [district, setDistrict] = useState<string>('');
+  const [isAllDistrictsView, setIsAllDistrictsView] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [districtObj, setDistrictObj] = useState<any>(null);
+
+  // Handle async params
+  useEffect(() => {
+    const initParams = async () => {
+      const { district: encodedDistrict } = await params;
+      const decodedDistrict = decodeURIComponent(encodedDistrict);
+      const isAll = decodedDistrict === 'all';
+
+      setDistrict(decodedDistrict);
+      setIsAllDistrictsView(isAll);
+
+      const obj = isAll
+        ? {
+            id: 0,
+            name: '전체',
+            code: 'all',
+            icon: '/images/district-icon/all.svg',
+            description: '모든 구 현수막 게시대',
+            count: 0,
+            size: '전체',
+            led_count: 0,
+            banner_count: 0,
+            sizeOfPeople: '전체',
+            logo: '/images/district-icon/all.svg',
+            src: '/images/led/landing.png',
+          }
+        : districts.find((d) => d.code === decodedDistrict);
+
+      setDistrictObj(obj);
+    };
+
+    initParams();
+  }, [params]);
 
   // 마포구인지 확인
-  const isMapoDistrict = districtObj?.code === 'mapo';
+  // const isMapoDistrict = districtObj?.code === 'mapo';
   // 송파구, 용산구인지 확인
-  const isSongpaOrYongsan =
-    districtObj?.code === 'songpa' || districtObj?.code === 'yongsan';
+  // const isSongpaOrYongsan =
+  //   districtObj?.code === 'songpa' || districtObj?.code === 'yongsan';
 
   const pageDropdownOptions = isAllDistrictsView
     ? [
@@ -416,7 +439,7 @@ export default function BannerDisplayPage({
     if (district) {
       fetchBannerData();
     }
-  }, [district, districtObj?.name, isAllDistrictsView]);
+  }, [district, districtObj, isAllDistrictsView]);
 
   if (loading) {
     return (
