@@ -16,13 +16,13 @@ export interface MarkerType {
 interface KakaoMapProps {
   markers: MarkerType[];
   selectedIds: string[];
-  onSelect: (id: string) => void;
+  center?: { lat: number; lng: number };
 }
 
 const KakaoMap: React.FC<KakaoMapProps> = ({
   markers,
   selectedIds,
-  onSelect,
+  center,
 }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,9 +55,25 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
     return () => clearTimeout(timeout);
   }, []);
 
-  const center = markers.length
-    ? { lat: markers[0].lat, lng: markers[0].lng }
-    : { lat: 37.5665, lng: 126.978 };
+  // 디버깅용 로그
+  console.log('🔍 KakaoMap markers:', markers);
+  console.log('🔍 KakaoMap selectedIds:', selectedIds);
+
+  // 중심점 계산: props로 받은 center가 있으면 사용, 없으면 마커들의 중심점 계산
+  const mapCenter =
+    center ||
+    (markers.length
+      ? {
+          lat:
+            markers.reduce((sum, marker) => sum + marker.lat, 0) /
+            markers.length,
+          lng:
+            markers.reduce((sum, marker) => sum + marker.lng, 0) /
+            markers.length,
+        }
+      : { lat: 37.5665, lng: 126.978 });
+
+  console.log('🔍 KakaoMap mapCenter:', mapCenter);
 
   if (error) {
     return (
@@ -83,29 +99,36 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
   }
 
   return (
-    <Map center={center} style={{ width: '100%', height: '90%' }} level={3}>
-      {markers.map((marker) => (
-        <MapMarker
-          key={marker.id}
-          position={{ lat: marker.lat, lng: marker.lng }}
-          image={{
-            src: selectedIds.includes(marker.id)
-              ? '/images/pos_sel.png'
-              : '/images/pos.png',
-            size: {
-              width: selectedIds.includes(marker.id) ? 38 : 27,
-              height: selectedIds.includes(marker.id) ? 37 : 34,
-            },
-          }}
-          onClick={() => onSelect(marker.id)}
-        >
-          {selectedIds.includes(marker.id) && (
-            <div style={{ padding: 5, fontWeight: 'bold', color: 'blue' }}>
-              {marker.title}
+    <Map center={mapCenter} style={{ width: '100%', height: '100%' }} level={3}>
+      {markers.map((marker) => {
+        return (
+          <MapMarker
+            key={marker.id}
+            position={{ lat: marker.lat, lng: marker.lng }}
+          >
+            <div
+              style={{
+                padding: '8px 12px',
+                backgroundColor: selectedIds.includes(marker.id)
+                  ? '#238CFA'
+                  : '#666',
+                color: 'white',
+                borderRadius: '4px',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                whiteSpace: 'nowrap',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                minWidth: '60px',
+                textAlign: 'center',
+              }}
+            >
+              {marker.title.length > 10
+                ? marker.title.substring(0, 10) + '...'
+                : marker.title}
             </div>
-          )}
-        </MapMarker>
-      ))}
+          </MapMarker>
+        );
+      })}
     </Map>
   );
 };

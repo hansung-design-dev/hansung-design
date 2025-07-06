@@ -9,6 +9,8 @@ export interface LEDDisplayData {
   address: string;
   panel_status: string;
   panel_type: string;
+  latitude: number;
+  longitude: number;
   region_gu: {
     id: string;
     name: string;
@@ -73,7 +75,14 @@ async function getLEDDisplaysByDistrict(districtName: string) {
       .from('panel_info')
       .select(
         `
-        *,
+        id,
+        panel_code,
+        nickname,
+        address,
+        panel_status,
+        panel_type,
+        latitude,
+        longitude,
         led_panel_details (*),
         led_slot_info (
           id,
@@ -111,7 +120,12 @@ async function getLEDDisplaysByDistrict(districtName: string) {
       throw error;
     }
 
-    return NextResponse.json({ success: true, data: data as LEDDisplayData[] });
+    console.log('🔍 API 응답 데이터 (첫 번째 아이템):', data?.[0]);
+
+    return NextResponse.json({
+      success: true,
+      data: data as unknown as LEDDisplayData[],
+    });
   } catch (error) {
     throw error;
   }
@@ -127,7 +141,14 @@ async function getAllLEDDisplays() {
       .from('panel_info')
       .select(
         `
-        *,
+        id,
+        panel_code,
+        nickname,
+        address,
+        panel_status,
+        panel_type,
+        latitude,
+        longitude,
         led_panel_details (*),
         led_slot_info (
           id,
@@ -164,7 +185,12 @@ async function getAllLEDDisplays() {
       throw error;
     }
 
-    return NextResponse.json({ success: true, data: data as LEDDisplayData[] });
+    console.log('🔍 API 응답 데이터 (첫 번째 아이템):', data?.[0]);
+
+    return NextResponse.json({
+      success: true,
+      data: data as unknown as LEDDisplayData[],
+    });
   } catch (error) {
     throw error;
   }
