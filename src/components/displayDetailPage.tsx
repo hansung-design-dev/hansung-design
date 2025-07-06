@@ -18,6 +18,7 @@ import {
 } from '@/src/types/displaydetail';
 import DistrictInfo from './districtInfo';
 import HalfPeriodTabs from './ui/HalfPeriodTabs';
+import GuidelineSection from './guidelineSection';
 // import { BannerBillboard } from '@/src/types/displaydetail';
 
 const fadeInUp = {
@@ -853,58 +854,11 @@ export default function DisplayDetailPage({
               />
 
               {/* 가이드라인 섹션 */}
-              {guidelines.length > 0 && !isAllDistrictsView && (
-                <div className="mt-12">
-                  <h3 className="text-xl font-bold mb-6 text-gray-800">
-                    {districtObj?.name} 현수막게시대 가이드라인
-                  </h3>
-
-                  {guidelines.map((guideline) => (
-                    <div key={guideline.id} className="mb-8">
-                      {/* 가이드라인 타입별 제목 */}
-                      {guidelines.length > 1 && (
-                        <h4 className="text-lg font-semibold mb-4 text-gray-700">
-                          {guideline.guideline_type === 'banner' &&
-                            '현수막게시대'}
-                          {guideline.guideline_type === 'top-fixed' &&
-                            '상단광고'}
-                          {guideline.guideline_type === 'bulliten-board' &&
-                            '시민게시대'}
-                          {guideline.guideline_type === 'admin' && '행정용'}
-                          {guideline.guideline_type === 'commercial' &&
-                            '상업용'}
-                          가이드라인
-                        </h4>
-                      )}
-
-                      {/* 가이드라인 이미지들 */}
-                      {guideline.image_url &&
-                        guideline.image_url.length > 0 && (
-                          <div className="mb-6">
-                            <div className="flex flex-col gap-4">
-                              {guideline.image_url.map(
-                                (imageUrl: string, index: number) => (
-                                  <div key={index} className="w-full">
-                                    <Image
-                                      src={imageUrl}
-                                      alt={`가이드라인 이미지 ${index + 1}`}
-                                      width={4500}
-                                      height={4500}
-                                      className="w-full max-w-full "
-                                      style={{
-                                        objectFit: 'contain',
-                                      }}
-                                    />
-                                  </div>
-                                )
-                              )}
-                            </div>
-                          </div>
-                        )}
-                    </div>
-                  ))}
-                </div>
-              )}
+              <GuidelineSection
+                guidelines={guidelines}
+                districtName={districtObj?.name || ''}
+                isAllDistrictsView={isAllDistrictsView}
+              />
             </>
           ) : (
             renderGalleryView()
