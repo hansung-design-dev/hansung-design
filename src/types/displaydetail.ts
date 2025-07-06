@@ -104,3 +104,29 @@ export interface DropdownOption {
   id: number;
   option: string;
 }
+
+export interface PanelGuideline {
+  id: string;
+  display_category_id: string;
+  notes: string;
+  order_period: string;
+  order_method: string;
+  account_info: string;
+  main_notice: string;
+  warning_notice: string;
+  show_warning: boolean;
+  created_at: string;
+  updated_at: string;
+  image_url: string[];
+  region_gu_id: string;
+  guideline_type:
+    | 'lower-panel'
+    | 'multi-panel'
+    | 'bulliten-board'
+    | 'led'
+    | 'panel'
+    | 'top-fixed'
+    | 'admin'
+    | 'commercial'
+    | 'banner';
+}
