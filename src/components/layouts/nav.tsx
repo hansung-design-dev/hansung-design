@@ -179,6 +179,12 @@ const IconList = ({ TextInvert }: { TextInvert?: boolean }) => {
         TextInvert={TextInvert}
       />
       <IconButton
+        iconPath="/svg/headphones.svg"
+        label="고객지원"
+        href="/customer"
+        TextInvert={TextInvert}
+      />
+      <IconButton
         iconPath="/svg/user.svg"
         label="마이페이지"
         TextInvert={TextInvert}
