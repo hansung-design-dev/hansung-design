@@ -10,8 +10,8 @@ export interface LEDBillboard {
   price: string;
   size: string;
   faces: number;
-  lat: number;
-  lng: number;
+  latitude: number;
+  longitude: number;
   status: string;
   panel_width: number;
   panel_height: number;

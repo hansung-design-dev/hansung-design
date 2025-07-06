@@ -15,6 +15,8 @@ export interface LEDDisplayData {
   address: string;
   panel_status: string;
   panel_type: string;
+  latitude: number;
+  longitude: number;
   region_gu: {
     id: string;
     name: string;
@@ -194,8 +196,8 @@ export default function LEDDisplayPage() {
         price: price,
         size: `${item.led_panel_details.panel_width}x${item.led_panel_details.panel_height}`,
         faces: item.led_panel_details.max_banners,
-        lat: 37.5665, // 기본 좌표 (실제 데이터가 있다면 사용)
-        lng: 126.978,
+        latitude: item.latitude || 37.5665, // API에서 받아온 실제 좌표 사용
+        longitude: item.longitude || 126.978,
         status: item.panel_status,
         panel_width: item.led_panel_details.panel_width,
         panel_height: item.led_panel_details.panel_height,
@@ -300,8 +302,8 @@ export default function LEDDisplayPage() {
                   price: item.price.toString(),
                   size: `${item.width}x${item.height}`,
                   faces: item.slots,
-                  lat: 37.5665, // Default coordinates
-                  lng: 126.978,
+                  latitude: 37.5665, // Default coordinates
+                  longitude: 126.978,
                   status: '진행중',
                   panel_width: item.width,
                   panel_height: item.height,
@@ -419,7 +421,6 @@ export default function LEDDisplayPage() {
       billboards={billboards}
       dropdownOptions={pageDropdownOptions}
       defaultView="gallery"
-      period={null}
       bankInfo={bankInfo}
     />
   );

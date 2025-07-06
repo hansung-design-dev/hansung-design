@@ -39,12 +39,7 @@ export default function LEDDisplayDetailPage({
   billboards: LEDBillboard[];
   dropdownOptions: DropdownOption[];
   defaultView?: 'location' | 'gallery' | 'list';
-  period?: {
-    first_half_from: string;
-    first_half_to: string;
-    second_half_from: string;
-    second_half_to: string;
-  } | null;
+
   bankInfo?: {
     id: string;
     bank_name: string;
@@ -74,12 +69,40 @@ export default function LEDDisplayDetailPage({
   const { dispatch } = useCart();
   const router = useRouter();
 
+  // selectedIds 상태 변화 추적 (디버깅용 - 주석 처리)
+  // useEffect(() => {
+  //   console.log('🔍 selectedIds 상태 변경:', selectedIds);
+
+  //   // 선택된 아이템들의 상세 정보 출력
+  //   if (selectedIds.length > 0) {
+  //     const selectedItems = billboards.filter((item) =>
+  //       selectedIds.includes(item.id)
+  //     );
+  //     console.log(
+  //       '🔍 현재 선택된 아이템들:',
+  //       selectedItems.map((item) => ({
+  //         id: item.id,
+  //         name: item.name,
+  //         latitude: item.latitude,
+  //         longitude: item.longitude,
+  //         district: item.district,
+  //         address: item.address,
+  //       }))
+  //     );
+  //   } else {
+  //     console.log('🔍 선택된 아이템 없음');
+  //   }
+  // }, [selectedIds, billboards]);
+
   const isAllDistrictsView = district === 'all';
 
   const filteredByDistrict =
     isAllDistrictsView && selectedOption
       ? billboards.filter((item) => item.district === selectedOption.option)
       : billboards;
+
+  // 디버깅: 원본 데이터 확인
+  // console.log('🔍 원본 billboards 데이터:', billboards);
 
   // 상하반기에 따른 필터링
   const filteredByHalfPeriod = filteredByDistrict.map((item) => ({
@@ -119,6 +142,28 @@ export default function LEDDisplayDetailPage({
   };
 
   const handleItemSelect = (id: string, checked?: boolean) => {
+    console.log('🔍 handleItemSelect called:', { id, checked, viewType });
+
+    // 지도 뷰에서는 선택만 하고 장바구니에는 추가하지 않음
+    if (viewType === 'location') {
+      const alreadySelected = selectedIds.includes(id);
+      const shouldSelect = checked !== undefined ? checked : !alreadySelected;
+
+      console.log('🔍 지도 뷰 선택 처리:', { alreadySelected, shouldSelect });
+
+      if (!shouldSelect) {
+        const newSelectedIds = selectedIds.filter((sid) => sid !== id);
+        console.log('🔍 선택 해제:', id, '새로운 selectedIds:', newSelectedIds);
+        setSelectedIds(newSelectedIds);
+      } else {
+        const newSelectedIds = [...selectedIds, id];
+        console.log('🔍 선택 추가:', id, '새로운 selectedIds:', newSelectedIds);
+        setSelectedIds(newSelectedIds);
+      }
+      return;
+    }
+
+    // 갤러리와 목록 뷰에서는 기존 로직 유지 (선택 시 장바구니에 추가)
     const alreadySelected = selectedIds.includes(id);
     let newSelectedIds;
 
@@ -172,6 +217,46 @@ export default function LEDDisplayDetailPage({
       }
     }
     setSelectedIds(newSelectedIds);
+  };
+
+  const handleAddToCart = (id: string) => {
+    const item = billboards.find((item) => item.id === id);
+    if (item) {
+      // total_price가 있으면 사용, 없으면 기존 로직 사용
+      const priceForCart =
+        item.total_price !== undefined
+          ? item.total_price
+          : (() => {
+              const priceString = String(item.price || '').replace(/,|원/g, '');
+              const priceNumber = parseInt(priceString, 10);
+              return !isNaN(priceNumber) ? priceNumber : 0;
+            })();
+
+      const cartItem = {
+        id: item.id, // 복합 ID (gwanak-03-uuid)
+        type: 'led-display' as const,
+        name: getCartItemName(item),
+        district: item.district,
+        price: priceForCart,
+        // LED 전자게시대는 상시접수이므로 상하반기 정보 제거
+        panel_type: item.panel_type,
+        panel_info_id: item.panel_info_id, // 원본 UUID
+      };
+
+      console.log('🔍 Adding LED item to cart:', cartItem);
+      console.log('🔍 LED 상담신청 아이템:', {
+        name: cartItem.name,
+        district: cartItem.district,
+        price: cartItem.price,
+        type: cartItem.type,
+      });
+      dispatch({
+        type: 'ADD_ITEM',
+        item: cartItem,
+      });
+    } else {
+      console.error('🔍 LED item not found in billboards:', id);
+    }
   };
 
   const handleRowClick = (e: React.MouseEvent, itemId: string) => {
@@ -240,86 +325,150 @@ export default function LEDDisplayDetailPage({
     </div>
   );
 
-  const renderLocationView = () => (
-    <div className="flex gap-8" style={{ height: '700px' }}>
-      <div
-        className="flex-1 overflow-y-auto pr-2"
-        style={{ maxWidth: '40%', maxHeight: '700px' }}
-      >
-        <div className="flex flex-col gap-6">
-          {filteredBillboards.map((item, index) => {
-            const isSelected = selectedIds.includes(item.id);
-            const uniqueKey = item.id || `led-location-${index}`; // fallback key
-            return (
-              <div
-                key={uniqueKey}
-                className={`flex flex-col cursor-pointer `}
-                onClick={(e) => handleRowClick(e, item.id)}
-              >
+  const renderLocationView = () => {
+    // 지도 뷰에서는 단일 선택만 가능하므로 첫 번째 선택된 아이템만 사용
+    const selectedItem =
+      selectedIds.length > 0
+        ? filteredBillboards.find((b) => b.id === selectedIds[0])
+        : null;
+
+    // 선택된 아이템만 지도에 표시 (단일 선택)
+    const mapMarkers =
+      selectedItem &&
+      selectedItem.latitude != null &&
+      selectedItem.longitude != null
+        ? [
+            {
+              id: selectedItem.id,
+              title: selectedItem.name,
+              lat: selectedItem.latitude!,
+              lng: selectedItem.longitude!,
+              type: selectedItem.type,
+              isSelected: true,
+            },
+          ]
+        : [];
+
+    // 지도 중심점: 선택된 아이템이 있으면 해당 위치, 없으면 모든 아이템의 중심
+    const mapCenter =
+      selectedItem &&
+      selectedItem.latitude != null &&
+      selectedItem.longitude != null
+        ? { lat: selectedItem.latitude, lng: selectedItem.longitude }
+        : filteredBillboards.length > 0
+        ? {
+            lat:
+              filteredBillboards.reduce(
+                (sum, b) => sum + (b.latitude || 0),
+                0
+              ) / filteredBillboards.length,
+            lng:
+              filteredBillboards.reduce(
+                (sum, b) => sum + (b.longitude || 0),
+                0
+              ) / filteredBillboards.length,
+          }
+        : { lat: 37.5665, lng: 126.978 };
+
+    console.log('🔍 선택된 아이템:', selectedItem);
+    console.log('🔍 지도 마커 데이터:', mapMarkers);
+    console.log('🔍 지도 중심점:', mapCenter);
+
+    return (
+      <div className="flex gap-8" style={{ height: '700px' }}>
+        <div
+          className="flex-1 overflow-y-auto pr-2"
+          style={{ maxWidth: '40%', maxHeight: '700px' }}
+        >
+          <div className="flex flex-col gap-6">
+            {filteredBillboards.map((item, index) => {
+              const isSelected = selectedIds.includes(item.id);
+              const uniqueKey = item.id || `led-location-${index}`; // fallback key
+
+              console.log('🔍 렌더링 아이템:', {
+                id: item.id,
+                isSelected,
+                selectedIds,
+              });
+
+              return (
                 <div
-                  className={`relative aspect-[1/1] w-full overflow-hidden rounded-lg ${
-                    isSelected
-                      ? 'border-solid border-[#238CFA] border-[0.3rem]'
-                      : ''
+                  key={uniqueKey}
+                  className={`flex flex-col rounded-lg transition-colors p-2 cursor-pointer ${
+                    isSelected ? 'bg-blue-50 border-2 border-blue-300' : ''
                   }`}
+                  onClick={() => {
+                    console.log('🔍 아이템 클릭:', item.id);
+                    console.log('🔍 전체 아이템 데이터:', item);
+                    console.log('🔍 선택한 아이템 정보:', {
+                      id: item.id,
+                      name: item.name,
+                      latitude: item.latitude,
+                      longitude: item.longitude,
+                      district: item.district,
+                      address: item.address,
+                    });
+                    // 지도 뷰에서는 단일 선택만 가능
+                    if (isSelected) {
+                      // 이미 선택된 아이템을 클릭하면 선택 해제
+                      setSelectedIds([]);
+                    } else {
+                      // 새로운 아이템을 선택하면 이전 선택을 모두 해제하고 새 아이템만 선택
+                      setSelectedIds([item.id]);
+                    }
+                  }}
                 >
-                  {isSelected && (
+                  <div className="relative aspect-[1/1] w-full overflow-hidden rounded-lg">
                     <Image
-                      src="/images/blue-check.png"
-                      alt="선택됨"
-                      className="absolute top-2 left-2 w-4 h-4 z-10"
-                      width={10}
-                      height={10}
+                      src="/images/led-display.jpeg"
+                      alt={item.name}
+                      fill
+                      className="object-cover"
                     />
-                  )}
-                  <Image
-                    src="/images/led-display.jpeg"
-                    alt={item.name}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-                <div className="p-4">
-                  <div className="flex gap-2 mb-2">
-                    <span className="px-2 py-1 bg-gray-100 text-gray-600 text-0.875 rounded">
-                      {getLEDPanelTypeLabel(item.panel_type)}
-                    </span>
-                    <span className="px-2 py-1 bg-gray-100 text-gray-600 text-0.875 rounded">
-                      {item.district}
-                    </span>
                   </div>
-                  <h3 className="text-1 font-medium">{item.name}</h3>
-                  <p className="text-0.875 text-gray-600">
-                    {item.neighborhood}
-                  </p>
+                  <div className="p-4">
+                    <div className="flex gap-2 mb-2">
+                      <span className="px-2 py-1 bg-gray-100 text-gray-600 text-0.875 rounded">
+                        {getLEDPanelTypeLabel(item.panel_type)}
+                      </span>
+                      <span className="px-2 py-1 bg-gray-100 text-gray-600 text-0.875 rounded">
+                        {item.district}
+                      </span>
+                    </div>
+                    <h3 className="text-1 font-medium">{item.name}</h3>
+                    <p className="text-0.875 text-gray-600">
+                      {item.neighborhood}
+                    </p>
+                    {/* 지도 뷰에서만 장바구니 담기 버튼 표시 */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAddToCart(item.id);
+                      }}
+                      className="mt-3 w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors"
+                    >
+                      장바구니 담기
+                    </button>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-      </div>
-      <div className="min-w-0" style={{ width: '60%', minWidth: '500px' }}>
-        <div className="sticky top-0">
-          <div className="w-full aspect-square min-h-[500px]">
-            <KakaoMap
-              markers={filteredBillboards
-                .filter((b) => b.lat != null && b.lng != null)
-                .map((b) => ({
-                  id: b.id,
-                  title: b.name,
-                  lat: b.lat!,
-                  lng: b.lng!,
-                  type: b.type,
-                  isSelected: selectedIds.includes(b.id),
-                }))}
-              selectedIds={selectedIds}
-              onSelect={handleItemSelect}
-            />
+        <div className="min-w-0" style={{ width: '60%', minWidth: '500px' }}>
+          <div className="sticky top-0">
+            <div className="w-full h-[700px]">
+              <KakaoMap
+                markers={mapMarkers}
+                selectedIds={selectedIds}
+                center={mapCenter}
+              />
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <main className="min-h-screen flex flex-col bg-white pb-10">
@@ -353,6 +502,9 @@ export default function LEDDisplayDetailPage({
             </h2>
           </div>
           {selectedOption && <div>{selectedOption.option}</div>}
+
+          {/* LED 전자게시대는 상시접수 */}
+          <div className="mt-2 text-green-600 font-medium">상시접수</div>
 
           <DistrictInfo bankInfo={bankInfo} flexRow={true} />
         </div>
