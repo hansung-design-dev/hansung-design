@@ -304,6 +304,22 @@ export default function DisplayDetailPage({
   };
 
   const handleItemSelect = (id: string, checked?: boolean) => {
+    // 지도 뷰에서는 선택만 하고 장바구니에는 추가하지 않음
+    if (viewType === 'location') {
+      const alreadySelected = selectedIds.includes(id);
+      const shouldSelect = checked !== undefined ? checked : !alreadySelected;
+
+      if (!shouldSelect) {
+        const newSelectedIds = selectedIds.filter((sid) => sid !== id);
+        setSelectedIds(newSelectedIds);
+      } else {
+        const newSelectedIds = [...selectedIds, id];
+        setSelectedIds(newSelectedIds);
+      }
+      return;
+    }
+
+    // 갤러리와 목록 뷰에서는 기존 로직 유지 (선택 시 장바구니에 추가)
     const alreadySelected = selectedIds.includes(id);
     let newSelectedIds;
 
@@ -408,31 +424,15 @@ export default function DisplayDetailPage({
   const renderGalleryView = () => (
     <div className="grid grid-cols-3 sm:grid-cols-1 md:grid-cols-4 lg:grid-cols-4 gap-6 ">
       {filteredBillboards.map((item, index) => {
-        const isSelected = selectedIds.includes(item.id);
         return (
           <div
             key={index}
             className={`flex flex-col cursor-pointer `}
             onClick={() => handleItemSelect(item.id)}
           >
-            <div
-              className={`relative aspect-[1/1] w-full overflow-hidden rounded-lg ${
-                isSelected
-                  ? 'border-solid border-[#238CFA] border-[0.3rem]'
-                  : ''
-              }`}
-            >
-              {isSelected && (
-                <Image
-                  src="/images/blue-check.png"
-                  alt="선택됨"
-                  className="absolute top-2 left-2 w-4 h-4 z-10"
-                  width={10}
-                  height={10}
-                />
-              )}
+            <div className="relative aspect-[1/1] w-full overflow-hidden rounded-lg">
               <Image
-                src="/images/led-display.jpeg" // 기본 이미지 사용
+                src="/images/banner-display/landing.png"
                 alt={item.name}
                 fill
                 className={`md:object-cover sm:object-cover `}
@@ -456,87 +456,145 @@ export default function DisplayDetailPage({
     </div>
   );
 
-  const renderLocationView = () => (
-    <div className="flex gap-8" style={{ height: '700px' }}>
-      {/* Left: Card List (scrollable) */}
-      <div
-        className="flex-1 overflow-y-auto pr-2"
-        style={{ maxWidth: '40%', maxHeight: '700px' }}
-      >
-        <div className="flex flex-col gap-6">
-          {filteredBillboards.map((item, index) => {
-            const isSelected = selectedIds.includes(item.id);
-            return (
-              <div
-                key={index}
-                className={`flex flex-col cursor-pointer `}
-                onClick={() => handleItemSelect(item.id)}
-              >
+  const renderLocationView = () => {
+    // 지도 뷰에서는 단일 선택만 가능하므로 첫 번째 선택된 아이템만 사용
+    const selectedItem =
+      selectedIds.length > 0
+        ? filteredBillboards.find((b) => b.id === selectedIds[0])
+        : null;
+
+    // 선택된 아이템만 지도에 표시 (단일 선택)
+    const mapMarkers =
+      selectedItem && selectedItem.lat != null && selectedItem.lng != null
+        ? [
+            {
+              id: selectedItem.id,
+              title: selectedItem.name,
+              lat: selectedItem.lat!,
+              lng: selectedItem.lng!,
+              type: selectedItem.type,
+              isSelected: true,
+            },
+          ]
+        : [];
+
+    // 지도 중심점: 선택된 아이템이 있으면 해당 위치, 없으면 모든 아이템의 중심
+    const mapCenter =
+      selectedItem && selectedItem.lat != null && selectedItem.lng != null
+        ? { lat: selectedItem.lat, lng: selectedItem.lng }
+        : filteredBillboards.length > 0
+        ? {
+            lat:
+              filteredBillboards.reduce((sum, b) => sum + (b.lat || 0), 0) /
+              filteredBillboards.length,
+            lng:
+              filteredBillboards.reduce((sum, b) => sum + (b.lng || 0), 0) /
+              filteredBillboards.length,
+          }
+        : { lat: 37.5665, lng: 126.978 };
+
+    // 디버깅 로그 주석 처리
+    // console.log('🔍 선택된 아이템:', selectedItem);
+    // console.log('🔍 지도 마커 데이터:', mapMarkers);
+    // console.log('🔍 지도 중심점:', mapCenter);
+
+    return (
+      <div className="flex gap-8" style={{ height: '700px' }}>
+        <div
+          className="flex-1 overflow-y-auto pr-2"
+          style={{ maxWidth: '40%', maxHeight: '700px' }}
+        >
+          <div className="flex flex-col gap-6">
+            {filteredBillboards.map((item, index) => {
+              const isSelected = selectedIds.includes(item.id);
+              const uniqueKey = item.id || `banner-location-${index}`; // fallback key
+
+              // 디버깅 로그 주석 처리
+              // console.log('🔍 렌더링 아이템:', {
+              //   id: item.id,
+              //   isSelected,
+              //   selectedIds,
+              // });
+
+              return (
                 <div
-                  className={`relative aspect-[1/1] w-full overflow-hidden rounded-lg ${
-                    isSelected
-                      ? 'border-solid border-[#238CFA] border-[0.3rem]'
-                      : ''
+                  key={uniqueKey}
+                  className={`flex flex-col rounded-lg transition-colors p-2 cursor-pointer ${
+                    isSelected ? 'bg-blue-50' : ''
                   }`}
+                  onClick={() => {
+                    // 디버깅 로그 주석 처리
+                    // console.log('🔍 아이템 클릭:', item.id);
+                    // console.log('🔍 전체 아이템 데이터:', item);
+                    // console.log('🔍 선택한 아이템 정보:', {
+                    //   id: item.id,
+                    //   name: item.name,
+                    //   latitude: item.lat,
+                    //   longitude: item.lng,
+                    //   district: item.district,
+                    //   address: item.address,
+                    // });
+                    // 지도 뷰에서는 단일 선택만 가능
+                    if (isSelected) {
+                      // 이미 선택된 아이템을 클릭하면 선택 해제
+                      setSelectedIds([]);
+                    } else {
+                      // 새로운 아이템을 선택하면 이전 선택을 모두 해제하고 새 아이템만 선택
+                      setSelectedIds([item.id]);
+                    }
+                  }}
                 >
-                  {isSelected && (
+                  <div className="relative aspect-[1/1] w-full overflow-hidden rounded-lg">
                     <Image
-                      src="/images/blue-check.png"
-                      alt="선택됨"
-                      className="absolute top-2 left-2 w-4 h-4 z-10"
-                      width={10}
-                      height={10}
+                      src="/images/banner-display/landing.png"
+                      alt={item.name}
+                      fill
+                      className="object-cover"
                     />
-                  )}
-                  <Image
-                    src="/images/led-display.jpeg" // 기본 이미지 사용
-                    alt={item.name}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-                <div className="p-4">
-                  <div className="flex gap-2 mb-2">
-                    <span className="px-2 py-1 bg-gray-100 text-gray-600 text-0.875 rounded">
-                      {getPanelTypeLabel(item)}
-                    </span>
-                    <span className="px-2 py-1 bg-gray-100 text-gray-600 text-0.875 rounded">
-                      {item.district}
-                    </span>
                   </div>
-                  <h3 className="text-1 font-medium">{item.name}</h3>
-                  <p className="text-0.875 text-gray-600">
-                    {item.neighborhood}
-                  </p>
+                  <div className="p-4">
+                    <div className="flex gap-2 mb-2">
+                      <span className="px-2 py-1 bg-gray-100 text-gray-600 text-0.875 rounded">
+                        {getPanelTypeLabel(item)}
+                      </span>
+                      <span className="px-2 py-1 bg-gray-100 text-gray-600 text-0.875 rounded">
+                        {item.district}
+                      </span>
+                    </div>
+                    <h3 className="text-1 font-medium">{item.name}</h3>
+                    <p className="text-0.875 text-gray-600">
+                      {item.neighborhood}
+                    </p>
+                    {/* 지도 뷰에서만 장바구니 담기 버튼 표시 */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleItemSelect(item.id, true);
+                      }}
+                      className="mt-3 w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors"
+                    >
+                      장바구니 담기
+                    </button>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-      </div>
-      {/* Right: Map (sticky, 1.5x width of card list) */}
-      <div className="min-w-0" style={{ width: '60%', minWidth: '500px' }}>
-        <div className="sticky top-0">
-          <div className="w-full aspect-square min-h-[500px]">
-            <KakaoMap
-              markers={filteredBillboards
-                .filter((b) => b.lat != null && b.lng != null)
-                .map((b) => ({
-                  id: b.id,
-                  title: b.name,
-                  lat: b.lat!,
-                  lng: b.lng!,
-                  type: b.type,
-                  isSelected: selectedIds.includes(b.id),
-                }))}
-              selectedIds={selectedIds}
-              onSelect={handleItemSelect}
-            />
+        <div className="min-w-0" style={{ width: '60%', minWidth: '500px' }}>
+          <div className="sticky top-0">
+            <div className="w-full h-[700px]">
+              <KakaoMap
+                markers={mapMarkers}
+                selectedIds={selectedIds}
+                center={mapCenter}
+              />
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <main className="min-h-screen flex flex-col bg-white pb-10">

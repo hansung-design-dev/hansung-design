@@ -20,6 +20,8 @@ interface BannerDisplayData {
   panel_code?: number;
   panel_type?: string;
   max_banner?: number; // panel_info에서 가져오는 max_banner
+  latitude?: number; // 위도 추가
+  longitude?: number; // 경도 추가
   created_at: string;
   updated_at: string;
   banner_panel_details: {
@@ -433,8 +435,8 @@ export default function BannerDisplayPage({
                 total_price: totalPrice,
                 size: `${slotWidth}x${slotHeight}` || 'no size',
                 faces: maxBanners,
-                lat: 37.5665, // 실제 좌표로 교체 필요
-                lng: 126.978,
+                lat: item.latitude || 37.5665, // 실제 데이터베이스 좌표 사용
+                lng: item.longitude || 126.978,
                 panel_width: slotWidth,
                 panel_height: slotHeight,
                 is_for_admin: isForAdmin,
@@ -571,7 +573,7 @@ export default function BannerDisplayPage({
       districtObj={districtObj}
       billboards={billboards}
       dropdownOptions={pageDropdownOptions}
-      defaultView="list"
+      defaultView="location"
       period={period}
       bankInfo={bankInfo}
       panelTypeFilter={panelTypeFilter}
