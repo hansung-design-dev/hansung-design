@@ -33,25 +33,19 @@ export default function DistrictInfo({
   isLEDDisplay = false,
 }: DistrictInfoProps) {
   // 디버깅용 로그
-  console.log('🔍 DistrictInfo 상세 디버깅:', {
-    period,
-    periodType: typeof period,
-    periodKeys: period ? Object.keys(period) : 'null',
-    periodValues: period ? Object.values(period) : 'null',
-    bankInfo,
-    flexRow,
-    isLEDDisplay,
-  });
+  // console.log('🔍 DistrictInfo 상세 디버깅:', {
+  //   period,
+  //   periodType: typeof period,
+  //   periodKeys: period ? Object.keys(period) : 'null',
+  //   periodValues: period ? Object.values(period) : 'null',
+  //   bankInfo,
+  //   flexRow,
+  //   isLEDDisplay,
+  // });
 
   return (
     <div className="text-gray-600">
-      {period ? (
-        <BannerPeriod {...period} />
-      ) : (
-        <div className="mt-2 text-red-600 font-medium">
-          신청기간을 받아올 수 없습니다
-        </div>
-      )}
+      {period && <BannerPeriod {...period} />}
 
       {isLEDDisplay && (
         <div className="mt-2 text-green-600 font-medium">상시접수</div>

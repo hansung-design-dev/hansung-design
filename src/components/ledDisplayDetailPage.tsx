@@ -9,7 +9,7 @@ import ViewTypeButton from '@/src/components/viewTypeButton';
 import MapPinIcon from '@/src/icons/map-pin.svg';
 import GalleryIcon from '@/src/icons/gallery.svg';
 import ListIcon from '@/src/icons/list.svg';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useCart } from '../contexts/cartContext';
 import { District, DropdownOption } from '@/src/types/displaydetail';
 import { LEDBillboard } from '@/src/types/leddetail';
@@ -39,12 +39,7 @@ export default function LEDDisplayDetailPage({
   billboards: LEDBillboard[];
   dropdownOptions: DropdownOption[];
   defaultView?: 'location' | 'gallery' | 'list';
-  period?: {
-    first_half_from: string;
-    first_half_to: string;
-    second_half_from: string;
-    second_half_to: string;
-  } | null;
+
   bankInfo?: {
     id: string;
     bank_name: string;
@@ -74,30 +69,30 @@ export default function LEDDisplayDetailPage({
   const { dispatch } = useCart();
   const router = useRouter();
 
-  // selectedIds 상태 변화 추적
-  useEffect(() => {
-    console.log('🔍 selectedIds 상태 변경:', selectedIds);
+  // selectedIds 상태 변화 추적 (디버깅용 - 주석 처리)
+  // useEffect(() => {
+  //   console.log('🔍 selectedIds 상태 변경:', selectedIds);
 
-    // 선택된 아이템들의 상세 정보 출력
-    if (selectedIds.length > 0) {
-      const selectedItems = billboards.filter((item) =>
-        selectedIds.includes(item.id)
-      );
-      console.log(
-        '🔍 현재 선택된 아이템들:',
-        selectedItems.map((item) => ({
-          id: item.id,
-          name: item.name,
-          latitude: item.latitude,
-          longitude: item.longitude,
-          district: item.district,
-          address: item.address,
-        }))
-      );
-    } else {
-      console.log('🔍 선택된 아이템 없음');
-    }
-  }, [selectedIds, billboards]);
+  //   // 선택된 아이템들의 상세 정보 출력
+  //   if (selectedIds.length > 0) {
+  //     const selectedItems = billboards.filter((item) =>
+  //       selectedIds.includes(item.id)
+  //     );
+  //     console.log(
+  //       '🔍 현재 선택된 아이템들:',
+  //       selectedItems.map((item) => ({
+  //         id: item.id,
+  //         name: item.name,
+  //         latitude: item.latitude,
+  //         longitude: item.longitude,
+  //         district: item.district,
+  //         address: item.address,
+  //       }))
+  //     );
+  //   } else {
+  //     console.log('🔍 선택된 아이템 없음');
+  //   }
+  // }, [selectedIds, billboards]);
 
   const isAllDistrictsView = district === 'all';
 
@@ -107,7 +102,7 @@ export default function LEDDisplayDetailPage({
       : billboards;
 
   // 디버깅: 원본 데이터 확인
-  console.log('🔍 원본 billboards 데이터:', billboards);
+  // console.log('🔍 원본 billboards 데이터:', billboards);
 
   // 상하반기에 따른 필터링
   const filteredByHalfPeriod = filteredByDistrict.map((item) => ({
@@ -507,6 +502,9 @@ export default function LEDDisplayDetailPage({
             </h2>
           </div>
           {selectedOption && <div>{selectedOption.option}</div>}
+
+          {/* LED 전자게시대는 상시접수 */}
+          <div className="mt-2 text-green-600 font-medium">상시접수</div>
 
           <DistrictInfo bankInfo={bankInfo} flexRow={true} />
         </div>

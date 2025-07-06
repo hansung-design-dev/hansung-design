@@ -421,7 +421,6 @@ export default function LEDDisplayPage() {
       billboards={billboards}
       dropdownOptions={pageDropdownOptions}
       defaultView="gallery"
-      period={null}
       bankInfo={bankInfo}
     />
   );
