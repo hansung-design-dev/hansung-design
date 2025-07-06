@@ -573,7 +573,7 @@ export default function BannerDisplayPage({
       districtObj={districtObj}
       billboards={billboards}
       dropdownOptions={pageDropdownOptions}
-      defaultView="location"
+      defaultView="list"
       period={period}
       bankInfo={bankInfo}
       panelTypeFilter={panelTypeFilter}

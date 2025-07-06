@@ -8,12 +8,13 @@ import ViewTypeButton from '@/src/components/viewTypeButton';
 import MapPinIcon from '@/src/icons/map-pin.svg';
 import GalleryIcon from '@/src/icons/gallery.svg';
 import ListIcon from '@/src/icons/list.svg';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCart } from '../contexts/cartContext';
 import {
   District,
   DropdownOption,
   DisplayBillboard,
+  PanelGuideline,
 } from '@/src/types/displaydetail';
 import DistrictInfo from './districtInfo';
 import HalfPeriodTabs from './ui/HalfPeriodTabs';
@@ -95,6 +96,9 @@ export default function DisplayDetailPage({
     'panel' | 'top-fixed'
   >('panel');
 
+  // 가이드라인 상태 추가
+  const [guidelines, setGuidelines] = useState<PanelGuideline[]>([]);
+
   // props로 받은 panelTypeFilter가 있으면 사용, 없으면 내부 상태 사용
   const currentPanelTypeFilter = panelTypeFilter || internalPanelTypeFilter;
   const currentSetPanelTypeFilter =
@@ -103,7 +107,64 @@ export default function DisplayDetailPage({
   const { dispatch } = useCart();
   const router = useRouter();
 
+  // 가이드라인 가져오기 함수
+  const fetchGuidelines = async (districtName: string) => {
+    try {
+      // 구별로 가이드라인 타입 결정
+      let guidelineTypes: string[] = [];
+
+      switch (districtName) {
+        case '서대문구':
+          guidelineTypes = ['admin', 'commercial'];
+          break;
+        case '마포구':
+          guidelineTypes = ['banner', 'bulliten-board'];
+          break;
+        case '용산구':
+        case '송파구':
+          guidelineTypes = ['banner', 'top-fixed'];
+          break;
+        default:
+          guidelineTypes = ['banner'];
+          break;
+      }
+
+      // 모든 가이드라인 타입을 병렬로 가져오기
+      const guidelinePromises = guidelineTypes.map(async (type) => {
+        try {
+          const response = await fetch(
+            `/api/panel-guideline?district=${encodeURIComponent(
+              districtName
+            )}&guideline_type=${type}`
+          );
+          const result = await response.json();
+          return result.success ? result.data : null;
+        } catch (error) {
+          console.warn(`${type} 가이드라인 가져오기 실패:`, error);
+          return null;
+        }
+      });
+
+      const guidelineResults = await Promise.all(guidelinePromises);
+      const validGuidelines = guidelineResults.filter(
+        Boolean
+      ) as PanelGuideline[];
+
+      setGuidelines(validGuidelines);
+    } catch (error) {
+      console.error('가이드라인 가져오기 오류:', error);
+      setGuidelines([]);
+    }
+  };
+
   const isAllDistrictsView = district === 'all';
+
+  // 가이드라인 가져오기
+  useEffect(() => {
+    if (districtObj?.name && !isAllDistrictsView) {
+      fetchGuidelines(districtObj.name);
+    }
+  }, [districtObj?.name, isAllDistrictsView]);
   // 마포구인지 확인
   const isMapoDistrict = districtObj?.code === 'mapo';
   // 송파구, 용산구인지 확인
@@ -775,20 +836,76 @@ export default function DisplayDetailPage({
           ) : viewType === 'location' ? (
             renderLocationView()
           ) : viewType === 'list' ? (
-            <ItemList
-              items={filteredBillboards}
-              showHeader
-              showCheckbox={
-                !isAllDistrictsView ||
-                !!(selectedOption && selectedOption.option !== '전체')
-              }
-              selectedIds={selectedIds}
-              onItemSelect={(id, checked) => handleItemSelect(id, checked)}
-              enableRowClick={false}
-              hideQuantityColumns={
-                isSongpaOrYongsan && currentPanelTypeFilter === 'top-fixed'
-              }
-            />
+            <>
+              <ItemList
+                items={filteredBillboards}
+                showHeader
+                showCheckbox={
+                  !isAllDistrictsView ||
+                  !!(selectedOption && selectedOption.option !== '전체')
+                }
+                selectedIds={selectedIds}
+                onItemSelect={(id, checked) => handleItemSelect(id, checked)}
+                enableRowClick={false}
+                hideQuantityColumns={
+                  isSongpaOrYongsan && currentPanelTypeFilter === 'top-fixed'
+                }
+              />
+
+              {/* 가이드라인 섹션 */}
+              {guidelines.length > 0 && !isAllDistrictsView && (
+                <div className="mt-12">
+                  <h3 className="text-xl font-bold mb-6 text-gray-800">
+                    {districtObj?.name} 현수막게시대 가이드라인
+                  </h3>
+
+                  {guidelines.map((guideline) => (
+                    <div key={guideline.id} className="mb-8">
+                      {/* 가이드라인 타입별 제목 */}
+                      {guidelines.length > 1 && (
+                        <h4 className="text-lg font-semibold mb-4 text-gray-700">
+                          {guideline.guideline_type === 'banner' &&
+                            '현수막게시대'}
+                          {guideline.guideline_type === 'top-fixed' &&
+                            '상단광고'}
+                          {guideline.guideline_type === 'bulliten-board' &&
+                            '시민게시대'}
+                          {guideline.guideline_type === 'admin' && '행정용'}
+                          {guideline.guideline_type === 'commercial' &&
+                            '상업용'}
+                          가이드라인
+                        </h4>
+                      )}
+
+                      {/* 가이드라인 이미지들 */}
+                      {guideline.image_url &&
+                        guideline.image_url.length > 0 && (
+                          <div className="mb-6">
+                            <div className="flex flex-col gap-4">
+                              {guideline.image_url.map(
+                                (imageUrl: string, index: number) => (
+                                  <div key={index} className="w-full">
+                                    <Image
+                                      src={imageUrl}
+                                      alt={`가이드라인 이미지 ${index + 1}`}
+                                      width={4500}
+                                      height={4500}
+                                      className="w-full max-w-full "
+                                      style={{
+                                        objectFit: 'contain',
+                                      }}
+                                    />
+                                  </div>
+                                )
+                              )}
+                            </div>
+                          </div>
+                        )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           ) : (
             renderGalleryView()
           )}

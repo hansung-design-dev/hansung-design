@@ -11,6 +11,7 @@ interface UserProfile {
   profile_title: string;
   company_name?: string;
   business_registration_number?: string;
+  business_registration_file?: string;
   phone: string;
   email: string;
   contact_person_name: string;
@@ -28,6 +29,7 @@ interface UserProfileModalProps {
     profile_title: string;
     company_name: string;
     business_registration_number: string;
+    business_registration_file?: string;
     phone: string;
     email: string;
     contact_person_name: string;
@@ -108,12 +110,15 @@ export default function UserProfileModal({
     profile_title: '',
     company_name: '',
     business_registration_number: '',
+    business_registration_file: '',
     phone: '',
     email: '',
     contact_person_name: '',
     fax_number: '',
     is_default: false,
   });
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileName, setFileName] = useState<string>('');
   const [userProfiles, setUserProfiles] = useState<UserProfile[]>([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(
@@ -151,6 +156,8 @@ export default function UserProfileModal({
         company_name: profileToEdit.company_name || '',
         business_registration_number:
           profileToEdit.business_registration_number || '',
+        business_registration_file:
+          profileToEdit.business_registration_file || '',
         phone: profileToEdit.phone || '',
         email: profileToEdit.email || '',
         contact_person_name: profileToEdit.contact_person_name || '',
@@ -158,12 +165,17 @@ export default function UserProfileModal({
         is_default: profileToEdit.is_default || false,
       });
       setSelectedProfileId(profileToEdit.id);
+      // 기존 파일명 설정
+      if (profileToEdit.business_registration_file) {
+        setFileName(profileToEdit.business_registration_file);
+      }
     } else {
       // 새 프로필 생성 시 기본값 설정
       setFormData({
         profile_title: '',
         company_name: '',
         business_registration_number: '',
+        business_registration_file: '',
         phone: user?.phone || '',
         email: user?.email || '',
         contact_person_name: user?.name || '',
@@ -171,6 +183,8 @@ export default function UserProfileModal({
         is_default: false,
       });
       setSelectedProfileId(null);
+      setFileName('');
+      setSelectedFile(null);
     }
   }, [profileToEdit, user]);
 
@@ -186,11 +200,60 @@ export default function UserProfileModal({
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // 파일 타입 검증
+      const allowedTypes = [
+        'application/pdf',
+        'image/jpeg',
+        'image/jpg',
+        'image/png',
+      ];
+      if (!allowedTypes.includes(file.type)) {
+        setAlertModal({
+          isOpen: true,
+          title: '파일 형식 오류',
+          message: 'PDF, JPEG, JPG, PNG 파일만 업로드 가능합니다.',
+          type: 'error',
+          onConfirm: () => {},
+        });
+        return;
+      }
+
+      // 파일 크기 검증 (5MB 제한)
+      if (file.size > 5 * 1024 * 1024) {
+        setAlertModal({
+          isOpen: true,
+          title: '파일 크기 오류',
+          message: '파일 크기는 5MB 이하여야 합니다.',
+          type: 'error',
+          onConfirm: () => {},
+        });
+        return;
+      }
+
+      setSelectedFile(file);
+      setFileName(file.name);
+      setFormData((prev) => ({
+        ...prev,
+        business_registration_file: file.name,
+      }));
+    }
+  };
+
+  const handleFileRemove = () => {
+    setSelectedFile(null);
+    setFileName('');
+    setFormData((prev) => ({ ...prev, business_registration_file: '' }));
+  };
+
   const handleProfileSelect = (profile: UserProfile) => {
     setFormData({
       profile_title: profile.profile_title || '',
       company_name: profile.company_name || '',
       business_registration_number: profile.business_registration_number || '',
+      business_registration_file: profile.business_registration_file || '',
       phone: profile.phone || '',
       email: profile.email || '',
       contact_person_name: profile.contact_person_name || '',
@@ -199,6 +262,13 @@ export default function UserProfileModal({
     });
     setSelectedProfileId(profile.id);
     setIsDropdownOpen(false);
+    // 파일명 설정
+    if (profile.business_registration_file) {
+      setFileName(profile.business_registration_file);
+    } else {
+      setFileName('');
+    }
+    setSelectedFile(null);
   };
 
   const handleDropdownToggle = () => {
@@ -220,9 +290,38 @@ export default function UserProfileModal({
         return;
       }
 
+      // 파일이 선택된 경우 먼저 파일 업로드
+      let fileUrl = formData.business_registration_file;
+      if (selectedFile) {
+        const formDataFile = new FormData();
+        formDataFile.append('file', selectedFile);
+        formDataFile.append('userId', user.id);
+        formDataFile.append('type', 'business_registration');
+
+        const uploadResponse = await fetch('/api/upload', {
+          method: 'POST',
+          body: formDataFile,
+        });
+
+        const uploadResult = await uploadResponse.json();
+        if (uploadResult.success) {
+          fileUrl = uploadResult.fileUrl;
+        } else {
+          setAlertModal({
+            isOpen: true,
+            title: '파일 업로드 오류',
+            message: uploadResult.error || '파일 업로드에 실패했습니다.',
+            type: 'error',
+            onConfirm: () => {},
+          });
+          return;
+        }
+      }
+
       const requestData = {
         user_auth_id: user.id,
         ...formData,
+        business_registration_file: fileUrl,
       };
 
       let response;
@@ -451,23 +550,78 @@ export default function UserProfileModal({
             />
           </div>
 
-          {/* 사업자등록번호 */}
+          {/* 사업자등록증 첨부 */}
           <div className="flex gap-2 items-center">
             <label className="block text-1 text-gray-2 font-500 mb-2 w-29">
-              사업자등록번호
+              사업자등록증
             </label>
-            <input
-              type="text"
-              value={formData.business_registration_number}
-              onChange={(e) =>
-                handleInputChange(
-                  'business_registration_number',
-                  e.target.value
-                )
-              }
-              className="w-[80%] px-3 py-4 border-solid border-1 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-1"
-              placeholder="123-45-67890 (개인인 경우 비워두세요)"
-            />
+            <div className="w-[80%] space-y-2">
+              <div className="flex gap-2">
+                <input
+                  type="file"
+                  accept=".pdf,.jpeg,.jpg,.png"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  id="business-registration-file"
+                />
+                <label
+                  htmlFor="business-registration-file"
+                  className="px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors flex items-center gap-2"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7,10 12,15 17,10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                  업로드하기
+                </label>
+                {fileName && (
+                  <Button
+                    onClick={handleFileRemove}
+                    size="sm"
+                    variant="outlinedGray"
+                    className="px-3 py-3"
+                  >
+                    삭제
+                  </Button>
+                )}
+              </div>
+              {fileName && (
+                <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14,2 14,8 20,8" />
+                      <line x1="16" y1="13" x2="8" y2="13" />
+                      <line x1="16" y1="17" x2="8" y2="17" />
+                      <polyline points="10,9 9,9 8,9" />
+                    </svg>
+                    <span className="text-sm text-blue-800">{fileName}</span>
+                  </div>
+                </div>
+              )}
+              <p className="text-xs text-gray-500">
+                PDF, JPEG, JPG, PNG 파일만 가능 (최대 5MB)
+              </p>
+            </div>
           </div>
 
           {/* 팩스번호 */}
