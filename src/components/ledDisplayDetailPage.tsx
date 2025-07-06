@@ -119,6 +119,20 @@ export default function LEDDisplayDetailPage({
   };
 
   const handleItemSelect = (id: string, checked?: boolean) => {
+    // 지도 뷰에서는 선택만 하고 장바구니에는 추가하지 않음
+    if (viewType === 'location') {
+      const alreadySelected = selectedIds.includes(id);
+      const shouldSelect = checked !== undefined ? checked : !alreadySelected;
+
+      if (!shouldSelect) {
+        setSelectedIds(selectedIds.filter((sid) => sid !== id));
+      } else {
+        setSelectedIds([...selectedIds, id]);
+      }
+      return;
+    }
+
+    // 갤러리와 목록 뷰에서는 기존 로직 유지 (선택 시 장바구니에 추가)
     const alreadySelected = selectedIds.includes(id);
     let newSelectedIds;
 
@@ -172,6 +186,46 @@ export default function LEDDisplayDetailPage({
       }
     }
     setSelectedIds(newSelectedIds);
+  };
+
+  const handleAddToCart = (id: string) => {
+    const item = billboards.find((item) => item.id === id);
+    if (item) {
+      // total_price가 있으면 사용, 없으면 기존 로직 사용
+      const priceForCart =
+        item.total_price !== undefined
+          ? item.total_price
+          : (() => {
+              const priceString = String(item.price || '').replace(/,|원/g, '');
+              const priceNumber = parseInt(priceString, 10);
+              return !isNaN(priceNumber) ? priceNumber : 0;
+            })();
+
+      const cartItem = {
+        id: item.id, // 복합 ID (gwanak-03-uuid)
+        type: 'led-display' as const,
+        name: getCartItemName(item),
+        district: item.district,
+        price: priceForCart,
+        // LED 전자게시대는 상시접수이므로 상하반기 정보 제거
+        panel_type: item.panel_type,
+        panel_info_id: item.panel_info_id, // 원본 UUID
+      };
+
+      console.log('🔍 Adding LED item to cart:', cartItem);
+      console.log('🔍 LED 상담신청 아이템:', {
+        name: cartItem.name,
+        district: cartItem.district,
+        price: cartItem.price,
+        type: cartItem.type,
+      });
+      dispatch({
+        type: 'ADD_ITEM',
+        item: cartItem,
+      });
+    } else {
+      console.error('🔍 LED item not found in billboards:', id);
+    }
   };
 
   const handleRowClick = (e: React.MouseEvent, itemId: string) => {
@@ -292,6 +346,16 @@ export default function LEDDisplayDetailPage({
                   <p className="text-0.875 text-gray-600">
                     {item.neighborhood}
                   </p>
+                  {/* 지도 뷰에서만 장바구니 담기 버튼 표시 */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAddToCart(item.id);
+                    }}
+                    className="mt-3 w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors"
+                  >
+                    장바구니 담기
+                  </button>
                 </div>
               </div>
             );
