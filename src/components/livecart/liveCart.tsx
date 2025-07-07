@@ -10,6 +10,7 @@ export default function LiveCart() {
   const { user } = useAuth();
   const router = useRouter();
   const [timeLeft, setTimeLeft] = useState<string>('');
+  const [expanded, setExpanded] = useState(false);
 
   // 상담신청 아이템과 일반 아이템 분리
   const regularItems = cart.filter((item) => item.price !== 0);
@@ -105,10 +106,31 @@ export default function LiveCart() {
       <div className="h-[2rem] bg-[#E6E6E6] flex items-center justify-center py-3 text-1.5 md:text-1.25 font-weight-700 sm:text-0.875 sm:font-weight-500">
         <div>최근 방문한 사람이 20명 이에요.</div>
       </div>
-      <div className=" bottom-0 left-0 w-full bg-white shadow-lg z-50 flex sm:flex-col md:flex-row h-[16.9375rem] sm:h-auto md:justify-center  lg:justify-center">
+      <div
+        className={` bottom-10 left-0 w-full bg-white shadow-lg z-50 flex sm:flex-col md:flex-row transition-all duration-300 ${
+          expanded ? 'h-[40rem]' : 'h-[18rem]'
+        } sm:h-auto md:justify-center lg:justify-center`}
+      >
         {/* 장바구니 */}
-        <div className="h-[7rem] sm:h-auto p-6 sm:p-3 overflow-y-auto py-[3rem] sm:py-2 flex items-center sm:items-start ">
-          <div className="lg:w-[30rem] sm:w-full flex flex-col gap-2 max-h-[13rem] sm:max-h-[10rem] overflow-y-auto py-6 sm:py-4 sm:px-4 ">
+        <div className={`relative ${expanded ? 'h-[40rem]' : 'h-[16rem]'}`}>
+          {/* Arrow-up 버튼 */}
+          <button
+            className="absolute top-2 left-1/2 -translate-x-1/2 z-10 bg-white rounded-full p-1 shadow-md hover:bg-gray-50 transition-colors"
+            onClick={() => setExpanded(!expanded)}
+          >
+            <Image
+              src="/svg/arrow-up.svg"
+              alt="더보기"
+              width={20}
+              height={20}
+              className={`transition-transform duration-300 ${
+                expanded ? 'rotate-180' : ''
+              }`}
+            />
+          </button>
+          <div
+            className={`lg:w-[40rem] sm:w-full flex flex-col gap-2 overflow-y-auto py-6 sm:py-4 sm:px-4 h-full`}
+          >
             {/* 남은 시간 표시 (일반 아이템이 있을 때만) */}
             {hasRegularItems && (
               <div className="text-sm text-red-500 font-medium mb-2">
@@ -174,7 +196,11 @@ export default function LiveCart() {
         </div>
 
         {/* 장바구니 버튼 */}
-        <div className="lg:w-[27rem]  flex lg:flex-col md:flex-col sm:flex-row justify-center items-center p-6 sm:p-4 gap-2">
+        <div
+          className={`lg:w-[27rem] flex lg:flex-col md:flex-col sm:flex-row justify-center items-center p-6 sm:p-4 gap-2 ${
+            expanded ? 'h-[40rem]' : 'h-[18rem]'
+          }`}
+        >
           <Button
             size="cart"
             variant="outlinedBlack"
