@@ -124,7 +124,7 @@ function ConfirmModal({
 }
 
 export default function UserInfoPage() {
-  const [activeTab, setActiveTab] = useState('간편정보관리');
+  const [activeTab] = useState('간편정보관리');
   const { user, signOut } = useAuth();
   const router = useRouter();
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
@@ -143,14 +143,6 @@ export default function UserInfoPage() {
     message: '',
     onConfirm: () => {},
   });
-
-  const tabs = [
-    // { name: '마이페이지', href: '/mypage' },
-    { name: '주문내역', href: '/mypage/orders' },
-    { name: '1:1상담', href: '/mypage/customer-service' },
-    { name: '간편정보관리', href: '/mypage/info' },
-    { name: '로그아웃', href: '/' },
-  ];
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 3;
@@ -282,11 +274,7 @@ export default function UserInfoPage() {
   return (
     <main className="min-h-screen flex flex-col bg-[#F1F1F1]">
       <Nav variant="default" className="bg-white sm:px-0" />
-      <MypageContainer
-        tabs={tabs}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-      >
+      <MypageContainer activeTab={activeTab}>
         <div className="flex flex-col sm:items-start">
           <Link href="/mypage" className="md:hidden lg:hidden sm:inline">
             <Image

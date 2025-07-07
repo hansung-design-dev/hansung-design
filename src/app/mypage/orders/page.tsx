@@ -107,7 +107,7 @@ interface OrderDetail {
 }
 
 export default function OrdersPage() {
-  const [activeTab, setActiveTab] = useState('주문내역');
+  const [activeTab] = useState('주문내역');
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -137,14 +137,6 @@ export default function OrdersPage() {
 
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-
-  const tabs = [
-    // { name: '마이페이지', href: '/mypage' },
-    { name: '주문내역', href: '/mypage/orders' },
-    { name: '1:1상담', href: '/mypage/customer-service' },
-    { name: '간편정보관리', href: '/mypage/info' },
-    { name: '로그아웃', href: '/' },
-  ];
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -371,11 +363,7 @@ export default function OrdersPage() {
   return (
     <main className="min-h-screen flex flex-col bg-gray-100 w-full">
       <Nav variant="default" className="bg-white sm:px-0" />
-      <MypageContainer
-        tabs={tabs}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-      >
+      <MypageContainer activeTab={activeTab}>
         <OrderHeaderSection
           statusSummary={statusSummary}
           startDate={startDate}
