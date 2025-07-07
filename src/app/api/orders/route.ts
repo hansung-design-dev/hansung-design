@@ -194,7 +194,24 @@ export async function GET(request: NextRequest) {
                   slot_name: detail.panel_slot_usage_id
                     ? '선택된 슬롯'
                     : '기본 슬롯',
-                  banner_type: detail.panel_info?.panel_type || 'panel',
+                  banner_type: (() => {
+                    const panelType = detail.panel_info?.panel_type || 'panel';
+                    const typeMap: Record<string, string> = {
+                      manual: '현수막게시대',
+                      'semi-auto': '반자동',
+                      'bulletin-board': '시민게시대',
+                      'bulletin-boardg': '시민게시대',
+                      'cultural-board': '시민/문화게시대',
+                      'lower-panel': '저단형',
+                      'multi-panel': '연립형',
+                      led: 'LED전자게시대',
+                      no_lighting: '비조명용',
+                      with_lighting: '조명용',
+                      panel: '현수막게시대',
+                      'top-fixed': '상단광고',
+                    };
+                    return typeMap[panelType] || panelType;
+                  })(),
                   price_unit: '15 days',
                 },
                 quantity: detail.slot_order_quantity,

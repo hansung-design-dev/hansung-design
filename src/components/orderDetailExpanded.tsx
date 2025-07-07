@@ -51,6 +51,7 @@ const OrderDetailExpanded: React.FC<OrderDetailExpandedProps> = ({
   orderDetail,
 }) => {
   console.log('OrderDetailExpanded 렌더링:', orderDetail);
+  console.log('orderDetail.productName:', orderDetail.productName);
 
   return (
     <div className="bg-white rounded-lg  mt-4 shadow-sm">

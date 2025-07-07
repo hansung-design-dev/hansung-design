@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import MypageContainer from '@/src/components/mypageContainer';
 import Image from 'next/image';
+import { useAuth } from '@/src/contexts/authContext';
 
 interface DesignTab {
   name: string;
@@ -13,6 +14,7 @@ interface DesignItem {
   id: string;
   orderNumber: string;
   title: string;
+  subtitle?: string;
   location: string;
   status: 'pending' | 'uploaded' | 'completed';
   uploadDate?: string;
@@ -20,31 +22,69 @@ interface DesignItem {
   thumbnail?: string;
 }
 
+interface OrderItem {
+  id: string;
+  panel_info: {
+    address: string;
+    nickname?: string;
+    panel_status: string;
+    region_dong?: string;
+    max_banner?: number;
+    first_half_closure_quantity?: number;
+    second_half_closure_quantity?: number;
+  };
+  slot_info: {
+    slot_name: string;
+    banner_type: string;
+    price_unit: string;
+  };
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  start_date: string;
+  end_date: string;
+  price_display?: string;
+}
+
+interface Order {
+  id: string;
+  order_number: string;
+  total_amount: number;
+  status: string;
+  payment_status: string;
+  order_date: string;
+  year_month?: string;
+  order_items: OrderItem[];
+}
+
+interface OrdersResponse {
+  success: boolean;
+  orders: Order[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  statusSummary: {
+    total: number;
+    pending: number;
+    confirmed: number;
+    completed: number;
+  };
+  error?: string;
+}
+
 export default function DesignPage() {
   const [activeTab, setActiveTab] = useState('send');
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const { user, loading: authLoading } = useAuth();
 
   const tabs: DesignTab[] = [
     { name: '시안 보내기', id: 'send' },
     { name: '시안 보기', id: 'view' },
-  ];
-
-  // 시안 보내기 리스트 (결제완료된 주문들)
-  const sendDesignList: DesignItem[] = [
-    {
-      id: '1',
-      orderNumber: 'ORD-2025-001',
-      title: '울림픽대교 남단사거리 앞',
-      location: '방이동',
-      status: 'pending',
-    },
-    {
-      id: '2',
-      orderNumber: 'ORD-2025-002',
-      title: '송파구청 앞 현수막게시대',
-      location: '송파동',
-      status: 'uploaded',
-      uploadDate: '2025.01.15',
-    },
   ];
 
   // 시안 보기 리스트 (한성디자인이 완성한 디자인들)
@@ -56,7 +96,7 @@ export default function DesignPage() {
       location: '방이동',
       status: 'completed',
       completionDate: '2025.01.20',
-      thumbnail: '/images/design-thumbnail-1.jpg',
+      thumbnail: '/images/digital-signage-example.jpeg',
     },
     {
       id: '2',
@@ -65,9 +105,51 @@ export default function DesignPage() {
       location: '합정동',
       status: 'completed',
       completionDate: '2025.01.18',
-      thumbnail: '/images/design-thumbnail-2.jpg',
+      thumbnail: '/images/digital-signage-example.jpeg',
     },
   ];
+
+  const fetchOrders = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/orders?page=1&limit=50');
+      const data: OrdersResponse = await response.json();
+
+      if (data.success) {
+        setOrders(data.orders);
+      } else {
+        console.error(data.error || '주문 내역을 불러오는데 실패했습니다.');
+      }
+    } catch {
+      console.error('주문 내역을 불러오는데 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (authLoading) return;
+
+    if (!user) {
+      return;
+    }
+
+    fetchOrders();
+  }, [user, authLoading, fetchOrders]);
+
+  // 결제완료된 주문들을 시안 보내기용으로 변환
+  const sendDesignList: DesignItem[] = orders
+    .filter((order) => order.status === 'confirmed') // 결제완료된 주문만 필터링
+    .flatMap((order) =>
+      order.order_items.map((item, index) => ({
+        id: `${order.id}-${index}`,
+        orderNumber: order.order_number,
+        title: item.panel_info.nickname || item.panel_info.address,
+        subtitle: `(${item.slot_info.banner_type})`,
+        location: item.panel_info.region_dong || item.panel_info.address,
+        status: 'pending' as const, // 시안 대기 상태
+      }))
+    );
 
   const handleUploadDesign = (orderId: string) => {
     // 시안 업로드 모달 또는 페이지로 이동
@@ -143,7 +225,9 @@ export default function DesignPage() {
             </p>
           </div>
 
-          {sendDesignList.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-8">주문 내역을 불러오는 중...</div>
+          ) : sendDesignList.length === 0 ? (
             <div className="text-center py-12">
               <div className="text-gray-400 mb-4">
                 <svg
@@ -174,6 +258,11 @@ export default function DesignPage() {
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="font-semibold text-gray-800">
                           {item.title}
+                          {item.subtitle && (
+                            <span className="ml-1 text-gray-500 font-normal">
+                              {item.subtitle}
+                            </span>
+                          )}
                         </h3>
                         {getStatusBadge(item.status)}
                       </div>
@@ -278,6 +367,11 @@ export default function DesignPage() {
                     <div className="flex items-center gap-2 mb-2">
                       <h3 className="font-semibold text-gray-800 text-sm">
                         {item.title}
+                        {item.subtitle && (
+                          <span className="ml-1 text-gray-500 font-normal">
+                            {item.subtitle}
+                          </span>
+                        )}
                       </h3>
                       {getStatusBadge(item.status)}
                     </div>

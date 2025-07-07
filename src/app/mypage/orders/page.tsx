@@ -244,6 +244,7 @@ export default function OrdersPage() {
       order.order_items.map((item) => ({
         id: globalIndex++, // 고유한 숫자 ID 생성
         title: item.panel_info.nickname || item.panel_info.address,
+        subtitle: `(${item.slot_info.banner_type})`,
         location: item.panel_info.region_dong || item.panel_info.address, // region_dong 우선 사용
         status: getStatusDisplay(order.status),
         category: item.slot_info.banner_type,
