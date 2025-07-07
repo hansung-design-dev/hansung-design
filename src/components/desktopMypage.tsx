@@ -3,9 +3,7 @@ import MypageContainer from './mypageContainer';
 import DateLocationFilter from '@/src/components/ui/datelocationfilter';
 
 interface Props {
-  tabs: { name: string; href: string }[];
   activeTab: string;
-  setActiveTab: (tab: string) => void;
   userName: string;
 }
 
@@ -20,18 +18,9 @@ interface Props {
 //     date: '2024.03.06',
 //   }));
 
-export default function DesktopMyPage({
-  tabs,
-  activeTab,
-  setActiveTab,
-  userName,
-}: Props) {
+export default function DesktopMyPage({ activeTab, userName }: Props) {
   return (
-    <MypageContainer
-      tabs={tabs}
-      activeTab={activeTab}
-      setActiveTab={setActiveTab}
-    >
+    <MypageContainer activeTab={activeTab}>
       {/* 사용자 정보 */}
       <div className="mb-12">
         <div className="flex flex-col md:flex-row lg:items-start md:items-center lg:justify-between lg:gap-6 md:gap-2">
