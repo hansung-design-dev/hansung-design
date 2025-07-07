@@ -13,6 +13,8 @@ export interface CartItem {
   panel_type?: string;
   panel_info_id?: string; // panel_info 테이블의 실제 ID
   isTopFixed?: boolean; // 상단광고 여부
+  is_public_institution?: boolean; // 공공기관용 여부
+  is_company?: boolean; // 기업용 여부
   panel_slot_snapshot?: {
     id: string | null;
     notes: string | null;
@@ -43,6 +45,7 @@ interface CartState {
 type CartAction =
   | { type: 'ADD_ITEM'; item: CartItem }
   | { type: 'REMOVE_ITEM'; id: string }
+  | { type: 'UPDATE_CART'; items: CartItem[] }
   | { type: 'CLEAR_CART' }
   | { type: 'LOAD_CART'; state: CartState };
 
@@ -152,6 +155,15 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         lastUpdated: Date.now(),
       };
       console.log('🔍 New cart state after REMOVE_ITEM:', newState);
+      saveCartToStorage(newState);
+      return newState;
+
+    case 'UPDATE_CART':
+      newState = {
+        items: action.items,
+        lastUpdated: Date.now(),
+      };
+      console.log('🔍 New cart state after UPDATE_CART:', newState);
       saveCartToStorage(newState);
       return newState;
 

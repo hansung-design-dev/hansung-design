@@ -22,6 +22,8 @@ export async function PUT(
       contact_person_name,
       fax_number,
       is_default = false,
+      is_public_institution = false,
+      is_company = false,
     } = await request.json();
 
     // 필수 필드 검증
@@ -61,6 +63,8 @@ export async function PUT(
         contact_person_name,
         fax_number,
         is_default,
+        is_public_institution,
+        is_company,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
