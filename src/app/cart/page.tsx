@@ -106,6 +106,7 @@ function CartItemRow({
   onDelete,
   onPeriodChange,
   inquiryStatus,
+  getPanelTypeDisplay,
 }: {
   item: CartItem;
   user: { name: string; phone: string; company_name?: string };
@@ -126,6 +127,7 @@ function CartItemRow({
     answer_content?: string;
     answered_at?: string;
   };
+  getPanelTypeDisplay: (panelType: string) => string;
 }) {
   if (isConsulting) {
     const hasInquiry = inquiryStatus && inquiryStatus.status;
@@ -144,7 +146,18 @@ function CartItemRow({
           />
 
           <div className="flex flex-col gap-3 min-w-0 flex-1">
-            <div className="text-1 truncate">{item.name}</div>
+            <div className="text-1 truncate">
+              {item.name}
+              <span className="ml-2 text-gray-500 text-0.875">
+                (
+                {getPanelTypeDisplay(
+                  item.panel_slot_snapshot?.banner_type ||
+                    item.panel_type ||
+                    'panel'
+                )}
+                )
+              </span>
+            </div>
             <div className="text-1.25 font-semibold">
               {item.price === 0
                 ? '상담문의'
@@ -220,7 +233,18 @@ function CartItemRow({
           className="w-24 h-24 object-cover mr-4 flex-shrink-0"
         />
         <div className="flex flex-col gap-3 min-w-0 flex-1">
-          <div className="text-1 truncate">{item.name}</div>
+          <div className="text-1 truncate">
+            {item.name}
+            <span className="ml-2 text-gray-500 text-0.875">
+              (
+              {getPanelTypeDisplay(
+                item.panel_slot_snapshot?.banner_type ||
+                  item.panel_type ||
+                  'panel'
+              )}
+              )
+            </span>
+          </div>
           <div className="text-1.25 font-semibold">
             {item.price === 0
               ? '상담문의'
@@ -409,14 +433,67 @@ export default function Cart() {
   //   );
   // };
 
-  // 상단광고와 현수막게시대를 구분하여 그룹화
+  // 패널 타입을 한글로 변환하는 함수
+  const getPanelTypeDisplay = (panelType: string) => {
+    const typeMap: Record<string, string> = {
+      panel: '현수막게시대',
+      'top-fixed': '상단광고',
+      led: 'LED전자게시대',
+      'multi-panel': '연립형',
+      'lower-panel': '저단형',
+      'bulletin-board': '시민/문화게시대',
+      'semi-auto': '반자동',
+      with_lighting: '조명용',
+      no_lighting: '비조명용',
+      manual: '현수막게시대',
+      'cultural-board': '시민/문화게시대',
+    };
+    return typeMap[panelType] || panelType;
+  };
+
+  // 결제신청/상담신청 분류 로직
   const groupedItems = useMemo(() => {
-    const consultingItems = cart.filter(
-      (item) => item.price === 0 || item.isTopFixed
-    );
-    const regularItems = cart.filter(
-      (item) => item.price > 0 && !item.isTopFixed
-    );
+    const consultingItems: CartItem[] = [];
+    const regularItems: CartItem[] = [];
+
+    cart.forEach((item) => {
+      const panelType =
+        item.panel_slot_snapshot?.banner_type || item.panel_type || 'panel';
+      const district = item.district;
+
+      // LED 전자게시대는 모두 상담신청
+      if (item.type === 'led-display') {
+        consultingItems.push(item);
+        return;
+      }
+
+      // 현수막게시대 분류
+      if (item.type === 'banner-display') {
+        // 상단광고는 모두 상담신청 (용산구, 송파구)
+        if (panelType === 'top-fixed') {
+          consultingItems.push(item);
+          return;
+        }
+
+        // 결제신청 조건
+        const isPaymentEligible =
+          // 용산구, 송파구의 현수막게시대
+          ((district === '용산구' || district === '송파구') &&
+            panelType === 'panel') ||
+          // 마포구 연립형과 저단형
+          (district === '마포구' &&
+            (panelType === 'multi-panel' || panelType === 'lower-panel')) ||
+          // 서대문구, 관악구
+          district === '서대문구' ||
+          district === '관악구';
+
+        if (isPaymentEligible && item.price > 0) {
+          regularItems.push(item);
+        } else {
+          consultingItems.push(item);
+        }
+      }
+    });
 
     return {
       consulting: consultingItems,
@@ -430,7 +507,7 @@ export default function Cart() {
   );
   const ledConsultingItemsOnly = groupedItems.consulting.filter(
     (item) => item.type === 'led-display'
-  ); // LED 전자게시대는 모두 상담신청
+  );
 
   // 상담신청 아이템들의 문의 상태 확인
   const fetchInquiryStatuses = useCallback(async () => {
@@ -790,6 +867,7 @@ export default function Cart() {
                       onOrderModify={() => handleOrderModify(item.id)}
                       onDelete={() => handleDelete(item)}
                       onPeriodChange={handlePeriodChange}
+                      getPanelTypeDisplay={getPanelTypeDisplay}
                     />
                   ))}
                 </CartGroupCard>
@@ -831,6 +909,7 @@ export default function Cart() {
                       }
                       onDelete={() => handleDelete(item)}
                       inquiryStatus={inquiryStatuses[item.id]}
+                      getPanelTypeDisplay={getPanelTypeDisplay}
                     />
                   ))}
                 </CartGroupCard>
@@ -857,6 +936,7 @@ export default function Cart() {
                       }
                       onDelete={() => handleDelete(item)}
                       inquiryStatus={inquiryStatuses[item.id]}
+                      getPanelTypeDisplay={getPanelTypeDisplay}
                     />
                   ))}
                 </CartGroupCard>
