@@ -37,7 +37,7 @@ interface CustomerServiceResponse {
 }
 
 export default function CustomerServicePage() {
-  const [activeTab, setActiveTab] = useState('1:1상담');
+  const [activeTab] = useState('1:1상담');
   const [openItemId, setOpenItemId] = useState<string | null>(null);
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,14 +52,6 @@ export default function CustomerServicePage() {
 
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-
-  const tabs = [
-    // { name: '마이페이지', href: '/mypage' },
-    { name: '주문내역', href: '/mypage/orders' },
-    { name: '1:1상담', href: '/mypage/customer-service' },
-    { name: '간편정보관리', href: '/mypage/info' },
-    { name: '로그아웃', href: '/' },
-  ];
 
   const itemsPerPage = 5;
 
@@ -132,11 +124,7 @@ export default function CustomerServicePage() {
   }
 
   return (
-    <MypageContainer
-      tabs={tabs}
-      activeTab={activeTab}
-      setActiveTab={setActiveTab}
-    >
+    <MypageContainer activeTab={activeTab}>
       <div>
         <div>
           <div className="flex flex-col md:flex-row lg:items-start md:items-center lg:justify-between lg:gap-6 md:gap-2">
