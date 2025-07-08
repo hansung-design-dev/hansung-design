@@ -433,8 +433,16 @@ export default function Cart() {
   // 기본 프로필 정보를 장바구니 아이템에 적용
   useEffect(() => {
     if (defaultProfile && cart.length > 0) {
+      // 업데이트가 필요한 아이템이 있는지 체크
+      const needUpdate = cart.some(
+        (item) =>
+          !item.is_public_institution &&
+          !item.is_company &&
+          (defaultProfile.is_public_institution || defaultProfile.is_company)
+      );
+      if (!needUpdate) return;
+
       const updatedCart = cart.map((item) => {
-        // 이미 사용자 유형이 설정되어 있지 않은 아이템에만 기본 프로필 적용
         if (!item.is_public_institution && !item.is_company) {
           return {
             ...item,
@@ -446,10 +454,16 @@ export default function Cart() {
         return item;
       });
 
-      // 카트 상태 업데이트
       dispatch({ type: 'UPDATE_CART', items: updatedCart });
     }
-  }, [defaultProfile, dispatch, cart]);
+    // cart의 id, is_public_institution, is_company만 dependency에 둠
+  }, [
+    defaultProfile,
+    dispatch,
+    ...cart.map(
+      (item) => `${item.id}-${item.is_public_institution}-${item.is_company}`
+    ),
+  ]);
 
   // phone이 없을 때 기본값 설정
   const userWithPhone = user
@@ -1057,45 +1071,6 @@ export default function Cart() {
               )}
 
               {/* 경고 메시지 */}
-              {((groupedItems.regular.length > 0 &&
-                groupedItems.publicInstitution.length > 0) ||
-                (groupedItems.regular.length > 0 &&
-                  groupedItems.company.length > 0) ||
-                (groupedItems.publicInstitution.length > 0 &&
-                  groupedItems.company.length > 0)) && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                  <div className="flex items-center">
-                    <svg
-                      className="w-5 h-5 text-red-400 mr-2"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    <span className="text-red-800 font-medium">
-                      행정용 신청과 결제신청을 따로 해주세요
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* 모든 카테고리가 비어있을 때 */}
-              {groupedItems.regular.length === 0 &&
-                groupedItems.publicInstitution.length === 0 &&
-                groupedItems.company.length === 0 && (
-                  <CartGroupCard
-                    title="현수막게시대"
-                    phoneList={['1533-0570', '1899-0596', '02-719-0083']}
-                  >
-                    <div className="flex items-center justify-center py-12 text-gray-500">
-                      결제신청할 상품이 없습니다.
-                    </div>
-                  </CartGroupCard>
-                )}
             </>
           )}
 
