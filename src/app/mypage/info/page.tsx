@@ -129,7 +129,7 @@ function ConfirmModal({
 export default function UserInfoPage() {
   const [activeTab] = useState('간편정보관리');
   const { user, signOut } = useAuth();
-  const { profiles, setProfiles, updateProfile } = useProfile();
+  const { profiles, setProfiles } = useProfile();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -217,10 +217,7 @@ export default function UserInfoPage() {
     setIsModalOpen(true);
   };
 
-  // 프로필 수정 완료 후 ProfileContext 업데이트
-  const handleProfileUpdate = (updatedProfile: UserProfile) => {
-    updateProfile(updatedProfile.id, updatedProfile);
-  };
+  // ProfileContext update is handled directly in UserProfileModal
 
   const handleDeleteProfile = async (profileId: string) => {
     setConfirmModal({

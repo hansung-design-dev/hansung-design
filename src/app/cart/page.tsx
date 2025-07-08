@@ -449,7 +449,7 @@ export default function Cart() {
       // 카트 상태 업데이트
       dispatch({ type: 'UPDATE_CART', items: updatedCart });
     }
-  }, [defaultProfile, cart.length, dispatch]);
+  }, [defaultProfile, dispatch, cart]);
 
   // phone이 없을 때 기본값 설정
   const userWithPhone = user
@@ -498,7 +498,6 @@ export default function Cart() {
     const publicInstitutionItems: CartItem[] = [];
     const companyItems: CartItem[] = [];
 
-    console.log('🔍 카트 분류 시작 - 총 아이템 수:', cart.length);
     cart.forEach((item) => {
       const panelType =
         item.panel_slot_snapshot?.banner_type || item.panel_type || 'panel';
@@ -532,22 +531,11 @@ export default function Cart() {
 
         if (isPaymentEligible && item.price > 0) {
           // 공공기관용과 기업용 분류
-          console.log('🔍 아이템 분류:', {
-            id: item.id,
-            name: item.name,
-            is_public_institution: item.is_public_institution,
-            is_company: item.is_company,
-            price: item.price,
-          });
-
           if (item.is_public_institution) {
-            console.log('🔍 공공기관용으로 분류:', item.name);
             publicInstitutionItems.push(item);
           } else if (item.is_company) {
-            console.log('🔍 기업용으로 분류:', item.name);
             companyItems.push(item);
           } else {
-            console.log('🔍 개인용으로 분류:', item.name);
             regularItems.push(item);
           }
         } else {
@@ -562,13 +550,6 @@ export default function Cart() {
       publicInstitution: publicInstitutionItems,
       company: companyItems,
     };
-
-    console.log('🔍 분류 결과:', {
-      consulting: result.consulting.length,
-      regular: result.regular.length,
-      publicInstitution: result.publicInstitution.length,
-      company: result.company.length,
-    });
 
     return result;
   }, [cart]);
@@ -586,7 +567,7 @@ export default function Cart() {
     try {
       const statuses: InquiryStatus = {};
 
-      // cart에서 직접 상담신청 아이템 필터링
+      // 현재 cart에서 상담신청 아이템 필터링
       const consultingItems = cart.filter((item) => {
         const panelType =
           item.panel_slot_snapshot?.banner_type || item.panel_type || 'panel';
@@ -644,34 +625,35 @@ export default function Cart() {
     }
   }, [cart]);
 
-  useEffect(() => {
-    if (user && cart.length > 0) {
-      // 상담신청 아이템이 있는지 확인
-      const hasConsultingItems = cart.some((item) => {
-        const panelType =
-          item.panel_slot_snapshot?.banner_type || item.panel_type || 'panel';
-        const district = item.district;
+  // 문의 상태 확인을 수동으로만 호출하도록 변경
+  // useEffect(() => {
+  //   if (user && cart.length > 0) {
+  //     // 상담신청 아이템이 있는지 확인
+  //     const hasConsultingItems = cart.some((item) => {
+  //       const panelType =
+  //         item.panel_slot_snapshot?.banner_type || item.panel_type || 'panel';
+  //       const district = item.district;
 
-        if (item.type === 'led-display') return true;
-        if (item.type === 'banner-display' && panelType === 'top-fixed')
-          return true;
+  //       if (item.type === 'led-display') return true;
+  //       if (item.type === 'banner-display' && panelType === 'top-fixed')
+  //         return true;
 
-        const isPaymentEligible =
-          ((district === '용산구' || district === '송파구') &&
-            panelType === 'panel') ||
-          (district === '마포구' &&
-            (panelType === 'multi-panel' || panelType === 'lower-panel')) ||
-          district === '서대문구' ||
-          district === '관악구';
+  //       const isPaymentEligible =
+  //         ((district === '용산구' || district === '송파구') &&
+  //           panelType === 'panel') ||
+  //         (district === '마포구' &&
+  //           (panelType === 'multi-panel' || panelType === 'lower-panel')) ||
+  //         district === '서대문구' ||
+  //         district === '관악구';
 
-        return !(isPaymentEligible && item.price > 0);
-      });
+  //       return !(isPaymentEligible && item.price > 0);
+  //     });
 
-      if (hasConsultingItems) {
-        fetchInquiryStatuses();
-      }
-    }
-  }, [user, cart, fetchInquiryStatuses]);
+  //     if (hasConsultingItems) {
+  //       fetchInquiryStatuses();
+  //     }
+  //   }
+  // }, [user, fetchInquiryStatuses]);
 
   // 선택된 아이템들의 총계 계산
   const cartSummary = useMemo(() => {
@@ -768,6 +750,12 @@ export default function Cart() {
     // 카트 상태 업데이트
     dispatch({ type: 'UPDATE_CART', items: updatedCart });
 
+    // 선택된 아이템 해제 (분류가 변경되었으므로)
+    const newSelectedItems = new Set(selectedItems);
+    newSelectedItems.delete(itemId);
+    setSelectedItems(newSelectedItems);
+
+    console.log('🔍 프로필 변경 후 아이템 분류 재계산 필요');
     setIsUpdateSuccessModalOpen(true);
   };
 
