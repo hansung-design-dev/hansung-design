@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import ModalContainer from './ModalContainer';
 import { Button } from '../button/button';
 import { useAuth } from '@/src/contexts/authContext';
+import { useProfile } from '@/src/contexts/profileContext';
 import Image from 'next/image';
 
 interface UserProfile {
@@ -17,6 +18,8 @@ interface UserProfile {
   contact_person_name: string;
   fax_number?: string;
   is_default: boolean;
+  is_public_institution?: boolean;
+  is_company?: boolean;
   created_at: string;
 }
 
@@ -35,6 +38,8 @@ interface UserProfileModalProps {
     contact_person_name: string;
     fax_number: string;
     is_default: boolean;
+    is_public_institution: boolean;
+    is_company: boolean;
   }) => void; // 장바구니에서 확인 버튼 클릭 시 호출
 }
 
@@ -106,6 +111,7 @@ export default function UserProfileModal({
 }: UserProfileModalProps) {
   const router = useRouter();
   const { user } = useAuth();
+  const { updateProfile } = useProfile();
   const [formData, setFormData] = useState({
     profile_title: '',
     company_name: '',
@@ -116,6 +122,8 @@ export default function UserProfileModal({
     contact_person_name: '',
     fax_number: '',
     is_default: false,
+    is_public_institution: false,
+    is_company: false,
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState<string>('');
@@ -141,7 +149,15 @@ export default function UserProfileModal({
       const result = await response.json();
 
       if (result.success) {
-        setUserProfiles(result.data);
+        // 데이터베이스에 필드가 없을 경우를 대비해 기본값 설정
+        const profilesWithDefaults = result.data.map(
+          (profile: UserProfile) => ({
+            ...profile,
+            is_public_institution: profile.is_public_institution ?? false,
+            is_company: profile.is_company ?? false,
+          })
+        );
+        setUserProfiles(profilesWithDefaults);
       }
     } catch (error) {
       console.error('프로필 목록 조회 에러:', error);
@@ -163,6 +179,8 @@ export default function UserProfileModal({
         contact_person_name: profileToEdit.contact_person_name || '',
         fax_number: profileToEdit.fax_number || '',
         is_default: profileToEdit.is_default || false,
+        is_public_institution: profileToEdit.is_public_institution || false,
+        is_company: profileToEdit.is_company || false,
       });
       setSelectedProfileId(profileToEdit.id);
       // 기존 파일명 설정
@@ -181,6 +199,8 @@ export default function UserProfileModal({
         contact_person_name: user?.name || '',
         fax_number: '',
         is_default: false,
+        is_public_institution: false,
+        is_company: false,
       });
       setSelectedProfileId(null);
       setFileName('');
@@ -198,6 +218,14 @@ export default function UserProfileModal({
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+
+    // 공공기관/기업 체크박스 변경 시 ProfileContext 업데이트
+    if (
+      profileToEdit &&
+      (field === 'is_public_institution' || field === 'is_company')
+    ) {
+      updateProfile(profileToEdit.id, { [field]: value });
+    }
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -259,6 +287,8 @@ export default function UserProfileModal({
       contact_person_name: profile.contact_person_name || '',
       fax_number: profile.fax_number || '',
       is_default: profile.is_default || false,
+      is_public_institution: profile.is_public_institution || false,
+      is_company: profile.is_company || false,
     });
     setSelectedProfileId(profile.id);
     setIsDropdownOpen(false);
@@ -352,6 +382,10 @@ export default function UserProfileModal({
             : '프로필이 생성되었습니다.',
           type: 'success',
           onConfirm: () => {
+            // ProfileContext 업데이트
+            if (profileToEdit && result.data) {
+              updateProfile(profileToEdit.id, result.data);
+            }
             // 페이지 새로고침하여 프로필 목록 업데이트
             window.location.reload();
           },
@@ -637,6 +671,62 @@ export default function UserProfileModal({
               placeholder="02-1234-5678 (선택사항)"
             />
           </div>
+
+          {/* 공공/기업용 체크박스 - 마이페이지 모드에서만 표시 */}
+          {mode !== 'edit' && (
+            <div className="flex gap-2 items-center">
+              <label className="block text-1 text-gray-2 font-500 mb-2 w-29">
+                사용자 유형
+              </label>
+              <div className="w-[80%] space-y-3">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={formData.is_public_institution}
+                    onChange={(e) =>
+                      handleInputChange(
+                        'is_public_institution',
+                        e.target.checked
+                      )
+                    }
+                    className="mr-2"
+                  />
+                  공공기관용 (행정가격 적용, 승인 필요)
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={formData.is_company}
+                    onChange={(e) =>
+                      handleInputChange('is_company', e.target.checked)
+                    }
+                    className="mr-2"
+                  />
+                  기업용 (승인 필요, 일반가격)
+                </label>
+                <p className="text-xs text-gray-500">
+                  개인용은 체크하지 않으시면 됩니다.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* 장바구니 모드에서 사용자 유형 표시 */}
+          {mode === 'edit' &&
+            (formData.is_public_institution || formData.is_company) && (
+              <div className="flex gap-2 items-center">
+                <label className="block text-1 text-gray-2 font-500 mb-2 w-29">
+                  사용자 유형
+                </label>
+                <div className="w-[80%]">
+                  <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                    <span className="text-sm text-blue-800">
+                      {formData.is_public_institution ? '공공기관용' : '기업용'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
 
           {/* 기본 프로필 설정 - edit 모드에서만 표시 */}
           {mode === 'edit' && (

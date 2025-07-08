@@ -1,9 +1,9 @@
-import React from 'react';
-import Link from 'next/link';
+'use client';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Button } from '@/src/components/button/button';
-//import { motion } from 'framer-motion';
 import Nav from '@/src/components/layouts/nav';
+import { useAuth } from '@/src/contexts/authContext';
 
 // const fadeInUp = {
 //   initial: { y: 60, opacity: 0 },
@@ -15,6 +15,71 @@ import Nav from '@/src/components/layouts/nav';
 // };
 
 export default function PaymentPage() {
+  const { user } = useAuth();
+  const [userType, setUserType] = useState<
+    'personal' | 'public_institution' | 'company'
+  >('personal');
+  const [isApproved, setIsApproved] = useState(false);
+  const [isPaymentEnabled, setIsPaymentEnabled] = useState(true);
+
+  // 사용자 유형 확인 (실제로는 API에서 가져와야 함)
+  useEffect(() => {
+    if (user) {
+      // 임시로 랜덤하게 사용자 유형 설정 (실제로는 프로필 정보에서 가져와야 함)
+      const types = ['personal', 'public_institution', 'company'];
+      const randomType = types[Math.floor(Math.random() * types.length)] as
+        | 'personal'
+        | 'public_institution'
+        | 'company';
+      setUserType(randomType);
+
+      // 공공기관용과 기업용은 승인 필요
+      if (randomType === 'public_institution' || randomType === 'company') {
+        setIsApproved(false);
+        setIsPaymentEnabled(false);
+      } else {
+        setIsApproved(true);
+        setIsPaymentEnabled(true);
+      }
+    }
+  }, [user]);
+
+  // 사용자 유형에 따른 UI 텍스트
+  const getUserTypeText = () => {
+    switch (userType) {
+      case 'public_institution':
+        return '공공기관용';
+      case 'company':
+        return '기업용';
+      default:
+        return '개인용';
+    }
+  };
+
+  // 사용자 유형에 따른 가격 표시
+  const getPriceDisplay = () => {
+    switch (userType) {
+      case 'public_institution':
+        return '1,150,000'; // 행정가격 (할인 적용)
+      case 'company':
+        return '1,250,000'; // 일반가격
+      default:
+        return '1,250,000'; // 일반가격
+    }
+  };
+
+  // 사용자 유형에 따른 할인 표시
+  const getDiscountDisplay = () => {
+    switch (userType) {
+      case 'public_institution':
+        return '-200,000원'; // 행정가격 할인
+      case 'company':
+        return '-0원'; // 할인 없음
+      default:
+        return '-100,000원'; // 기본 할인
+    }
+  };
+
   return (
     <main className="min-h-screen bg-white pt-[5.5rem] bg-gray-100 min-h-screen lg:px-[10rem]">
       <Nav variant="default" className="bg-white" />
@@ -40,7 +105,7 @@ export default function PaymentPage() {
                     className="w-[1.75rem] h-[1.75rem] sm:w-[0.875rem] sm:h-[0.875rem]"
                   />
                   <div className="text-1.25 font-700 sm:text-0.875">
-                    기업 1 이름
+                    {getUserTypeText()} - {user?.name || '사용자'}
                   </div>
                 </div>
               </div>
@@ -190,8 +255,12 @@ export default function PaymentPage() {
                 <span>1,350,000원</span>
               </div>
               <div className="flex justify-between py-1">
-                <span>기본할인금액</span>
-                <span>-100,000원</span>
+                <span>
+                  {userType === 'public_institution'
+                    ? '행정가격할인'
+                    : '기본할인금액'}
+                </span>
+                <span>{getDiscountDisplay()}</span>
               </div>
               <div className="flex justify-between py-1">
                 <span>쿠폰할인금액</span>
@@ -205,15 +274,47 @@ export default function PaymentPage() {
             <div className="flex justify-between items-center mt-4 border-t border-gray-1 pt-7 sm:flex-col sm:gap-4">
               <span className="text-1.25 font-900">최종 결제 금액</span>
               <span className="text-1.875 font-900">
-                1,250,000 <span className="text-1 font-400">원</span>
+                {getPriceDisplay()} <span className="text-1 font-400">원</span>
               </span>
             </div>
           </div>
 
-          <button className="w-full bg-black text-white py-6 rounded-lg hover:bg-gray-800 transition-colors">
-            <Link href="/payment" className="text-white sm:text-1.25">
-              결제하기
-            </Link>
+          {/* 승인 상태 표시 */}
+          {(userType === 'public_institution' || userType === 'company') &&
+            !isApproved && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                <div className="flex items-center">
+                  <svg
+                    className="w-5 h-5 text-yellow-400 mr-2"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <span className="text-yellow-800 font-medium">
+                    {userType === 'public_institution'
+                      ? '행정가격 승인 대기중'
+                      : '기업 승인 대기중'}
+                  </span>
+                </div>
+              </div>
+            )}
+
+          <button
+            className={`w-full py-6 rounded-lg transition-colors ${
+              isPaymentEnabled
+                ? 'bg-black text-white hover:bg-gray-800'
+                : 'bg-gray-400 text-gray-600 cursor-not-allowed'
+            }`}
+            disabled={!isPaymentEnabled}
+          >
+            <span className="text-white sm:text-1.25">
+              {isPaymentEnabled ? '결제하기' : '승인 대기중'}
+            </span>
           </button>
         </div>
       </div>

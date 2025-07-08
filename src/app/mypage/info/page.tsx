@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Nav from '../../../components/layouts/nav';
 import { useAuth } from '@/src/contexts/authContext';
+import { useProfile } from '@/src/contexts/profileContext';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/src/components/button/button';
 import Image from 'next/image';
@@ -20,6 +21,8 @@ interface UserProfile {
   contact_person_name: string;
   fax_number?: string;
   is_default: boolean;
+  is_public_institution?: boolean;
+  is_company?: boolean;
   created_at: string;
 }
 
@@ -126,8 +129,8 @@ function ConfirmModal({
 export default function UserInfoPage() {
   const [activeTab] = useState('간편정보관리');
   const { user, signOut } = useAuth();
+  const { profiles, setProfiles } = useProfile();
   const router = useRouter();
-  const [profiles, setProfiles] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [profileToEdit, setProfileToEdit] = useState<UserProfile | null>(null);
@@ -156,7 +159,17 @@ export default function UserInfoPage() {
       const result = await response.json();
 
       if (result.success) {
-        setProfiles(result.data);
+        // 데이터베이스에 필드가 없을 경우를 대비해 기본값 설정
+        const profilesWithDefaults = result.data.map(
+          (profile: UserProfile) => ({
+            ...profile,
+            is_public_institution: profile.is_public_institution ?? false,
+            is_company: profile.is_company ?? false,
+          })
+        );
+
+        console.log('🔍 가져온 프로필 데이터:', profilesWithDefaults);
+        setProfiles(profilesWithDefaults); // ProfileContext에 저장
       } else {
         console.error('프로필 조회 실패:', result.error);
         setAlertModal({
@@ -203,6 +216,8 @@ export default function UserInfoPage() {
     setProfileToEdit(profile);
     setIsModalOpen(true);
   };
+
+  // ProfileContext update is handled directly in UserProfileModal
 
   const handleDeleteProfile = async (profileId: string) => {
     setConfirmModal({
@@ -342,57 +357,76 @@ export default function UserInfoPage() {
                   등록된 간편정보가 없습니다.
                 </div>
               ) : (
-                currentItems.map((profile) => (
-                  <div
-                    key={profile.id}
-                    className="border border-solid border-gray-3 rounded-lg px-3 md:px-4 py-4 md:py-8 mb-3 md:mb-4 flex flex-col md:flex-row justify-between items-start gap-3 md:gap-0"
-                  >
-                    <div className="font-500 text-gray-2 flex flex-col gap-1 md:gap-2">
-                      <div className="text-1 md:text-1.25 mb-1 flex items-center gap-2">
-                        {profile.profile_title}
-                        {profile.is_default && (
-                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                            기본
-                          </span>
+                currentItems.map((profile) => {
+                  console.log('🔍 렌더링할 프로필:', {
+                    id: profile.id,
+                    title: profile.profile_title,
+                    is_public_institution: profile.is_public_institution,
+                    is_company: profile.is_company,
+                  });
+
+                  return (
+                    <div
+                      key={profile.id}
+                      className="border border-solid border-gray-3 rounded-lg px-3 md:px-4 py-4 md:py-8 mb-3 md:mb-4 flex flex-col md:flex-row justify-between items-start gap-3 md:gap-0"
+                    >
+                      <div className="font-500 text-gray-2 flex flex-col gap-1 md:gap-2">
+                        <div className="text-1 md:text-1.25 mb-1 flex items-center gap-2">
+                          {profile.profile_title}
+                          {profile.is_default && (
+                            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                              기본
+                            </span>
+                          )}
+                          {profile.is_public_institution && (
+                            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                              행정용
+                            </span>
+                          )}
+                          {profile.is_company && (
+                            <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded">
+                              기업용
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-0.875 md:text-1">
+                          {profile.contact_person_name}
+                        </div>
+                        <div className="text-0.875 md:text-1">
+                          {profile.phone}
+                        </div>
+                        <div className="text-0.875 md:text-1">
+                          {profile.email}
+                        </div>
+                        {profile.company_name && (
+                          <div className="text-0.875 md:text-1 text-gray-500">
+                            {profile.company_name}
+                          </div>
                         )}
                       </div>
-                      <div className="text-0.875 md:text-1">
-                        {profile.contact_person_name}
-                      </div>
-                      <div className="text-0.875 md:text-1">
-                        {profile.phone}
-                      </div>
-                      <div className="text-0.875 md:text-1">
-                        {profile.email}
-                      </div>
-                      {profile.company_name && (
-                        <div className="text-0.875 md:text-1 text-gray-500">
-                          {profile.company_name}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex gap-2 mt-2 md:mt-0">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="bg-gray-4"
-                        onClick={() => handleEditProfile(profile)}
-                      >
-                        수정
-                      </Button>
-                      {!profile.is_default && (
+                      <div className="flex gap-2 mt-2 md:mt-0">
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="bg-red-100 text-red-600"
-                          onClick={() => handleDeleteProfile(profile.id)}
+                          className="bg-gray-4"
+                          onClick={() => handleEditProfile(profile)}
                         >
-                          삭제
+                          수정
                         </Button>
-                      )}
+                        {!profile.is_default && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="bg-red-100 text-red-600"
+                            onClick={() => handleDeleteProfile(profile.id)}
+                          >
+                            삭제
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
 
               {totalPages > 1 && (
