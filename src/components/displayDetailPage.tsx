@@ -730,6 +730,14 @@ export default function DisplayDetailPage({
             </div>
           </div>
         )}
+        {mapoFilter === 'simin' && (
+          <div className="mb-8">
+            <div className="flex items-center gap-4  pb-4 text-blue-700 text-1 line-height-[1.5rem]">
+              시민 게시대는 게첨일기준 매월1일에 포스터 직접 가지고 사무실로
+              직접내방하여 신청해주세요. <br /> 아래 가이드라인을 참고해주세요
+            </div>
+          </div>
+        )}
 
         {/* 송파구, 용산구 전용 filter */}
         {isSongpaOrYongsan && (

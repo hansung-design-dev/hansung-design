@@ -35,6 +35,11 @@ export interface CartItem {
     panel_slot_status: string | null;
   };
   panel_slot_usage_id?: string;
+  // 사용자 정보 추가
+  contact_person_name?: string;
+  phone?: string;
+  company_name?: string;
+  email?: string;
 }
 
 interface CartState {

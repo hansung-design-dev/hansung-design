@@ -505,17 +505,28 @@ export default function UserProfileModal({
                         }`}
                         onClick={() => handleProfileSelect(profile)}
                       >
-                        <div className="font-medium">
+                        <div className="font-medium flex items-center gap-2">
                           {profile.profile_title}
+                          {/* 사용자 유형 태그 */}
+                          {profile.is_public_institution && (
+                            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                              행정용
+                            </span>
+                          )}
+                          {profile.is_company && (
+                            <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded">
+                              기업용
+                            </span>
+                          )}
+                          {profile.is_default && (
+                            <span className="inline-block mt-1 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                              기본
+                            </span>
+                          )}
                         </div>
                         <div className="text-sm text-gray-600">
                           {profile.contact_person_name} • {profile.phone}
                         </div>
-                        {profile.is_default && (
-                          <span className="inline-block mt-1 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                            기본
-                          </span>
-                        )}
                       </div>
                     ))}
                   </div>
@@ -727,28 +738,6 @@ export default function UserProfileModal({
                 </div>
               </div>
             )}
-
-          {/* 기본 프로필 설정 - edit 모드에서만 표시 */}
-          {mode === 'edit' && (
-            <div className="flex gap-2 items-center">
-              <label className="block text-1 text-gray-2 font-500 mb-2 w-29">
-                기본 프로필
-              </label>
-              <div className="flex gap-4">
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.is_default}
-                    onChange={(e) =>
-                      handleInputChange('is_default', e.target.checked)
-                    }
-                    className="mr-2"
-                  />
-                  기본 프로필로 설정
-                </label>
-              </div>
-            </div>
-          )}
 
           {/* 버튼들 */}
           <div className="flex justify-center gap-4 pt-4">

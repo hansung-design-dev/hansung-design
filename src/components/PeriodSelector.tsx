@@ -28,7 +28,7 @@ export default function PeriodSelector({
 
   useEffect(() => {
     onPeriodChange(currentYear, currentMonth, period);
-  }, [currentYear, currentMonth, period, onPeriodChange]);
+  }, [period]);
 
   const getPeriodText = (period: 'first_half' | 'second_half') => {
     return period === 'first_half' ? '상반기 (1-15일)' : '하반기 (16-31일)';
