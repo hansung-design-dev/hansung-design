@@ -438,7 +438,7 @@ export default function Cart() {
     cart.forEach((item) => {
       const panelType =
         item.panel_slot_snapshot?.banner_type || item.panel_type || 'panel';
-      const district = item.district;
+      // const district = item.district;
 
       // 상담신청: LED 전자게시대 전체, 상단광고(용산구/송파구)
       if (
