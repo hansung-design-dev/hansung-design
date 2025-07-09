@@ -174,20 +174,25 @@ const ItemList: React.FC<ItemTableProps> = ({
                   }`}
                   onClick={(e) => handleRowClick(e, item.id)}
                 >
-                  {showCheckbox && (
-                    <td
-                      className="text-center px-4"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(item.id)}
-                        onChange={(e) =>
-                          onItemSelect?.(item.id, e.target.checked)
-                        }
-                      />
-                    </td>
-                  )}
+                  {showCheckbox &&
+                    !(
+                      item.district === '마포구' &&
+                      (item.panel_type === 'bulletin-board' ||
+                        item.panel_type === 'citizen-board')
+                    ) && (
+                      <td
+                        className="text-center px-4"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(item.id)}
+                          onChange={(e) =>
+                            onItemSelect?.(item.id, e.target.checked)
+                          }
+                        />
+                      </td>
+                    )}
                   <td className="text-center pl-4">
                     {item.panel_code || item.id}
                   </td>
@@ -329,15 +334,22 @@ const ItemList: React.FC<ItemTableProps> = ({
               }}
             >
               <div className="flex items-center gap-2 mb-1">
-                {showCheckbox && (
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.includes(item.id)}
-                    onChange={(e) => onItemSelect?.(item.id, e.target.checked)}
-                    onClick={(e) => e.stopPropagation()}
-                    className="mr-2"
-                  />
-                )}
+                {showCheckbox &&
+                  !(
+                    item.district === '마포구' &&
+                    (item.panel_type === 'bulletin-board' ||
+                      item.panel_type === 'citizen-board')
+                  ) && (
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(item.id)}
+                      onChange={(e) =>
+                        onItemSelect?.(item.id, e.target.checked)
+                      }
+                      onClick={(e) => e.stopPropagation()}
+                      className="mr-2"
+                    />
+                  )}
                 <span className="text-sm text-gray-500 font-medium">
                   No. {item.panel_code || item.id}
                 </span>

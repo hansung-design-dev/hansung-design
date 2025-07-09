@@ -107,12 +107,12 @@ export default function LiveCart() {
         <div>최근 방문한 사람이 20명 이에요.</div>
       </div>
       <div
-        className={` bottom-10 left-0 w-full bg-white shadow-lg z-50 flex sm:flex-col md:flex-row transition-all duration-300 ${
-          expanded ? 'h-[40rem]' : 'h-[18rem]'
+        className={` bottom-8 left-0 w-full bg-white shadow-lg z-50 flex sm:flex-col md:flex-row transition-all duration-300 ${
+          expanded ? 'h-[30rem]' : 'h-[15rem]'
         } sm:h-auto md:justify-center lg:justify-center`}
       >
         {/* 장바구니 */}
-        <div className={`relative ${expanded ? 'h-[40rem]' : 'h-[16rem]'}`}>
+        <div className={`relative ${expanded ? 'h-[40rem]' : 'h-[15rem]'}`}>
           {/* Arrow-up 버튼 */}
           <button
             className="absolute top-2 left-1/2 -translate-x-1/2 z-10 bg-white rounded-full p-1 shadow-md hover:bg-gray-50 transition-colors"
