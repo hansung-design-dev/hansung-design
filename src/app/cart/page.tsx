@@ -77,7 +77,7 @@ function CartGroupCard({
       <div className="flex items-center pt-4 pb-2 border-b border-black px-[3rem]">
         <input
           type="checkbox"
-          className="w-6 h-6 mr-4"
+          className="w-6 h-6 mr-4 cursor-pointer"
           checked={isSelected}
           onChange={(e) => onSelect?.(e.target.checked)}
         />
@@ -581,9 +581,59 @@ export default function Cart() {
       return sum + (item.price || 0);
     }, 0);
 
+    // 기업용 아이템이 선택되었는지 확인
+    const hasCompanyItems = selectedCartItems.some((item) => item.is_company);
+
+    // 공공기관용 아이템이 선택되었는지 확인
+    const hasPublicInstitutionItems = selectedCartItems.some(
+      (item) => item.is_public_institution
+    );
+
+    // 개인용 아이템이 선택되었는지 확인
+    const hasGeneralItems = selectedCartItems.some(
+      (item) => !item.is_company && !item.is_public_institution
+    );
+
+    // 공공기관용과 개인용 아이템이 함께 선택되었는지 확인
+    const hasMixedUserTypes = hasPublicInstitutionItems && hasGeneralItems;
+
+    // 상세 가격 정보가 있는 아이템이 선택되었는지 확인
+    const hasDetailedPriceItems = selectedCartItems.some(
+      (item) => item.panel_slot_snapshot
+    );
+
+    // 상세 가격 정보 계산 (모든 아이템)
+    let priceDetails = null;
+    if (hasDetailedPriceItems) {
+      const itemsWithDetails = selectedCartItems.filter(
+        (item) => item.panel_slot_snapshot
+      );
+      const totalAdvertisingFee = itemsWithDetails.reduce((sum, item) => {
+        return sum + (item.panel_slot_snapshot?.advertising_fee || 0);
+      }, 0);
+      const totalTaxPrice = itemsWithDetails.reduce((sum, item) => {
+        return sum + (item.panel_slot_snapshot?.tax_price || 0);
+      }, 0);
+      const totalRoadUsageFee = itemsWithDetails.reduce((sum, item) => {
+        return sum + (item.panel_slot_snapshot?.road_usage_fee || 0);
+      }, 0);
+
+      priceDetails = {
+        advertising_fee: totalAdvertisingFee,
+        tax_price: totalTaxPrice,
+        road_usage_fee: totalRoadUsageFee,
+      };
+    }
+
     return {
       quantity: totalQuantity,
       totalAmount: totalPrice,
+      hasCompanyItems,
+      hasPublicInstitutionItems,
+      hasGeneralItems,
+      hasMixedUserTypes,
+      hasDetailedPriceItems,
+      priceDetails,
     };
   }, [cart, selectedItems]);
 
@@ -597,22 +647,43 @@ export default function Cart() {
     setSelectedItems(newSelected);
   };
 
-  // const handleGroupSelect = (items: CartItem[], selected: boolean) => {
-  //   const newSelected = new Set(selectedItems);
-  //   if (selected) {
-  //     items.forEach((item) => newSelected.add(String(item.id)));
-  //   } else {
-  //     items.forEach((item) => newSelected.delete(String(item.id)));
-  //   }
-  //   setSelectedItems(newSelected);
-  // };
+  const handleGroupSelect = (
+    userType: 'company' | 'public_institution' | 'general',
+    selected: boolean
+  ) => {
+    const groupItems = cart.filter((item) => {
+      if (userType === 'company') return item.is_company;
+      if (userType === 'public_institution') return item.is_public_institution;
+      return !item.is_company && !item.is_public_institution; // general
+    });
+    const groupItemIds = groupItems.map((item) => item.id);
 
-  // const isGroupSelected = (items: CartItem[]) => {
-  //   return (
-  //     items.length > 0 &&
-  //     items.every((item) => selectedItems.has(String(item.id)))
-  //   );
-  // };
+    if (selected) {
+      // 해당 그룹의 모든 아이템을 선택
+      const newSelected = new Set(selectedItems);
+      groupItemIds.forEach((id) => newSelected.add(id));
+      setSelectedItems(newSelected);
+    } else {
+      // 해당 그룹의 모든 아이템을 선택 해제
+      const newSelected = new Set(selectedItems);
+      groupItemIds.forEach((id) => newSelected.delete(id));
+      setSelectedItems(newSelected);
+    }
+  };
+
+  const isGroupSelected = (
+    userType: 'company' | 'public_institution' | 'general'
+  ) => {
+    const groupItems = cart.filter((item) => {
+      if (userType === 'company') return item.is_company;
+      if (userType === 'public_institution') return item.is_public_institution;
+      return !item.is_company && !item.is_public_institution; // general
+    });
+    return (
+      groupItems.length > 0 &&
+      groupItems.every((item) => selectedItems.has(item.id))
+    );
+  };
 
   const handleOrderModify = (itemId: string) => {
     setCurrentModifyingItemId(itemId);
@@ -620,7 +691,7 @@ export default function Cart() {
   };
 
   // 프로필 변경 시에만 cart의 해당 아이템 속성만 dispatch로 바꿈
-  const handleProfileConfirm = (
+  const handleProfileConfirm = async (
     profileData: {
       profile_title: string;
       company_name: string;
@@ -635,10 +706,75 @@ export default function Cart() {
     },
     itemId: string
   ) => {
+    const item = cart.find((item) => item.id === itemId);
+    if (!item) return;
+
+    let updatedPrice = item.price;
+    let updatedPanelSlotSnapshot = item.panel_slot_snapshot;
+
+    // 공공기관용으로 변경된 경우 가격 정보 업데이트
+    if (profileData.is_public_institution && item.panel_info_id) {
+      try {
+        // banner_slot_price_policy에서 public_institution 가격 가져오기
+        const response = await fetch(
+          `/api/banner-display?action=getByDistrict&district=${encodeURIComponent(
+            item.district
+          )}`
+        );
+        const result = await response.json();
+
+        if (result.success && result.data) {
+          const panelInfo = result.data.find(
+            (panel: { id: string }) => panel.id === item.panel_info_id
+          );
+          if (
+            panelInfo &&
+            panelInfo.banner_slot_info &&
+            panelInfo.banner_slot_info.length > 0
+          ) {
+            const slotInfo = panelInfo.banner_slot_info[0];
+            if (slotInfo.banner_slot_price_policy) {
+              const publicInstitutionPolicy =
+                slotInfo.banner_slot_price_policy.find(
+                  (p: { price_usage_type: string }) =>
+                    p.price_usage_type === 'public_institution'
+                );
+              if (publicInstitutionPolicy) {
+                updatedPrice = publicInstitutionPolicy.total_price;
+                updatedPanelSlotSnapshot = {
+                  id: null,
+                  notes: null,
+                  max_width: null,
+                  slot_name: null,
+                  tax_price: publicInstitutionPolicy.tax_price,
+                  created_at: null,
+                  is_premium: null,
+                  max_height: null,
+                  price_unit: null,
+                  updated_at: null,
+                  banner_type: null,
+                  slot_number: null,
+                  total_price: publicInstitutionPolicy.total_price,
+                  panel_info_id: null,
+                  road_usage_fee: publicInstitutionPolicy.road_usage_fee,
+                  advertising_fee: publicInstitutionPolicy.advertising_fee,
+                  panel_slot_status: null,
+                };
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('공공기관용 가격 정보 가져오기 실패:', error);
+      }
+    }
+
     const updatedCart = cart.map((item) =>
       item.id === itemId
         ? {
             ...item,
+            price: updatedPrice,
+            panel_slot_snapshot: updatedPanelSlotSnapshot,
             is_public_institution: profileData.is_public_institution,
             is_company: profileData.is_company,
             contact_person_name: profileData.contact_person_name,
@@ -880,7 +1016,15 @@ export default function Cart() {
   };
 
   return (
-    <main className="pt-[3rem] bg-gray-100 min-h-screen lg:px-[1rem] pb-[12rem]">
+    <main
+      className={`pt-[3rem] bg-gray-100 min-h-screen lg:px-[1rem] ${
+        cartSummary.hasPublicInstitutionItems
+          ? 'pb-[17rem]'
+          : cartSummary.hasDetailedPriceItems
+          ? 'pb-[15rem]'
+          : 'pb-[12rem]'
+      }`}
+    >
       <div className="max-w-5xl mx-auto py-10">
         {/* 탭 버튼들 */}
         <div className="flex gap-5 py-10">
@@ -913,6 +1057,10 @@ export default function Cart() {
                 <CartGroupCard
                   title="현수막게시대 (개인용)"
                   phoneList={['1533-0570', '1899-0596', '02-719-0083']}
+                  isSelected={isGroupSelected('general')}
+                  onSelect={(selected) =>
+                    handleGroupSelect('general', selected)
+                  }
                 >
                   {groupedItems.regular.map((item) => {
                     const userInfo = {
@@ -945,6 +1093,10 @@ export default function Cart() {
                 <CartGroupCard
                   title="현수막게시대 (공공기관용)"
                   phoneList={['1533-0570', '1899-0596', '02-719-0083']}
+                  isSelected={isGroupSelected('public_institution')}
+                  onSelect={(selected) =>
+                    handleGroupSelect('public_institution', selected)
+                  }
                 >
                   {groupedItems.publicInstitution.map((item) => {
                     const userInfo = {
@@ -977,6 +1129,10 @@ export default function Cart() {
                 <CartGroupCard
                   title="현수막게시대 (기업용)"
                   phoneList={['1533-0570', '1899-0596', '02-719-0083']}
+                  isSelected={isGroupSelected('company')}
+                  onSelect={(selected) =>
+                    handleGroupSelect('company', selected)
+                  }
                 >
                   {groupedItems.company.map((item) => {
                     const userInfo = {
@@ -1014,6 +1170,10 @@ export default function Cart() {
                 <CartGroupCard
                   title="상단광고"
                   phoneList={['1533-0570', '1899-0596', '02-719-0083']}
+                  isSelected={isGroupSelected('general')}
+                  onSelect={(selected) =>
+                    handleGroupSelect('general', selected)
+                  }
                 >
                   {bannerConsultingItems.map((item) => {
                     const userInfo = {
@@ -1049,6 +1209,10 @@ export default function Cart() {
                 <CartGroupCard
                   title="LED전자게시대"
                   phoneList={['1533-0570', '1899-0596', '02-719-0083']}
+                  isSelected={isGroupSelected('general')}
+                  onSelect={(selected) =>
+                    handleGroupSelect('general', selected)
+                  }
                 >
                   {ledConsultingItemsOnly.map((item) => {
                     const userInfo = {
@@ -1093,17 +1257,56 @@ export default function Cart() {
         </motion.div>
       </div>
 
-      <div className="fixed bottom-0 left-0 w-full h-[11rem] bg-white border-t border-gray-300 py-0 px-8 flex items-center justify-around gap-4">
-        <div className="flex space-x-6 text-lg font-semibold">
+      <div
+        className={`fixed bottom-0 left-0 w-full bg-white border-t border-gray-300 py-0 px-8 flex items-center justify-around gap-4 ${
+          cartSummary.hasDetailedPriceItems ? 'h-[14rem]' : 'h-[11rem]'
+        }`}
+      >
+        <div className="flex flex-col space-y-2 text-lg font-semibold">
           <div>선택수량 {cartSummary.quantity}개</div>
+          {cartSummary.hasDetailedPriceItems && cartSummary.priceDetails && (
+            <div className="flex items-center justify-center gap-4 text-1">
+              <div>
+                광고대행료{' '}
+                {cartSummary.priceDetails.advertising_fee.toLocaleString()}원
+              </div>
+              <div>+</div>
+              <div>
+                수수료 {cartSummary.priceDetails.tax_price.toLocaleString()}원
+              </div>
+              <div>+</div>
+              <div>
+                도로사용료{' '}
+                {cartSummary.priceDetails.road_usage_fee.toLocaleString()}원
+              </div>
+            </div>
+          )}
           <div>= 총 주문금액 {cartSummary.totalAmount.toLocaleString()}원</div>
+          {cartSummary.hasPublicInstitutionItems && (
+            <div className="text-red text-xs">
+              행정용결제는 사용자 승인과정 후에 결제가 진행됩니다.
+            </div>
+          )}
         </div>
-        <Button
-          className="px-12 py-4 text-lg font-bold rounded bg-black text-white"
-          onClick={handlePayment}
-        >
-          총 {cartSummary.quantity}건 결제하기
-        </Button>
+        <div className="flex flex-col items-center gap-2">
+          <Button
+            className={`px-12 py-4 text-lg font-bold rounded ${
+              cartSummary.hasMixedUserTypes
+                ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                : 'bg-black text-white'
+            }`}
+            onClick={handlePayment}
+            disabled={cartSummary.hasMixedUserTypes}
+          >
+            {cartSummary.hasCompanyItems ||
+            cartSummary.hasPublicInstitutionItems
+              ? '결제 신청하기'
+              : `총 ${cartSummary.quantity}건 결제하기`}
+          </Button>
+          {cartSummary.hasMixedUserTypes && (
+            <div className="text-red text-xs">개별결제 해주세요.</div>
+          )}
+        </div>
       </div>
 
       {/* 모달들 */}

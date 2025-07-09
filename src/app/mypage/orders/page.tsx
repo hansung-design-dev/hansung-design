@@ -129,6 +129,17 @@ export default function OrdersPage() {
   });
   const [searchLocation, setSearchLocation] = useState('');
 
+  // 실제 검색에 사용할 필터 상태 (버튼을 눌렀을 때만 업데이트)
+  const [activeStartDate, setActiveStartDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  });
+  const [activeEndDate, setActiveEndDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  });
+  const [activeSearchLocation, setActiveSearchLocation] = useState('');
+
   // 상세 정보 관련 state
   const [selectedOrderDetail, setSelectedOrderDetail] =
     useState<OrderDetail | null>(null);
@@ -220,12 +231,27 @@ export default function OrdersPage() {
     setStartDate(todayStr);
     setEndDate(todayStr);
     setSearchLocation('');
+    // 실제 검색 상태도 업데이트
+    setActiveStartDate(todayStr);
+    setActiveEndDate(todayStr);
+    setActiveSearchLocation('');
   };
 
   // 기간 검색 함수
   const handlePeriodSearch = () => {
     // 기간 검색만 활성화하고 동 검색은 비활성화
     setSearchLocation('');
+    // 실제 검색 상태 업데이트
+    setActiveStartDate(startDate);
+    setActiveEndDate(endDate);
+    setActiveSearchLocation('');
+
+    console.log('🔍 기간 검색 실행:', {
+      startDate,
+      endDate,
+      activeStartDate: startDate,
+      activeEndDate: endDate,
+    });
   };
 
   // 동 검색 함수
@@ -235,12 +261,16 @@ export default function OrdersPage() {
     const todayStr = today.toISOString().split('T')[0];
     setStartDate(todayStr);
     setEndDate(todayStr);
+    // 실제 검색 상태 업데이트
+    setActiveStartDate(todayStr);
+    setActiveEndDate(todayStr);
+    setActiveSearchLocation(searchLocation);
   };
 
   // 주문 데이터를 OrderItemList 컴포넌트 형식으로 변환
   const transformOrdersForDisplay = () => {
     let globalIndex = 1; // 전역 인덱스로 고유한 숫자 ID 생성
-    return orders.flatMap((order) =>
+    const transformed = orders.flatMap((order) =>
       order.order_items.map((item) => ({
         id: globalIndex++, // 고유한 숫자 ID 생성
         title: item.panel_info.nickname || item.panel_info.address,
@@ -256,6 +286,18 @@ export default function OrdersPage() {
         orderId: order.order_number, // 주문번호를 orderId로 설정
       }))
     );
+
+    console.log(
+      '🔍 변환된 주문 데이터:',
+      transformed.map((item) => ({
+        orderNumber: item.orderNumber,
+        startDate: item.startDate,
+        endDate: item.endDate,
+        title: item.title,
+      }))
+    );
+
+    return transformed;
   };
 
   const getStatusDisplay = (status: string) => {
@@ -276,7 +318,7 @@ export default function OrdersPage() {
   // 필터링된 주문 목록
   const filteredOrders = transformOrdersForDisplay().filter((item) => {
     // 검색 조건이 없으면 전체보기
-    if (!searchLocation && startDate === endDate) {
+    if (!activeSearchLocation && activeStartDate === activeEndDate) {
       return true;
     }
 
@@ -284,38 +326,85 @@ export default function OrdersPage() {
     let isLocationMatch = true;
 
     // 날짜 필터링 (광고 게시 기간이 선택한 기간과 겹치는지 확인)
-    if (startDate !== endDate) {
-      console.log('🔍 날짜 필터링:', {
+    if (activeStartDate !== activeEndDate) {
+      console.log('🔍 날짜 필터링 시작:', {
         itemStartDate: item.startDate,
         itemEndDate: item.endDate,
-        searchStart: startDate,
-        searchEnd: endDate,
+        searchStart: activeStartDate,
+        searchEnd: activeEndDate,
+        orderNumber: item.orderNumber,
+        title: item.title,
       });
 
       // 날짜 문자열이 유효한지 확인
       if (item.startDate && item.endDate) {
-        const itemStartDate = new Date(item.startDate);
-        const itemEndDate = new Date(item.endDate);
-        const searchStart = new Date(startDate);
-        const searchEnd = new Date(endDate);
+        // 날짜 파싱을 더 안전하게 처리
+        const parseDate = (dateStr: string) => {
+          try {
+            // ISO 형식 (YYYY-MM-DD) 또는 다른 형식 처리
+            if (dateStr.includes('T')) {
+              return new Date(dateStr);
+            } else {
+              // YYYY-MM-DD 형식인 경우
+              return new Date(dateStr + 'T00:00:00');
+            }
+          } catch (error) {
+            console.error('날짜 파싱 오류:', { dateStr, error });
+            return new Date('Invalid Date');
+          }
+        };
+
+        const itemStartDate = parseDate(item.startDate);
+        const itemEndDate = parseDate(item.endDate);
+        const searchStart = parseDate(activeStartDate);
+        const searchEnd = parseDate(activeEndDate);
+
+        console.log('🔍 날짜 객체 변환 결과:', {
+          originalItemStartDate: item.startDate,
+          originalItemEndDate: item.endDate,
+          originalSearchStart: activeStartDate,
+          originalSearchEnd: activeEndDate,
+          itemStartDate: itemStartDate.toString(),
+          itemEndDate: itemEndDate.toString(),
+          searchStart: searchStart.toString(),
+          searchEnd: searchEnd.toString(),
+          itemStartTime: itemStartDate.getTime(),
+          itemEndTime: itemEndDate.getTime(),
+          searchStartTime: searchStart.getTime(),
+          searchEndTime: searchEnd.getTime(),
+        });
 
         // 날짜가 유효한지 확인
+        const isValidDate = (date: Date) => {
+          return date instanceof Date && !isNaN(date.getTime());
+        };
+
         if (
-          !isNaN(itemStartDate.getTime()) &&
-          !isNaN(itemEndDate.getTime()) &&
-          !isNaN(searchStart.getTime()) &&
-          !isNaN(searchEnd.getTime())
+          isValidDate(itemStartDate) &&
+          isValidDate(itemEndDate) &&
+          isValidDate(searchStart) &&
+          isValidDate(searchEnd)
         ) {
-          // 광고 기간이 검색 기간과 겹치는지 확인
+          // 광고 기간이 검색 기간과 겹치는지 확인 (from-to 사이의 기간)
           isDateInRange =
             itemStartDate <= searchEnd && itemEndDate >= searchStart;
-          console.log('🔍 날짜 범위 결과:', isDateInRange);
+          console.log('🔍 날짜 범위 결과:', {
+            isDateInRange,
+            condition1: itemStartDate <= searchEnd,
+            condition2: itemEndDate >= searchStart,
+            orderNumber: item.orderNumber,
+          });
         } else {
           console.log('🔍 유효하지 않은 날짜:', {
-            itemStartDate,
-            itemEndDate,
-            searchStart,
-            searchEnd,
+            itemStartDate: itemStartDate.toString(),
+            itemEndDate: itemEndDate.toString(),
+            searchStart: searchStart.toString(),
+            searchEnd: searchEnd.toString(),
+            orderNumber: item.orderNumber,
+            itemStartValid: isValidDate(itemStartDate),
+            itemEndValid: isValidDate(itemEndDate),
+            searchStartValid: isValidDate(searchStart),
+            searchEndValid: isValidDate(searchEnd),
           });
           isDateInRange = false;
         }
@@ -323,30 +412,31 @@ export default function OrdersPage() {
         console.log('🔍 날짜 데이터 없음:', {
           startDate: item.startDate,
           endDate: item.endDate,
+          orderNumber: item.orderNumber,
         });
         isDateInRange = false;
       }
     }
 
     // 위치 필터링 (region_dong으로 검색)
-    if (searchLocation) {
+    if (activeSearchLocation) {
       isLocationMatch = item.location
         .toLowerCase()
-        .includes(searchLocation.toLowerCase());
+        .includes(activeSearchLocation.toLowerCase());
       console.log('🔍 위치 검색:', {
         location: item.location,
-        searchLocation,
+        searchLocation: activeSearchLocation,
         isLocationMatch,
       });
     }
 
     // 기간 또는 동으로 검색 (OR 조건)
     // 둘 다 조건이 있으면 OR, 하나만 있으면 해당 조건만 적용
-    if (startDate !== endDate && searchLocation) {
+    if (activeStartDate !== activeEndDate && activeSearchLocation) {
       return isDateInRange || isLocationMatch;
-    } else if (startDate !== endDate) {
+    } else if (activeStartDate !== activeEndDate) {
       return isDateInRange;
-    } else if (searchLocation) {
+    } else if (activeSearchLocation) {
       return isLocationMatch;
     }
 

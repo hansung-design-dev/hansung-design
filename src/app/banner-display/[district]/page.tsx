@@ -55,6 +55,15 @@ interface BannerDisplayData {
     updated_at: string;
     first_half_closure_quantity?: number;
     second_half_closure_quantity?: number;
+    // banner_slot_price_policy 정보 추가
+    banner_slot_price_policy?: {
+      id: string;
+      price_usage_type: 'default' | 'public_institution' | 'company';
+      tax_price: number;
+      road_usage_fee: number;
+      advertising_fee: number;
+      total_price: number;
+    }[];
   }[];
   region_gu: {
     id: string;
@@ -342,20 +351,42 @@ export default function BannerDisplayPage({
                   slot_number: slot.slot_number,
                   banner_type: slot.banner_type,
                   total_price: slot.total_price,
+                  price_policies: slot.banner_slot_price_policy,
                 })),
                 foundSlots: slots,
                 isTopFixed,
               });
 
-              const price = isTopFixed
-                ? '상담문의'
-                : slots?.panelSlot
-                ? `${slots.panelSlot.total_price?.toLocaleString()}원`
-                : '문의';
+              // 가격 계산 로직 수정 - banner_slot_price_policy 사용
+              let price = '문의';
+              let totalPrice = 0;
 
-              const totalPrice = isTopFixed
-                ? 0 // 상단광고는 상담신청으로 처리
-                : slots?.panelSlot?.total_price || 0;
+              if (isTopFixed) {
+                price = '상담문의';
+                totalPrice = 0; // 상단광고는 상담신청으로 처리
+              } else if (slots?.panelSlot) {
+                // banner_slot_price_policy에서 가격 정보 가져오기
+                const pricePolicies = slots.panelSlot.banner_slot_price_policy;
+                if (pricePolicies && pricePolicies.length > 0) {
+                  // 기본적으로 'default' 타입 사용
+                  const defaultPolicy = pricePolicies.find(
+                    (p: { price_usage_type: string }) =>
+                      p.price_usage_type === 'default'
+                  );
+                  if (defaultPolicy) {
+                    totalPrice = defaultPolicy.total_price;
+                    price = `${defaultPolicy.total_price?.toLocaleString()}원`;
+                  } else {
+                    // default가 없으면 첫 번째 정책 사용
+                    totalPrice = pricePolicies[0].total_price;
+                    price = `${pricePolicies[0].total_price?.toLocaleString()}원`;
+                  }
+                } else {
+                  // 기존 로직 (banner_slot_info의 total_price 사용)
+                  totalPrice = slots.panelSlot.total_price || 0;
+                  price = `${slots.panelSlot.total_price?.toLocaleString()}원`;
+                }
+              }
 
               // 가격 디버깅 로그
               console.log('🔍 가격 정보:', {

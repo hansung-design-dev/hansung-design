@@ -40,6 +40,15 @@ export interface BannerDisplayData {
     price_unit: string;
     is_premium: boolean;
     panel_slot_status: string;
+    // banner_slot_price_policy 정보 추가
+    price_policies?: {
+      id: string;
+      price_usage_type: 'default' | 'public_institution' | 'company';
+      tax_price: number;
+      road_usage_fee: number;
+      advertising_fee: number;
+      total_price: number;
+    }[];
   }[];
 }
 
@@ -93,7 +102,15 @@ async function getBannerDisplaysByDistrict(districtName: string) {
           banner_type,
           price_unit,
           is_premium,
-          panel_slot_status
+          panel_slot_status,
+          banner_slot_price_policy (
+            id,
+            price_usage_type,
+            tax_price,
+            road_usage_fee,
+            advertising_fee,
+            total_price
+          )
         ),
         region_gu!inner (
           id,
@@ -180,7 +197,15 @@ async function getAllBannerDisplays() {
           banner_type,
           price_unit,
           is_premium,
-          panel_slot_status
+          panel_slot_status,
+          banner_slot_price_policy (
+            id,
+            price_usage_type,
+            tax_price,
+            road_usage_fee,
+            advertising_fee,
+            total_price
+          )
         ),
         region_gu!inner (
           id,
@@ -297,7 +322,18 @@ async function getAllDistrictsData() {
           code,
           logo_image_url
         ),
-        panel_status
+        panel_status,
+        banner_slot_info (
+          id,
+          banner_slot_price_policy (
+            id,
+            price_usage_type,
+            tax_price,
+            road_usage_fee,
+            advertising_fee,
+            total_price
+          )
+        )
       `
       )
       .eq('display_type_id', (await getBannerDisplayTypeId()).id)
