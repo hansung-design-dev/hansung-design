@@ -137,61 +137,62 @@ export default function LiveCart() {
                 ⏰ 장바구니 만료까지: {timeLeft}
               </div>
             )}
-            {cart.map((item) => (
-              <div
-                key={item.id}
-                className="mb-2 flex items-center justify-between"
-              >
-                <div className="flex flex-col gap-2">
-                  <div>
-                    <span className="mr-2">{item.name}</span>
-                    <span className="font-bold mr-2">
-                      ({getPanelTypeLabel(item.panel_type)})
-                    </span>
-                    {/* LED 전자게시대가 아닌 경우에만 상하반기 정보 표시 */}
-                    {item.halfPeriod && item.type !== 'led-display' && (
-                      <span className="ml-2 text-sm text-blue-600 font-medium">
-                        {item.halfPeriod === 'first_half' ? '상반기' : '하반기'}
+            {cart.map((item) => {
+              return (
+                <div
+                  key={item.id}
+                  className="mb-2 flex items-center justify-between"
+                >
+                  <div className="flex flex-col gap-2">
+                    <div>
+                      <span className="mr-2 text-gray-600 font-medium text-sm">
+                        no.{item.panel_code}
                       </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-500">{item.district}</span>
-                    {/* LED 전자게시대가 아닌 경우에만 년월 정보 표시 */}
-                    {/* {item.halfPeriod &&
-                      item.selectedYear &&
-                      item.selectedMonth &&
-                      item.type !== 'led-display' && (
-                        <span className="text-xs text-gray-400">
-                          {item.selectedYear}년 {item.selectedMonth}월
+                      <span className="mr-2">{item.name}</span>
+                      <span className="font-bold mr-2">
+                        ({getPanelTypeLabel(item.panel_type)}
+                        {item.district === '서대문구' &&
+                          item.is_for_admin &&
+                          '-행정용패널'}
+                        )
+                      </span>
+                      {/* LED 전자게시대가 아닌 경우에만 상하반기 정보 표시 */}
+                      {item.halfPeriod && item.type !== 'led-display' && (
+                        <span className="ml-2 text-sm text-blue-600 font-medium">
+                          {item.halfPeriod === 'first_half'
+                            ? '상반기'
+                            : '하반기'}
                         </span>
-                      )} */}
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-500">{item.district}</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-center gap-2">
+                    <Button
+                      size="sm"
+                      className="ml-auto text-red-500 p-0 bg-transparent border-none hover:cursor-pointer"
+                      onClick={() =>
+                        dispatch({ type: 'REMOVE_ITEM', id: item.id })
+                      }
+                    >
+                      <Image
+                        src="/svg/x.svg"
+                        alt="delete"
+                        width={20}
+                        height={20}
+                      />
+                    </Button>
+                    <span className="mr-2">
+                      {item.price === 0
+                        ? '상담문의'
+                        : `${item.price.toLocaleString()}원`}
+                    </span>
                   </div>
                 </div>
-
-                <div className="flex flex-col items-center gap-2">
-                  <Button
-                    size="sm"
-                    className="ml-auto text-red-500 p-0 bg-transparent border-none hover:cursor-pointer"
-                    onClick={() =>
-                      dispatch({ type: 'REMOVE_ITEM', id: item.id })
-                    }
-                  >
-                    <Image
-                      src="/svg/x.svg"
-                      alt="delete"
-                      width={20}
-                      height={20}
-                    />
-                  </Button>
-                  <span className="mr-2">
-                    {item.price === 0
-                      ? '상담문의'
-                      : `${item.price.toLocaleString()}원`}
-                  </span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 

@@ -601,6 +601,7 @@ export default function DisplayDetailPage({
           panel_info_id: item.panel_info_id, // 원본 UUID
           isTopFixed: item.panel_type === 'top-fixed', // 상단광고 여부 (하이픈으로 수정)
           ...(panelSlotSnapshot && { panel_slot_snapshot: panelSlotSnapshot }), // 가격 상세 정보 추가
+          panel_code: item.panel_code,
         };
 
         console.log('🔍 Adding item to cart:', cartItem);
