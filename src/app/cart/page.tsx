@@ -65,16 +65,18 @@ function CartGroupCard({
   phoneList,
   isSelected,
   onSelect,
+  onDelete,
 }: {
   title: string;
   children: React.ReactNode;
   phoneList?: string[];
   isSelected?: boolean;
   onSelect?: (selected: boolean) => void;
+  onDelete?: () => void;
 }) {
   return (
     <div className="mb-8 bg-white rounded-lg overflow-hidden py-4">
-      <div className="flex items-center pt-4 pb-2 border-b border-black px-[3rem]">
+      <div className=" relative flex items-center pt-4 pb-2 border-b border-black px-[3rem]">
         <input
           type="checkbox"
           className="w-6 h-6 mr-4 cursor-pointer"
@@ -87,6 +89,12 @@ function CartGroupCard({
             상담전화: {phoneList.join(', ')}
           </span>
         )}
+        <button
+          className="absolute top-4 right-10 text-1.5 font-100 text-gray-2 hover:cursor-pointer"
+          onClick={onDelete}
+        >
+          x
+        </button>
       </div>
       <div className="w-[95%] mx-auto">
         <svg
@@ -146,6 +154,21 @@ function CartItemRow({
   };
   getPanelTypeDisplay: (panelType: string) => string;
 }) {
+  // 패널 번호 추출 함수
+  // const getPanelNumber = () => {
+  //   // panel_slot_snapshot에서 slot_number가 있으면 사용
+  //   if (item.panel_slot_snapshot?.slot_number) {
+  //     return item.panel_slot_snapshot.slot_number;
+  //   }
+  //   // panel_info_id에서 패널 번호 추출 시도
+  //   if (item.panel_info_id) {
+  //     const match = item.panel_info_id.match(/(\d+)$/);
+  //     if (match) {
+  //       return match[1];
+  //     }
+  //   }
+  //   return null;
+  // };
   if (isConsulting) {
     const hasInquiry = inquiryStatus && inquiryStatus.status;
     const isPending = hasInquiry && inquiryStatus.status === 'pending';
@@ -164,14 +187,22 @@ function CartItemRow({
 
           <div className="flex flex-col gap-3 min-w-0 flex-1">
             <div className="text-1 truncate">
-              {item.name}
-              <span className="ml-2 text-gray-500 text-0.875">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-gray-600 font-medium text-sm">
+                  no.{item.panel_code}
+                </span>
+                {item.name}
+              </div>
+              <span className="text-gray-500 text-0.875">
                 (
                 {getPanelTypeDisplay(
                   item.panel_slot_snapshot?.banner_type ||
                     item.panel_type ||
                     'panel'
                 )}
+                {item.district === '서대문구' &&
+                  item.is_for_admin &&
+                  '-행정용패널'}
                 )
               </span>
             </div>
@@ -251,14 +282,22 @@ function CartItemRow({
         />
         <div className="flex flex-col gap-3 min-w-0 flex-1">
           <div className="text-1 truncate">
-            {item.name}
-            <span className="ml-2 text-gray-500 text-0.875">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-gray-600 font-medium text-sm">
+                no.{item.panel_code}
+              </span>
+              {item.name}
+            </div>
+            <span className="text-gray-500 text-0.875">
               (
               {getPanelTypeDisplay(
                 item.panel_slot_snapshot?.banner_type ||
                   item.panel_type ||
                   'panel'
               )}
+              {item.district === '서대문구' &&
+                item.is_for_admin &&
+                '-행정용패널'}
               )
             </span>
           </div>
@@ -398,6 +437,12 @@ export default function Cart() {
   const [selectedProductId, setSelectedProductId] = useState('');
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<CartItem | null>(null);
+  const [isGroupDeleteModalOpen, setIsGroupDeleteModalOpen] = useState(false);
+  const [groupToDelete, setGroupToDelete] = useState<{
+    userType: 'company' | 'public_institution' | 'general';
+    district: string;
+    title: string;
+  } | null>(null);
   const [isUpdateSuccessModalOpen, setIsUpdateSuccessModalOpen] =
     useState(false);
   const [inquiryStatuses, setInquiryStatuses] = useState<InquiryStatus>({});
@@ -431,14 +476,11 @@ export default function Cart() {
   // 결제신청/상담신청 분류 로직 (useMemo)
   const groupedItems = useMemo(() => {
     const consultingItems: CartItem[] = [];
-    const regularItems: CartItem[] = [];
-    const publicInstitutionItems: CartItem[] = [];
-    const companyItems: CartItem[] = [];
+    const paymentItems: CartItem[] = [];
 
     cart.forEach((item) => {
       const panelType =
         item.panel_slot_snapshot?.banner_type || item.panel_type || 'panel';
-      // const district = item.district;
 
       // 상담신청: LED 전자게시대 전체, 상단광고(용산구/송파구)
       if (
@@ -449,22 +491,24 @@ export default function Cart() {
         return;
       }
 
-      // 결제신청: 현수막게시대 전체 구 (마포구 시민/문화게시대는 체크박스 비노출로 이미 추가 불가)
-      // 기업/행정용 분리
-      if (item.is_public_institution) {
-        publicInstitutionItems.push(item);
-      } else if (item.is_company) {
-        companyItems.push(item);
-      } else {
-        regularItems.push(item);
+      // 결제신청: 현수막게시대 전체 구
+      paymentItems.push(item);
+    });
+
+    // 결제신청 아이템들을 구별로 분류
+    const districtGroups: { [district: string]: CartItem[] } = {};
+
+    paymentItems.forEach((item) => {
+      const district = item.district;
+      if (!districtGroups[district]) {
+        districtGroups[district] = [];
       }
+      districtGroups[district].push(item);
     });
 
     return {
       consulting: consultingItems,
-      regular: regularItems,
-      publicInstitution: publicInstitutionItems,
-      company: companyItems,
+      districts: districtGroups,
     };
   }, [cart]);
 
@@ -649,12 +693,23 @@ export default function Cart() {
 
   const handleGroupSelect = (
     userType: 'company' | 'public_institution' | 'general',
+    district: string,
     selected: boolean
   ) => {
     const groupItems = cart.filter((item) => {
-      if (userType === 'company') return item.is_company;
-      if (userType === 'public_institution') return item.is_public_institution;
-      return !item.is_company && !item.is_public_institution; // general
+      const matchesUserType =
+        (userType === 'company' && item.is_company) ||
+        (userType === 'public_institution' && item.is_public_institution) ||
+        (userType === 'general' &&
+          !item.is_company &&
+          !item.is_public_institution);
+
+      // 상담신청 아이템의 경우 district 체크를 건너뜀
+      if (district === '') {
+        return matchesUserType;
+      }
+
+      return matchesUserType && item.district === district;
     });
     const groupItemIds = groupItems.map((item) => item.id);
 
@@ -672,12 +727,23 @@ export default function Cart() {
   };
 
   const isGroupSelected = (
-    userType: 'company' | 'public_institution' | 'general'
+    userType: 'company' | 'public_institution' | 'general',
+    district: string
   ) => {
     const groupItems = cart.filter((item) => {
-      if (userType === 'company') return item.is_company;
-      if (userType === 'public_institution') return item.is_public_institution;
-      return !item.is_company && !item.is_public_institution; // general
+      const matchesUserType =
+        (userType === 'company' && item.is_company) ||
+        (userType === 'public_institution' && item.is_public_institution) ||
+        (userType === 'general' &&
+          !item.is_company &&
+          !item.is_public_institution);
+
+      // 상담신청 아이템의 경우 district 체크를 건너뜀
+      if (district === '') {
+        return matchesUserType;
+      }
+
+      return matchesUserType && item.district === district;
     });
     return (
       groupItems.length > 0 &&
@@ -848,6 +914,52 @@ export default function Cart() {
       setItemToDelete(null);
       setIsDeleteModalOpen(false);
     }
+  };
+
+  // 그룹별 삭제 확인 모달 표시
+  const handleGroupDeleteClick = (
+    userType: 'company' | 'public_institution' | 'general',
+    district: string,
+    title: string
+  ) => {
+    setGroupToDelete({ userType, district, title });
+    setIsGroupDeleteModalOpen(true);
+  };
+
+  // 그룹별 삭제 확인 모달에서 확인 클릭 시 실행
+  const handleGroupDeleteConfirm = () => {
+    if (!groupToDelete) return;
+
+    const { userType, district } = groupToDelete;
+    const groupItems = cart.filter((item) => {
+      const matchesUserType =
+        (userType === 'company' && item.is_company) ||
+        (userType === 'public_institution' && item.is_public_institution) ||
+        (userType === 'general' &&
+          !item.is_company &&
+          !item.is_public_institution);
+
+      // 상담신청 아이템의 경우 district 체크를 건너뜀
+      if (district === '') {
+        return matchesUserType;
+      }
+
+      return matchesUserType && item.district === district;
+    });
+
+    // 해당 그룹의 모든 아이템을 장바구니에서 제거
+    groupItems.forEach((item) => {
+      dispatch({ type: 'REMOVE_ITEM', id: item.id });
+    });
+
+    // 선택된 아이템에서도 제거
+    const newSelected = new Set(selectedItems);
+    groupItems.forEach((item) => newSelected.delete(item.id));
+    setSelectedItems(newSelected);
+
+    // 모달 닫기
+    setIsGroupDeleteModalOpen(false);
+    setGroupToDelete(null);
   };
 
   // 결제 처리 함수
@@ -1052,113 +1164,189 @@ export default function Cart() {
         <motion.div initial="initial" animate="animate" variants={fadeInUp}>
           {userWithPhone && activeTab === 'payment' && (
             <>
-              {/* 개인용 아이템 */}
-              {groupedItems.regular.length > 0 && (
-                <CartGroupCard
-                  title="현수막게시대 (개인용)"
-                  phoneList={['1533-0570', '1899-0596', '02-719-0083']}
-                  isSelected={isGroupSelected('general')}
-                  onSelect={(selected) =>
-                    handleGroupSelect('general', selected)
-                  }
-                >
-                  {groupedItems.regular.map((item) => {
-                    const userInfo = {
-                      name: item.contact_person_name || userWithPhone?.name,
-                      phone: item.phone || userWithPhone?.phone,
-                      company_name:
-                        item.company_name || userWithPhone?.company_name,
-                    };
-                    return (
-                      <CartItemRow
-                        key={item.id}
-                        item={item}
-                        user={userInfo}
-                        isSelected={selectedItems.has(item.id)}
-                        onSelect={(selected) =>
-                          handleItemSelect(item.id, selected)
-                        }
-                        onOrderModify={() => handleOrderModify(item.id)}
-                        onDelete={() => handleDelete(item)}
-                        onPeriodChange={handlePeriodChange}
-                        getPanelTypeDisplay={getPanelTypeDisplay}
-                      />
+              {/* 구별로 분류된 현수막게시대 아이템들 */}
+              {Object.keys(groupedItems.districts).length > 0 &&
+                Object.entries(groupedItems.districts).map(
+                  ([district, items]) => {
+                    // 각 구 내에서 개인용/공공기관용/기업용으로 분류
+                    const regularItems = items.filter(
+                      (item) => !item.is_company && !item.is_public_institution
                     );
-                  })}
-                </CartGroupCard>
-              )}
+                    const publicInstitutionItems = items.filter(
+                      (item) => item.is_public_institution
+                    );
+                    const companyItems = items.filter(
+                      (item) => item.is_company
+                    );
 
-              {/* 공공기관용 아이템 */}
-              {groupedItems.publicInstitution.length > 0 && (
-                <CartGroupCard
-                  title="현수막게시대 (공공기관용)"
-                  phoneList={['1533-0570', '1899-0596', '02-719-0083']}
-                  isSelected={isGroupSelected('public_institution')}
-                  onSelect={(selected) =>
-                    handleGroupSelect('public_institution', selected)
-                  }
-                >
-                  {groupedItems.publicInstitution.map((item) => {
-                    const userInfo = {
-                      name: item.contact_person_name || userWithPhone?.name,
-                      phone: item.phone || userWithPhone?.phone,
-                      company_name:
-                        item.company_name || userWithPhone?.company_name,
-                    };
                     return (
-                      <CartItemRow
-                        key={item.id}
-                        item={item}
-                        user={userInfo}
-                        isSelected={selectedItems.has(item.id)}
-                        onSelect={(selected) =>
-                          handleItemSelect(item.id, selected)
-                        }
-                        onOrderModify={() => handleOrderModify(item.id)}
-                        onDelete={() => handleDelete(item)}
-                        onPeriodChange={handlePeriodChange}
-                        getPanelTypeDisplay={getPanelTypeDisplay}
-                      />
-                    );
-                  })}
-                </CartGroupCard>
-              )}
+                      <div key={`district-${district}`}>
+                        {/* 기본 구별 카드 (개인용 아이템들) */}
+                        {regularItems.length > 0 && (
+                          <CartGroupCard
+                            title={`현수막게시대 (${district})`}
+                            phoneList={[
+                              '1533-0570',
+                              '1899-0596',
+                              '02-719-0083',
+                            ]}
+                            isSelected={isGroupSelected('general', district)}
+                            onSelect={(selected) =>
+                              handleGroupSelect('general', district, selected)
+                            }
+                            onDelete={() =>
+                              handleGroupDeleteClick(
+                                'general',
+                                district,
+                                `현수막게시대 (${district})`
+                              )
+                            }
+                          >
+                            {regularItems.map((item) => {
+                              const userInfo = {
+                                name:
+                                  item.contact_person_name ||
+                                  userWithPhone?.name,
+                                phone: item.phone || userWithPhone?.phone,
+                                company_name:
+                                  item.company_name ||
+                                  userWithPhone?.company_name,
+                              };
+                              return (
+                                <CartItemRow
+                                  key={item.id}
+                                  item={item}
+                                  user={userInfo}
+                                  isSelected={selectedItems.has(item.id)}
+                                  onSelect={(selected) =>
+                                    handleItemSelect(item.id, selected)
+                                  }
+                                  onOrderModify={() =>
+                                    handleOrderModify(item.id)
+                                  }
+                                  onDelete={() => handleDelete(item)}
+                                  onPeriodChange={handlePeriodChange}
+                                  getPanelTypeDisplay={getPanelTypeDisplay}
+                                />
+                              );
+                            })}
+                          </CartGroupCard>
+                        )}
 
-              {/* 기업용 아이템 */}
-              {groupedItems.company.length > 0 && (
-                <CartGroupCard
-                  title="현수막게시대 (기업용)"
-                  phoneList={['1533-0570', '1899-0596', '02-719-0083']}
-                  isSelected={isGroupSelected('company')}
-                  onSelect={(selected) =>
-                    handleGroupSelect('company', selected)
-                  }
-                >
-                  {groupedItems.company.map((item) => {
-                    const userInfo = {
-                      name: item.contact_person_name || userWithPhone?.name,
-                      phone: item.phone || userWithPhone?.phone,
-                      company_name:
-                        item.company_name || userWithPhone?.company_name,
-                    };
-                    return (
-                      <CartItemRow
-                        key={item.id}
-                        item={item}
-                        user={userInfo}
-                        isSelected={selectedItems.has(item.id)}
-                        onSelect={(selected) =>
-                          handleItemSelect(item.id, selected)
-                        }
-                        onOrderModify={() => handleOrderModify(item.id)}
-                        onDelete={() => handleDelete(item)}
-                        onPeriodChange={handlePeriodChange}
-                        getPanelTypeDisplay={getPanelTypeDisplay}
-                      />
+                        {/* 공공기관용 카드 (해당 구에서 공공기관용으로 변경된 아이템들) */}
+                        {publicInstitutionItems.length > 0 && (
+                          <CartGroupCard
+                            title={`현수막게시대 (공공기관용) - ${district}`}
+                            phoneList={[
+                              '1533-0570',
+                              '1899-0596',
+                              '02-719-0083',
+                            ]}
+                            isSelected={isGroupSelected(
+                              'public_institution',
+                              district
+                            )}
+                            onSelect={(selected) =>
+                              handleGroupSelect(
+                                'public_institution',
+                                district,
+                                selected
+                              )
+                            }
+                            onDelete={() =>
+                              handleGroupDeleteClick(
+                                'public_institution',
+                                district,
+                                `현수막게시대 (공공기관용) - ${district}`
+                              )
+                            }
+                          >
+                            {publicInstitutionItems.map((item) => {
+                              const userInfo = {
+                                name:
+                                  item.contact_person_name ||
+                                  userWithPhone?.name,
+                                phone: item.phone || userWithPhone?.phone,
+                                company_name:
+                                  item.company_name ||
+                                  userWithPhone?.company_name,
+                              };
+                              return (
+                                <CartItemRow
+                                  key={item.id}
+                                  item={item}
+                                  user={userInfo}
+                                  isSelected={selectedItems.has(item.id)}
+                                  onSelect={(selected) =>
+                                    handleItemSelect(item.id, selected)
+                                  }
+                                  onOrderModify={() =>
+                                    handleOrderModify(item.id)
+                                  }
+                                  onDelete={() => handleDelete(item)}
+                                  onPeriodChange={handlePeriodChange}
+                                  getPanelTypeDisplay={getPanelTypeDisplay}
+                                />
+                              );
+                            })}
+                          </CartGroupCard>
+                        )}
+
+                        {/* 기업용 카드 (해당 구에서 기업용으로 변경된 아이템들) */}
+                        {companyItems.length > 0 && (
+                          <CartGroupCard
+                            title={`현수막게시대 (기업용) - ${district}`}
+                            phoneList={[
+                              '1533-0570',
+                              '1899-0596',
+                              '02-719-0083',
+                            ]}
+                            isSelected={isGroupSelected('company', district)}
+                            onSelect={(selected) =>
+                              handleGroupSelect('company', district, selected)
+                            }
+                            onDelete={() =>
+                              handleGroupDeleteClick(
+                                'company',
+                                district,
+                                `현수막게시대 (기업용) - ${district}`
+                              )
+                            }
+                          >
+                            {companyItems.map((item) => {
+                              const userInfo = {
+                                name:
+                                  item.contact_person_name ||
+                                  userWithPhone?.name,
+                                phone: item.phone || userWithPhone?.phone,
+                                company_name:
+                                  item.company_name ||
+                                  userWithPhone?.company_name,
+                              };
+                              return (
+                                <CartItemRow
+                                  key={item.id}
+                                  item={item}
+                                  user={userInfo}
+                                  isSelected={selectedItems.has(item.id)}
+                                  onSelect={(selected) =>
+                                    handleItemSelect(item.id, selected)
+                                  }
+                                  onOrderModify={() =>
+                                    handleOrderModify(item.id)
+                                  }
+                                  onDelete={() => handleDelete(item)}
+                                  onPeriodChange={handlePeriodChange}
+                                  getPanelTypeDisplay={getPanelTypeDisplay}
+                                />
+                              );
+                            })}
+                          </CartGroupCard>
+                        )}
+                      </div>
                     );
-                  })}
-                </CartGroupCard>
-              )}
+                  }
+                )}
 
               {/* 경고 메시지 */}
             </>
@@ -1170,9 +1358,12 @@ export default function Cart() {
                 <CartGroupCard
                   title="상단광고"
                   phoneList={['1533-0570', '1899-0596', '02-719-0083']}
-                  isSelected={isGroupSelected('general')}
+                  isSelected={isGroupSelected('general', '')}
                   onSelect={(selected) =>
-                    handleGroupSelect('general', selected)
+                    handleGroupSelect('general', '', selected)
+                  }
+                  onDelete={() =>
+                    handleGroupDeleteClick('general', '', '상단광고')
                   }
                 >
                   {bannerConsultingItems.map((item) => {
@@ -1209,9 +1400,12 @@ export default function Cart() {
                 <CartGroupCard
                   title="LED전자게시대"
                   phoneList={['1533-0570', '1899-0596', '02-719-0083']}
-                  isSelected={isGroupSelected('general')}
+                  isSelected={isGroupSelected('general', '')}
                   onSelect={(selected) =>
-                    handleGroupSelect('general', selected)
+                    handleGroupSelect('general', '', selected)
+                  }
+                  onDelete={() =>
+                    handleGroupDeleteClick('general', '', 'LED전자게시대')
                   }
                 >
                   {ledConsultingItemsOnly.map((item) => {
@@ -1332,6 +1526,21 @@ export default function Cart() {
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleConfirmDelete}
         itemName={itemToDelete?.name || ''}
+      />
+
+      {/* 그룹별 삭제 확인 모달 */}
+      <DeleteConfirmModal
+        isOpen={isGroupDeleteModalOpen}
+        onClose={() => {
+          setIsGroupDeleteModalOpen(false);
+          setGroupToDelete(null);
+        }}
+        onConfirm={handleGroupDeleteConfirm}
+        itemName={
+          groupToDelete
+            ? `${groupToDelete.title} 아이템을 전체삭제 하시겠습니까?`
+            : ''
+        }
       />
 
       <SuccessModal

@@ -15,6 +15,8 @@ export interface CartItem {
   isTopFixed?: boolean; // 상단광고 여부
   is_public_institution?: boolean; // 공공기관용 여부
   is_company?: boolean; // 기업용 여부
+  is_for_admin?: boolean; // 행정용 패널 여부
+  panel_code?: string; // 패널 코드(번호)
   panel_slot_snapshot?: {
     id: string | null;
     notes: string | null;
