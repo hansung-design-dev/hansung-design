@@ -366,8 +366,11 @@ export default function DisplayDetailPage({
   };
 
   const handleItemSelect = (id: string, checked?: boolean) => {
+    console.log('🔍 handleItemSelect called with id:', id, 'checked:', checked);
+
     // 지도 뷰에서는 선택만 하고 장바구니에는 추가하지 않음
     if (viewType === 'location') {
+      console.log('🔍 Location view - only selection, no cart addition');
       const alreadySelected = selectedIds.includes(id);
       const shouldSelect = checked !== undefined ? checked : !alreadySelected;
 
@@ -396,195 +399,231 @@ export default function DisplayDetailPage({
       newSelectedIds = [...selectedIds, id];
       // billboards에서 아이템 찾기
       const item = billboards.find((item) => item.id === id);
+      console.log('🔍 Item found in billboards:', item ? 'YES' : 'NO');
       if (item) {
-        const isSpecialDistrict =
-          item.district === '송파구' || item.district === '용산구';
-
-        // 송파구, 용산구의 경우 banner_type에 따라 가격 설정
-        let priceForCart;
+        // 리스트에 표시된 가격 그대로 사용
+        const priceForCart = item.total_price || 0;
         let panelSlotSnapshot = null;
 
-        if (isSpecialDistrict && item.type === 'banner') {
-          if (item.banner_type === 'top-fixed') {
-            // 상단광고는 상담신청으로 처리 (가격 0)
-            priceForCart = 0;
-          } else if (item.banner_type === 'panel') {
-            // 현수막게시대는 결제신청으로 처리 (실제 가격)
-            // banner_slot_info에서 가격 정보 가져오기
-            if (item.banner_slot_info && item.banner_slot_info.length > 0) {
-              const slotInfo = item.banner_slot_info[0]; // 첫 번째 슬롯 사용
-              if (
-                slotInfo.banner_slot_price_policy &&
-                slotInfo.banner_slot_price_policy.length > 0
-              ) {
-                // 기본적으로 'default' 타입 사용
-                const defaultPolicy = slotInfo.banner_slot_price_policy.find(
-                  (p) => p.price_usage_type === 'default'
-                );
-                if (defaultPolicy) {
-                  priceForCart = defaultPolicy.total_price;
-                  panelSlotSnapshot = {
-                    id: null,
-                    notes: null,
-                    max_width: null,
-                    slot_name: null,
-                    tax_price: defaultPolicy.tax_price,
-                    created_at: null,
-                    is_premium: null,
-                    max_height: null,
-                    price_unit: null,
-                    updated_at: null,
-                    banner_type: null,
-                    slot_number: null,
-                    total_price: defaultPolicy.total_price,
-                    panel_info_id: null,
-                    road_usage_fee: defaultPolicy.road_usage_fee,
-                    advertising_fee: defaultPolicy.advertising_fee,
-                    panel_slot_status: null,
-                  };
-                } else {
-                  // default가 없으면 첫 번째 정책 사용
-                  const firstPolicy = slotInfo.banner_slot_price_policy[0];
-                  priceForCart = firstPolicy.total_price;
-                  panelSlotSnapshot = {
-                    id: null,
-                    notes: null,
-                    max_width: null,
-                    slot_name: null,
-                    tax_price: firstPolicy.tax_price,
-                    created_at: null,
-                    is_premium: null,
-                    max_height: null,
-                    price_unit: null,
-                    updated_at: null,
-                    banner_type: null,
-                    slot_number: null,
-                    total_price: firstPolicy.total_price,
-                    panel_info_id: null,
-                    road_usage_fee: firstPolicy.road_usage_fee,
-                    advertising_fee: firstPolicy.advertising_fee,
-                    panel_slot_status: null,
-                  };
-                }
-              } else {
-                // 기존 로직 (banner_slot_info의 total_price 사용)
-                priceForCart = slotInfo.total_price || 0;
-                panelSlotSnapshot = {
-                  id: null,
-                  notes: null,
-                  max_width: null,
-                  slot_name: null,
-                  tax_price: slotInfo.tax_price || 0,
-                  created_at: null,
-                  is_premium: null,
-                  max_height: null,
-                  price_unit: null,
-                  updated_at: null,
-                  banner_type: null,
-                  slot_number: null,
-                  total_price: slotInfo.total_price || 0,
-                  panel_info_id: null,
-                  road_usage_fee: slotInfo.road_usage_fee || 0,
-                  advertising_fee: slotInfo.advertising_fee || 0,
-                  panel_slot_status: null,
-                };
-              }
+        console.log('🔍 Item selected:', {
+          district: item.district,
+          itemId: item.id,
+          itemName: item.name,
+          itemTotalPrice: item.total_price,
+          itemPrice: item.price,
+        });
+
+        // banner_slot_info에서 가격 정보 가져오기 (snapshot용) - BannerBillboard 타입인 경우만
+        if (
+          item.type === 'banner' &&
+          'banner_slot_info' in item &&
+          item.banner_slot_info &&
+          item.banner_slot_info.length > 0
+        ) {
+          console.log('🔍 Creating panel_slot_snapshot for item:', {
+            itemId: item.id,
+            itemName: item.name,
+            bannerSlotInfo: item.banner_slot_info.map((slot) => ({
+              banner_type: slot.banner_type,
+              slot_number: slot.slot_number,
+              total_price: slot.total_price,
+              hasPricePolicy: !!slot.banner_slot_price_policy?.length,
+              pricePolicies: slot.banner_slot_price_policy?.map((p) => ({
+                price_usage_type: p.price_usage_type,
+                total_price: p.total_price,
+                advertising_fee: p.advertising_fee,
+                tax_price: p.tax_price,
+                road_usage_fee: p.road_usage_fee,
+              })),
+            })),
+          });
+
+          // 현수막게시대 슬롯 찾기 (상단광고가 아닌 모든 슬롯)
+          // 'top-fixed'가 아닌 슬롯을 우선적으로 찾기
+          let slotInfo = item.banner_slot_info.find(
+            (slot) => slot.banner_type !== 'top-fixed' && slot.slot_number > 0
+          );
+
+          console.log('🔍 Looking for banner slot (non-top-fixed):', {
+            foundBannerSlot: !!slotInfo,
+            allSlots: item.banner_slot_info.map((slot) => ({
+              banner_type: slot.banner_type,
+              slot_number: slot.slot_number,
+              hasPricePolicy: !!slot.banner_slot_price_policy?.length,
+            })),
+          });
+
+          if (!slotInfo) {
+            // 현수막게시대 슬롯이 없으면 첫 번째 슬롯 사용
+            slotInfo = item.banner_slot_info[0];
+            console.log('🔍 No banner slot found, using first slot');
+          } else {
+            console.log('🔍 Found banner slot, using it');
+          }
+
+          console.log('🔍 Selected slot for snapshot:', {
+            banner_type: slotInfo.banner_type,
+            slot_number: slotInfo.slot_number,
+            total_price: slotInfo.total_price,
+            pricePolicies: slotInfo.banner_slot_price_policy?.map((p) => ({
+              price_usage_type: p.price_usage_type,
+              total_price: p.total_price,
+              advertising_fee: p.advertising_fee,
+              tax_price: p.tax_price,
+              road_usage_fee: p.road_usage_fee,
+            })),
+          });
+
+          if (
+            slotInfo.banner_slot_price_policy &&
+            slotInfo.banner_slot_price_policy.length > 0
+          ) {
+            // 기본적으로 'default' 타입 사용
+            const defaultPolicy = slotInfo.banner_slot_price_policy.find(
+              (p: { price_usage_type: string }) =>
+                p.price_usage_type === 'default'
+            );
+            if (defaultPolicy) {
+              panelSlotSnapshot = {
+                id: slotInfo.id,
+                notes: slotInfo.notes,
+                max_width: slotInfo.max_width,
+                slot_name: slotInfo.slot_name,
+                tax_price: defaultPolicy.tax_price,
+                created_at: slotInfo.created_at,
+                is_premium: slotInfo.is_premium,
+                max_height: slotInfo.max_height,
+                price_unit: slotInfo.price_unit || null,
+                updated_at: slotInfo.updated_at,
+                banner_type: slotInfo.banner_type,
+                slot_number: slotInfo.slot_number,
+                total_price: defaultPolicy.total_price,
+                panel_info_id: slotInfo.panel_info_id,
+                road_usage_fee: defaultPolicy.road_usage_fee,
+                advertising_fee: defaultPolicy.advertising_fee,
+                panel_slot_status: slotInfo.panel_slot_status,
+              } as {
+                id: string | null;
+                notes: string | null;
+                max_width: number | null;
+                slot_name: string | null;
+                tax_price: number | null;
+                created_at: string | null;
+                is_premium: boolean | null;
+                max_height: number | null;
+                price_unit: string | null;
+                updated_at: string | null;
+                banner_type: string | null;
+                slot_number: number | null;
+                total_price: number | null;
+                panel_info_id: string | null;
+                road_usage_fee: number | null;
+                advertising_fee: number | null;
+                panel_slot_status: string | null;
+              };
+              console.log(
+                '🔍 Created panel_slot_snapshot with default policy:',
+                panelSlotSnapshot
+              );
             } else {
-              priceForCart = item.total_price || 0;
+              // default가 없으면 첫 번째 정책 사용
+              const firstPolicy = slotInfo.banner_slot_price_policy[0];
+              panelSlotSnapshot = {
+                id: slotInfo.id,
+                notes: slotInfo.notes,
+                max_width: slotInfo.max_width,
+                slot_name: slotInfo.slot_name,
+                tax_price: firstPolicy.tax_price,
+                created_at: slotInfo.created_at,
+                is_premium: slotInfo.is_premium,
+                max_height: slotInfo.max_height,
+                price_unit: slotInfo.price_unit || null,
+                updated_at: slotInfo.updated_at,
+                banner_type: slotInfo.banner_type,
+                slot_number: slotInfo.slot_number,
+                total_price: firstPolicy.total_price,
+                panel_info_id: slotInfo.panel_info_id,
+                road_usage_fee: firstPolicy.road_usage_fee,
+                advertising_fee: firstPolicy.advertising_fee,
+                panel_slot_status: slotInfo.panel_slot_status,
+              } as {
+                id: string | null;
+                notes: string | null;
+                max_width: number | null;
+                slot_name: string | null;
+                tax_price: number | null;
+                created_at: string | null;
+                is_premium: boolean | null;
+                max_height: number | null;
+                price_unit: string | null;
+                updated_at: string | null;
+                banner_type: string | null;
+                slot_number: number | null;
+                total_price: number | null;
+                panel_info_id: string | null;
+                road_usage_fee: number | null;
+                advertising_fee: number | null;
+                panel_slot_status: string | null;
+              };
+              console.log(
+                '🔍 Created panel_slot_snapshot with first policy:',
+                panelSlotSnapshot
+              );
             }
           } else {
-            // 기타 타입은 기본 로직
-            priceForCart = item.total_price || 0;
+            // 기존 로직 (banner_slot_info의 total_price 사용)
+            panelSlotSnapshot = {
+              id: slotInfo.id,
+              notes: slotInfo.notes,
+              max_width: slotInfo.max_width,
+              slot_name: slotInfo.slot_name,
+              tax_price: slotInfo.tax_price || 0,
+              created_at: slotInfo.created_at,
+              is_premium: slotInfo.is_premium,
+              max_height: slotInfo.max_height,
+              price_unit: slotInfo.price_unit || null,
+              updated_at: slotInfo.updated_at,
+              banner_type: slotInfo.banner_type,
+              slot_number: slotInfo.slot_number,
+              total_price: slotInfo.total_price || 0,
+              panel_info_id: slotInfo.panel_info_id,
+              road_usage_fee: slotInfo.road_usage_fee || 0,
+              advertising_fee: slotInfo.advertising_fee || 0,
+              panel_slot_status: slotInfo.panel_slot_status,
+            } as {
+              id: string | null;
+              notes: string | null;
+              max_width: number | null;
+              slot_name: string | null;
+              tax_price: number | null;
+              created_at: string | null;
+              is_premium: boolean | null;
+              max_height: number | null;
+              price_unit: string | null;
+              updated_at: string | null;
+              banner_type: string | null;
+              slot_number: number | null;
+              total_price: number | null;
+              panel_info_id: string | null;
+              road_usage_fee: number | null;
+              advertising_fee: number | null;
+              panel_slot_status: string | null;
+            };
+            console.log(
+              '🔍 Created panel_slot_snapshot with slot info:',
+              panelSlotSnapshot
+            );
           }
         } else {
-          // 다른 구들은 기존 로직
-          // banner_slot_info에서 가격 정보 가져오기 (BannerBillboard 타입인 경우만)
-          if (
-            item.type === 'banner' &&
-            item.banner_slot_info &&
-            item.banner_slot_info.length > 0
-          ) {
-            const slotInfo = item.banner_slot_info[0];
-            if (
-              slotInfo.banner_slot_price_policy &&
-              slotInfo.banner_slot_price_policy.length > 0
-            ) {
-              // 기본적으로 'default' 타입 사용
-              const defaultPolicy = slotInfo.banner_slot_price_policy.find(
-                (p: { price_usage_type: string }) =>
-                  p.price_usage_type === 'default'
-              );
-              if (defaultPolicy) {
-                priceForCart = defaultPolicy.total_price;
-                panelSlotSnapshot = {
-                  id: null,
-                  notes: null,
-                  max_width: null,
-                  slot_name: null,
-                  tax_price: defaultPolicy.tax_price,
-                  created_at: null,
-                  is_premium: null,
-                  max_height: null,
-                  price_unit: null,
-                  updated_at: null,
-                  banner_type: null,
-                  slot_number: null,
-                  total_price: defaultPolicy.total_price,
-                  panel_info_id: null,
-                  road_usage_fee: defaultPolicy.road_usage_fee,
-                  advertising_fee: defaultPolicy.advertising_fee,
-                  panel_slot_status: null,
-                };
-              } else {
-                // default가 없으면 첫 번째 정책 사용
-                const firstPolicy = slotInfo.banner_slot_price_policy[0];
-                priceForCart = firstPolicy.total_price;
-                panelSlotSnapshot = {
-                  id: null,
-                  notes: null,
-                  max_width: null,
-                  slot_name: null,
-                  tax_price: firstPolicy.tax_price,
-                  created_at: null,
-                  is_premium: null,
-                  max_height: null,
-                  price_unit: null,
-                  updated_at: null,
-                  banner_type: null,
-                  slot_number: null,
-                  total_price: firstPolicy.total_price,
-                  panel_info_id: null,
-                  road_usage_fee: firstPolicy.road_usage_fee,
-                  advertising_fee: firstPolicy.advertising_fee,
-                  panel_slot_status: null,
-                };
-              }
-            } else {
-              // 기존 로직 (banner_slot_info의 total_price 사용)
-              priceForCart = slotInfo.total_price || 0;
-              panelSlotSnapshot = {
-                id: null,
-                notes: null,
-                max_width: null,
-                slot_name: null,
-                tax_price: slotInfo.tax_price || 0,
-                created_at: null,
-                is_premium: null,
-                max_height: null,
-                price_unit: null,
-                updated_at: null,
-                banner_type: null,
-                slot_number: null,
-                total_price: slotInfo.total_price || 0,
-                panel_info_id: null,
-                road_usage_fee: slotInfo.road_usage_fee || 0,
-                advertising_fee: slotInfo.advertising_fee || 0,
-                panel_slot_status: null,
-              };
-            }
-          } else {
-            priceForCart = item.total_price || 0;
-          }
+          console.log('🔍 No banner_slot_info found for item:', {
+            itemId: item.id,
+            itemType: item.type,
+            hasBannerSlotInfo: 'banner_slot_info' in item,
+            bannerSlotInfoLength:
+              'banner_slot_info' in item
+                ? item.banner_slot_info?.length
+                : 'N/A',
+          });
         }
 
         const cartItem = {
@@ -603,6 +642,14 @@ export default function DisplayDetailPage({
           ...(panelSlotSnapshot && { panel_slot_snapshot: panelSlotSnapshot }), // 가격 상세 정보 추가
           panel_code: item.panel_code?.toString(),
         };
+
+        console.log('🔍 Final cart item with snapshot:', {
+          itemId: cartItem.id,
+          itemName: cartItem.name,
+          price: cartItem.price,
+          hasSnapshot: !!cartItem.panel_slot_snapshot,
+          snapshot: cartItem.panel_slot_snapshot,
+        });
 
         console.log('🔍 Adding item to cart:', cartItem);
         console.log('🔍 상하반기 정보:', {

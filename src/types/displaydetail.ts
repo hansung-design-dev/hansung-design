@@ -52,6 +52,7 @@ export interface BannerBillboard extends BaseBillboard {
   banner_type?: string;
   banner_slot_info?: {
     id: string;
+    panel_info_id: string;
     slot_number: number;
     slot_name: string;
     max_width: number;
@@ -64,6 +65,9 @@ export interface BannerBillboard extends BaseBillboard {
     price_unit?: string;
     is_premium: boolean;
     panel_slot_status: string;
+    notes: string;
+    created_at: string;
+    updated_at: string;
     // banner_slot_price_policy 정보 추가
     banner_slot_price_policy?: {
       id: string;

@@ -414,6 +414,9 @@ export async function POST(request: NextRequest) {
     // 첫 번째 아이템의 panel_slot_snapshot 가져오기 (가격 정보용)
     const firstItemSnapshot = items[0]?.panel_slot_snapshot;
 
+    // 결제 방법에 따른 결제 상태 결정
+    const isPaid = paymentMethod === 'bank_transfer' ? false : true;
+
     // 하나의 주문 생성 (주문 메타데이터만 포함)
     const { data: order, error: orderError } = await supabase
       .from('orders')
@@ -421,7 +424,7 @@ export async function POST(request: NextRequest) {
         user_profile_id: userProfile.id, // 기본 프로필 ID 사용
         user_auth_id: userId,
         total_price: totalPrice,
-        is_paid: true, // 임시로 즉시 결제 완료
+        is_paid: isPaid, // 계좌이체는 입금대기, 카드결제는 즉시 완료
         is_checked: false,
         payment_method: paymentMethod || 'card', // 기본값 설정
         year_month: yearMonth,
