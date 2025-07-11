@@ -78,13 +78,30 @@ export default function DisplayDetailPage({
   const [viewType, setViewType] = useState<'location' | 'gallery' | 'list'>(
     defaultView
   );
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [mapoFilter, setMapoFilter] = useState<'yeollip' | 'jeodan' | 'simin'>(
     'yeollip'
   );
   const [selectedHalfPeriod, setSelectedHalfPeriod] = useState<
     'first_half' | 'second_half'
   >('first_half');
+
+  // 상반기/하반기 탭별로 선택 상태 분리
+  const [selectedIdsFirstHalf, setSelectedIdsFirstHalf] = useState<string[]>(
+    []
+  );
+  const [selectedIdsSecondHalf, setSelectedIdsSecondHalf] = useState<string[]>(
+    []
+  );
+
+  // 현재 선택된 상하반기에 따른 선택 상태
+  const selectedIds =
+    selectedHalfPeriod === 'first_half'
+      ? selectedIdsFirstHalf
+      : selectedIdsSecondHalf;
+  const setSelectedIds =
+    selectedHalfPeriod === 'first_half'
+      ? setSelectedIdsFirstHalf
+      : setSelectedIdsSecondHalf;
   const [selectedDistrictPeriod, setSelectedDistrictPeriod] = useState<{
     first_half_from: string;
     first_half_to: string;
@@ -166,6 +183,13 @@ export default function DisplayDetailPage({
       fetchGuidelines(districtObj.name);
     }
   }, [districtObj?.name, isAllDistrictsView]);
+
+  // 상하반기 탭 변경 시 선택 상태 초기화 (선택적)
+  // useEffect(() => {
+  //   // 상하반기 탭을 변경할 때마다 선택 상태를 초기화하고 싶다면 주석 해제
+  //   setSelectedIdsFirstHalf([]);
+  //   setSelectedIdsSecondHalf([]);
+  // }, [selectedHalfPeriod]);
   // 마포구인지 확인
   const isMapoDistrict = districtObj?.code === 'mapo';
   // 송파구, 용산구인지 확인
@@ -393,8 +417,10 @@ export default function DisplayDetailPage({
 
     if (!shouldSelect) {
       newSelectedIds = selectedIds.filter((sid) => sid !== id);
-      dispatch({ type: 'REMOVE_ITEM', id });
-      console.log('🔍 Removed item from cart:', id);
+      // 상반기/하반기 정보를 포함한 ID로 장바구니에서 제거
+      const uniqueCartItemId = `${id}-${selectedHalfPeriod}`;
+      dispatch({ type: 'REMOVE_ITEM', id: uniqueCartItemId });
+      console.log('🔍 Removed item from cart:', uniqueCartItemId);
     } else {
       newSelectedIds = [...selectedIds, id];
       // billboards에서 아이템 찾기
@@ -626,8 +652,11 @@ export default function DisplayDetailPage({
           });
         }
 
+        // 상반기/하반기 정보를 포함한 고유한 ID 생성
+        const uniqueCartItemId = `${item.id}-${selectedHalfPeriod}`;
+
         const cartItem = {
-          id: item.id, // 복합 ID (gwanak-03-uuid)
+          id: uniqueCartItemId, // 상반기/하반기 정보를 포함한 고유 ID
           type: 'banner-display' as const,
           name: getCartItemName(item),
           district: item.district,
