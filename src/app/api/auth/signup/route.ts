@@ -8,24 +8,50 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, name, username, phone, agreements } =
-      await request.json();
+    const body = await request.json();
+    console.log('🔍 회원가입 요청 데이터:', body);
+
+    const { email, password, name, username, phone, agreements } = body;
+
+    console.log('🔍 필수 필드 검증:', {
+      email: !!email,
+      password: !!password,
+      name: !!name,
+      username: !!username,
+      phone: !!phone,
+      agreements: agreements,
+    });
 
     // 필수 필드 검증
     if (!email || !password || !name || !username || !phone) {
+      console.log('🔍 필수 필드 누락:', {
+        email: !!email,
+        password: !!password,
+        name: !!name,
+        username: !!username,
+        phone: !!phone,
+      });
       return NextResponse.json(
         { success: false, error: '모든 필수 정보를 입력해주세요.' },
         { status: 400 }
       );
     }
 
+    console.log('🔍 약관 동의 확인:', {
+      terms: agreements?.terms,
+      privacy: agreements?.privacy,
+      collection: agreements?.collection,
+      thirdParty: agreements?.thirdParty,
+    });
+
     // 약관 동의 확인
     if (
-      !agreements.terms ||
-      !agreements.privacy ||
-      !agreements.collection ||
-      !agreements.thirdParty
+      !agreements?.terms ||
+      !agreements?.privacy ||
+      !agreements?.collection ||
+      !agreements?.thirdParty
     ) {
+      console.log('🔍 약관 동의 누락');
       return NextResponse.json(
         { success: false, error: '모든 필수 약관에 동의해주세요.' },
         { status: 400 }
