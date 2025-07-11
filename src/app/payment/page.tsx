@@ -39,7 +39,24 @@ function PaymentPageContent() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sendByEmail, setSendByEmail] = useState(false);
-  const [emailAddress, setEmailAddress] = useState('');
+
+  // 패널 타입 표시 함수
+  const getPanelTypeDisplay = (panelType: string) => {
+    const typeMap: Record<string, string> = {
+      panel: '현수막게시대',
+      'top-fixed': '상단광고',
+      led: 'LED전자게시대',
+      'multi-panel': '연립형',
+      'lower-panel': '저단형',
+      'bulletin-board': '시민/문화게시대',
+      'semi-auto': '반자동',
+      with_lighting: '조명용',
+      no_lighting: '비조명용',
+      manual: '현수막게시대',
+      'cultural-board': '시민/문화게시대',
+    };
+    return typeMap[panelType] || panelType;
+  };
 
   // URL 파라미터에서 선택된 아이템 ID들 가져오기
   useEffect(() => {
@@ -222,7 +239,7 @@ function PaymentPageContent() {
 
   if (error) {
     return (
-      <main className="min-h-screen bg-white pt-[5.5rem] bg-gray-100 min-h-screen lg:px-[10rem]">
+      <main className="min-h-screen bg-white pt-[5.5rem] bg-gray-100 lg:px-[10rem]">
         <Nav variant="default" className="bg-white" />
         <div className="container mx-auto px-4 sm:px-1 py-8">
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -273,6 +290,18 @@ function PaymentPageContent() {
                 </h2>
                 <div className="mb-4 text-1.25 font-700 text-[#222] sm:text-0.875">
                   {item.name}
+                  <span className="text-gray-500 text-0.875 ml-2">
+                    (
+                    {getPanelTypeDisplay(
+                      item.panel_type ||
+                        item.panel_slot_snapshot?.banner_type ||
+                        'panel'
+                    )}
+                    {item.district === '서대문구' &&
+                      item.is_for_admin &&
+                      '-행정용패널'}
+                    )
+                  </span>
                 </div>
                 <div className="flex items-center gap-2 border border-solid border-gray-12 rounded-[0.375rem] p-4 bg-gray-11 sm:p-2">
                   <div className="text-1.25 font-700 sm:text-0.875">
@@ -341,13 +370,9 @@ function PaymentPageContent() {
                             </label>
                           </div>
                           {sendByEmail && (
-                            <input
-                              type="email"
-                              value={emailAddress}
-                              onChange={(e) => setEmailAddress(e.target.value)}
-                              className="border border-gray-300 border-solid shadow-none rounded h-[3rem] w-full md:w-[20rem] sm:w-[14.4rem] placeholder:pl-4"
-                              placeholder="이메일 주소를 입력해주세요"
-                            />
+                            <span className="text-gray-600 font-medium text-sm h-[3rem] w-full md:w-[20rem] sm:w-[14.4rem] placeholder:pl-4">
+                              hansung-design@example.com
+                            </span>
                           )}
                           {!sendByEmail && (
                             <input
@@ -442,7 +467,7 @@ function PaymentPageContent() {
             {paymentMethod === 'bank_transfer' && bankInfo && (
               <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <h4 className="font-semibold text-blue-800 mb-2">
-                  입금 계좌 정보
+                  입금 계좌 정보 ({selectedItems[0]?.district || '선택된 구'})
                 </h4>
                 <div className="text-blue-700">
                   <p>
@@ -456,7 +481,7 @@ function PaymentPageContent() {
                   </p>
                 </div>
                 <p className="text-sm text-blue-600 mt-2">
-                  * 계좌이체 시 입금자명을 주문자명과 동일하게 입력해주세요.
+                  * 계좌이체시 입금자명을 주문자명과 동일하게 입력해주세요.
                 </p>
               </div>
             )}
@@ -466,7 +491,7 @@ function PaymentPageContent() {
         {/* 우측 - 결제 영역 */}
         <div className="w-full md:w-[24rem] space-y-6">
           <div className="bg-white p-6 rounded-lg shadow-md">
-            <h3 className="font-bold text-1.25 mb-4 border-b border-gray-1 pb-4 border-b-[2px]">
+            <h3 className="font-bold text-1.25 mb-4 border-b-sollid border-gray-1 pb-4 border-b-[2px]">
               최종 결제 금액
             </h3>
             <div className="flex flex-col gap-[0.88rem] text-1 font-500 text-gray-2">
@@ -493,7 +518,7 @@ function PaymentPageContent() {
           </div>
 
           <button
-            className={`w-full py-6 rounded-lg transition-colors ${
+            className={`w-full py-6 rounded-lg transition-colors hover:cursor-pointer ${
               isProcessing
                 ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
                 : 'bg-black text-white hover:bg-gray-800'
@@ -501,7 +526,7 @@ function PaymentPageContent() {
             disabled={isProcessing}
             onClick={handlePayment}
           >
-            <span className="text-white sm:text-1.25">
+            <span className="text-white sm:text-1.25 ">
               {isProcessing
                 ? '처리중...'
                 : paymentMethod === 'bank_transfer'

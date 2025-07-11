@@ -356,7 +356,7 @@ export async function POST(request: NextRequest) {
     }, 0);
     console.log('🔍 총 가격:', totalPrice);
 
-    // 모든 아이템의 상반기/하반기 정보가 일치하는지 확인
+    // 첫 번째 아이템 확인
     const firstItem = items[0];
     if (!firstItem) {
       return NextResponse.json(
@@ -365,23 +365,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const allItemsHaveSamePeriod = items.every(
-      (item) =>
-        item.halfPeriod === firstItem.halfPeriod &&
-        item.selectedYear === firstItem.selectedYear &&
-        item.selectedMonth === firstItem.selectedMonth
-    );
+    // 각 아이템의 기간 정보가 유효한지 확인 (모든 아이템이 같은 기간일 필요는 없음)
+    const allItemsHaveValidPeriod = items.every((item) => {
+      return item.halfPeriod && item.selectedYear && item.selectedMonth;
+    });
 
-    if (!allItemsHaveSamePeriod) {
+    if (!allItemsHaveValidPeriod) {
       return NextResponse.json(
         {
-          error:
-            '모든 상품은 같은 기간(년월, 상반기/하반기)을 선택해야 합니다.',
+          error: '모든 상품에 유효한 기간 정보가 필요합니다.',
         },
         { status: 400 }
       );
     }
 
+    // 주문 메타데이터용으로 첫 번째 아이템의 기간 정보 사용 (실제로는 각 아이템별로 개별 처리)
     const halfPeriod = firstItem.halfPeriod;
     const selectedYear = firstItem.selectedYear;
     const selectedMonth = firstItem.selectedMonth;

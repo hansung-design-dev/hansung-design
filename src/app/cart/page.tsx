@@ -279,8 +279,8 @@ function CartItemRow({
             <span className="text-gray-500 text-0.875">
               (
               {getPanelTypeDisplay(
-                item.panel_slot_snapshot?.banner_type ||
-                  item.panel_type ||
+                item.panel_type ||
+                  item.panel_slot_snapshot?.banner_type ||
                   'panel'
               )}
               {item.district === '서대문구' &&
@@ -469,7 +469,7 @@ export default function Cart() {
 
     cart.forEach((item) => {
       const panelType =
-        item.panel_slot_snapshot?.banner_type || item.panel_type || 'panel';
+        item.panel_type || item.panel_slot_snapshot?.banner_type || 'panel';
 
       // 상담신청: LED 전자게시대 전체, 상단광고(용산구/송파구)
       if (
@@ -517,7 +517,7 @@ export default function Cart() {
       // 현재 cart에서 상담신청 아이템 필터링
       const consultingItems = cart.filter((item) => {
         const panelType =
-          item.panel_slot_snapshot?.banner_type || item.panel_type || 'panel';
+          item.panel_type || item.panel_slot_snapshot?.banner_type || 'panel';
         const district = item.district;
 
         // LED 전자게시대는 모두 상담신청
