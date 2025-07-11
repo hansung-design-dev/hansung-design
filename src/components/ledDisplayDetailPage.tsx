@@ -199,7 +199,7 @@ export default function LEDDisplayDetailPage({
           // LED 전자게시대는 상시접수이므로 상하반기 정보 제거
           panel_type: item.panel_type,
           panel_info_id: item.panel_info_id, // 원본 UUID
-          panel_code: item.panel_code,
+          panel_code: item.panel_code?.toString(),
         };
 
         console.log('🔍 Adding LED item to cart:', cartItem);
@@ -242,7 +242,7 @@ export default function LEDDisplayDetailPage({
         // LED 전자게시대는 상시접수이므로 상하반기 정보 제거
         panel_type: item.panel_type,
         panel_info_id: item.panel_info_id, // 원본 UUID
-        panel_code: item.panel_code,
+        panel_code: item.panel_code?.toString(),
       };
 
       console.log('🔍 Adding LED item to cart:', cartItem);
