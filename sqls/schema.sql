@@ -321,7 +321,6 @@ CREATE TABLE public.region_gu (
   is_active boolean DEFAULT false,
   CONSTRAINT region_gu_pkey PRIMARY KEY (id)
 );
-
 CREATE TABLE public.region_gu_display_periods (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   display_type_id uuid,

@@ -27,7 +27,7 @@ import UserProfileModal from '@/src/components/modal/UserProfileModal';
 import ConsultationModal from '@/src/components/modal/ConsultationModal';
 import PeriodSelector from '@/src/components/PeriodSelector';
 // import CartItemAccordion from '@/src/components/cartItemAccordion';
-//import { useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 const fadeInUp = {
   initial: { y: 60, opacity: 0 },
@@ -193,18 +193,6 @@ function CartItemRow({
                 </span>
                 {item.name}
               </div>
-              <span className="text-gray-500 text-0.875">
-                (
-                {getPanelTypeDisplay(
-                  item.panel_slot_snapshot?.banner_type ||
-                    item.panel_type ||
-                    'panel'
-                )}
-                {item.district === '서대문구' &&
-                  item.is_for_admin &&
-                  '-행정용패널'}
-                )
-              </span>
             </div>
             <div className="text-1.25 font-semibold">
               {item.price === 0
@@ -291,8 +279,8 @@ function CartItemRow({
             <span className="text-gray-500 text-0.875">
               (
               {getPanelTypeDisplay(
-                item.panel_slot_snapshot?.banner_type ||
-                  item.panel_type ||
+                item.panel_type ||
+                  item.panel_slot_snapshot?.banner_type ||
                   'panel'
               )}
               {item.district === '서대문구' &&
@@ -427,6 +415,7 @@ export default function Cart() {
   const { cart, dispatch } = useCart();
   const { user } = useAuth();
   const { profiles } = useProfile();
+  const router = useRouter();
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<'payment' | 'consulting'>(
     'payment'
@@ -480,7 +469,7 @@ export default function Cart() {
 
     cart.forEach((item) => {
       const panelType =
-        item.panel_slot_snapshot?.banner_type || item.panel_type || 'panel';
+        item.panel_type || item.panel_slot_snapshot?.banner_type || 'panel';
 
       // 상담신청: LED 전자게시대 전체, 상단광고(용산구/송파구)
       if (
@@ -528,7 +517,7 @@ export default function Cart() {
       // 현재 cart에서 상담신청 아이템 필터링
       const consultingItems = cart.filter((item) => {
         const panelType =
-          item.panel_slot_snapshot?.banner_type || item.panel_type || 'panel';
+          item.panel_type || item.panel_slot_snapshot?.banner_type || 'panel';
         const district = item.district;
 
         // LED 전자게시대는 모두 상담신청
@@ -646,6 +635,20 @@ export default function Cart() {
       (item) => item.panel_slot_snapshot
     );
 
+    // 디버깅: 선택된 아이템들의 panel_slot_snapshot 확인
+    console.log(
+      '🔍 Cart - Selected items with panel_slot_snapshot:',
+      selectedCartItems.map((item) => ({
+        id: item.id,
+        name: item.name,
+        hasSnapshot: !!item.panel_slot_snapshot,
+        snapshot: item.panel_slot_snapshot,
+        price: item.price,
+        district: item.district,
+        panel_type: item.panel_type,
+      }))
+    );
+
     // 상세 가격 정보 계산 (모든 아이템)
     let priceDetails = null;
     if (hasDetailedPriceItems) {
@@ -667,6 +670,10 @@ export default function Cart() {
         tax_price: totalTaxPrice,
         road_usage_fee: totalRoadUsageFee,
       };
+
+      console.log('🔍 Cart - Calculated price details:', priceDetails);
+    } else {
+      console.log('🔍 Cart - No items with panel_slot_snapshot found');
     }
 
     return {
@@ -988,114 +995,23 @@ export default function Cart() {
         return;
       }
 
-      // 주문 생성 API 호출
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          items: selectedCartItems.map((item) => {
-            // 복합 ID에서 원본 UUID 추출
-            let panelInfoId;
+      // 선택된 아이템들을 URL 파라미터로 인코딩하여 결제 페이지로 이동
+      const selectedItemsParam = encodeURIComponent(
+        JSON.stringify(selectedCartItems.map((item) => item.id))
+      );
 
-            // UUID 패턴: 8-4-4-4-12 형식 (예: 298a1257-f68f-4f64-b918-bdd8db37fb79)
-            const uuidPattern =
-              /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      console.log('🔍 Cart - selectedCartItems:', selectedCartItems);
+      console.log('🔍 Cart - selectedItemsParam:', selectedItemsParam);
 
-            if (item.panel_info_id) {
-              if (uuidPattern.test(item.panel_info_id)) {
-                // 이미 UUID인 경우
-                panelInfoId = item.panel_info_id;
-              } else if (item.panel_info_id.includes('-')) {
-                // 복합 ID인 경우: district-panel-uuid
-                const parts = item.panel_info_id.split('-');
-                if (parts.length >= 5) {
-                  // UUID 부분 추출 (3번째 요소부터 끝까지)
-                  const uuidPart = parts.slice(2).join('-');
-                  if (uuidPattern.test(uuidPart)) {
-                    panelInfoId = uuidPart;
-                  } else {
-                    console.error('❌ 잘못된 UUID 형식:', uuidPart);
-                    throw new Error('잘못된 패널 정보 ID 형식입니다.');
-                  }
-                } else {
-                  console.error('❌ 복합 ID 형식 오류:', item.panel_info_id);
-                  throw new Error('잘못된 패널 정보 ID 형식입니다.');
-                }
-              } else {
-                console.error('❌ 알 수 없는 ID 형식:', item.panel_info_id);
-                throw new Error('잘못된 패널 정보 ID 형식입니다.');
-              }
-            } else if (item.id) {
-              if (uuidPattern.test(item.id)) {
-                // 이미 UUID인 경우
-                panelInfoId = item.id;
-              } else if (item.id.includes('-')) {
-                // 복합 ID인 경우
-                const parts = item.id.split('-');
-                if (parts.length >= 5) {
-                  const uuidPart = parts.slice(2).join('-');
-                  if (uuidPattern.test(uuidPart)) {
-                    panelInfoId = uuidPart;
-                  } else {
-                    console.error('❌ 잘못된 UUID 형식:', uuidPart);
-                    throw new Error('잘못된 패널 정보 ID 형식입니다.');
-                  }
-                } else {
-                  console.error('❌ 복합 ID 형식 오류:', item.id);
-                  throw new Error('잘못된 패널 정보 ID 형식입니다.');
-                }
-              } else {
-                console.error('❌ 알 수 없는 ID 형식:', item.id);
-                throw new Error('잘못된 패널 정보 ID 형식입니다.');
-              }
-            } else {
-              throw new Error('패널 정보 ID가 없습니다.');
-            }
-
-            console.log('🔍 원본 ID:', item.id, '추출된 UUID:', panelInfoId);
-
-            return {
-              id: item.id,
-              name: item.name,
-              price: item.price,
-              quantity: 1,
-              panel_info_id: panelInfoId,
-              panel_slot_snapshot: item.panel_slot_snapshot,
-              panel_slot_usage_id: item.panel_slot_usage_id,
-              halfPeriod: item.halfPeriod,
-              selectedYear: item.selectedYear,
-              selectedMonth: item.selectedMonth,
-              startDate: new Date().toISOString().split('T')[0],
-              endDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
-                .toISOString()
-                .split('T')[0],
-            };
-          }),
-          paymentMethod: 'card',
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error || '주문 생성에 실패했습니다.');
-      }
-
-      // 성공 시 선택된 아이템들을 장바구니에서 제거
-      selectedCartItems.forEach((item) => {
-        dispatch({ type: 'REMOVE_ITEM', id: item.id });
-      });
-
-      // 선택 상태 초기화
+      // 선택 상태 초기화 (아이템은 payment 페이지에서 성공 후 제거)
       setSelectedItems(new Set());
 
-      // 성공 모달 표시
-      setIsPaymentSuccessModalOpen(true);
+      router.push(`/payment?items=${selectedItemsParam}`);
     } catch (error) {
-      console.error('Payment error:', error);
-      setErrorMessage('결제 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+      console.error('Payment navigation error:', error);
+      setErrorMessage(
+        '결제 페이지로 이동 중 오류가 발생했습니다. 다시 시도해주세요.'
+      );
       setIsPaymentErrorModalOpen(true);
     }
   };

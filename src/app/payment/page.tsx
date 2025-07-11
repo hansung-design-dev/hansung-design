@@ -1,111 +1,319 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Image from 'next/image';
 import { Button } from '@/src/components/button/button';
 import Nav from '@/src/components/layouts/nav';
 import { useAuth } from '@/src/contexts/authContext';
+import { useCart } from '@/src/contexts/cartContext';
+import { useProfile } from '@/src/contexts/profileContext';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { CartItem } from '@/src/contexts/cartContext';
 
-// const fadeInUp = {
-//   initial: { y: 60, opacity: 0 },
-//   animate: {
-//     y: 0,
-//     opacity: 1,
-//     transition: { duration: 0.6, ease: 'easeOut' },
-//   },
-// };
+interface BankInfo {
+  id: string;
+  bank_name: string;
+  account_number: string;
+  depositor: string;
+  region_gu: {
+    id: string;
+    name: string;
+  };
+  display_types: {
+    id: string;
+    name: string;
+  };
+}
 
-export default function PaymentPage() {
+function PaymentPageContent() {
   const { user } = useAuth();
-  const [userType, setUserType] = useState<
-    'personal' | 'public_institution' | 'company'
-  >('personal');
-  const [isApproved, setIsApproved] = useState(false);
-  const [isPaymentEnabled, setIsPaymentEnabled] = useState(true);
+  const { cart, dispatch } = useCart();
+  const { profiles } = useProfile();
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
-  // 사용자 유형 확인 (실제로는 API에서 가져와야 함)
+  const [selectedItems, setSelectedItems] = useState<CartItem[]>([]);
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'bank_transfer'>(
+    'card'
+  );
+  const [bankInfo, setBankInfo] = useState<BankInfo | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sendByEmail, setSendByEmail] = useState(false);
+
+  // 패널 타입 표시 함수
+  const getPanelTypeDisplay = (panelType: string) => {
+    const typeMap: Record<string, string> = {
+      panel: '현수막게시대',
+      'top-fixed': '상단광고',
+      led: 'LED전자게시대',
+      'multi-panel': '연립형',
+      'lower-panel': '저단형',
+      'bulletin-board': '시민/문화게시대',
+      'semi-auto': '반자동',
+      with_lighting: '조명용',
+      no_lighting: '비조명용',
+      manual: '현수막게시대',
+      'cultural-board': '시민/문화게시대',
+    };
+    return typeMap[panelType] || panelType;
+  };
+
+  // URL 파라미터에서 선택된 아이템 ID들 가져오기
   useEffect(() => {
-    if (user) {
-      // 임시로 랜덤하게 사용자 유형 설정 (실제로는 프로필 정보에서 가져와야 함)
-      const types = ['personal', 'public_institution', 'company'];
-      const randomType = types[Math.floor(Math.random() * types.length)] as
-        | 'personal'
-        | 'public_institution'
-        | 'company';
-      setUserType(randomType);
+    const itemsParam = searchParams.get('items');
+    console.log('🔍 Payment page - itemsParam:', itemsParam);
+    console.log('🔍 Payment page - cart:', cart);
 
-      // 공공기관용과 기업용은 승인 필요
-      if (randomType === 'public_institution' || randomType === 'company') {
-        setIsApproved(false);
-        setIsPaymentEnabled(false);
-      } else {
-        setIsApproved(true);
-        setIsPaymentEnabled(true);
+    if (itemsParam) {
+      try {
+        const selectedItemIds = JSON.parse(
+          decodeURIComponent(itemsParam)
+        ) as string[];
+        console.log('🔍 Payment page - selectedItemIds:', selectedItemIds);
+
+        const items = cart.filter((item) => selectedItemIds.includes(item.id));
+        console.log('🔍 Payment page - filtered items:', items);
+
+        setSelectedItems(items);
+      } catch (error) {
+        console.error('Error parsing selected items:', error);
+        setError('선택된 상품 정보를 불러오는데 실패했습니다.');
       }
+    } else {
+      console.log('🔍 Payment page - no items param found');
     }
-  }, [user]);
+  }, [searchParams, cart]);
 
-  // 사용자 유형에 따른 UI 텍스트
-  const getUserTypeText = () => {
-    switch (userType) {
-      case 'public_institution':
-        return '공공기관용';
-      case 'company':
-        return '기업용';
-      default:
-        return '개인용';
+  // 기본 프로필 찾기
+  const defaultProfile =
+    profiles.find((profile) => profile.is_default) || profiles[0];
+
+  // 가격 계산
+  const priceSummary = selectedItems.reduce(
+    (summary, item) => {
+      const roadUsageFee = item.panel_slot_snapshot?.road_usage_fee || 0;
+      const advertisingFee = item.panel_slot_snapshot?.advertising_fee || 0;
+      const taxPrice = item.panel_slot_snapshot?.tax_price || 0;
+      const totalPrice = item.price || 0;
+
+      return {
+        roadUsageFee: summary.roadUsageFee + roadUsageFee,
+        advertisingFee: summary.advertisingFee + advertisingFee,
+        taxPrice: summary.taxPrice + taxPrice,
+        totalPrice: summary.totalPrice + totalPrice,
+      };
+    },
+    {
+      roadUsageFee: 0,
+      advertisingFee: 0,
+      taxPrice: 0,
+      totalPrice: 0,
+    }
+  );
+
+  // 구별 계좌번호 정보 가져오기
+  useEffect(() => {
+    const fetchBankInfo = async () => {
+      if (selectedItems.length === 0) return;
+
+      // 첫 번째 아이템의 구와 타입으로 계좌번호 가져오기
+      const firstItem = selectedItems[0];
+      const displayType =
+        firstItem.type === 'banner-display' ? 'banner_display' : 'led_display';
+
+      try {
+        const response = await fetch(
+          `/api/region-gu?action=getBankInfo&district=${encodeURIComponent(
+            firstItem.district
+          )}&displayType=${displayType}`
+        );
+        const data = await response.json();
+
+        if (data.success) {
+          setBankInfo(data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching bank info:', error);
+      }
+    };
+
+    fetchBankInfo();
+  }, [selectedItems]);
+
+  // 결제 처리
+  const handlePayment = async () => {
+    if (!user) {
+      setError('로그인이 필요합니다.');
+      return;
+    }
+
+    if (selectedItems.length === 0) {
+      setError('선택된 상품이 없습니다.');
+      return;
+    }
+
+    setIsProcessing(true);
+    setError(null);
+
+    try {
+      // 복합 ID에서 원본 UUID 추출 함수
+      const extractPanelInfoId = (item: CartItem) => {
+        const uuidPattern =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+        if (item.panel_info_id) {
+          if (uuidPattern.test(item.panel_info_id)) {
+            return item.panel_info_id;
+          } else if (item.panel_info_id.includes('-')) {
+            const parts = item.panel_info_id.split('-');
+            if (parts.length >= 5) {
+              const uuidPart = parts.slice(2).join('-');
+              if (uuidPattern.test(uuidPart)) {
+                return uuidPart;
+              }
+            }
+          }
+        } else if (item.id) {
+          if (uuidPattern.test(item.id)) {
+            return item.id;
+          } else if (item.id.includes('-')) {
+            const parts = item.id.split('-');
+            if (parts.length >= 5) {
+              const uuidPart = parts.slice(2).join('-');
+              if (uuidPattern.test(uuidPart)) {
+                return uuidPart;
+              }
+            }
+          }
+        }
+        throw new Error('패널 정보 ID를 추출할 수 없습니다.');
+      };
+
+      // 주문 생성 API 호출
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: selectedItems.map((item) => ({
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            quantity: 1,
+            panel_info_id: extractPanelInfoId(item),
+            panel_slot_snapshot: item.panel_slot_snapshot,
+            panel_slot_usage_id: item.panel_slot_usage_id,
+            halfPeriod: item.halfPeriod,
+            selectedYear: item.selectedYear,
+            selectedMonth: item.selectedMonth,
+            startDate: new Date().toISOString().split('T')[0],
+            endDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
+              .toISOString()
+              .split('T')[0],
+          })),
+          paymentMethod: paymentMethod,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || '주문 생성에 실패했습니다.');
+      }
+
+      // 성공 시 선택된 아이템들을 장바구니에서 제거
+      selectedItems.forEach((item) => {
+        dispatch({ type: 'REMOVE_ITEM', id: item.id });
+      });
+
+      // 성공 시 마이페이지 주문내역으로 이동
+      router.push('/mypage/orders');
+    } catch (error) {
+      console.error('Payment error:', error);
+      setError('결제 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
-  // 사용자 유형에 따른 가격 표시
-  const getPriceDisplay = () => {
-    switch (userType) {
-      case 'public_institution':
-        return '1,150,000'; // 행정가격 (할인 적용)
-      case 'company':
-        return '1,250,000'; // 일반가격
-      default:
-        return '1,250,000'; // 일반가격
-    }
-  };
-
-  // 사용자 유형에 따른 할인 표시
-  const getDiscountDisplay = () => {
-    switch (userType) {
-      case 'public_institution':
-        return '-200,000원'; // 행정가격 할인
-      case 'company':
-        return '-0원'; // 할인 없음
-      default:
-        return '-100,000원'; // 기본 할인
-    }
-  };
+  if (error) {
+    return (
+      <main className="min-h-screen bg-white pt-[5.5rem] bg-gray-100 lg:px-[10rem]">
+        <Nav variant="default" className="bg-white" />
+        <div className="container mx-auto px-4 sm:px-1 py-8">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-center">
+              <svg
+                className="w-5 h-5 text-red-400 mr-2"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <span className="text-red-800 font-medium">{error}</span>
+            </div>
+            <Button
+              className="mt-4 bg-red-600 text-white px-4 py-2 rounded"
+              onClick={() => router.push('/cart')}
+            >
+              장바구니로 돌아가기
+            </Button>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
-    <main className="min-h-screen bg-white pt-[5.5rem] bg-gray-100 min-h-screen lg:px-[10rem]">
+    <main className="min-h-screen bg-white pt-[5.5rem] bg-gray-100 lg:px-[10rem]">
       <Nav variant="default" className="bg-white" />
 
       <div className="container mx-auto px-4 sm:px-1 py-8 grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-8">
-        {/* 좌측 - 현수막 게시대 카드 2개 */}
+        {/* 좌측 - 주문 상품 정보 */}
         <div className="space-y-8 border border-solid border-gray-3 rounded-[0.375rem] p-[2.5rem] sm:p-[1.5rem]">
-          {[1, 2].map((_, index) => (
+          {/* 주문 상품 목록 */}
+          {selectedItems.map((item) => (
             <section
-              key={index}
+              key={item.id}
               className="p-6 border rounded-lg shadow-sm flex flex-col gap-4 sm:p-2"
             >
               <div>
-                <h2 className="text-1.25 text-gray-2 font-bold mb-4 border-b border-black border-b-[0.4rem] pb-4">
-                  현수막 게시대
+                <h2 className="text-1.25 text-gray-2 font-bold mb-4 border-b-solid border-black border-b-[0.1rem] pb-4">
+                  {item.type === 'banner-display'
+                    ? '현수막 게시대'
+                    : 'LED 전자게시대'}
                 </h2>
                 <div className="mb-4 text-1.25 font-700 text-[#222] sm:text-0.875">
-                  올림픽대로 반포사거리 앞 (반포 우수저장)
+                  {item.name}
+                  <span className="text-gray-500 text-0.875 ml-2">
+                    (
+                    {getPanelTypeDisplay(
+                      item.panel_type ||
+                        item.panel_slot_snapshot?.banner_type ||
+                        'panel'
+                    )}
+                    {item.district === '서대문구' &&
+                      item.is_for_admin &&
+                      '-행정용패널'}
+                    )
+                  </span>
                 </div>
                 <div className="flex items-center gap-2 border border-solid border-gray-12 rounded-[0.375rem] p-4 bg-gray-11 sm:p-2">
-                  <input
-                    type="checkbox"
-                    className="w-[1.75rem] h-[1.75rem] sm:w-[0.875rem] sm:h-[0.875rem]"
-                  />
                   <div className="text-1.25 font-700 sm:text-0.875">
-                    {getUserTypeText()} - {user?.name || '사용자'}
+                    {item.is_public_institution
+                      ? '공공기관용'
+                      : item.is_company
+                      ? '기업용'
+                      : '개인용'}{' '}
+                    -{' '}
+                    {defaultProfile?.contact_person_name ||
+                      user?.name ||
+                      '사용자'}
                   </div>
                 </div>
               </div>
@@ -114,7 +322,7 @@ export default function PaymentPage() {
                 <h3 className="text-1.25 font-600 mb-2 text-[#222] sm:pb-5">
                   고객 정보
                 </h3>
-                <form className="flex flex-col gap-5 ">
+                <form className="flex flex-col gap-5">
                   <div className="flex flex-col gap-4 sm:gap-8">
                     {/* 작업이름 */}
                     <div className="flex flex-col sm:flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4 sm:gap-2">
@@ -128,18 +336,6 @@ export default function PaymentPage() {
                       />
                     </div>
 
-                    {/* 휴대폰 번호 */}
-                    <div className="flex flex-col sm:flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4 sm:gap-2">
-                      <label className="w-full md:w-[9rem] text-gray-600 font-medium">
-                        휴대폰 번호
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full md:w-[21.25rem] sm:w-[13rem]  border border-gray-300 border-solid shadow-none rounded px-4 h-[3rem]"
-                        placeholder="010 - 1234 - 5678"
-                      />
-                    </div>
-
                     {/* 파일업로드 */}
                     <div className="flex flex-col sm:flex-col md:flex-row items-start justify-between gap-2 md:gap-4 sm:gap-2">
                       <label className="w-full md:w-[9rem] text-gray-600 font-medium pt-2">
@@ -148,38 +344,44 @@ export default function PaymentPage() {
                       <div className="flex-1 space-y-2">
                         <input
                           type="file"
-                          className="border border-gray-300 py-2 w-full rounded"
+                          className={`border border-gray-300 py-2 w-full rounded ${
+                            sendByEmail ? 'opacity-50 cursor-not-allowed' : ''
+                          }`}
+                          disabled={sendByEmail}
+                          readOnly={sendByEmail}
+                          defaultValue={
+                            sendByEmail ? 'hansung-design@example.com' : ''
+                          }
                         />
                         <div className="flex flex-col gap-2 items-start">
-                          <div className="text-sm text-gray-500">
-                            이메일로 파일 보낼게요
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              id="sendByEmail"
+                              checked={sendByEmail}
+                              onChange={(e) => setSendByEmail(e.target.checked)}
+                              className="w-4 h-4"
+                            />
+                            <label
+                              htmlFor="sendByEmail"
+                              className="text-sm text-gray-500"
+                            >
+                              이메일로 파일 보낼게요
+                            </label>
                           </div>
-                          <input
-                            type="text"
-                            className="border border-gray-300 border-solid shadow-none rounded h-[3rem] w-full md:w-[20rem] sm:w-[14.4rem] placeholder:pl-4"
-                            placeholder="파일 이름"
-                          />
+                          {sendByEmail && (
+                            <span className="text-gray-600 font-medium text-sm h-[3rem] w-full md:w-[20rem] sm:w-[14.4rem] placeholder:pl-4">
+                              hansung-design@example.com
+                            </span>
+                          )}
+                          {!sendByEmail && (
+                            <input
+                              type="text"
+                              className="border border-gray-300 border-solid shadow-none rounded h-[3rem] w-full md:w-[20rem] sm:w-[14.4rem] placeholder:pl-4"
+                              placeholder="파일 이름"
+                            />
+                          )}
                         </div>
-                      </div>
-                    </div>
-
-                    {/* 쿠폰번호 */}
-                    <div className="flex flex-col sm:flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4 sm:gap-2">
-                      <label className="w-full md:w-[9rem] text-gray-600 font-medium">
-                        쿠폰번호
-                      </label>
-                      <div className="flex gap-2 w-full md:w-[21.25rem]">
-                        <input
-                          type="text"
-                          className="w-1/2 border border-gray-300 border-solid shadow-none rounded px-4 h-[3rem]"
-                          placeholder="쿠폰번호 입력"
-                        />
-                        <button
-                          type="button"
-                          className="w-1/2 bg-black text-white rounded-[0.375rem] h-[3rem]"
-                        >
-                          확인
-                        </button>
                       </div>
                     </div>
 
@@ -200,7 +402,7 @@ export default function PaymentPage() {
                     </div>
                   </div>
 
-                  <div className="flex justify-end ">
+                  <div className="flex justify-end">
                     <Button
                       variant="ghost"
                       className="bg-gray-4 w-full md:w-[8rem] text-0.875 p-1 sm:w-[10rem] sm:mb-6"
@@ -213,12 +415,32 @@ export default function PaymentPage() {
             </section>
           ))}
 
+          {/* 결제수단 선택 */}
           <section className="p-6 bg-white rounded-lg shadow-md">
             <h3 className="text-1.25 font-700 mb-4 sm:text-1">결제수단</h3>
             <div className="flex flex-col gap-3 items-center justify-center">
-              <button className="border border-gray-3 rounded-[0.375rem] px-4 py-6 w-full bg-gray-11 text-1.25 font-700 sm:text-1 sm:py-4">
+              <button
+                className={`border rounded-[0.375rem] px-4 py-6 w-full text-1.25 font-700 sm:text-1 sm:py-4 ${
+                  paymentMethod === 'card'
+                    ? 'border-black bg-black text-white'
+                    : 'border-gray-3 bg-gray-11'
+                }`}
+                onClick={() => setPaymentMethod('card')}
+              >
                 신용 · 체크카드
               </button>
+
+              <button
+                className={`border rounded-[0.375rem] px-4 py-6 w-full text-1.25 font-700 sm:text-1 sm:py-4 ${
+                  paymentMethod === 'bank_transfer'
+                    ? 'border-black bg-black text-white'
+                    : 'border-gray-3 bg-gray-11'
+                }`}
+                onClick={() => setPaymentMethod('bank_transfer')}
+              >
+                계좌이체
+              </button>
+
               <div className="w-full flex flex-col sm:flex-row gap-4 items-center justify-between">
                 <button className="border border-gray-3 rounded-[0.375rem] p-4 w-full sm:h-[3rem] sm:flex sm:items-center sm:justify-center">
                   <Image
@@ -240,84 +462,88 @@ export default function PaymentPage() {
                 </button>
               </div>
             </div>
+
+            {/* 계좌이체 선택 시 계좌번호 표시 */}
+            {paymentMethod === 'bank_transfer' && bankInfo && (
+              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <h4 className="font-semibold text-blue-800 mb-2">
+                  입금 계좌 정보 ({selectedItems[0]?.district || '선택된 구'})
+                </h4>
+                <div className="text-blue-700">
+                  <p>
+                    <strong>은행:</strong> {bankInfo.bank_name}
+                  </p>
+                  <p>
+                    <strong>계좌번호:</strong> {bankInfo.account_number}
+                  </p>
+                  <p>
+                    <strong>예금주:</strong> {bankInfo.depositor}
+                  </p>
+                </div>
+                <p className="text-sm text-blue-600 mt-2">
+                  * 계좌이체시 입금자명을 주문자명과 동일하게 입력해주세요.
+                </p>
+              </div>
+            )}
           </section>
         </div>
 
         {/* 우측 - 결제 영역 */}
         <div className="w-full md:w-[24rem] space-y-6">
           <div className="bg-white p-6 rounded-lg shadow-md">
-            <h3 className="font-bold text-1.25 mb-4 border-b border-gray-1 pb-4 border-b-[2px]">
+            <h3 className="font-bold text-1.25 mb-4 border-b-sollid border-gray-1 pb-4 border-b-[2px]">
               최종 결제 금액
             </h3>
             <div className="flex flex-col gap-[0.88rem] text-1 font-500 text-gray-2">
               <div className="flex justify-between py-1">
-                <span>주문금액</span>
-                <span>1,350,000원</span>
+                <span>도로이용비</span>
+                <span>{priceSummary.roadUsageFee.toLocaleString()}원</span>
               </div>
               <div className="flex justify-between py-1">
-                <span>
-                  {userType === 'public_institution'
-                    ? '행정가격할인'
-                    : '기본할인금액'}
-                </span>
-                <span>{getDiscountDisplay()}</span>
+                <span>광고대행비</span>
+                <span>{priceSummary.advertisingFee.toLocaleString()}원</span>
               </div>
               <div className="flex justify-between py-1">
-                <span>쿠폰할인금액</span>
-                <span>-0원</span>
-              </div>
-              <div className="flex justify-between py-1">
-                <span>부가세</span>
-                <span>-0원</span>
+                <span>수수료</span>
+                <span>{priceSummary.taxPrice.toLocaleString()}원</span>
               </div>
             </div>
             <div className="flex justify-between items-center mt-4 border-t border-gray-1 pt-7 sm:flex-col sm:gap-4">
-              <span className="text-1.25 font-900">최종 결제 금액</span>
+              <span className="text-1.25 font-900">최종결제금액</span>
               <span className="text-1.875 font-900">
-                {getPriceDisplay()} <span className="text-1 font-400">원</span>
+                {priceSummary.totalPrice.toLocaleString()}{' '}
+                <span className="text-1 font-400">원</span>
               </span>
             </div>
           </div>
 
-          {/* 승인 상태 표시 */}
-          {(userType === 'public_institution' || userType === 'company') &&
-            !isApproved && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-                <div className="flex items-center">
-                  <svg
-                    className="w-5 h-5 text-yellow-400 mr-2"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  <span className="text-yellow-800 font-medium">
-                    {userType === 'public_institution'
-                      ? '행정가격 승인 대기중'
-                      : '기업 승인 대기중'}
-                  </span>
-                </div>
-              </div>
-            )}
-
           <button
-            className={`w-full py-6 rounded-lg transition-colors ${
-              isPaymentEnabled
-                ? 'bg-black text-white hover:bg-gray-800'
-                : 'bg-gray-400 text-gray-600 cursor-not-allowed'
+            className={`w-full py-6 rounded-lg transition-colors hover:cursor-pointer ${
+              isProcessing
+                ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                : 'bg-black text-white hover:bg-gray-800'
             }`}
-            disabled={!isPaymentEnabled}
+            disabled={isProcessing}
+            onClick={handlePayment}
           >
-            <span className="text-white sm:text-1.25">
-              {isPaymentEnabled ? '결제하기' : '승인 대기중'}
+            <span className="text-white sm:text-1.25 ">
+              {isProcessing
+                ? '처리중...'
+                : paymentMethod === 'bank_transfer'
+                ? '입금대기 신청'
+                : '결제하기'}
             </span>
           </button>
         </div>
       </div>
     </main>
+  );
+}
+
+export default function PaymentPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PaymentPageContent />
+    </Suspense>
   );
 }
