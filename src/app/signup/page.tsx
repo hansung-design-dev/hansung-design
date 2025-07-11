@@ -18,8 +18,10 @@ export default function Signup() {
   const [modalOpen, setModalOpen] = useState(false);
   const [currentModal, setCurrentModal] = useState('');
 
-  // 본인인증 상태
-  const [isVerified, setIsVerified] = useState(false);
+  // 휴대폰 인증 상태
+  const [isPhoneVerified, setIsPhoneVerified] = useState(false);
+  const [phoneVerificationLoading, setPhoneVerificationLoading] =
+    useState(false);
 
   // 입력 필드 상태
   const [formData, setFormData] = useState({
@@ -38,6 +40,7 @@ export default function Signup() {
     email: { isValid: false, message: '' },
     password: { isValid: false, message: '' },
     passwordConfirm: { isValid: false, message: '' },
+    phone: { isValid: false, message: '' },
   });
 
   // API 연동 상태
@@ -176,6 +179,18 @@ export default function Signup() {
     return { isValid: true, message: '' };
   };
 
+  // 휴대폰 번호 유효성 검사
+  const validatePhone = (phone: string) => {
+    const phoneRegex = /^[0-9]{10,11}$/;
+    if (!phone) {
+      return { isValid: false, message: '휴대폰 번호를 입력해주세요.' };
+    }
+    if (!phoneRegex.test(phone)) {
+      return { isValid: false, message: '올바른 휴대폰 번호를 입력해주세요.' };
+    }
+    return { isValid: true, message: '' };
+  };
+
   // 입력 필드 변경 핸들러
   const handleInputChange = (field: keyof typeof formData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -198,6 +213,9 @@ export default function Signup() {
       case 'email':
         validationResult = validateEmail(value);
         break;
+      case 'phone':
+        validationResult = validatePhone(value);
+        break;
       case 'password':
         validationResult = validatePassword(value);
         setValidation((prev) => ({
@@ -216,24 +234,33 @@ export default function Signup() {
     setValidation((prev) => ({ ...prev, [field]: validationResult }));
   };
 
-  // 본인인증 핸들러
-  const handleVerification = (type: 'ipin' | 'phone') => {
-    // 실제 인증 로직은 여기에 구현
-    console.log(`${type} 인증 시작`);
+  // 휴대폰 인증 핸들러
+  const handlePhoneVerification = async () => {
+    if (!formData.phone) {
+      setError('휴대폰 번호를 먼저 입력해주세요.');
+      return;
+    }
 
-    // 임시로 인증 완료 처리 (실제로는 인증 API 호출)
-    if (type === 'ipin') {
-      // 아이핀 인증 시뮬레이션
-      setTimeout(() => {
-        setIsVerified(true);
-        setError(''); // 성공 시 에러 메시지 초기화
-      }, 1000);
-    } else if (type === 'phone') {
-      // 휴대폰 인증 시뮬레이션
-      setTimeout(() => {
-        setIsVerified(true);
-        setError(''); // 성공 시 에러 메시지 초기화
-      }, 1000);
+    // 휴대폰 번호 유효성 검사
+    const phoneValidation = validatePhone(formData.phone);
+    if (!phoneValidation.isValid) {
+      setError(phoneValidation.message);
+      return;
+    }
+
+    setPhoneVerificationLoading(true);
+    setError('');
+
+    try {
+      // 실제 인증 로직은 나중에 구현하고, 현재는 모의 처리
+      await new Promise((resolve) => setTimeout(resolve, 1000)); // 1초 대기
+      setIsPhoneVerified(true);
+      setError(''); // 성공 메시지는 validation 메시지로 표시
+    } catch {
+      setError('휴대폰 인증 중 오류가 발생했습니다.');
+      setIsPhoneVerified(false);
+    } finally {
+      setPhoneVerificationLoading(false);
     }
   };
 
@@ -249,13 +276,16 @@ export default function Signup() {
     console.log('회원가입 조건 확인:', {
       allFieldsValid,
       allRequiredAgreements,
-      isVerified,
+      isPhoneVerified,
       usernameChecked,
       agreements,
     });
 
     return (
-      allFieldsValid && allRequiredAgreements && isVerified && usernameChecked
+      allFieldsValid &&
+      allRequiredAgreements &&
+      isPhoneVerified &&
+      usernameChecked
     );
   };
 
@@ -303,7 +333,16 @@ export default function Signup() {
   };
 
   const handleSignup = async () => {
+    console.log('🔍 회원가입 시작');
+    console.log('🔍 canSignup 결과:', canSignup());
+    console.log('🔍 폼 데이터:', formData);
+    console.log('🔍 약관 동의:', agreements);
+    console.log('🔍 유효성 검사:', validation);
+    console.log('🔍 휴대폰 인증:', isPhoneVerified);
+    console.log('🔍 아이디 중복확인:', usernameChecked);
+
     if (!canSignup()) {
+      console.log('🔍 회원가입 조건 미충족');
       return;
     }
 
@@ -311,6 +350,15 @@ export default function Signup() {
     setError('');
 
     try {
+      console.log('🔍 signUp 함수 호출:', {
+        email: formData.email,
+        password: formData.password,
+        name: formData.name,
+        username: formData.id,
+        phone: formData.phone,
+        agreements,
+      });
+
       const result = await signUp(
         formData.email,
         formData.password,
@@ -320,12 +368,15 @@ export default function Signup() {
         agreements
       );
 
+      console.log('🔍 signUp 결과:', result);
+
       if (result.success) {
         router.push('/signin'); // 회원가입 성공 시 로그인 페이지로 이동
       } else {
         setError(result.error || '회원가입에 실패했습니다.');
       }
-    } catch {
+    } catch (error) {
+      console.error('🔍 회원가입 오류:', error);
       setError('회원가입 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
@@ -436,6 +487,47 @@ export default function Signup() {
           {validation.email.message && (
             <div className="text-blue-500 text-0.75 mt-2 ml-2">
               {validation.email.message}
+            </div>
+          )}
+        </div>
+
+        {/* 휴대폰 번호 인풋 */}
+        <div className="w-full mb-6">
+          <div className="flex items-center gap-2">
+            <div className="flex flex-1 items-center h-[4rem] bg-white rounded">
+              <Image
+                src="/svg/login-password.svg"
+                alt="휴대폰"
+                width={20}
+                height={20}
+                className="h-[1.25rem] w-[1.25rem] pl-2"
+              />
+              <input
+                type="tel"
+                placeholder="  휴대폰 번호를 입력해주세요."
+                className="flex-1 outline-none border-none font-200"
+                value={formData.phone}
+                onChange={(e) => handleInputChange('phone', e.target.value)}
+                onBlur={(e) => handleInputBlur('phone', e.target.value)}
+              />
+            </div>
+            <Button
+              size="sm"
+              className="text-0-75-500 h-[4rem]"
+              onClick={handlePhoneVerification}
+              disabled={phoneVerificationLoading || !formData.phone}
+            >
+              {phoneVerificationLoading ? '인증중...' : '인증'}
+            </Button>
+          </div>
+          {validation.phone.message && (
+            <div className="text-blue-500 text-0.75 mt-2 ml-2">
+              {validation.phone.message}
+            </div>
+          )}
+          {isPhoneVerified && !validation.phone.message && (
+            <div className="text-green-500 text-0.75 mt-2 ml-2">
+              휴대폰 인증이 완료되었습니다.
             </div>
           )}
         </div>
@@ -676,11 +768,13 @@ export default function Signup() {
                 </div>
                 <div
                   className={`flex items-center gap-2 ${
-                    isVerified ? 'text-green-600' : 'text-red-600'
+                    isPhoneVerified ? 'text-green-600' : 'text-red-600'
                   }`}
                 >
                   <span>✓</span>
-                  <span>본인인증: {isVerified ? '완료' : '미완료'}</span>
+                  <span>
+                    휴대폰 인증: {isPhoneVerified ? '완료' : '미완료'}
+                  </span>
                 </div>
                 <div
                   className={`flex items-center gap-2 ${
@@ -694,28 +788,6 @@ export default function Signup() {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* 본인인증 섹션 */}
-        <div className="w-full mb-6">
-          <div className="flex gap-4">
-            <button
-              className={`flex-1 h-[3.5rem] text-white text-1 font-500 rounded transition-colors ${
-                isVerified ? 'bg-green-600' : 'bg-black hover:bg-blue-700'
-              }`}
-              onClick={() => handleVerification('ipin')}
-            >
-              {isVerified ? '인증 완료' : '아이핀 인증'}
-            </button>
-            <button
-              className={`flex-1 h-[3.5rem] text-white text-1 font-500 rounded transition-colors ${
-                isVerified ? 'bg-green-600' : 'bg-black hover:bg-green-700'
-              }`}
-              onClick={() => handleVerification('phone')}
-            >
-              {isVerified ? '인증 완료' : '휴대폰 인증'}
-            </button>
           </div>
         </div>
 
