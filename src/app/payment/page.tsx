@@ -38,6 +38,8 @@ function PaymentPageContent() {
   const [bankInfo, setBankInfo] = useState<BankInfo | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sendByEmail, setSendByEmail] = useState(false);
+  const [emailAddress, setEmailAddress] = useState('');
 
   // URL 파라미터에서 선택된 아이템 ID들 가져오기
   useEffect(() => {
@@ -251,7 +253,7 @@ function PaymentPageContent() {
   }
 
   return (
-    <main className="min-h-screen bg-white pt-[5.5rem] bg-gray-100 min-h-screen lg:px-[10rem]">
+    <main className="min-h-screen bg-white pt-[5.5rem] bg-gray-100 lg:px-[10rem]">
       <Nav variant="default" className="bg-white" />
 
       <div className="container mx-auto px-4 sm:px-1 py-8 grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-8">
@@ -264,7 +266,7 @@ function PaymentPageContent() {
               className="p-6 border rounded-lg shadow-sm flex flex-col gap-4 sm:p-2"
             >
               <div>
-                <h2 className="text-1.25 text-gray-2 font-bold mb-4 border-b border-black border-b-[0.4rem] pb-4">
+                <h2 className="text-1.25 text-gray-2 font-bold mb-4 border-b-solid border-black border-b-[0.1rem] pb-4">
                   {item.type === 'banner-display'
                     ? '현수막 게시대'
                     : 'LED 전자게시대'}
@@ -305,21 +307,6 @@ function PaymentPageContent() {
                       />
                     </div>
 
-                    {/* 휴대폰 번호 */}
-                    <div className="flex flex-col sm:flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4 sm:gap-2">
-                      <label className="w-full md:w-[9rem] text-gray-600 font-medium">
-                        휴대폰 번호
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full md:w-[21.25rem] sm:w-[13rem] border border-gray-300 border-solid shadow-none rounded px-4 h-[3rem]"
-                        placeholder="010 - 1234 - 5678"
-                        defaultValue={
-                          defaultProfile?.phone || user?.phone || ''
-                        }
-                      />
-                    </div>
-
                     {/* 파일업로드 */}
                     <div className="flex flex-col sm:flex-col md:flex-row items-start justify-between gap-2 md:gap-4 sm:gap-2">
                       <label className="w-full md:w-[9rem] text-gray-600 font-medium pt-2">
@@ -328,38 +315,48 @@ function PaymentPageContent() {
                       <div className="flex-1 space-y-2">
                         <input
                           type="file"
-                          className="border border-gray-300 py-2 w-full rounded"
+                          className={`border border-gray-300 py-2 w-full rounded ${
+                            sendByEmail ? 'opacity-50 cursor-not-allowed' : ''
+                          }`}
+                          disabled={sendByEmail}
+                          readOnly={sendByEmail}
+                          defaultValue={
+                            sendByEmail ? 'hansung-design@example.com' : ''
+                          }
                         />
                         <div className="flex flex-col gap-2 items-start">
-                          <div className="text-sm text-gray-500">
-                            이메일로 파일 보낼게요
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              id="sendByEmail"
+                              checked={sendByEmail}
+                              onChange={(e) => setSendByEmail(e.target.checked)}
+                              className="w-4 h-4"
+                            />
+                            <label
+                              htmlFor="sendByEmail"
+                              className="text-sm text-gray-500"
+                            >
+                              이메일로 파일 보낼게요
+                            </label>
                           </div>
-                          <input
-                            type="text"
-                            className="border border-gray-300 border-solid shadow-none rounded h-[3rem] w-full md:w-[20rem] sm:w-[14.4rem] placeholder:pl-4"
-                            placeholder="파일 이름"
-                          />
+                          {sendByEmail && (
+                            <input
+                              type="email"
+                              value={emailAddress}
+                              onChange={(e) => setEmailAddress(e.target.value)}
+                              className="border border-gray-300 border-solid shadow-none rounded h-[3rem] w-full md:w-[20rem] sm:w-[14.4rem] placeholder:pl-4"
+                              placeholder="이메일 주소를 입력해주세요"
+                            />
+                          )}
+                          {!sendByEmail && (
+                            <input
+                              type="text"
+                              className="border border-gray-300 border-solid shadow-none rounded h-[3rem] w-full md:w-[20rem] sm:w-[14.4rem] placeholder:pl-4"
+                              placeholder="파일 이름"
+                            />
+                          )}
                         </div>
-                      </div>
-                    </div>
-
-                    {/* 쿠폰번호 */}
-                    <div className="flex flex-col sm:flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4 sm:gap-2">
-                      <label className="w-full md:w-[9rem] text-gray-600 font-medium">
-                        쿠폰번호
-                      </label>
-                      <div className="flex gap-2 w-full md:w-[21.25rem]">
-                        <input
-                          type="text"
-                          className="w-1/2 border border-gray-300 border-solid shadow-none rounded px-4 h-[3rem]"
-                          placeholder="쿠폰번호 입력"
-                        />
-                        <button
-                          type="button"
-                          className="w-1/2 bg-black text-white rounded-[0.375rem] h-[3rem]"
-                        >
-                          확인
-                        </button>
                       </div>
                     </div>
 
