@@ -215,7 +215,7 @@ export default function DisplayDetailPage({
       })
     : billboards;
 
-  // 송파구, 용산구 필터에 따른 데이터 필터링 (banner_slot_info의 banner_type 사용)
+  // 송파구, 용산구, 서대문구 필터에 따른 데이터 필터링 (banner_slot_info의 banner_type 사용)
   const filteredByPanelType = isSongpaOrYongsan
     ? filteredByMapo.filter((item) => {
         // banner_slot_info에서 banner_type 확인
@@ -226,9 +226,10 @@ export default function DisplayDetailPage({
               (slot) => slot.banner_type === 'top_fixed'
             );
           } else if (currentPanelTypeFilter === 'panel') {
-            // 현수막게시대 탭: banner_type이 'panel'인 슬롯이 있는 아이템
+            // 현수막게시대 탭: banner_type이 'panel' 또는 'semi_auto'인 슬롯이 있는 아이템 (서대문구 포함)
             return item.banner_slot_info.some(
-              (slot) => slot.banner_type === 'panel'
+              (slot) =>
+                slot.banner_type === 'panel' || slot.banner_type === 'semi_auto'
             );
           } else if (currentPanelTypeFilter === 'semi_auto') {
             return item.banner_slot_info.some(
@@ -239,6 +240,26 @@ export default function DisplayDetailPage({
         return true;
       })
     : filteredByMapo;
+
+  // 서대문구 필터링 디버깅
+  if (districtObj?.name === '서대문구') {
+    console.log('🔍 서대문구 필터링 과정:', {
+      currentPanelTypeFilter,
+      filteredByMapoCount: filteredByMapo.length,
+      filteredByPanelTypeCount: filteredByPanelType.length,
+      filteredItems: filteredByPanelType.map((item) => ({
+        panel_code: item.panel_code,
+        panel_type: item.panel_type,
+        banner_slot_info:
+          item.type === 'banner'
+            ? item.banner_slot_info?.map((slot) => ({
+                banner_type: slot.banner_type,
+                slot_number: slot.slot_number,
+              }))
+            : 'N/A',
+      })),
+    });
+  }
 
   // 디버깅: 필터링 결과 확인
   if (isSongpaOrYongsan) {
@@ -271,6 +292,25 @@ export default function DisplayDetailPage({
         nickname: item.nickname,
       }))
     );
+
+    // 서대문구 6-16번 패널 특별 디버깅
+    if (districtObj?.name === '서대문구') {
+      const panels6to16 = filteredByMapo.filter(
+        (item) =>
+          item.panel_code && item.panel_code >= 6 && item.panel_code <= 16
+      );
+      console.log('🔍 서대문구 6-16번 패널들:', {
+        totalCount: panels6to16.length,
+        panels: panels6to16.map((item) => ({
+          panel_code: item.panel_code,
+          panel_type: item.panel_type,
+          type: item.type,
+          banner_slot_info:
+            item.type === 'banner' ? item.banner_slot_info : 'N/A',
+          nickname: item.nickname,
+        })),
+      });
+    }
   }
 
   const filteredByDistrict =
