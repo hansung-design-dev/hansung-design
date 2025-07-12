@@ -202,7 +202,6 @@ export const ledSlotInfo = [
     base_price: 500000,
     tax_price: 50000,
     price_unit: 'daily',
-    is_premium: true,
     panel_slot_status: 'available',
   },
   {
@@ -216,7 +215,6 @@ export const ledSlotInfo = [
     base_price: 400000,
     tax_price: 40000,
     price_unit: 'daily',
-    is_premium: true,
     panel_slot_status: 'available',
   },
 ];
@@ -234,7 +232,6 @@ export const bannerSlotInfo = [
     tax_price: 10000,
     banner_type: 'horizontal',
     price_unit: 'daily',
-    is_premium: true,
     panel_slot_status: 'available',
   },
   {
@@ -248,7 +245,6 @@ export const bannerSlotInfo = [
     tax_price: 10000,
     banner_type: 'horizontal',
     price_unit: 'daily',
-    is_premium: false,
     panel_slot_status: 'available',
   },
   {
@@ -262,7 +258,6 @@ export const bannerSlotInfo = [
     tax_price: 10000,
     banner_type: 'horizontal',
     price_unit: 'daily',
-    is_premium: false,
     panel_slot_status: 'available',
   },
   {
@@ -276,7 +271,6 @@ export const bannerSlotInfo = [
     tax_price: 12000,
     banner_type: 'horizontal',
     price_unit: 'daily',
-    is_premium: true,
     panel_slot_status: 'available',
   },
   {
@@ -290,7 +284,6 @@ export const bannerSlotInfo = [
     tax_price: 12000,
     banner_type: 'horizontal',
     price_unit: 'daily',
-    is_premium: false,
     panel_slot_status: 'available',
   },
   {
@@ -304,7 +297,6 @@ export const bannerSlotInfo = [
     tax_price: 12000,
     banner_type: 'horizontal',
     price_unit: 'daily',
-    is_premium: false,
     panel_slot_status: 'available',
   },
   {
@@ -318,7 +310,6 @@ export const bannerSlotInfo = [
     tax_price: 12000,
     banner_type: 'horizontal',
     price_unit: 'daily',
-    is_premium: false,
     panel_slot_status: 'available',
   },
 ];

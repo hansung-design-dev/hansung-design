@@ -474,7 +474,7 @@ export default function Cart() {
       // 상담신청: LED 전자게시대 전체, 상단광고(용산구/송파구)
       if (
         item.type === 'led-display' ||
-        (item.type === 'banner-display' && panelType === 'top-fixed')
+        (item.type === 'banner-display' && panelType === 'top_fixed')
       ) {
         consultingItems.push(item);
         return;
@@ -528,7 +528,7 @@ export default function Cart() {
         // 현수막게시대 분류
         if (item.type === 'banner-display') {
           // 상단광고는 모두 상담신청 (용산구, 송파구)
-          if (panelType === 'top-fixed') {
+          if (panelType === 'top_fixed') {
             return true;
           }
 
@@ -539,7 +539,7 @@ export default function Cart() {
               panelType === 'panel') ||
             // 마포구 연립형과 저단형
             (district === '마포구' &&
-              (panelType === 'multi-panel' || panelType === 'lower-panel')) ||
+              (panelType === 'multi_panel' || panelType === 'lower_panel')) ||
             // 서대문구, 관악구
             district === '서대문구' ||
             district === '관악구';
@@ -582,7 +582,7 @@ export default function Cart() {
   //       const district = item.district;
 
   //       if (item.type === 'led-display') return true;
-  //       if (item.type === 'banner-display' && panelType === 'top-fixed')
+  //       if (item.type === 'banner-display' && panelType === 'top_fixed')
   //         return true;
 
   //       const isPaymentEligible =
@@ -821,7 +821,6 @@ export default function Cart() {
                   slot_name: null,
                   tax_price: publicInstitutionPolicy.tax_price,
                   created_at: null,
-                  is_premium: null,
                   max_height: null,
                   price_unit: null,
                   updated_at: null,
@@ -1029,16 +1028,16 @@ export default function Cart() {
   const getPanelTypeDisplay = (panelType: string) => {
     const typeMap: Record<string, string> = {
       panel: '현수막게시대',
-      'top-fixed': '상단광고',
+      top_fixed: '상단광고',
       led: 'LED전자게시대',
-      'multi-panel': '연립형',
-      'lower-panel': '저단형',
-      'bulletin-board': '시민/문화게시대',
-      'semi-auto': '반자동',
+      multi_panel: '연립형',
+      lower_panel: '저단형',
+      bulletin_board: '시민/문화게시대',
+      semi_auto: '반자동',
       with_lighting: '조명용',
       no_lighting: '비조명용',
       manual: '현수막게시대',
-      'cultural-board': '시민/문화게시대',
+      cultural_board: '시민/문화게시대',
     };
     return typeMap[panelType] || panelType;
   };

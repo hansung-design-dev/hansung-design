@@ -71,7 +71,6 @@ export interface BannerSlotInfo {
   tax_price?: number;
   banner_type: '일반형' | '돌출형' | '지정게시대' | '자율게시대';
   price_unit?: '15 days' | 'month';
-  is_premium: boolean;
   panel_slot_status: string;
   notes: string;
   created_at: string;

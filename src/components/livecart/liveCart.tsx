@@ -20,11 +20,11 @@ export default function LiveCart() {
     if (!panelType) return '현수막게시대';
 
     switch (panelType) {
-      case 'multi-panel':
+      case 'multi_panel':
         return '연립형';
-      case 'lower-panel':
+      case 'lower_panel':
         return '저단형';
-      case 'bulletin-board':
+      case 'bulletin_board':
         return '시민게시대';
       case 'citizen-board':
         return '시민/문화게시대';

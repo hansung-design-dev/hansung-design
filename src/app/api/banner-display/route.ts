@@ -32,16 +32,11 @@ export interface BannerDisplayData {
     slot_name: string;
     max_width: number;
     max_height: number;
-    total_price: number;
-    tax_price: number;
-    advertising_fee: number;
-    road_usage_fee: number;
     banner_type: string;
     price_unit: string;
-    is_premium: boolean;
     panel_slot_status: string;
-    // banner_slot_price_policy 정보 추가
-    price_policies?: {
+    // banner_slot_price_policy 정보로 가격 정보 대체
+    price_policies: {
       id: string;
       price_usage_type: 'default' | 'public_institution' | 'company';
       tax_price: number;
@@ -95,13 +90,8 @@ async function getBannerDisplaysByDistrict(districtName: string) {
           slot_name,
           max_width,
           max_height,
-          total_price,
-          tax_price,
-          advertising_fee,
-          road_usage_fee,
           banner_type,
           price_unit,
-          is_premium,
           panel_slot_status,
           banner_slot_price_policy (
             id,
@@ -132,12 +122,13 @@ async function getBannerDisplaysByDistrict(districtName: string) {
     if (districtName === '송파구') {
       query = query.eq('panel_type', 'panel');
     }
-    // 용산구: panel_type = 'with_lighting', 'no_lighting', 'semi-auto', 'panel'인 것만 조회
+    // 용산구: panel_type = 'with_lighting', 'no_lighting', 'semi_auto', 'panel'인 것만 조회
     else if (districtName === '용산구') {
       query = query.in('panel_type', [
         'with_lighting',
         'no_lighting',
-        'semi-auto',
+        'semi_auto',
+        'panel',
       ]);
     }
 
@@ -190,13 +181,8 @@ async function getAllBannerDisplays() {
           slot_name,
           max_width,
           max_height,
-          total_price,
-          tax_price,
-          advertising_fee,
-          road_usage_fee,
           banner_type,
           price_unit,
-          is_premium,
           panel_slot_status,
           banner_slot_price_policy (
             id,
@@ -406,6 +392,8 @@ async function getAllDistrictsData() {
 
         // 이번달 16일~말일 계산 (2차는 항상 고정)
         const now = new Date();
+        console.log('🔍 Current year:', now.getFullYear());
+        console.log('🔍 Current month:', now.getMonth() + 1); // 1-based (1=January, 7=July)
         const secondHalfStart = new Date(now.getFullYear(), now.getMonth(), 16);
         const secondHalfEnd = new Date(
           now.getFullYear(),

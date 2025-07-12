@@ -44,16 +44,16 @@ function PaymentPageContent() {
   const getPanelTypeDisplay = (panelType: string) => {
     const typeMap: Record<string, string> = {
       panel: '현수막게시대',
-      'top-fixed': '상단광고',
+      top_fixed: '상단광고',
       led: 'LED전자게시대',
-      'multi-panel': '연립형',
-      'lower-panel': '저단형',
-      'bulletin-board': '시민/문화게시대',
-      'semi-auto': '반자동',
+      multi_panel: '연립형',
+      lower_panel: '저단형',
+      bulletin_board: '시민/문화게시대',
+      semi_auto: '반자동',
       with_lighting: '조명용',
       no_lighting: '비조명용',
       manual: '현수막게시대',
-      'cultural-board': '시민/문화게시대',
+      cultural_board: '시민/문화게시대',
     };
     return typeMap[panelType] || panelType;
   };

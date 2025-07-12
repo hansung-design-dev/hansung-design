@@ -198,17 +198,17 @@ export async function GET(request: NextRequest) {
                     const panelType = detail.panel_info?.panel_type || 'panel';
                     const typeMap: Record<string, string> = {
                       manual: '현수막게시대',
-                      'semi-auto': '반자동',
-                      'bulletin-board': '시민게시대',
-                      'bulletin-boardg': '시민게시대',
-                      'cultural-board': '시민/문화게시대',
-                      'lower-panel': '저단형',
-                      'multi-panel': '연립형',
+                      semi_auto: '반자동',
+                      bulletin_board: '시민게시대',
+                      bulletin_boardg: '시민게시대',
+                      cultural_board: '시민/문화게시대',
+                      lower_panel: '저단형',
+                      multi_panel: '연립형',
                       led: 'LED전자게시대',
                       no_lighting: '비조명용',
                       with_lighting: '조명용',
                       panel: '현수막게시대',
-                      'top-fixed': '상단광고',
+                      top_fixed: '상단광고',
                     };
                     return typeMap[panelType] || panelType;
                   })(),
@@ -227,9 +227,9 @@ export async function GET(request: NextRequest) {
                     const panelType = detail.panel_info?.panel_type;
                     const regionName = detail.panel_info?.region_gu?.name;
 
-                    // 마포구 시민게시대 (bulletin-board)
+                    // 마포구 시민게시대 (bulletin_board)
                     if (
-                      panelType === 'bulletin-board' &&
+                      panelType === 'bulletin_board' &&
                       regionName === '마포구'
                     ) {
                       return '포스터 지참 후 방문 신청';
@@ -289,7 +289,6 @@ interface OrderItem {
     slot_name: string | null;
     tax_price: number | null;
     created_at: string | null;
-    is_premium: boolean | null;
     max_height: number | null;
     price_unit: string | null;
     updated_at: string | null;

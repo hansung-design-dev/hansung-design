@@ -11,8 +11,8 @@ CREATE TABLE public.bank_info (
   created_at timestamp without time zone DEFAULT now(),
   updated_at timestamp without time zone DEFAULT now(),
   CONSTRAINT bank_info_pkey PRIMARY KEY (id),
-  CONSTRAINT bank_info_region_gu_id_fkey FOREIGN KEY (region_gu_id) REFERENCES public.region_gu(id),
-  CONSTRAINT bank_info_display_type_id_fkey FOREIGN KEY (display_type_id) REFERENCES public.display_types(id)
+  CONSTRAINT bank_info_display_type_id_fkey FOREIGN KEY (display_type_id) REFERENCES public.display_types(id),
+  CONSTRAINT bank_info_region_gu_id_fkey FOREIGN KEY (region_gu_id) REFERENCES public.region_gu(id)
 );
 CREATE TABLE public.banner_panel_details (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -30,19 +30,27 @@ CREATE TABLE public.banner_slot_info (
   slot_name text,
   max_width numeric,
   max_height numeric,
-  total_price numeric CHECK (total_price >= 0::numeric),
-  tax_price numeric CHECK (tax_price >= 0::numeric),
   banner_type USER-DEFINED,
   price_unit USER-DEFINED DEFAULT '15 days'::price_unit_enum,
-  is_premium boolean DEFAULT false,
   panel_slot_status USER-DEFINED DEFAULT 'available'::panel_slot_status_enum,
   notes text,
   created_at timestamp without time zone DEFAULT now(),
   updated_at timestamp without time zone DEFAULT now(),
-  road_usage_fee numeric CHECK (road_usage_fee >= 0::numeric),
-  advertising_fee numeric CHECK (advertising_fee >= 0::numeric),
   CONSTRAINT banner_slot_info_pkey PRIMARY KEY (id),
   CONSTRAINT banner_slot_info_panel_info_id_fkey FOREIGN KEY (panel_info_id) REFERENCES public.panel_info(id)
+);
+CREATE TABLE public.banner_slot_inventory (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  panel_info_id uuid,
+  region_gu_display_period_id uuid,
+  total_slots integer NOT NULL DEFAULT 0,
+  available_slots integer NOT NULL DEFAULT 0,
+  closed_slots integer DEFAULT 0,
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT banner_slot_inventory_pkey PRIMARY KEY (id),
+  CONSTRAINT banner_slot_inventory_panel_info_id_fkey FOREIGN KEY (panel_info_id) REFERENCES public.panel_info(id),
+  CONSTRAINT banner_slot_inventory_region_gu_display_period_id_fkey FOREIGN KEY (region_gu_display_period_id) REFERENCES public.region_gu_display_periods(id)
 );
 CREATE TABLE public.banner_slot_price_policy (
   id uuid NOT NULL,
@@ -146,7 +154,6 @@ CREATE TABLE public.led_slot_info (
   total_price numeric CHECK (total_price >= 0::numeric),
   tax_price numeric CHECK (tax_price >= 0::numeric),
   price_unit USER-DEFINED DEFAULT '15 days'::price_unit_enum,
-  is_premium boolean DEFAULT false,
   panel_slot_status USER-DEFINED DEFAULT 'available'::panel_slot_status_enum,
   notes text,
   created_at timestamp without time zone DEFAULT now(),
@@ -178,13 +185,12 @@ CREATE TABLE public.order_details (
   display_end_date date,
   created_at timestamp without time zone DEFAULT now(),
   updated_at timestamp without time zone DEFAULT now(),
-  half_period text CHECK (half_period = ANY (ARRAY['first_half'::text, 'second_half'::text])),
   panel_info_id uuid,
   panel_slot_usage_id uuid,
   CONSTRAINT order_details_pkey PRIMARY KEY (id),
   CONSTRAINT order_details_panel_slot_usage_id_fkey FOREIGN KEY (panel_slot_usage_id) REFERENCES public.panel_slot_usage(id),
-  CONSTRAINT order_details_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
-  CONSTRAINT order_details_panel_info_id_fkey FOREIGN KEY (panel_info_id) REFERENCES public.panel_info(id)
+  CONSTRAINT order_details_panel_info_id_fkey FOREIGN KEY (panel_info_id) REFERENCES public.panel_info(id),
+  CONSTRAINT order_details_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id)
 );
 CREATE TABLE public.orders (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -208,10 +214,8 @@ CREATE TABLE public.orders (
   created_at timestamp without time zone DEFAULT now(),
   updated_at timestamp without time zone DEFAULT now(),
   auth_user_id uuid,
-  half_period text CHECK (half_period = ANY (ARRAY['first_half'::text, 'second_half'::text])),
   user_profile_id uuid,
   user_auth_id uuid DEFAULT '00000000-0000-0000-0000-000000000000'::uuid,
-  year_month character varying NOT NULL DEFAULT '2025-06'::character varying,
   order_number character varying,
   CONSTRAINT orders_pkey PRIMARY KEY (id),
   CONSTRAINT orders_user_profile_id_fkey FOREIGN KEY (user_profile_id) REFERENCES public.user_profiles(id),
@@ -257,6 +261,7 @@ CREATE TABLE public.panel_info (
   max_banner integer DEFAULT 1,
   first_half_closure_quantity integer DEFAULT 0,
   second_half_closure_quantity integer DEFAULT 0,
+  notes text,
   CONSTRAINT panel_info_pkey PRIMARY KEY (id),
   CONSTRAINT panel_info_display_type_id_fkey FOREIGN KEY (display_type_id) REFERENCES public.display_types(id),
   CONSTRAINT panel_info_region_gu_id_fkey FOREIGN KEY (region_gu_id) REFERENCES public.region_gu(id),
@@ -276,8 +281,8 @@ CREATE TABLE public.panel_popup_notices (
   region_gu_id uuid,
   notice_categories_id uuid,
   CONSTRAINT panel_popup_notices_pkey PRIMARY KEY (id),
-  CONSTRAINT panel_popup_notices_display_category_id_fkey FOREIGN KEY (display_category_id) REFERENCES public.display_types(id),
-  CONSTRAINT panel_popup_notices_region_gu_id_fkey FOREIGN KEY (region_gu_id) REFERENCES public.region_gu(id)
+  CONSTRAINT panel_popup_notices_region_gu_id_fkey FOREIGN KEY (region_gu_id) REFERENCES public.region_gu(id),
+  CONSTRAINT panel_popup_notices_display_category_id_fkey FOREIGN KEY (display_category_id) REFERENCES public.display_types(id)
 );
 CREATE TABLE public.panel_slot_usage (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -293,12 +298,10 @@ CREATE TABLE public.panel_slot_usage (
   created_at timestamp without time zone DEFAULT now(),
   updated_at timestamp without time zone DEFAULT now(),
   banner_slot_info_id uuid,
-  order_details_id uuid,
   CONSTRAINT panel_slot_usage_pkey PRIMARY KEY (id),
-  CONSTRAINT panel_slot_usage_order_details_id_fkey FOREIGN KEY (order_details_id) REFERENCES public.order_details(id),
   CONSTRAINT panel_slot_usage_display_type_id_fkey FOREIGN KEY (display_type_id) REFERENCES public.display_types(id),
-  CONSTRAINT panel_slot_usage_panel_info_id_fkey FOREIGN KEY (panel_info_id) REFERENCES public.panel_info(id),
-  CONSTRAINT panel_slot_usage_banner_slot_info_id_fkey FOREIGN KEY (banner_slot_info_id) REFERENCES public.banner_slot_info(id)
+  CONSTRAINT panel_slot_usage_banner_slot_info_id_fkey FOREIGN KEY (banner_slot_info_id) REFERENCES public.banner_slot_info(id),
+  CONSTRAINT panel_slot_usage_panel_info_id_fkey FOREIGN KEY (panel_info_id) REFERENCES public.panel_info(id)
 );
 CREATE TABLE public.region_dong (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -325,21 +328,16 @@ CREATE TABLE public.region_gu_display_periods (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   display_type_id uuid,
   region_gu_id uuid,
-  first_half_from date,
-  first_half_to date,
-  first_half_closure_quantity integer DEFAULT 0,
+  period_from date,
+  period_to date,
   second_half_from date,
   second_half_to date,
-  second_half_closure_quantity integer DEFAULT 0,
-  next_first_half_from date,
-  next_first_half_to date,
-  next_first_half_closure_quantity integer DEFAULT 0,
-  next_second_half_from date,
-  next_second_half_to date,
-  next_second_half_closure_quantity integer DEFAULT 0,
   created_at timestamp without time zone DEFAULT now(),
   updated_at timestamp without time zone DEFAULT now(),
   year_month character varying NOT NULL DEFAULT '2025-06'::character varying,
+  half_period text CHECK (half_period = ANY (ARRAY['first_half'::text, 'second_half'::text])),
+  total_faces integer DEFAULT 0,
+  available_faces integer DEFAULT 0,
   CONSTRAINT region_gu_display_periods_pkey PRIMARY KEY (id),
   CONSTRAINT region_gu_display_periods_display_type_id_fkey FOREIGN KEY (display_type_id) REFERENCES public.display_types(id),
   CONSTRAINT region_gu_display_periods_region_gu_id_fkey FOREIGN KEY (region_gu_id) REFERENCES public.region_gu(id)
@@ -357,6 +355,21 @@ CREATE TABLE public.region_gu_guideline (
   updated_at timestamp without time zone DEFAULT now(),
   CONSTRAINT region_gu_guideline_pkey PRIMARY KEY (id),
   CONSTRAINT region_gu_guideline_region_gu_id_fkey FOREIGN KEY (region_gu_id) REFERENCES public.region_gu(id)
+);
+CREATE TABLE public.top_fixed_banner_inventory (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  panel_info_id uuid NOT NULL,
+  region_gu_display_period_id uuid NOT NULL,
+  total_slots integer NOT NULL DEFAULT 1,
+  available_slots integer NOT NULL DEFAULT 1,
+  closed_faces integer DEFAULT 0,
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now(),
+  banner_slot_info_id uuid,
+  CONSTRAINT top_fixed_banner_inventory_pkey PRIMARY KEY (id),
+  CONSTRAINT top_fixed_banner_inventory_banner_slot_info_id_fkey FOREIGN KEY (banner_slot_info_id) REFERENCES public.banner_slot_info(id),
+  CONSTRAINT top_fixed_banner_inventory_panel_info_id_fkey FOREIGN KEY (panel_info_id) REFERENCES public.panel_info(id),
+  CONSTRAINT top_fixed_banner_inventory_region_gu_display_period_id_fkey FOREIGN KEY (region_gu_display_period_id) REFERENCES public.region_gu_display_periods(id)
 );
 CREATE TABLE public.user_auth (
   id uuid NOT NULL DEFAULT gen_random_uuid(),

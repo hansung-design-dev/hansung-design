@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     const now = new Date();
     console.log('🔍 Current date:', now);
     console.log('🔍 Current year:', now.getFullYear());
-    console.log('🔍 Current month:', now.getMonth()); // 0-based (0=January, 6=July)
+    console.log('🔍 Current month:', now.getMonth() + 1); // 1-based (1=January, 7=July)
 
     const secondHalfStart = new Date(now.getFullYear(), now.getMonth(), 16);
     const secondHalfEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);

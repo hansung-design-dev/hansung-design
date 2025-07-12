@@ -24,7 +24,6 @@ export interface CartItem {
     slot_name: string | null;
     tax_price: number | null;
     created_at: string | null;
-    is_premium: boolean | null;
     max_height: number | null;
     price_unit: string | null;
     updated_at: string | null;
