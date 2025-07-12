@@ -43,9 +43,7 @@ export async function GET(request: NextRequest) {
     // 신청기간 조회 (DB에 없어도 이번달 기간으로 계산)
     const { data: periodData, error: periodError } = await supabase
       .from('region_gu_display_periods')
-      .select(
-        'first_half_from, first_half_to, second_half_from, second_half_to'
-      )
+      .select('period_from, period_to, half_period')
       .eq('region_gu_id', guData.id)
       .eq('display_type_id', typeData.id)
       .single();
@@ -70,28 +68,16 @@ export async function GET(request: NextRequest) {
       return `${year}-${month}-${day}`;
     };
 
-    let currentPeriodData;
+    // DB에 데이터가 없으면 둘 다 이번달 계산값 사용
+    const firstHalfStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const firstHalfEnd = new Date(now.getFullYear(), now.getMonth(), 15);
 
-    if (periodData && !periodError) {
-      // DB에 데이터가 있으면 1차는 DB값 사용, 2차는 이번달 16일~말일 고정
-      currentPeriodData = {
-        first_half_from: periodData.first_half_from,
-        first_half_to: periodData.first_half_to,
-        second_half_from: formatDate(secondHalfStart),
-        second_half_to: formatDate(secondHalfEnd),
-      };
-    } else {
-      // DB에 데이터가 없으면 둘 다 이번달 계산값 사용
-      const firstHalfStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      const firstHalfEnd = new Date(now.getFullYear(), now.getMonth(), 15);
-
-      currentPeriodData = {
-        first_half_from: formatDate(firstHalfStart),
-        first_half_to: formatDate(firstHalfEnd),
-        second_half_from: formatDate(secondHalfStart),
-        second_half_to: formatDate(secondHalfEnd),
-      };
-    }
+    const currentPeriodData = {
+      first_half_from: formatDate(firstHalfStart),
+      first_half_to: formatDate(firstHalfEnd),
+      second_half_from: formatDate(secondHalfStart),
+      second_half_to: formatDate(secondHalfEnd),
+    };
 
     return NextResponse.json({ success: true, data: currentPeriodData });
   } catch {

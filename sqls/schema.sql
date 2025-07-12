@@ -330,8 +330,6 @@ CREATE TABLE public.region_gu_display_periods (
   region_gu_id uuid,
   period_from date,
   period_to date,
-  second_half_from date,
-  second_half_to date,
   created_at timestamp without time zone DEFAULT now(),
   updated_at timestamp without time zone DEFAULT now(),
   year_month character varying NOT NULL DEFAULT '2025-06'::character varying,

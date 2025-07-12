@@ -106,8 +106,8 @@ export default function GuidelineSection({
           {guidelines.length > 1 && (
             <h4 className="text-lg font-semibold mb-4 text-gray-700">
               {guideline.guideline_type === 'banner' && '현수막게시대'}
-              {guideline.guideline_type === 'top-fixed' && '상단광고'}
-              {guideline.guideline_type === 'bulliten-board' && '시민게시대'}
+              {guideline.guideline_type === 'top_fixed' && '상단광고'}
+              {guideline.guideline_type === 'bulletin_board' && '시민게시대'}
               {guideline.guideline_type === 'admin' && '행정용'}
               {guideline.guideline_type === 'commercial' && '상업용'}
               가이드라인

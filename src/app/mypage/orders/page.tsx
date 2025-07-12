@@ -209,10 +209,16 @@ export default function OrdersPage() {
     }
 
     // 해당 아이템의 주문 정보 찾기
-    const item = orders.find((item) => item.id === itemId);
-    if (item && item.id) {
-      // console.log('아이템 확장:', itemId, '주문번호:', item.order_number);
-      await handleOrderClick(item.order_number);
+    // transformOrdersForDisplay에서 생성된 숫자 ID를 사용하므로
+    // 실제 주문을 찾기 위해 orderId를 사용해야 함
+    const transformedOrders = transformOrdersForDisplay();
+    const transformedItem = transformedOrders.find(
+      (item) => item.id === itemId
+    );
+
+    if (transformedItem && transformedItem.orderId) {
+      // console.log('아이템 확장:', itemId, '주문번호:', transformedItem.orderNumber);
+      await handleOrderClick(transformedItem.orderNumber);
       setExpandedItemId(itemId);
     }
   };

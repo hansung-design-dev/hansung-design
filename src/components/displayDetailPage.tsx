@@ -15,11 +15,11 @@ import {
   DropdownOption,
   DisplayBillboard,
   PanelGuideline,
+  BannerBillboard,
 } from '@/src/types/displaydetail';
 import DistrictInfo from './districtInfo';
 import HalfPeriodTabs from './ui/HalfPeriodTabs';
 import GuidelineSection from './guidelineSection';
-// import { BannerBillboard } from '@/src/types/displaydetail';
 
 const fadeInUp = {
   initial: { y: 60, opacity: 0 },
@@ -136,7 +136,7 @@ export default function DisplayDetailPage({
           guidelineTypes = ['admin', 'commercial'];
           break;
         case '마포구':
-          guidelineTypes = ['banner', 'bulliten_board'];
+          guidelineTypes = ['banner', 'bulletin_board'];
           break;
         case '용산구':
         case '송파구':
@@ -202,13 +202,13 @@ export default function DisplayDetailPage({
   const filteredByMapo = isMapoDistrict
     ? billboards.filter((item) => {
         if (mapoFilter === 'yeollip') {
-          return item.panel_type === 'multi-panel';
+          return item.panel_type === 'multi_panel';
         } else if (mapoFilter === 'jeodan') {
-          return item.panel_type === 'lower-panel';
+          return item.panel_type === 'lower_panel';
         } else if (mapoFilter === 'simin') {
           return (
             item.panel_type === 'bulletin_board' ||
-            item.panel_type === 'citizen-board'
+            item.panel_type === 'citizen_board'
           );
         }
         return true;
@@ -225,11 +225,10 @@ export default function DisplayDetailPage({
             return item.banner_slot_info.some(
               (slot) => slot.banner_type === 'top_fixed'
             );
-          } else if (currentPanelTypeFilter === 'panel' || 'semi_auto') {
-            // 현수막게시대 탭: banner_type이 'panel', 'semi_auto'인 슬롯이 있는 아이템. (서대문))
+          } else if (currentPanelTypeFilter === 'panel') {
+            // 현수막게시대 탭: banner_type이 'panel'인 슬롯이 있는 아이템
             return item.banner_slot_info.some(
-              (slot) =>
-                slot.banner_type === 'panel' || slot.banner_type === 'semi_auto'
+              (slot) => slot.banner_type === 'panel'
             );
           } else if (currentPanelTypeFilter === 'semi_auto') {
             return item.banner_slot_info.some(
@@ -261,9 +260,13 @@ export default function DisplayDetailPage({
       '🔍 모든 아이템의 banner_slot_info:',
       filteredByMapo.map((item) => ({
         panel_code: item.panel_code,
+        panel_type: item.panel_type,
         banner_slot_info:
           item.type === 'banner'
-            ? item.banner_slot_info?.map((slot) => slot.banner_type)
+            ? item.banner_slot_info?.map((slot) => ({
+                banner_type: slot.banner_type,
+                slot_number: slot.slot_number,
+              }))
             : 'N/A',
         nickname: item.nickname,
       }))
@@ -304,7 +307,7 @@ export default function DisplayDetailPage({
         itemType: item.type,
         bannerSlotInfo:
           item.type === 'banner' && 'banner_slot_info' in item
-            ? (item as any).banner_slot_info?.map((slot: any) => ({
+            ? (item as BannerBillboard).banner_slot_info?.map((slot) => ({
                 banner_type: slot.banner_type,
                 slot_number: slot.slot_number,
                 max_width: slot.max_width,
@@ -390,13 +393,13 @@ export default function DisplayDetailPage({
     if (!panelType) return '현수막게시대';
 
     switch (panelType) {
-      case 'multi-panel':
+      case 'multi_panel':
         return '연립형';
-      case 'lower-panel':
+      case 'lower_panel':
         return '저단형';
       case 'bulletin_board':
         return '시민게시대';
-      case 'citizen-board':
+      case 'citizen_board':
         return '시민/문화게시대';
       case 'with_lighting':
         return '조명형';

@@ -148,8 +148,24 @@ async function getBannerDisplaysByDistrict(districtName: string) {
           panel_code: item.panel_code,
           panel_type: item.panel_type,
           nickname: item.nickname,
+          banner_slot_info_count: item.banner_slot_info?.length || 0,
         })) || [],
     });
+
+    // 용산구 6번 패널 특별 디버깅
+    if (districtName === '용산구') {
+      const panel6 = data?.find((item) => item.panel_code === 6);
+      if (panel6) {
+        console.log('🔍 용산구 6번 패널 API 응답:', {
+          panel_code: panel6.panel_code,
+          panel_type: panel6.panel_type,
+          banner_slot_info: panel6.banner_slot_info,
+          banner_slot_info_count: panel6.banner_slot_info?.length || 0,
+        });
+      } else {
+        console.log('🔍 용산구 6번 패널이 API 응답에 없음');
+      }
+    }
 
     return NextResponse.json({
       success: true,

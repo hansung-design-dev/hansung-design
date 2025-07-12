@@ -46,7 +46,8 @@ interface BannerDisplayData {
       | '지정게시대'
       | '자율게시대'
       | 'top_fixed'
-      | 'panel';
+      | 'panel'
+      | 'semi_auto';
     price_unit?: '15 days' | 'month';
     panel_slot_status: string;
     notes: string;
@@ -329,7 +330,9 @@ export default function BannerDisplayPage({
 
                 // 현수막게시대 슬롯 찾기 (banner_type으로만 구분)
                 const panelSlot = item.banner_slot_info.find(
-                  (slot) => slot.banner_type === 'panel'
+                  (slot) =>
+                    slot.banner_type === 'panel' ||
+                    slot.banner_type === 'semi_auto'
                 );
 
                 return { topFixedSlot, panelSlot };
@@ -344,10 +347,13 @@ export default function BannerDisplayPage({
               console.log('🔍 슬롯 정보:', {
                 panelCode: item.panel_code,
                 nickname: item.nickname,
+                district: item.region_gu.name,
                 bannerSlotInfo: item.banner_slot_info?.map((slot) => ({
                   slot_number: slot.slot_number,
                   banner_type: slot.banner_type,
                   total_price: slot.total_price,
+                  max_width: slot.max_width,
+                  max_height: slot.max_height,
                   price_policies: slot.banner_slot_price_policy,
                 })),
                 foundSlots: slots,
