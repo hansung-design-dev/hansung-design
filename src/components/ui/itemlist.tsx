@@ -16,10 +16,10 @@ const statusDisplayMap: { [key: string]: string } = {
 
 const bannerTypeDisplayMap: { [key: string]: string } = {
   panel: '판넬형',
-  'semi-auto': '반자동',
+  semi_auto: '반자동',
   with_lighting: '조명용',
   no_lighting: '비조명용',
-  'top-fixed': '상단광고',
+  top_fixed: '상단광고',
 };
 
 const getStatusClass = (status: string) => {
@@ -82,23 +82,23 @@ const ItemList: React.FC<ItemTableProps> = ({
     if (!panelType) return '현수막게시대';
 
     switch (panelType) {
-      case 'multi-panel':
+      case 'multi_panel':
         return '연립형';
-      case 'lower-panel':
+      case 'lower_panel':
         return '저단형';
-      case 'bulletin-board':
+      case 'bulletin_board':
         return '시민게시대';
-      case 'citizen-board':
+      case 'citizen_board':
         return '시민/문화게시대';
       case 'with_lighting':
         return '조명형';
       case 'no_lighting':
         return '비조명형';
-      case 'semi-auto':
+      case 'semi_auto':
         return '반자동';
       case 'panel':
         return '패널형';
-      case 'top-fixed':
+      case 'top_fixed':
         return '상단광고';
       default:
         return '현수막게시대';
@@ -174,16 +174,16 @@ const ItemList: React.FC<ItemTableProps> = ({
                   }`}
                   onClick={(e) => handleRowClick(e, item.id)}
                 >
-                  {showCheckbox &&
-                    !(
-                      item.district === '마포구' &&
-                      (item.panel_type === 'bulletin-board' ||
-                        item.panel_type === 'citizen-board')
-                    ) && (
-                      <td
-                        className="text-center px-4"
-                        onClick={(e) => e.stopPropagation()}
-                      >
+                  {showCheckbox && (
+                    <td
+                      className="text-center px-4"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {item.district === '마포구' &&
+                      (item.panel_type === 'bulletin_board' ||
+                        item.panel_type === 'citizen_board') ? (
+                        <span></span>
+                      ) : (
                         <input
                           type="checkbox"
                           checked={selectedIds.includes(item.id)}
@@ -191,8 +191,9 @@ const ItemList: React.FC<ItemTableProps> = ({
                             onItemSelect?.(item.id, e.target.checked)
                           }
                         />
-                      </td>
-                    )}
+                      )}
+                    </td>
+                  )}
                   <td className="text-center pl-4">
                     {item.panel_code || item.id}
                   </td>
@@ -272,7 +273,7 @@ const ItemList: React.FC<ItemTableProps> = ({
                   <td className="text-center pl-4">
                     {isSpecialDistrict &&
                     item.type === 'banner' &&
-                    item.banner_type === 'top-fixed'
+                    item.banner_type === 'top_fixed'
                       ? '상담문의'
                       : item.price}
                   </td>
@@ -335,11 +336,11 @@ const ItemList: React.FC<ItemTableProps> = ({
             >
               <div className="flex items-center gap-2 mb-1">
                 {showCheckbox &&
-                  !(
-                    item.district === '마포구' &&
-                    (item.panel_type === 'bulletin-board' ||
-                      item.panel_type === 'citizen-board')
-                  ) && (
+                  (item.district === '마포구' &&
+                  (item.panel_type === 'bulletin_board' ||
+                    item.panel_type === 'citizen_board') ? (
+                    <span className="mr-2"></span>
+                  ) : (
                     <input
                       type="checkbox"
                       checked={selectedIds.includes(item.id)}
@@ -349,7 +350,7 @@ const ItemList: React.FC<ItemTableProps> = ({
                       onClick={(e) => e.stopPropagation()}
                       className="mr-2"
                     />
-                  )}
+                  ))}
                 <span className="text-sm text-gray-500 font-medium">
                   No. {item.panel_code || item.id}
                 </span>

@@ -3,6 +3,66 @@ import ArrowLeft from '@/src/icons/arrow-left.svg';
 import ArrowRight from '@/src/icons/arrow-right.svg';
 import { useRouter } from 'next/navigation';
 import { Button } from './button/button';
+import ConfirmModal from './modal/ConfirmModal';
+
+// 알림 모달 컴포넌트
+function AlertModal({
+  isOpen,
+  onClose,
+  title,
+  message,
+  type = 'info',
+  onConfirm,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  message: string;
+  type?: 'info' | 'success' | 'error' | 'warning';
+  onConfirm?: () => void;
+}) {
+  if (!isOpen) return null;
+
+  const getIcon = () => {
+    switch (type) {
+      case 'success':
+        return <div className="text-green-500 text-4xl mb-4">✓</div>;
+      case 'error':
+        return <div className="text-red-500 text-4xl mb-4">✗</div>;
+      case 'warning':
+        return <div className="text-yellow-500 text-4xl mb-4">⚠</div>;
+      default:
+        return <div className="text-blue-500 text-4xl mb-4">ℹ</div>;
+    }
+  };
+
+  const handleConfirm = () => {
+    if (onConfirm) {
+      onConfirm();
+    }
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
+      <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+        <div className="text-center">
+          {getIcon()}
+          <h3 className="text-xl font-bold mb-4">{title}</h3>
+          <p className="text-gray-600 mb-6">{message}</p>
+          <Button
+            size="md"
+            variant="filledBlack"
+            onClick={handleConfirm}
+            className="w-full"
+          >
+            확인
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface ListItem {
   id: number;
@@ -36,6 +96,7 @@ interface ItemTableProps {
   expandedItemId?: number | null;
   onExpandItem?: (itemId: number | null) => void;
   expandedContent?: React.ReactNode;
+  onCancelOrder?: (item: ListItem) => void;
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -50,8 +111,18 @@ const OrderItemList: React.FC<ItemTableProps> = ({
   expandedItemId,
   onExpandItem,
   expandedContent,
+  onCancelOrder,
 }) => {
   const [page, setPage] = useState(1);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [itemToCancel, setItemToCancel] = useState<ListItem | null>(null);
+  const [alertModal, setAlertModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info' as 'info' | 'success' | 'error' | 'warning',
+    onConfirm: () => {},
+  });
   const router = useRouter();
   const totalPages = Math.ceil(items.length / ITEMS_PER_PAGE);
   const paginatedItems = items.slice(
@@ -93,8 +164,79 @@ const OrderItemList: React.FC<ItemTableProps> = ({
     }
   };
 
+  const handleCancelClick = (item: ListItem) => {
+    setItemToCancel(item);
+    setIsConfirmModalOpen(true);
+  };
+
+  const handleConfirmCancel = async () => {
+    if (itemToCancel) {
+      try {
+        // orderId가 있으면 orderId를, 없으면 id를 사용
+        const orderId = itemToCancel.orderId || itemToCancel.id.toString();
+
+        const response = await fetch(`/api/orders/cancel?orderId=${orderId}`, {
+          method: 'DELETE',
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // 성공 시 UI에서 아이템 제거
+          onCancelOrder?.(itemToCancel);
+
+          // 성공 모달 표시
+          setAlertModal({
+            isOpen: true,
+            title: '삭제 완료',
+            message: '주문이 성공적으로 취소되었습니다.',
+            type: 'success',
+            onConfirm: () => {},
+          });
+        } else {
+          // 에러 처리
+          setAlertModal({
+            isOpen: true,
+            title: '삭제 실패',
+            message: result.error || '주문 취소에 실패했습니다.',
+            type: 'error',
+            onConfirm: () => {},
+          });
+        }
+      } catch (error) {
+        console.error('주문 취소 에러:', error);
+        setAlertModal({
+          isOpen: true,
+          title: '오류',
+          message: '주문 취소 중 오류가 발생했습니다.',
+          type: 'error',
+          onConfirm: () => {},
+        });
+      }
+    }
+  };
+
   return (
     <>
+      <ConfirmModal
+        isOpen={isConfirmModalOpen}
+        onClose={() => setIsConfirmModalOpen(false)}
+        onConfirm={handleConfirmCancel}
+        title="신청 취소 확인"
+        message="정말로 이 신청을 취소하시겠습니까?"
+        confirmText="취소하기"
+        cancelText="돌아가기"
+      />
+
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+        onConfirm={alertModal.onConfirm}
+      />
+
       {/* ✅ 데스크탑/tablet 이상: table로 표시 */}
       <div className="overflow-x-auto hidden lg:block">
         <table className="w-full border-collapse border-t border-gray-200 text-1.25 font-500">
@@ -157,9 +299,15 @@ const OrderItemList: React.FC<ItemTableProps> = ({
                     size="xs"
                     variant="outlinedGray"
                     className={` px-4 py-1 rounded-full text-gray-700 font-200`}
-                    disabled={
-                      item.status === '마감' || item.status === '송출중'
-                    }
+                    // 테스트 중이므로 모든 상태에서 취소 가능
+                    // TODO: 실제 운영 시에는 아래 주석을 해제
+                    // disabled={
+                    //   item.status === '마감' || item.status === '송출중'
+                    // }
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCancelClick(item);
+                    }}
                   >
                     신청 취소
                   </Button>
@@ -230,12 +378,19 @@ const OrderItemList: React.FC<ItemTableProps> = ({
               </span>
             </div>
             <button
-              className={`border px-4 py-1 rounded mt-2 ${
-                item.status === '마감' || item.status === '송출중'
-                  ? 'text-gray-400 border-gray-200 bg-gray-100 cursor-not-allowed'
-                  : 'text-black border-black hover:bg-gray-100'
-              }`}
-              disabled={item.status === '마감' || item.status === '송출중'}
+              className={`border px-4 py-1 rounded mt-2 text-black border-black hover:bg-gray-100`}
+              // 테스트 중이므로 모든 상태에서 취소 가능
+              // TODO: 실제 운영 시에는 아래 주석을 해제
+              // className={`border px-4 py-1 rounded mt-2 ${
+              //   item.status === '마감' || item.status === '송출중'
+              //     ? 'text-gray-400 border-gray-200 bg-gray-100 cursor-not-allowed'
+              //     : 'text-black border-black hover:bg-gray-100'
+              // }`}
+              // disabled={item.status === '마감' || item.status === '송출중'}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCancelClick(item);
+              }}
             >
               신청 취소
             </button>

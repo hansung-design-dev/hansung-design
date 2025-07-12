@@ -91,7 +91,6 @@ interface OrderDetail {
     slot_name: string | null;
     tax_price: number | null;
     created_at: string | null;
-    is_premium: boolean | null;
     max_height: number | null;
     price_unit: string | null;
     updated_at: string | null;
@@ -210,10 +209,16 @@ export default function OrdersPage() {
     }
 
     // 해당 아이템의 주문 정보 찾기
-    const item = filteredOrders.find((item) => item.id === itemId);
-    if (item && item.orderId) {
-      console.log('아이템 확장:', itemId, '주문번호:', item.orderId);
-      await handleOrderClick(item.orderId);
+    // transformOrdersForDisplay에서 생성된 숫자 ID를 사용하므로
+    // 실제 주문을 찾기 위해 orderId를 사용해야 함
+    const transformedOrders = transformOrdersForDisplay();
+    const transformedItem = transformedOrders.find(
+      (item) => item.id === itemId
+    );
+
+    if (transformedItem && transformedItem.orderId) {
+      // console.log('아이템 확장:', itemId, '주문번호:', transformedItem.orderNumber);
+      await handleOrderClick(transformedItem.orderNumber);
       setExpandedItemId(itemId);
     }
   };
@@ -267,6 +272,23 @@ export default function OrdersPage() {
     setActiveSearchLocation(searchLocation);
   };
 
+  // 주문 취소 핸들러
+  const handleCancelOrder = (item: { id: number; orderId?: string }) => {
+    if (!item.orderId) return;
+
+    // 주문 목록에서 해당 아이템 제거 (실제 주문 ID로 필터링)
+    setOrders((prevOrders) =>
+      prevOrders.filter((order) => order.id !== item.orderId)
+    );
+
+    // 상태 요약 업데이트 (pending 상태인 주문이 취소되므로 pending 개수 감소)
+    setStatusSummary((prev) => ({
+      ...prev,
+      pending: Math.max(0, prev.pending - 1),
+      total: Math.max(0, prev.total - 1),
+    }));
+  };
+
   // 주문 데이터를 OrderItemList 컴포넌트 형식으로 변환
   const transformOrdersForDisplay = () => {
     let globalIndex = 1; // 전역 인덱스로 고유한 숫자 ID 생성
@@ -283,7 +305,7 @@ export default function OrdersPage() {
           item.price_display || order.total_amount.toLocaleString() + '원',
         startDate: item.start_date,
         endDate: item.end_date,
-        orderId: order.order_number, // 주문번호를 orderId로 설정
+        orderId: order.id, // 실제 주문 ID를 orderId로 설정
       }))
     );
 
@@ -481,6 +503,7 @@ export default function OrdersPage() {
               items={filteredOrders}
               expandedItemId={expandedItemId}
               onExpandItem={handleExpandItem}
+              onCancelOrder={handleCancelOrder}
               expandedContent={
                 detailLoading ? (
                   <div className="text-center py-8">

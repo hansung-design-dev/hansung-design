@@ -15,11 +15,11 @@ import {
   DropdownOption,
   DisplayBillboard,
   PanelGuideline,
+  BannerBillboard,
 } from '@/src/types/displaydetail';
 import DistrictInfo from './districtInfo';
 import HalfPeriodTabs from './ui/HalfPeriodTabs';
 import GuidelineSection from './guidelineSection';
-// import { BannerBillboard } from '@/src/types/displaydetail';
 
 const fadeInUp = {
   initial: { y: 60, opacity: 0 },
@@ -66,9 +66,9 @@ export default function DisplayDetailPage({
       name: string;
     };
   } | null;
-  panelTypeFilter?: 'panel' | 'top-fixed';
+  panelTypeFilter?: 'panel' | 'top_fixed';
   setPanelTypeFilter?: React.Dispatch<
-    React.SetStateAction<'panel' | 'top-fixed'>
+    React.SetStateAction<'panel' | 'top_fixed'>
   >;
 }) {
   const [selectedOption, setSelectedOption] = useState<{
@@ -111,7 +111,7 @@ export default function DisplayDetailPage({
 
   // 송파구, 용산구 탭 필터 추가
   const [internalPanelTypeFilter, setInternalPanelTypeFilter] = useState<
-    'panel' | 'top-fixed'
+    'panel' | 'top_fixed' | 'semi_auto'
   >('panel');
 
   // 가이드라인 상태 추가
@@ -136,11 +136,11 @@ export default function DisplayDetailPage({
           guidelineTypes = ['admin', 'commercial'];
           break;
         case '마포구':
-          guidelineTypes = ['banner', 'bulliten-board'];
+          guidelineTypes = ['banner', 'bulletin_board'];
           break;
         case '용산구':
         case '송파구':
-          guidelineTypes = ['banner', 'top-fixed'];
+          guidelineTypes = ['banner', 'top_fixed'];
           break;
         default:
           guidelineTypes = ['banner'];
@@ -192,47 +192,74 @@ export default function DisplayDetailPage({
   // }, [selectedHalfPeriod]);
   // 마포구인지 확인
   const isMapoDistrict = districtObj?.code === 'mapo';
-  // 송파구, 용산구인지 확인
+  // 송파구, 용산구, 서대문구인지 확인
   const isSongpaOrYongsan =
-    districtObj?.code === 'songpa' || districtObj?.code === 'yongsan';
+    districtObj?.code === 'songpa' ||
+    districtObj?.code === 'yongsan' ||
+    districtObj?.code === 'seodaemun';
 
   // 마포구 필터에 따른 데이터 필터링
   const filteredByMapo = isMapoDistrict
     ? billboards.filter((item) => {
         if (mapoFilter === 'yeollip') {
-          return item.panel_type === 'multi-panel';
+          return item.panel_type === 'multi_panel';
         } else if (mapoFilter === 'jeodan') {
-          return item.panel_type === 'lower-panel';
+          return item.panel_type === 'lower_panel';
         } else if (mapoFilter === 'simin') {
           return (
-            item.panel_type === 'bulletin-board' ||
-            item.panel_type === 'citizen-board'
+            item.panel_type === 'bulletin_board' ||
+            item.panel_type === 'citizen_board'
           );
         }
         return true;
       })
     : billboards;
 
-  // 송파구, 용산구 필터에 따른 데이터 필터링 (banner_slot_info의 banner_type 사용)
+  // 송파구, 용산구, 서대문구 필터에 따른 데이터 필터링 (banner_slot_info의 banner_type 사용)
   const filteredByPanelType = isSongpaOrYongsan
     ? filteredByMapo.filter((item) => {
         // banner_slot_info에서 banner_type 확인
         if (item.type === 'banner' && item.banner_slot_info) {
-          if (currentPanelTypeFilter === 'top-fixed') {
-            // 상단광고 탭: banner_type이 'top-fixed'인 슬롯이 있는 아이템만
+          if (currentPanelTypeFilter === 'top_fixed') {
+            // 상단광고 탭: banner_type이 'top_fixed'인 슬롯이 있는 아이템만
             return item.banner_slot_info.some(
-              (slot) => slot.banner_type === 'top-fixed'
+              (slot) => slot.banner_type === 'top_fixed'
             );
           } else if (currentPanelTypeFilter === 'panel') {
-            // 현수막게시대 탭: banner_type이 'panel'인 슬롯이 있는 아이템만
+            // 현수막게시대 탭: banner_type이 'panel' 또는 'semi_auto'인 슬롯이 있는 아이템 (서대문구 포함)
             return item.banner_slot_info.some(
-              (slot) => slot.banner_type === 'panel'
+              (slot) =>
+                slot.banner_type === 'panel' || slot.banner_type === 'semi_auto'
+            );
+          } else if (currentPanelTypeFilter === 'semi_auto') {
+            return item.banner_slot_info.some(
+              (slot) => slot.banner_type === 'semi_auto'
             );
           }
         }
         return true;
       })
     : filteredByMapo;
+
+  // 서대문구 필터링 디버깅
+  if (districtObj?.name === '서대문구') {
+    console.log('🔍 서대문구 필터링 과정:', {
+      currentPanelTypeFilter,
+      filteredByMapoCount: filteredByMapo.length,
+      filteredByPanelTypeCount: filteredByPanelType.length,
+      filteredItems: filteredByPanelType.map((item) => ({
+        panel_code: item.panel_code,
+        panel_type: item.panel_type,
+        banner_slot_info:
+          item.type === 'banner'
+            ? item.banner_slot_info?.map((slot) => ({
+                banner_type: slot.banner_type,
+                slot_number: slot.slot_number,
+              }))
+            : 'N/A',
+      })),
+    });
+  }
 
   // 디버깅: 필터링 결과 확인
   if (isSongpaOrYongsan) {
@@ -254,13 +281,36 @@ export default function DisplayDetailPage({
       '🔍 모든 아이템의 banner_slot_info:',
       filteredByMapo.map((item) => ({
         panel_code: item.panel_code,
+        panel_type: item.panel_type,
         banner_slot_info:
           item.type === 'banner'
-            ? item.banner_slot_info?.map((slot) => slot.banner_type)
+            ? item.banner_slot_info?.map((slot) => ({
+                banner_type: slot.banner_type,
+                slot_number: slot.slot_number,
+              }))
             : 'N/A',
         nickname: item.nickname,
       }))
     );
+
+    // 서대문구 6-16번 패널 특별 디버깅
+    if (districtObj?.name === '서대문구') {
+      const panels6to16 = filteredByMapo.filter(
+        (item) =>
+          item.panel_code && item.panel_code >= 6 && item.panel_code <= 16
+      );
+      console.log('🔍 서대문구 6-16번 패널들:', {
+        totalCount: panels6to16.length,
+        panels: panels6to16.map((item) => ({
+          panel_code: item.panel_code,
+          panel_type: item.panel_type,
+          type: item.type,
+          banner_slot_info:
+            item.type === 'banner' ? item.banner_slot_info : 'N/A',
+          nickname: item.nickname,
+        })),
+      });
+    }
   }
 
   const filteredByDistrict =
@@ -288,13 +338,70 @@ export default function DisplayDetailPage({
 
   // 구분 컬럼에 표시할 값 계산 함수 (탭에 따라 다른 로직 적용)
   const getPanelTypeLabel = (item: DisplayBillboard) => {
-    // 송파구, 용산구의 경우 탭에 따라 다른 로직 적용
+    // 서대문구 panel_type 디버깅
+    if (districtObj?.code === 'seodaemun') {
+      console.log('🔍 서대문구 panel_type 디버깅:', {
+        itemId: item.id,
+        itemName: item.name,
+        panelType: item.panel_type,
+        itemType: item.type,
+        bannerSlotInfo:
+          item.type === 'banner' && 'banner_slot_info' in item
+            ? (item as BannerBillboard).banner_slot_info?.map((slot) => ({
+                banner_type: slot.banner_type,
+                slot_number: slot.slot_number,
+                max_width: slot.max_width,
+                max_height: slot.max_height,
+                total_price: slot.total_price,
+              }))
+            : 'N/A',
+      });
+    }
+
+    // 송파구, 용산구, 서대문구의 경우 탭에 따라 다른 로직 적용
     if (isSongpaOrYongsan && item.type === 'banner') {
-      if (currentPanelTypeFilter === 'top-fixed') {
+      // 서대문구는 banner_slot_info의 banner_type을 우선적으로 확인
+      if (districtObj?.code === 'seodaemun') {
+        // banner_slot_info에서 banner_type 확인
+        if (item.banner_slot_info && item.banner_slot_info.length > 0) {
+          const slot = item.banner_slot_info.find(
+            (s) => s.banner_type === 'semi_auto' || s.banner_type === 'panel'
+          );
+          if (slot) {
+            switch (slot.banner_type) {
+              case 'semi_auto':
+                return '반자동';
+              case 'panel':
+                return '패널형';
+              default:
+                return '?';
+            }
+          }
+        }
+
+        // fallback: panel_info의 panel_type 확인
+        const panelType = item.panel_type;
+        if (!panelType) return '현수막게시대';
+
+        switch (panelType) {
+          case 'with_lighting':
+            return '조명형';
+          case 'no_lighting':
+            return '비조명형';
+          case 'semi_auto':
+            return '반자동';
+          case 'panel':
+            return '패널형';
+          default:
+            return '현수막게시대';
+        }
+      }
+
+      if (currentPanelTypeFilter === 'top_fixed') {
         // 상단광고 탭: banner_type에서 값 가져오기
         if (item.banner_slot_info && item.banner_slot_info.length > 0) {
           const topFixedSlot = item.banner_slot_info.find(
-            (slot) => slot.banner_type === 'top-fixed'
+            (slot) => slot.banner_type === 'top_fixed'
           );
           if (topFixedSlot) {
             return '상단광고';
@@ -311,7 +418,7 @@ export default function DisplayDetailPage({
             return '조명형';
           case 'no_lighting':
             return '비조명형';
-          case 'semi-auto':
+          case 'semi_auto':
             return '반자동';
           case 'panel':
             return '패널형';
@@ -326,23 +433,23 @@ export default function DisplayDetailPage({
     if (!panelType) return '현수막게시대';
 
     switch (panelType) {
-      case 'multi-panel':
+      case 'multi_panel':
         return '연립형';
-      case 'lower-panel':
+      case 'lower_panel':
         return '저단형';
-      case 'bulletin-board':
+      case 'bulletin_board':
         return '시민게시대';
-      case 'citizen-board':
+      case 'citizen_board':
         return '시민/문화게시대';
       case 'with_lighting':
         return '조명형';
       case 'no_lighting':
         return '비조명형';
-      case 'semi-auto':
+      case 'semi_auto':
         return '반자동';
       case 'panel':
         return '패널형';
-      case 'top-fixed':
+      case 'top_fixed':
         return '상단광고';
       default:
         return '현수막게시대';
@@ -465,12 +572,12 @@ export default function DisplayDetailPage({
           });
 
           // 현수막게시대 슬롯 찾기 (상단광고가 아닌 모든 슬롯)
-          // 'top-fixed'가 아닌 슬롯을 우선적으로 찾기
+          // 'top_fixed'가 아닌 슬롯을 우선적으로 찾기
           let slotInfo = item.banner_slot_info.find(
-            (slot) => slot.banner_type !== 'top-fixed' && slot.slot_number > 0
+            (slot) => slot.banner_type !== 'top_fixed' && slot.slot_number > 0
           );
 
-          console.log('🔍 Looking for banner slot (non-top-fixed):', {
+          console.log('🔍 Looking for banner slot (non-top_fixed):', {
             foundBannerSlot: !!slotInfo,
             allSlots: item.banner_slot_info.map((slot) => ({
               banner_type: slot.banner_type,
@@ -517,7 +624,7 @@ export default function DisplayDetailPage({
                 slot_name: slotInfo.slot_name,
                 tax_price: defaultPolicy.tax_price,
                 created_at: slotInfo.created_at,
-                is_premium: slotInfo.is_premium,
+
                 max_height: slotInfo.max_height,
                 price_unit: slotInfo.price_unit || null,
                 updated_at: slotInfo.updated_at,
@@ -561,7 +668,7 @@ export default function DisplayDetailPage({
                 slot_name: slotInfo.slot_name,
                 tax_price: firstPolicy.tax_price,
                 created_at: slotInfo.created_at,
-                is_premium: slotInfo.is_premium,
+
                 max_height: slotInfo.max_height,
                 price_unit: slotInfo.price_unit || null,
                 updated_at: slotInfo.updated_at,
@@ -605,7 +712,7 @@ export default function DisplayDetailPage({
               slot_name: slotInfo.slot_name,
               tax_price: slotInfo.tax_price || 0,
               created_at: slotInfo.created_at,
-              is_premium: slotInfo.is_premium,
+
               max_height: slotInfo.max_height,
               price_unit: slotInfo.price_unit || null,
               updated_at: slotInfo.updated_at,
@@ -667,7 +774,7 @@ export default function DisplayDetailPage({
           selectedMonth: new Date().getMonth() + 2, // 다음달
           panel_type: item.panel_type,
           panel_info_id: item.panel_info_id, // 원본 UUID
-          isTopFixed: item.panel_type === 'top-fixed', // 상단광고 여부 (하이픈으로 수정)
+          isTopFixed: item.panel_type === 'top_fixed', // 상단광고 여부 (하이픈으로 수정)
           ...(panelSlotSnapshot && { panel_slot_snapshot: panelSlotSnapshot }), // 가격 상세 정보 추가
           panel_code: item.panel_code?.toString(),
         };
@@ -971,9 +1078,9 @@ export default function DisplayDetailPage({
                 현수막게시대
               </button>
               <button
-                onClick={() => currentSetPanelTypeFilter('top-fixed')}
+                onClick={() => currentSetPanelTypeFilter('top_fixed')}
                 className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-6 font-medium ${
-                  currentPanelTypeFilter === 'top-fixed'
+                  currentPanelTypeFilter === 'top_fixed'
                     ? 'text-white bg-black rounded-full '
                     : 'text-gray-600 hover:text-gray-800'
                 }`}
@@ -990,7 +1097,7 @@ export default function DisplayDetailPage({
             selectedOption &&
             selectedOption.option !== '전체' &&
             selectedDistrictPeriod)) &&
-          !(isSongpaOrYongsan && currentPanelTypeFilter === 'top-fixed') && (
+          !(isSongpaOrYongsan && currentPanelTypeFilter === 'top_fixed') && (
             <HalfPeriodTabs
               selectedPeriod={selectedHalfPeriod}
               onPeriodChange={setSelectedHalfPeriod}
@@ -1074,7 +1181,7 @@ export default function DisplayDetailPage({
                 onItemSelect={(id, checked) => handleItemSelect(id, checked)}
                 enableRowClick={false}
                 hideQuantityColumns={
-                  isSongpaOrYongsan && currentPanelTypeFilter === 'top-fixed'
+                  isSongpaOrYongsan && currentPanelTypeFilter === 'top_fixed'
                 }
               />
 

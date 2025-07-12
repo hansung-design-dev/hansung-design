@@ -45,10 +45,10 @@ interface BannerDisplayData {
       | '돌출형'
       | '지정게시대'
       | '자율게시대'
-      | 'top-fixed'
-      | 'panel';
+      | 'top_fixed'
+      | 'panel'
+      | 'semi_auto';
     price_unit?: '15 days' | 'month';
-    is_premium: boolean;
     panel_slot_status: string;
     notes: string;
     created_at: string;
@@ -157,7 +157,7 @@ export default function BannerDisplayPage({
   const [bankInfo, setBankInfo] = useState<BankInfo | null>(null);
 
   // 송파구, 용산구 탭 필터 추가 (DisplayDetailPage에서 사용)
-  const [panelTypeFilter, setPanelTypeFilter] = useState<'panel' | 'top-fixed'>(
+  const [panelTypeFilter, setPanelTypeFilter] = useState<'panel' | 'top_fixed'>(
     'panel'
   );
 
@@ -323,34 +323,37 @@ export default function BannerDisplayPage({
                   }))
                 );
 
-                // 상단광고 슬롯 찾기 (slot_number = 0)
+                // 상단광고 슬롯 찾기 (banner_type으로만 구분)
                 const topFixedSlot = item.banner_slot_info.find(
-                  (slot) =>
-                    slot.banner_type === 'top-fixed' && slot.slot_number === 0
+                  (slot) => slot.banner_type === 'top_fixed'
                 );
 
-                // 현수막게시대 슬롯 찾기 (첫 번째 panel 슬롯 - slot_number = 1)
+                // 현수막게시대 슬롯 찾기 (banner_type으로만 구분)
                 const panelSlot = item.banner_slot_info.find(
                   (slot) =>
-                    slot.banner_type === 'panel' && slot.slot_number === 1
+                    slot.banner_type === 'panel' ||
+                    slot.banner_type === 'semi_auto'
                 );
 
                 return { topFixedSlot, panelSlot };
               };
 
               const slots = findSlotByType();
-              // panelTypeFilter가 'top-fixed'인 경우 상단광고로 처리
-              const isTopFixed = panelTypeFilter === 'top-fixed';
+              // panelTypeFilter가 'top_fixed'인 경우 상단광고로 처리
+              const isTopFixed = panelTypeFilter === 'top_fixed';
               console.log('isTopFixed', isTopFixed);
 
               // 디버깅 로그 추가
               console.log('🔍 슬롯 정보:', {
                 panelCode: item.panel_code,
                 nickname: item.nickname,
+                district: item.region_gu.name,
                 bannerSlotInfo: item.banner_slot_info?.map((slot) => ({
                   slot_number: slot.slot_number,
                   banner_type: slot.banner_type,
                   total_price: slot.total_price,
+                  max_width: slot.max_width,
+                  max_height: slot.max_height,
                   price_policies: slot.banner_slot_price_policy,
                 })),
                 foundSlots: slots,
@@ -411,7 +414,7 @@ export default function BannerDisplayPage({
               });
 
               const bannerType = isTopFixed
-                ? 'top-fixed'
+                ? 'top_fixed'
                 : slots?.panelSlot?.banner_type || undefined;
 
               // 상하반기별 마감수 정보 (panel_info에서 가져오기)

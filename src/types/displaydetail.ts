@@ -63,7 +63,6 @@ export interface BannerBillboard extends BaseBillboard {
     road_usage_fee?: number;
     banner_type: string;
     price_unit?: string;
-    is_premium: boolean;
     panel_slot_status: string;
     notes: string;
     created_at: string;
@@ -133,12 +132,12 @@ export interface PanelGuideline {
   image_url: string[];
   region_gu_id: string;
   guideline_type:
-    | 'lower-panel'
-    | 'multi-panel'
-    | 'bulliten-board'
+    | 'lower_panel'
+    | 'multi_panel'
+    | 'bulletin_board'
     | 'led'
     | 'panel'
-    | 'top-fixed'
+    | 'top_fixed'
     | 'admin'
     | 'commercial'
     | 'banner';
