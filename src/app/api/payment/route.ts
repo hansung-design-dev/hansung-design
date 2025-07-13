@@ -41,14 +41,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const {
-      action,
-      orderId,
-      paymentMethodId,
-      amount,
-      userAuthId,
-      userProfileId,
-    } = body;
+    const { action, orderId, paymentMethodId, amount, userProfileId } = body;
 
     switch (action) {
       case 'processPayment':
@@ -163,7 +156,7 @@ export async function POST(request: NextRequest) {
 
       case 'approvePayment':
         // 어드민이 결제 승인
-        const { adminProfileId, adminNotes } = body;
+        const { adminNotes } = body;
 
         // 결제 정보 업데이트
         const { error: paymentUpdateError } = await supabase
