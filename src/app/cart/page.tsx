@@ -994,7 +994,19 @@ export default function Cart() {
         return;
       }
 
-      // 선택된 아이템들을 URL 파라미터로 인코딩하여 결제 페이지로 이동
+      // 공공기관/기업용 아이템이 있는지 확인
+      const hasPublicInstitutionItems = selectedCartItems.some(
+        (item) => item.is_public_institution
+      );
+      const hasCompanyItems = selectedCartItems.some((item) => item.is_company);
+
+      // 공공기관/기업용인 경우 어드민 승인 요청
+      if (hasPublicInstitutionItems || hasCompanyItems) {
+        await handleAdminApprovalRequest(selectedCartItems);
+        return;
+      }
+
+      // 일반 사용자인 경우 결제 페이지로 이동
       const selectedItemsParam = encodeURIComponent(
         JSON.stringify(selectedCartItems.map((item) => item.id))
       );
@@ -1010,6 +1022,81 @@ export default function Cart() {
       console.error('Payment navigation error:', error);
       setErrorMessage(
         '결제 페이지로 이동 중 오류가 발생했습니다. 다시 시도해주세요.'
+      );
+      setIsPaymentErrorModalOpen(true);
+    }
+  };
+
+  // 어드민 승인 요청 함수
+  const handleAdminApprovalRequest = async (selectedCartItems: CartItem[]) => {
+    try {
+      // 주문 생성
+      const orderResponse = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: selectedCartItems.map((item) => ({
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            quantity: 1,
+            panel_info_id: item.panel_info_id,
+            panel_slot_snapshot: item.panel_slot_snapshot,
+            panel_slot_usage_id: item.panel_slot_usage_id,
+            halfPeriod: item.halfPeriod,
+            selectedYear: item.selectedYear,
+            selectedMonth: item.selectedMonth,
+            startDate: new Date().toISOString().split('T')[0],
+            endDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
+              .toISOString()
+              .split('T')[0],
+          })),
+          paymentMethod: 'admin_approval',
+        }),
+      });
+
+      const orderData = await orderResponse.json();
+
+      if (!orderData.success) {
+        throw new Error(orderData.error || '주문 생성에 실패했습니다.');
+      }
+
+      // 어드민 승인 요청
+      const approvalResponse = await fetch('/api/payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'requestAdminApproval',
+          orderId: orderData.data.id,
+        }),
+      });
+
+      const approvalData = await approvalResponse.json();
+
+      if (!approvalData.success) {
+        throw new Error(
+          approvalData.error || '어드민 승인 요청에 실패했습니다.'
+        );
+      }
+
+      // 성공 시 선택된 아이템들을 장바구니에서 제거
+      selectedCartItems.forEach((item) => {
+        dispatch({ type: 'REMOVE_ITEM', id: item.id });
+      });
+
+      // 선택 상태 초기화
+      setSelectedItems(new Set());
+
+      // 주문내역 페이지로 이동
+      router.push('/mypage/orders');
+    } catch (error) {
+      console.error('Admin approval request error:', error);
+      setErrorMessage(
+        '어드민 승인 요청 중 오류가 발생했습니다. 다시 시도해주세요.'
       );
       setIsPaymentErrorModalOpen(true);
     }
@@ -1409,7 +1496,7 @@ export default function Cart() {
           >
             {cartSummary.hasCompanyItems ||
             cartSummary.hasPublicInstitutionItems
-              ? '결제 신청하기'
+              ? '결제대기 신청하기'
               : `총 ${cartSummary.quantity}건 결제하기`}
           </Button>
           {cartSummary.hasMixedUserTypes && (

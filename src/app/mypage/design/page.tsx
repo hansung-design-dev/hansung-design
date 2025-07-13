@@ -1,404 +1,274 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import MypageContainer from '@/src/components/mypageContainer';
-import Image from 'next/image';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/src/contexts/authContext';
+import Nav from '@/src/components/layouts/nav';
+import { Button } from '@/src/components/button/button';
+import { useRouter } from 'next/navigation';
 
-interface DesignTab {
-  name: string;
+interface DesignDraft {
   id: string;
-}
-
-interface DesignItem {
-  id: string;
-  orderNumber: string;
-  title: string;
-  subtitle?: string;
-  location: string;
-  status: 'pending' | 'uploaded' | 'completed';
-  uploadDate?: string;
-  completionDate?: string;
-  thumbnail?: string;
-}
-
-interface OrderItem {
-  id: string;
-  panel_info: {
-    address: string;
-    nickname?: string;
-    panel_status: string;
-    region_dong?: string;
-    max_banner?: number;
-    first_half_closure_quantity?: number;
-    second_half_closure_quantity?: number;
-  };
-  slot_info: {
-    slot_name: string;
-    banner_type: string;
-    price_unit: string;
-  };
-  quantity: number;
-  unit_price: number;
-  total_price: number;
-  start_date: string;
-  end_date: string;
-  price_display?: string;
+  order_id: string;
+  user_profile_id: string;
+  admin_profile_id: string | null;
+  file_name: string | null;
+  file_url: string | null;
+  file_extension: string | null;
+  file_size: number | null;
+  draft_category: 'initial' | 'feedback' | 'revision' | 'final';
+  notes: string | null;
+  is_approved: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 interface Order {
   id: string;
   order_number: string;
-  total_amount: number;
-  status: string;
   payment_status: string;
-  order_date: string;
-  year_month?: string;
-  order_items: OrderItem[];
-}
-
-interface OrdersResponse {
-  success: boolean;
-  orders: Order[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
-  statusSummary: {
-    total: number;
-    pending: number;
-    confirmed: number;
-    completed: number;
-  };
-  error?: string;
+  admin_approval_status: string;
+  design_drafts_id: string | null;
+  created_at: string;
+  design_drafts?: DesignDraft[];
 }
 
 export default function DesignPage() {
-  const [activeTab, setActiveTab] = useState('send');
+  const { user } = useAuth();
+  const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const { user, loading: authLoading } = useAuth();
-
-  const tabs: DesignTab[] = [
-    { name: '시안 보내기', id: 'send' },
-    { name: '시안 보기', id: 'view' },
-  ];
-
-  // 시안 보기 리스트 (한성디자인이 완성한 디자인들)
-  const viewDesignList: DesignItem[] = [
-    {
-      id: '1',
-      orderNumber: 'ORD-2025-001',
-      title: '울림픽대교 남단사거리 앞',
-      location: '방이동',
-      status: 'completed',
-      completionDate: '2025.01.20',
-      thumbnail: '/images/digital-signage-example.jpeg',
-    },
-    {
-      id: '2',
-      orderNumber: 'ORD-2025-003',
-      title: '마포구청 앞 LED게시대',
-      location: '합정동',
-      status: 'completed',
-      completionDate: '2025.01.18',
-      thumbnail: '/images/digital-signage-example.jpeg',
-    },
-  ];
-
-  const fetchOrders = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/orders?page=1&limit=50');
-      const data: OrdersResponse = await response.json();
-
-      if (data.success) {
-        setOrders(data.orders);
-      } else {
-        console.error(data.error || '주문 내역을 불러오는데 실패했습니다.');
-      }
-    } catch {
-      console.error('주문 내역을 불러오는데 실패했습니다.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [uploadingFile, setUploadingFile] = useState<string | null>(null);
 
   useEffect(() => {
-    if (authLoading) return;
-
     if (!user) {
+      router.push('/signin');
       return;
     }
 
     fetchOrders();
-  }, [user, authLoading, fetchOrders]);
+  }, [user, router]);
 
-  // 결제완료된 주문들을 시안 보내기용으로 변환
-  const sendDesignList: DesignItem[] = orders
-    .filter((order) => order.status === 'confirmed') // 결제완료된 주문만 필터링
-    .flatMap((order) =>
-      order.order_items.map((item, index) => ({
-        id: `${order.id}-${index}`,
-        orderNumber: order.order_number,
-        title: item.panel_info.nickname || item.panel_info.address,
-        subtitle: `(${item.slot_info.banner_type})`,
-        location: item.panel_info.region_dong || item.panel_info.address,
-        status: 'pending' as const, // 시안 대기 상태
-      }))
-    );
+  const fetchOrders = async () => {
+    try {
+      const response = await fetch('/api/orders');
+      const data = await response.json();
 
-  const handleUploadDesign = (orderId: string) => {
-    // 시안 업로드 모달 또는 페이지로 이동
-    console.log('시안 업로드:', orderId);
-  };
-
-  const handleViewDesign = (orderId: string) => {
-    // 시안 상세보기 페이지로 이동
-    console.log('시안 보기:', orderId);
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return (
-          <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
-            시안 대기
-          </span>
+      if (data.success) {
+        // 결제 완료된 주문만 필터링
+        const completedOrders = data.data.filter(
+          (order: Order) =>
+            order.payment_status === 'completed' ||
+            order.admin_approval_status === 'approved'
         );
-      case 'uploaded':
-        return (
-          <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-            시안 업로드 완료
-          </span>
-        );
-      case 'completed':
-        return (
-          <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-            디자인 완성
-          </span>
-        );
-      default:
-        return null;
+        setOrders(completedOrders);
+      }
+    } catch (error) {
+      console.error('Failed to fetch orders:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
+  const handleFileUpload = async (orderId: string, file: File) => {
+    if (!file) return;
+
+    setUploadingFile(orderId);
+
+    try {
+      // 파일 업로드 (실제 구현에서는 파일 스토리지 서비스 사용)
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('orderId', orderId);
+
+      const uploadResponse = await fetch('/api/design-drafts/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const uploadData = await uploadResponse.json();
+
+      if (uploadData.success) {
+        // 시안 정보 업데이트
+        const updateResponse = await fetch('/api/design-drafts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            action: 'updateDraft',
+            draftId: uploadData.data.draftId,
+            file_name: file.name,
+            file_url: uploadData.data.fileUrl,
+            file_extension: file.name.split('.').pop(),
+            file_size: file.size,
+            notes: '사용자가 업로드한 시안',
+          }),
+        });
+
+        const updateData = await updateResponse.json();
+
+        if (updateData.success) {
+          // 주문 목록 새로고침
+          fetchOrders();
+        }
+      }
+    } catch (error) {
+      console.error('File upload failed:', error);
+      alert('파일 업로드에 실패했습니다.');
+    } finally {
+      setUploadingFile(null);
+    }
+  };
+
+  const getDraftStatus = (draft: DesignDraft) => {
+    switch (draft.draft_category) {
+      case 'initial':
+        return '초기 시안';
+      case 'feedback':
+        return '피드백';
+      case 'revision':
+        return '수정 시안';
+      case 'final':
+        return '최종 시안';
+      default:
+        return '시안';
+    }
+  };
+
+  const getStatusColor = (draft: DesignDraft) => {
+    if (draft.is_approved) return 'text-green-600';
+    if (draft.draft_category === 'final') return 'text-blue-600';
+    return 'text-gray-600';
+  };
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-white pt-[5.5rem]">
+        <Nav variant="default" className="bg-white" />
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center">로딩 중...</div>
+        </div>
+      </main>
+    );
+  }
+
   return (
-    <MypageContainer activeTab="시안관리">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">시안관리</h1>
-        <p className="text-gray-600">
-          결제완료된 주문의 시안을 업로드하고 완성된 디자인을 확인할 수
-          있습니다.
-        </p>
-      </div>
+    <main className="min-h-screen bg-white pt-[5.5rem]">
+      <Nav variant="default" className="bg-white" />
 
-      {/* 탭 네비게이션 */}
-      <div className="flex border border-gray-200 rounded-lg p-1 mb-8">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-6 py-3 font-medium text-sm transition-colors rounded-md flex-1 ${
-              activeTab === tab.id
-                ? 'bg-gray-800 text-white'
-                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            {tab.name}
-          </button>
-        ))}
-      </div>
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-2xl font-bold mb-8">시안 관리</h1>
 
-      {/* 시안 보내기 탭 */}
-      {activeTab === 'send' && (
-        <div>
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-2">
-              시안 보내기
-            </h2>
-            <p className="text-sm text-gray-600">
-              결제가 완료된 주문에 대해 시안을 업로드할 수 있습니다.
-            </p>
+        {orders.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500 mb-4">시안 업로드할 주문이 없습니다.</p>
+            <Button
+              onClick={() => router.push('/mypage/orders')}
+              className="bg-black text-white px-6 py-2 rounded"
+            >
+              주문내역 보기
+            </Button>
           </div>
+        ) : (
+          <div className="space-y-6">
+            {orders.map((order) => (
+              <div key={order.id} className="border rounded-lg p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold">
+                      주문번호: {order.order_number}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      주문일: {new Date(order.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span
+                      className={`px-2 py-1 rounded text-xs ${
+                        order.payment_status === 'completed'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}
+                    >
+                      {order.payment_status === 'completed'
+                        ? '결제완료'
+                        : '승인완료'}
+                    </span>
+                  </div>
+                </div>
 
-          {loading ? (
-            <div className="text-center py-8">주문 내역을 불러오는 중...</div>
-          ) : sendDesignList.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-gray-400 mb-4">
-                <svg
-                  className="w-16 h-16 mx-auto"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-              </div>
-              <p className="text-gray-500">업로드할 시안이 없습니다.</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {sendDesignList.map((item) => (
-                <div
-                  key={item.id}
-                  className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow"
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-semibold text-gray-800">
-                          {item.title}
-                          {item.subtitle && (
-                            <span className="ml-1 text-gray-500 font-normal">
-                              {item.subtitle}
+                {/* 시안 업로드 영역 */}
+                <div className="border-t pt-4">
+                  <h4 className="font-medium mb-3">시안 업로드</h4>
+
+                  {/* 파일 업로드 */}
+                  <div className="mb-4">
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx,.txt,.hwp,.ai,.jpg,.jpeg,.png"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          handleFileUpload(order.id, file);
+                        }
+                      }}
+                      disabled={uploadingFile === order.id}
+                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-black file:text-white hover:file:bg-gray-800"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      지원 형식: PDF, Word, 텍스트, 한글, AI, JPG, JPEG, PNG
+                    </p>
+                  </div>
+
+                  {/* 기존 시안 목록 */}
+                  {order.design_drafts && order.design_drafts.length > 0 && (
+                    <div className="space-y-2">
+                      <h5 className="font-medium text-sm">업로드된 시안</h5>
+                      {order.design_drafts.map((draft) => (
+                        <div
+                          key={draft.id}
+                          className="flex items-center justify-between p-3 bg-gray-50 rounded"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <span
+                              className={`text-sm font-medium ${getStatusColor(
+                                draft
+                              )}`}
+                            >
+                              {getDraftStatus(draft)}
+                            </span>
+                            {draft.file_name && (
+                              <span className="text-sm text-gray-600">
+                                {draft.file_name}
+                              </span>
+                            )}
+                            <span className="text-xs text-gray-500">
+                              {new Date(draft.created_at).toLocaleDateString()}
+                            </span>
+                          </div>
+                          {draft.is_approved && (
+                            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                              승인됨
                             </span>
                           )}
-                        </h3>
-                        {getStatusBadge(item.status)}
-                      </div>
-                      <p className="text-sm text-gray-600 mb-1">
-                        주문번호: {item.orderNumber}
-                      </p>
-                      <p className="text-sm text-gray-600 mb-3">
-                        위치: {item.location}
-                      </p>
-                      {item.uploadDate && (
-                        <p className="text-sm text-gray-500">
-                          업로드일: {item.uploadDate}
-                        </p>
-                      )}
+                        </div>
+                      ))}
                     </div>
-                    <button
-                      onClick={() => handleUploadDesign(item.id)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        item.status === 'pending'
-                          ? 'bg-gray-800 text-white hover:bg-gray-900'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                      disabled={item.status === 'uploaded'}
-                    >
-                      {item.status === 'pending'
-                        ? '시안 업로드'
-                        : '업로드 완료'}
-                    </button>
-                  </div>
+                  )}
+
+                  {uploadingFile === order.id && (
+                    <div className="text-center py-2">
+                      <span className="text-sm text-gray-500">
+                        업로드 중...
+                      </span>
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 시안 보기 탭 */}
-      {activeTab === 'view' && (
-        <div>
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-2">
-              시안 보기
-            </h2>
-            <p className="text-sm text-gray-600">
-              한성디자인에서 완성한 디자인을 확인할 수 있습니다.
-            </p>
-          </div>
-
-          {viewDesignList.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-gray-400 mb-4">
-                <svg
-                  className="w-16 h-16 mx-auto"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1}
-                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
               </div>
-              <p className="text-gray-500">완성된 디자인이 없습니다.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {viewDesignList.map((item) => (
-                <div
-                  key={item.id}
-                  className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow"
-                >
-                  <div className="aspect-video bg-gray-100 relative">
-                    {item.thumbnail ? (
-                      <Image
-                        src={item.thumbnail}
-                        alt={item.title}
-                        fill
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-gray-400">
-                        <svg
-                          className="w-12 h-12"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={1}
-                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                          />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-semibold text-gray-800 text-sm">
-                        {item.title}
-                        {item.subtitle && (
-                          <span className="ml-1 text-gray-500 font-normal">
-                            {item.subtitle}
-                          </span>
-                        )}
-                      </h3>
-                      {getStatusBadge(item.status)}
-                    </div>
-                    <p className="text-xs text-gray-600 mb-1">
-                      주문번호: {item.orderNumber}
-                    </p>
-                    <p className="text-xs text-gray-600 mb-3">
-                      위치: {item.location}
-                    </p>
-                    {item.completionDate && (
-                      <p className="text-xs text-gray-500 mb-3">
-                        완성일: {item.completionDate}
-                      </p>
-                    )}
-                    <button
-                      onClick={() => handleViewDesign(item.id)}
-                      className="w-full px-3 py-2 bg-gray-800 text-white text-sm rounded-lg hover:bg-gray-900 transition-colors"
-                    >
-                      디자인 보기
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </MypageContainer>
+            ))}
+          </div>
+        )}
+      </div>
+    </main>
   );
 }

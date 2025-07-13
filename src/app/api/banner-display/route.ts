@@ -392,18 +392,25 @@ async function getAllDistrictsData() {
     // 5. 각 구별로 신청기간과 계좌번호 정보를 가져와서 조합
     const processedDistricts = await Promise.all(
       basicDistricts.map(async (district) => {
-        // 신청기간 가져오기 (DB에 없어도 이번달 기간으로 계산)
-        const { data: periodData, error: periodError } = await supabase
+        // 현재 월 계산
+        const currentDate = new Date();
+        const currentYearMonth = `${currentDate.getFullYear()}-${String(
+          currentDate.getMonth() + 1
+        ).padStart(2, '0')}`;
+
+        // 신청기간 가져오기 (현재 월 데이터 - 상반기와 하반기 모두)
+        const { data: periodDataList, error: periodError } = await supabase
           .from('region_gu_display_periods')
           .select('*')
           .eq('region_gu_id', district.id)
           .eq('display_type_id', (await getBannerDisplayTypeId()).id)
-          .single();
+          .eq('year_month', currentYearMonth);
 
         // DB에 데이터가 없어도 에러를 반환하지 않고 이번달 기간으로 계산
         console.log(`🔍 Period data for ${district.name}:`, {
-          periodData,
+          periodDataList,
           periodError,
+          currentYearMonth,
         });
 
         // 이번달 16일~말일 계산 (2차는 항상 고정)
@@ -427,13 +434,26 @@ async function getAllDistrictsData() {
 
         let currentPeriodData;
 
-        if (periodData && !periodError) {
-          // DB에 데이터가 있으면 1차는 DB값 사용, 2차는 이번달 16일~말일 고정
+        if (periodDataList && periodDataList.length > 0 && !periodError) {
+          // DB에서 상반기와 하반기 데이터 찾기
+          const firstHalfData = periodDataList.find(
+            (p) => p.half_period === 'first_half'
+          );
+          const secondHalfData = periodDataList.find(
+            (p) => p.half_period === 'second_half'
+          );
+
           currentPeriodData = {
-            first_half_from: periodData.first_half_from,
-            first_half_to: periodData.first_half_to,
-            second_half_from: formatDate(secondHalfStart),
-            second_half_to: formatDate(secondHalfEnd),
+            first_half_from:
+              firstHalfData?.period_from ||
+              formatDate(new Date(now.getFullYear(), now.getMonth(), 1)),
+            first_half_to:
+              firstHalfData?.period_to ||
+              formatDate(new Date(now.getFullYear(), now.getMonth(), 15)),
+            second_half_from:
+              secondHalfData?.period_from || formatDate(secondHalfStart),
+            second_half_to:
+              secondHalfData?.period_to || formatDate(secondHalfEnd),
           };
         } else {
           // DB에 데이터가 없으면 둘 다 이번달 계산값 사용

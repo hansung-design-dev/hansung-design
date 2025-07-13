@@ -31,6 +31,30 @@ const BannerPeriod: React.FC<BannerPeriodProps> = ({
     second_half_to,
   });
 
+  // 날짜 유효성 검사
+  const isValidDate = (dateStr: string) => {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    return !isNaN(d.getTime());
+  };
+
+  // 모든 날짜가 유효한지 확인
+  const allDatesValid = [
+    first_half_from,
+    first_half_to,
+    second_half_from,
+    second_half_to,
+  ].every(isValidDate);
+
+  if (!allDatesValid) {
+    console.warn('⚠️ BannerPeriod: 일부 날짜가 유효하지 않습니다:', {
+      first_half_from: isValidDate(first_half_from),
+      first_half_to: isValidDate(first_half_to),
+      second_half_from: isValidDate(second_half_from),
+      second_half_to: isValidDate(second_half_to),
+    });
+  }
+
   return (
     <div className="flex gap-3 text-1 font-500 text-gray-600">
       <div>신청일</div>

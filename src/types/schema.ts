@@ -231,6 +231,150 @@ export interface Order {
   product?: Product;
 }
 
+// 어드민 인증 타입
+export interface AdminAuth {
+  id: string;
+  email: string;
+  password_hash: string;
+  is_active: boolean;
+  last_login_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// 어드민 프로필 타입
+export interface AdminProfile {
+  id: string;
+  admin_auth_id: string;
+  name: string;
+  department?: string;
+  position?: string;
+  phone?: string;
+  role: 'admin' | 'super_admin' | 'designer' | 'sales';
+  permissions: Record<string, unknown>;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  admin_auth?: AdminAuth;
+}
+
+// 시안 교환 통합 타입
+export interface DesignDraft {
+  id: string;
+  order_id: string;
+  sender_user_profile_id?: string;
+  sender_admin_profile_id?: string;
+  receiver_user_profile_id?: string;
+  receiver_admin_profile_id?: string;
+  file_name?: string;
+  file_url?: string;
+  file_extension?: string;
+  file_size?: number;
+  draft_category: 'initial' | 'feedback' | 'revision' | 'final';
+  notes?: string;
+  is_approved: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// 결제 제공업체 타입
+export type PaymentProvider =
+  | 'naver_pay'
+  | 'kakao_pay'
+  | 'credit_card'
+  | 'bank_transfer'
+  | 'admin_approval';
+
+// 결제수단 관련 타입
+export interface PaymentMethod {
+  id: string;
+  name: string;
+  method_type: string;
+  method_code: string;
+  is_active: boolean;
+  description?: string;
+  is_online: boolean;
+  requires_admin_approval: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// 결제 정보 타입
+export interface Payment {
+  id: string;
+  order_id: string;
+  payment_method_id: string;
+  payment_provider?: PaymentProvider;
+  amount: number;
+  payment_status: 'pending' | 'completed' | 'failed' | 'cancelled' | 'refunded';
+  transaction_id?: string;
+  payment_date?: string;
+  admin_approval_status: 'pending' | 'approved' | 'rejected';
+  admin_notes?: string;
+  depositor_name?: string;
+  deposit_date?: string;
+  created_at: string;
+  updated_at: string;
+  payment_method?: PaymentMethod;
+}
+
+// 주문 검증 정보 타입
+export interface AdminOrderVerification {
+  id: string;
+  order_id: string;
+  is_paid: boolean;
+  is_checked: boolean;
+  is_received_order: boolean;
+  is_received_payment: boolean;
+  is_draft_sent: boolean;
+  is_draft_received: boolean;
+  is_address_verified: boolean;
+  is_draft_verified: boolean;
+  received_payment_at?: string;
+  admin_notes?: string;
+  verified_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// 주문 상태 확장
+export interface OrderWithPayment extends Order {
+  order_status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  admin_approval_required: boolean;
+  admin_approval_status: 'pending' | 'approved' | 'rejected';
+  admin_notes?: string;
+  draft_upload_required: boolean;
+  order_verifications?: AdminOrderVerification;
+  payments?: Payment[];
+  design_drafts?: DesignDraft[];
+}
+
+// 결제 플로우 상태
+export type PaymentFlowStatus =
+  | 'cart' // 장바구니
+  | 'payment' // 결제 페이지
+  | 'pending' // 결제 대기
+  | 'waiting_admin' // 어드민 승인 대기
+  | 'approved' // 어드민 승인됨
+  | 'completed' // 결제 완료
+  | 'cancelled'; // 취소됨
+
+// 사용자 프로필 타입 (공공기관/기관용 구분)
+export interface UserProfile {
+  id: string;
+  user_auth_id: string;
+  profile_title: string;
+  company_name?: string;
+  business_registration_number?: string;
+  phone: string;
+  email: string;
+  contact_person_name: string;
+  is_public_institution: boolean; // 공공기관 여부
+  is_company: boolean; // 기관용 여부
+  created_at: string;
+  updated_at: string;
+}
+
 // Component Props Interfaces
 export interface ViewTypeButtonProps {
   icon: string;
