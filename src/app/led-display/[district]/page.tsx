@@ -106,12 +106,6 @@ async function getAllLEDDisplays(): Promise<LEDDisplayData[]> {
   }
 }
 
-const dropdownOptions = [
-  { id: 1, option: '전체' },
-  { id: 2, option: '보기1' },
-  { id: 3, option: '보기2' },
-];
-
 export default function LEDDisplayPage() {
   const params = useParams();
   const encodedDistrict = params.district as string;
@@ -234,8 +228,17 @@ export default function LEDDisplayPage() {
         })),
       ];
     } else {
-      // 개별 구인 경우 기본 옵션
-      return dropdownOptions;
+      // 개별 구인 경우에도 모든 구 목록 제공
+      const districts = Array.from(
+        new Set(ledBillboards.map((b) => b.district))
+      ).sort();
+      return [
+        { id: 0, option: '전체보기' },
+        ...districts.map((districtName, index) => ({
+          id: index + 1,
+          option: districtName,
+        })),
+      ];
     }
   };
 

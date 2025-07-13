@@ -208,20 +208,14 @@ export default function BannerDisplayPage({
   // const isSongpaOrYongsan =
   //   districtObj?.code === 'songpa' || districtObj?.code === 'yongsan';
 
-  const pageDropdownOptions = isAllDistrictsView
-    ? [
-        { id: 0, option: '전체' },
-        { id: 1, option: '관악구' },
-        { id: 2, option: '마포구' },
-        { id: 3, option: '서대문구' },
-        { id: 4, option: '송파구' },
-        { id: 5, option: '용산구' },
-      ]
-    : [
-        { id: 1, option: '전체' },
-        { id: 2, option: '보기1' },
-        { id: 3, option: '보기2' },
-      ];
+  const pageDropdownOptions = [
+    { id: 0, option: '전체' },
+    { id: 1, option: '관악구' },
+    { id: 2, option: '마포구' },
+    { id: 3, option: '서대문구' },
+    { id: 4, option: '송파구' },
+    { id: 5, option: '용산구' },
+  ];
 
   console.log('🔍 District code from URL:', district);
   console.log('🔍 District object found:', districtObj);
