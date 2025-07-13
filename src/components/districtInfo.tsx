@@ -33,15 +33,15 @@ export default function DistrictInfo({
   isLEDDisplay = false,
 }: DistrictInfoProps) {
   // 디버깅용 로그
-  // console.log('🔍 DistrictInfo 상세 디버깅:', {
-  //   period,
-  //   periodType: typeof period,
-  //   periodKeys: period ? Object.keys(period) : 'null',
-  //   periodValues: period ? Object.values(period) : 'null',
-  //   bankInfo,
-  //   flexRow,
-  //   isLEDDisplay,
-  // });
+  console.log('🔍 DistrictInfo 상세 디버깅:', {
+    period,
+    periodType: typeof period,
+    periodKeys: period ? Object.keys(period) : 'null',
+    periodValues: period ? Object.values(period) : 'null',
+    bankInfo,
+    flexRow,
+    isLEDDisplay,
+  });
 
   return (
     <div className="text-gray-600">

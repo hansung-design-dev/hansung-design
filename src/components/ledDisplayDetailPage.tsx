@@ -63,6 +63,24 @@ export default function LEDDisplayDetailPage({
     defaultView
   );
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectedDistrictBankInfo, setSelectedDistrictBankInfo] = useState<{
+    id: string;
+    bank_name: string;
+    account_number: string;
+    depositor: string;
+    region_gu: {
+      id: string;
+      name: string;
+    };
+    display_types: {
+      id: string;
+      name: string;
+    };
+  } | null>(null);
+
+  const [selectedDistrictLogo, setSelectedDistrictLogo] = useState<
+    string | null
+  >(null);
   // const [selectedHalfPeriod, setSelectedHalfPeriod] = useState<
   //   'first_half' | 'second_half'
   // >('first_half');
@@ -95,6 +113,23 @@ export default function LEDDisplayDetailPage({
   // }, [selectedIds, billboards]);
 
   const isAllDistrictsView = district === 'all';
+
+  // 구 이름을 코드로 변환하는 함수
+  const getDistrictCode = (districtName: string): string => {
+    const districtMap: Record<string, string> = {
+      강동구: 'gangdong',
+      관악구: 'gwanak',
+      마포구: 'mapo',
+      서대문구: 'seodaemun',
+      송파구: 'songpa',
+      용산구: 'yongsan',
+      강북구: 'gangbuk',
+      광진구: 'gwangjin',
+      동작구: 'dongjak',
+      동대문구: 'dongdaemun',
+    };
+    return districtMap[districtName] || districtName.replace('구', '');
+  };
 
   const filteredByDistrict =
     isAllDistrictsView && selectedOption
@@ -134,10 +169,39 @@ export default function LEDDisplayDetailPage({
     return '';
   };
 
-  const handleDropdownChange = (item: { id: number; option: string }) => {
+  const handleDropdownChange = async (item: { id: number; option: string }) => {
     setSelectedOption(item);
-    if (item.option === '전체보기' && !isAllDistrictsView) {
+
+    if (item.option === '전체보기') {
       router.push('/led-display/all');
+      return;
+    }
+
+    // 개별 구 페이지에서 다른 구를 선택했을 때 해당 구의 데이터 가져오기
+    if (!isAllDistrictsView && item.option !== '전체보기') {
+      try {
+        // 선택된 구의 계좌번호 정보와 로고 가져오기
+        const bankResponse = await fetch(
+          `/api/region-gu?action=getByDistrict&district=${encodeURIComponent(
+            item.option
+          )}&displayType=led_display`
+        );
+        const bankResult = await bankResponse.json();
+        if (bankResult.success) {
+          setSelectedDistrictBankInfo(bankResult.data.bank_info);
+          setSelectedDistrictLogo(bankResult.data.logo_image_url);
+          console.log(
+            'Selected district bank info:',
+            bankResult.data.bank_info
+          );
+          console.log(
+            'Selected district logo:',
+            bankResult.data.logo_image_url
+          );
+        }
+      } catch (err) {
+        console.warn(`Failed to fetch data for ${item.option}:`, err);
+      }
     }
   };
 
@@ -492,23 +556,33 @@ export default function LEDDisplayDetailPage({
           <div className="flex gap-2 items-center">
             {districtObj && (
               <Image
-                src={districtObj.logo}
-                alt={districtObj.name}
+                src={
+                  selectedDistrictLogo ||
+                  (selectedOption?.option &&
+                  selectedOption.option !== '전체보기'
+                    ? `/images/district-icon/${getDistrictCode(
+                        selectedOption.option
+                      )}-gu.png`
+                    : districtObj.logo)
+                }
+                alt={selectedOption?.option || districtObj.name}
                 width={50}
                 height={50}
                 className="inline-block align-middle mr-2"
               />
             )}
             <h2 className="text-2.25 font-900 font-gmarket inline-block align-middle">
-              {districtObj?.name}
+              {selectedOption?.option || districtObj?.name}
             </h2>
           </div>
-          {selectedOption && <div>{selectedOption.option}</div>}
 
           {/* LED 전자게시대는 상시접수 */}
           <div className="mt-2 text-green-600 font-medium">상시접수</div>
 
-          <DistrictInfo bankInfo={bankInfo} flexRow={true} />
+          <DistrictInfo
+            bankInfo={selectedDistrictBankInfo || bankInfo}
+            flexRow={true}
+          />
         </div>
         {/* 상하반기 탭 - 개별 구 페이지에서만 표시
         {period && !isAllDistrictsView && (

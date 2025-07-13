@@ -109,6 +109,25 @@ export default function DisplayDetailPage({
     second_half_to: string;
   } | null>(null);
 
+  const [selectedDistrictBankInfo, setSelectedDistrictBankInfo] = useState<{
+    id: string;
+    bank_name: string;
+    account_number: string;
+    depositor: string;
+    region_gu: {
+      id: string;
+      name: string;
+    };
+    display_types: {
+      id: string;
+      name: string;
+    };
+  } | null>(null);
+
+  const [selectedDistrictLogo, setSelectedDistrictLogo] = useState<
+    string | null
+  >(null);
+
   // 송파구, 용산구 탭 필터 추가
   const [internalPanelTypeFilter, setInternalPanelTypeFilter] = useState<
     'panel' | 'top_fixed' | 'semi_auto'
@@ -176,6 +195,23 @@ export default function DisplayDetailPage({
   };
 
   const isAllDistrictsView = district === 'all';
+
+  // 구 이름을 코드로 변환하는 함수
+  const getDistrictCode = (districtName: string): string => {
+    const districtMap: Record<string, string> = {
+      강동구: 'gangdong',
+      관악구: 'gwanak',
+      마포구: 'mapo',
+      서대문구: 'seodaemun',
+      송파구: 'songpa',
+      용산구: 'yongsan',
+      강북구: 'gangbuk',
+      광진구: 'gwangjin',
+      동작구: 'dongjak',
+      동대문구: 'dongdaemun',
+    };
+    return districtMap[districtName] || districtName.replace('구', '');
+  };
 
   // 가이드라인 가져오기
   useEffect(() => {
@@ -469,8 +505,11 @@ export default function DisplayDetailPage({
 
   const handleDropdownChange = async (item: { id: number; option: string }) => {
     setSelectedOption(item);
-    if (item.option === '전체보기' && !isAllDistrictsView) {
+
+    // 전체보기로 이동
+    if (item.option === '전체') {
       router.push('/banner-display/all');
+      return;
     }
 
     // 전체보기에서 특정 구를 선택했을 때 해당 구의 상하반기 기간 가져오기
@@ -493,6 +532,43 @@ export default function DisplayDetailPage({
       // 전체로 돌아갈 때 상하반기 기간 초기화하고 selectedOption도 null로 설정
       setSelectedDistrictPeriod(null);
       setSelectedOption(null);
+    } else if (!isAllDistrictsView && item.option !== '전체') {
+      // 개별 구 페이지에서 다른 구를 선택했을 때 해당 구의 데이터 가져오기
+      try {
+        // 1. 선택된 구의 기간 데이터 가져오기
+        const periodResponse = await fetch(
+          `/api/display-period?district=${encodeURIComponent(
+            item.option
+          )}&display_type=banner_display`
+        );
+        const periodResult = await periodResponse.json();
+        if (periodResult.success) {
+          setSelectedDistrictPeriod(periodResult.data);
+          console.log('Selected district period:', periodResult.data);
+        }
+
+        // 2. 선택된 구의 계좌번호 정보와 로고 가져오기
+        const bankResponse = await fetch(
+          `/api/region-gu?action=getByDistrict&district=${encodeURIComponent(
+            item.option
+          )}&displayType=banner_display`
+        );
+        const bankResult = await bankResponse.json();
+        if (bankResult.success) {
+          setSelectedDistrictBankInfo(bankResult.data.bank_info);
+          setSelectedDistrictLogo(bankResult.data.logo_image_url);
+          console.log(
+            'Selected district bank info:',
+            bankResult.data.bank_info
+          );
+          console.log(
+            'Selected district logo:',
+            bankResult.data.logo_image_url
+          );
+        }
+      } catch (err) {
+        console.warn(`Failed to fetch data for ${item.option}:`, err);
+      }
     }
   };
 
@@ -1002,20 +1078,31 @@ export default function DisplayDetailPage({
           <div className="flex gap-2 items-center">
             {districtObj && (
               <Image
-                src={districtObj.logo}
-                alt={districtObj.name}
+                src={
+                  selectedDistrictLogo ||
+                  (selectedOption?.option && selectedOption.option !== '전체'
+                    ? `/images/district-icon/${getDistrictCode(
+                        selectedOption.option
+                      )}-gu.png`
+                    : districtObj.logo)
+                }
+                alt={selectedOption?.option || districtObj.name}
                 width={50}
                 height={50}
                 className="inline-block align-middle mr-2"
               />
             )}
             <h2 className="text-2.25 font-900 font-gmarket inline-block align-middle">
-              {districtObj?.name}
+              {selectedOption?.option || districtObj?.name}
             </h2>
           </div>
           {/* {selectedOption && <div>{selectedOption.option}</div>} */}
 
-          <DistrictInfo period={period} bankInfo={bankInfo} flexRow={true} />
+          <DistrictInfo
+            period={selectedDistrictPeriod || period}
+            bankInfo={selectedDistrictBankInfo || bankInfo}
+            flexRow={true}
+          />
         </div>
         {/* 마포구 전용 filter */}
         {isMapoDistrict && (

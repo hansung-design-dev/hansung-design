@@ -39,6 +39,7 @@ function PaymentPageContent() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sendByEmail, setSendByEmail] = useState(false);
+  const [showBankTransferModal, setShowBankTransferModal] = useState(false);
 
   // 패널 타입 표시 함수
   const getPanelTypeDisplay = (panelType: string) => {
@@ -189,8 +190,8 @@ function PaymentPageContent() {
         throw new Error('패널 정보 ID를 추출할 수 없습니다.');
       };
 
-      // 주문 생성 API 호출
-      const response = await fetch('/api/orders', {
+      // 1. 주문 생성 API 호출
+      const orderResponse = await fetch('/api/orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -216,10 +217,64 @@ function PaymentPageContent() {
         }),
       });
 
-      const data = await response.json();
+      const orderData = await orderResponse.json();
 
-      if (!data.success) {
-        throw new Error(data.error || '주문 생성에 실패했습니다.');
+      if (!orderData.success) {
+        throw new Error(orderData.error || '주문 생성에 실패했습니다.');
+      }
+
+      const orderId = orderData.data.id;
+      const totalAmount = priceSummary.totalPrice;
+
+      // 2. 결제수단 ID 결정
+      let paymentMethodId: string;
+
+      if (paymentMethod === 'card') {
+        // 신용카드 결제수단 ID 조회
+        const cardResponse = await fetch(
+          '/api/payment?action=getPaymentMethods'
+        );
+        const cardData = await cardResponse.json();
+        const creditCard = cardData.data.find(
+          (method: { method_code: string; id: string }) =>
+            method.method_code === 'credit_card'
+        );
+        paymentMethodId = creditCard.id;
+      } else if (paymentMethod === 'bank_transfer') {
+        // 계좌이체 결제수단 ID 조회
+        const bankResponse = await fetch(
+          '/api/payment?action=getPaymentMethods'
+        );
+        const bankData = await bankResponse.json();
+        const bankTransfer = bankData.data.find(
+          (method: { method_code: string; id: string }) =>
+            method.method_code === 'bank_transfer'
+        );
+        paymentMethodId = bankTransfer.id;
+      } else {
+        throw new Error('지원하지 않는 결제수단입니다.');
+      }
+
+      // 3. 결제 처리 API 호출
+      const paymentResponse = await fetch('/api/payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'processPayment',
+          orderId: orderId,
+          paymentMethodId: paymentMethodId,
+          amount: totalAmount,
+          userAuthId: user.id,
+          userProfileId: defaultProfile?.id,
+        }),
+      });
+
+      const paymentData = await paymentResponse.json();
+
+      if (!paymentData.success) {
+        throw new Error(paymentData.error || '결제 처리에 실패했습니다.');
       }
 
       // 성공 시 선택된 아이템들을 장바구니에서 제거
@@ -227,8 +282,12 @@ function PaymentPageContent() {
         dispatch({ type: 'REMOVE_ITEM', id: item.id });
       });
 
-      // 성공 시 마이페이지 주문내역으로 이동
-      router.push('/mypage/orders');
+      // 결제 상태에 따른 리다이렉트
+      if (paymentData.data.orderStatus === 'completed') {
+        router.push('/mypage/design');
+      } else {
+        router.push('/mypage/orders');
+      }
     } catch (error) {
       console.error('Payment error:', error);
       setError('결제 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
@@ -524,7 +583,13 @@ function PaymentPageContent() {
                 : 'bg-black text-white hover:bg-gray-800'
             }`}
             disabled={isProcessing}
-            onClick={handlePayment}
+            onClick={() => {
+              if (paymentMethod === 'bank_transfer') {
+                setShowBankTransferModal(true);
+              } else {
+                handlePayment();
+              }
+            }}
           >
             <span className="text-white sm:text-1.25 ">
               {isProcessing
@@ -536,6 +601,51 @@ function PaymentPageContent() {
           </button>
         </div>
       </div>
+
+      {/* 계좌이체 모달 */}
+      {showBankTransferModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+            <h3 className="text-xl font-bold mb-4">계좌이체 안내</h3>
+            <div className="mb-6">
+              <p className="text-gray-700 mb-4">
+                계좌이체 후 주문내역에서 확인해주세요.
+              </p>
+              {bankInfo && (
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="font-semibold mb-2">입금 계좌 정보</p>
+                  <p className="text-sm text-gray-600">
+                    은행: {bankInfo.bank_name}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    계좌번호: {bankInfo.account_number}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    예금주: {bankInfo.depositor}
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className="flex gap-4">
+              <button
+                className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded hover:bg-gray-400"
+                onClick={() => setShowBankTransferModal(false)}
+              >
+                취소
+              </button>
+              <button
+                className="flex-1 bg-black text-white py-2 px-4 rounded hover:bg-gray-800"
+                onClick={() => {
+                  setShowBankTransferModal(false);
+                  handlePayment();
+                }}
+              >
+                결제하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
