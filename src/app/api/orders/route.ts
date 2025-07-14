@@ -392,7 +392,6 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. design_drafts row 생성 (항상)
-    let designDraftId: string | null = null;
     if (userProfile.id) {
       const { data: draft, error: draftError } = await supabase
         .from('design_drafts')
@@ -409,7 +408,6 @@ export async function POST(request: NextRequest) {
       if (draftError) {
         console.warn('Failed to create draft record:', draftError);
       } else {
-        designDraftId = draft.id;
         // orders 테이블의 design_drafts_id와 draft_delivery_method 업데이트
         await supabase
           .from('orders')

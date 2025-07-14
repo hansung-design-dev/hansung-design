@@ -1,6 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/src/app/api/supabase';
 
+// 타입 정의
+interface UserProfile {
+  id: string;
+  profile_title?: string;
+  company_name?: string;
+  contact_person_name?: string;
+}
+
+interface AdminProfile {
+  id: string;
+  name?: string;
+  department?: string;
+  position?: string;
+}
+
+interface DesignDraft {
+  id: string;
+  user_profile_id?: string;
+  admin_profile_id?: string;
+  draft_category?: string;
+  project_name?: string;
+  notes?: string;
+  file_url?: string;
+  file_name?: string;
+  file_size?: number;
+  file_type?: string;
+  delivery_method?: string;
+  email_address?: string;
+  status?: string;
+  created_at: string;
+  updated_at?: string;
+  user_profiles?: UserProfile;
+  admin_profiles?: AdminProfile;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ orderNumber: string }> }
@@ -119,7 +154,7 @@ export async function GET(
     }
 
     // 디자인 드래프트 정보 조회
-    let designDrafts: any[] = [];
+    let designDrafts: DesignDraft[] = [];
     let designDraftsError = null;
 
     if (order.design_drafts_id) {
