@@ -3,10 +3,10 @@ import { supabase } from '@/src/app/api/supabase';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { orderNumber: string } }
+  { params }: { params: Promise<{ orderNumber: string }> }
 ) {
   try {
-    const orderNumber = params.orderNumber;
+    const { orderNumber } = await params;
 
     // 주문 정보 조회 (order_details, design_drafts 포함)
     const { data: order, error: orderError } = await supabase

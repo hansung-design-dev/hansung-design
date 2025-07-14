@@ -44,6 +44,7 @@ function PaymentPageContent() {
     'email' | 'upload'
   >('upload');
   const [isApprovedOrder, setIsApprovedOrder] = useState(false);
+  const [taxInvoice, setTaxInvoice] = useState(false);
 
   // 패널 타입 표시 함수
   const getPanelTypeDisplay = (panelType: string) => {
@@ -101,6 +102,11 @@ function PaymentPageContent() {
       console.log('🔍 Payment page - no items param found');
     }
   }, [searchParams, cart, isApprovedOrder]);
+
+  // sendByEmail 상태가 변경될 때 draftDeliveryMethod 업데이트
+  useEffect(() => {
+    setDraftDeliveryMethod(sendByEmail ? 'email' : 'upload');
+  }, [sendByEmail]);
 
   // 승인된 주문의 아이템 정보 가져오기
   const fetchApprovedOrderItems = async (orderId: string) => {
@@ -303,6 +309,7 @@ function PaymentPageContent() {
           })),
           paymentMethod: paymentMethod,
           draftDeliveryMethod: draftDeliveryMethod, // 시안 전송 방식 추가
+          isRequireTaxFiling: taxInvoice, // 세금계산서 신청 여부 추가
         }),
       });
 
@@ -358,6 +365,7 @@ function PaymentPageContent() {
           userAuthId: user.id,
           userProfileId: defaultProfile?.id,
           draftDeliveryMethod: draftDeliveryMethod, // 시안 전송 방식 추가
+          isRequireTaxFiling: taxInvoice, // 세금계산서 신청 여부 추가
         }),
       });
 
@@ -447,6 +455,7 @@ function PaymentPageContent() {
           userAuthId: user.id,
           userProfileId: defaultProfile?.id,
           draftDeliveryMethod: draftDeliveryMethod,
+          isRequireTaxFiling: taxInvoice, // 세금계산서 신청 여부 추가
         }),
       });
 
@@ -628,6 +637,8 @@ function PaymentPageContent() {
                       <div className="flex items-center gap-2">
                         <input
                           type="checkbox"
+                          checked={taxInvoice}
+                          onChange={(e) => setTaxInvoice(e.target.checked)}
                           className="w-5 h-5 sm:w-4 sm:h-4"
                         />
                         <label className="text-gray-600 font-medium sm:text-0.875">

@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { supabase } from '@/src/lib/supabase';
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     console.log('🔧 Generating missing August 2025 periods...');
 
@@ -27,7 +27,10 @@ export async function POST(request: NextRequest) {
     const { data: regions, error: regionsError } = await supabase
       .from('region_gu')
       .select('id, name, code')
-      .in('code', missingRegions.map(r => r.code));
+      .in(
+        'code',
+        missingRegions.map((r) => r.code)
+      );
 
     if (regionsError) {
       throw new Error('Failed to fetch regions');
@@ -91,7 +94,10 @@ export async function POST(request: NextRequest) {
       throw new Error('Failed to insert periods');
     }
 
-    console.log('✅ Missing August 2025 periods generated successfully:', insertedPeriods);
+    console.log(
+      '✅ Missing August 2025 periods generated successfully:',
+      insertedPeriods
+    );
 
     return NextResponse.json({
       success: true,
@@ -101,15 +107,15 @@ export async function POST(request: NextRequest) {
         periods: insertedPeriods,
       },
     });
-
   } catch (error) {
     console.error('❌ Error generating missing August periods:', error);
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        error:
+          error instanceof Error ? error.message : 'Unknown error occurred',
       },
       { status: 500 }
     );
   }
-} 
+}
