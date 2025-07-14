@@ -142,8 +142,10 @@ async function getAllBannerDisplays(): Promise<BannerDisplayData[]> {
 
 export default function BannerDisplayPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ district: string }>;
+  searchParams: Promise<{ period?: string }>;
 }) {
   const [billboards, setBillboards] = useState<BannerBillboard[]>([]);
   const [loading, setLoading] = useState(true);
@@ -173,11 +175,23 @@ export default function BannerDisplayPage({
   useEffect(() => {
     const initParams = async () => {
       const { district: encodedDistrict } = await params;
+      const { period: periodParam } = await searchParams;
       const decodedDistrict = decodeURIComponent(encodedDistrict);
       const isAll = decodedDistrict === 'all';
 
       setDistrict(decodedDistrict);
       setIsAllDistrictsView(isAll);
+
+      // URL 파라미터에서 기간 데이터 파싱
+      if (periodParam) {
+        try {
+          const periodData = JSON.parse(decodeURIComponent(periodParam));
+          setPeriod(periodData);
+          console.log('🔍 Period data from URL:', periodData);
+        } catch (error) {
+          console.error('Failed to parse period data from URL:', error);
+        }
+      }
 
       const obj = isAll
         ? {
@@ -200,7 +214,7 @@ export default function BannerDisplayPage({
     };
 
     initParams();
-  }, [params]);
+  }, [params, searchParams]);
 
   // 마포구인지 확인
   // const isMapoDistrict = districtObj?.code === 'mapo';
@@ -220,22 +234,6 @@ export default function BannerDisplayPage({
   console.log('🔍 District code from URL:', district);
   console.log('🔍 District object found:', districtObj);
   console.log('🔍 District name to pass to API:', districtObj?.name);
-
-  // 신청기간 가져오기 함수
-  async function getDisplayPeriod(districtName: string) {
-    try {
-      const response = await fetch(
-        `/api/display-period?district=${encodeURIComponent(
-          districtName
-        )}&display_type=banner_display`
-      );
-      const result = await response.json();
-      return result.success ? result.data : null;
-    } catch (err) {
-      console.warn(`Failed to fetch period for ${districtName}:`, err);
-      return null;
-    }
-  }
 
   // 구 정보 가져오기 함수 (로고 + 계좌번호 포함)
   async function getDistrictData(districtName: string) {
@@ -523,11 +521,8 @@ export default function BannerDisplayPage({
           }
         }
 
-        // 2. 신청기간 가져오기 (전체보기가 아닌 경우에만)
-        if (!isAllDistrictsView && districtObj?.name) {
-          const periodData = await getDisplayPeriod(districtObj.name);
-          setPeriod(periodData);
-        }
+        // 2. 신청기간은 URL 파라미터나 상태로 전달받도록 수정 (DB 재조회 제거)
+        // 기간 데이터는 구별 카드에서 이미 가져온 것을 사용
 
         // 3. 구 정보와 계좌번호 정보 가져오기 (전체보기가 아닌 경우에만)
         if (!isAllDistrictsView && districtObj?.name) {

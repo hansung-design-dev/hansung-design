@@ -40,36 +40,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 현재 월 계산
-    const currentDate = new Date();
-    const currentYearMonth = `${currentDate.getFullYear()}-${String(
-      currentDate.getMonth() + 1
-    ).padStart(2, '0')}`;
-
-    // 신청기간 조회 (현재 월 데이터 - 상반기와 하반기 모두)
-    const { data: periodDataList, error: periodError } = await supabase
-      .from('region_gu_display_periods')
-      .select('period_from, period_to, half_period')
-      .eq('region_gu_id', guData.id)
-      .eq('display_type_id', typeData.id)
-      .eq('year_month', currentYearMonth);
-
-    console.log(`🔍 Period data for ${district}:`, {
-      periodDataList,
-      periodError,
-    });
-    console.log(`🔍 Current year-month: ${currentYearMonth}`);
-
-    // 이번달 16일~말일 계산 (2차는 항상 고정)
+    // 현재 날짜 기준으로 신청 가능한 모든 기간 조회
     const now = new Date();
-    console.log('🔍 Current date:', now);
-    console.log('🔍 Current year:', now.getFullYear());
-    console.log('🔍 Current month:', now.getMonth() + 1); // 1-based (1=January, 7=July)
+    const koreaTime = new Date(now.getTime() + 9 * 60 * 60 * 1000); // UTC+9 (한국시간)
 
-    const secondHalfStart = new Date(now.getFullYear(), now.getMonth(), 16);
-    const secondHalfEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    console.log('🔍 Current date (Korea time):', koreaTime);
 
-    // 날짜를 YYYY-MM-DD 형식으로 변환 (로컬 시간 기준)
+    // 7일 후 날짜 계산 (7일 전부터는 신청 불가)
+    const sevenDaysLater = new Date(
+      koreaTime.getTime() + 7 * 24 * 60 * 60 * 1000
+    );
+
+    // 날짜를 YYYY-MM-DD 형식으로 변환
     const formatDate = (date: Date) => {
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -77,40 +59,50 @@ export async function GET(request: NextRequest) {
       return `${year}-${month}-${day}`;
     };
 
-    let currentPeriodData;
+    // 7일 후부터 시작하는 기간들만 조회 (7일 전부터는 신청 불가)
+    const { data: allPeriods, error: periodError } = await supabase
+      .from('region_gu_display_periods')
+      .select('period_from, period_to, period, year_month')
+      .eq('region_gu_id', guData.id)
+      .eq('display_type_id', typeData.id)
+      .gte('period_from', formatDate(sevenDaysLater)) // 7일 후부터 시작하는 기간들만
+      .order('period_from', { ascending: true });
 
-    if (periodDataList && periodDataList.length > 0 && !periodError) {
-      // DB에서 상반기와 하반기 데이터 찾기
-      const firstHalfData = periodDataList.find(
-        (p) => p.half_period === 'first_half'
-      );
-      const secondHalfData = periodDataList.find(
-        (p) => p.half_period === 'second_half'
-      );
+    console.log(`🔍 All available periods for ${district} (7+ days away):`, {
+      allPeriods,
+      periodError,
+      sevenDaysLater: formatDate(sevenDaysLater),
+    });
 
-      currentPeriodData = {
-        first_half_from:
-          firstHalfData?.period_from ||
-          formatDate(new Date(now.getFullYear(), now.getMonth(), 1)),
-        first_half_to:
-          firstHalfData?.period_to ||
-          formatDate(new Date(now.getFullYear(), now.getMonth(), 15)),
-        second_half_from:
-          secondHalfData?.period_from || formatDate(secondHalfStart),
-        second_half_to: secondHalfData?.period_to || formatDate(secondHalfEnd),
+    // 최대 2개의 신청 가능한 기간만 반환
+    const selectedPeriods = allPeriods?.slice(0, 2) || [];
+
+    if (selectedPeriods.length === 0) {
+      // 신청 가능한 기간이 없으면 빈 데이터 반환
+      const emptyPeriodData = {
+        first_half_from: '',
+        first_half_to: '',
+        second_half_from: '',
+        second_half_to: '',
+        available_periods: [],
       };
-    } else {
-      // DB에 데이터가 없으면 둘 다 이번달 계산값 사용
-      const firstHalfStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      const firstHalfEnd = new Date(now.getFullYear(), now.getMonth(), 15);
-
-      currentPeriodData = {
-        first_half_from: formatDate(firstHalfStart),
-        first_half_to: formatDate(firstHalfEnd),
-        second_half_from: formatDate(secondHalfStart),
-        second_half_to: formatDate(secondHalfEnd),
-      };
+      return NextResponse.json({ success: true, data: emptyPeriodData });
     }
+
+    // 기존 형식과 호환되도록 데이터 변환
+    const currentPeriodData = {
+      first_half_from: selectedPeriods[0]?.period_from || '',
+      first_half_to: selectedPeriods[0]?.period_to || '',
+      second_half_from: selectedPeriods[1]?.period_from || '',
+      second_half_to: selectedPeriods[1]?.period_to || '',
+      // 추가 정보
+      available_periods: selectedPeriods.map((period) => ({
+        period_from: period.period_from,
+        period_to: period.period_to,
+        period: period.period,
+        year_month: period.year_month,
+      })),
+    };
 
     return NextResponse.json({ success: true, data: currentPeriodData });
   } catch {

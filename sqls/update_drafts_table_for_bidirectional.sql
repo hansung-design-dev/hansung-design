@@ -23,6 +23,10 @@ UPDATE public.drafts
 SET direction = 'user_to_admin', draft_category = 'initial' 
 WHERE direction IS NULL;
 
--- 5. 시안 상태 enum 타입 생성 (필요시)
+-- 5. orders 테이블에 시안 전송 방식 컬럼 추가
+ALTER TABLE public.orders 
+ADD COLUMN draft_delivery_method text DEFAULT 'upload' CHECK (draft_delivery_method IN ('email', 'upload'));
+
+-- 6. 시안 상태 enum 타입 생성 (필요시)
 -- CREATE TYPE draft_status_enum AS ENUM ('pending', 'uploaded', 'reviewed', 'approved', 'rejected', 'feedback_sent', 'revision_uploaded', 'final_approved');
 -- ALTER TABLE public.drafts ALTER COLUMN upload_status TYPE draft_status_enum USING upload_status::draft_status_enum; 

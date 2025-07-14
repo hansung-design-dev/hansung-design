@@ -55,16 +55,104 @@ const BannerPeriod: React.FC<BannerPeriodProps> = ({
     });
   }
 
+  // 현재 날짜 (한국 시간)
+  const now = new Date();
+  const koreaTime = new Date(now.getTime() + 9 * 60 * 60 * 1000); // UTC+9
+
+  // 기간 슬라이딩 로직
+  const getCurrentPeriods = () => {
+    const firstHalfStart = new Date(first_half_from);
+    const firstHalfEnd = new Date(first_half_to);
+    const secondHalfStart = new Date(second_half_from);
+    const secondHalfEnd = new Date(second_half_to);
+
+    // 현재 날짜가 첫 번째 반기 시작일 이전인 경우
+    if (koreaTime < firstHalfStart) {
+      return {
+        firstPeriod: { from: first_half_from, to: first_half_to, label: '1차' },
+        secondPeriod: {
+          from: second_half_from,
+          to: second_half_to,
+          label: '2차',
+        },
+      };
+    }
+
+    // 현재 날짜가 첫 번째 반기 기간 내인 경우
+    if (koreaTime >= firstHalfStart && koreaTime <= firstHalfEnd) {
+      return {
+        firstPeriod: { from: first_half_from, to: first_half_to, label: '1차' },
+        secondPeriod: {
+          from: second_half_from,
+          to: second_half_to,
+          label: '2차',
+        },
+      };
+    }
+
+    // 현재 날짜가 첫 번째 반기 종료일 이후이고 두 번째 반기 시작일 이전인 경우
+    if (koreaTime > firstHalfEnd && koreaTime < secondHalfStart) {
+      return {
+        firstPeriod: {
+          from: second_half_from,
+          to: second_half_to,
+          label: '1차',
+        },
+        secondPeriod: null,
+      };
+    }
+
+    // 현재 날짜가 두 번째 반기 기간 내인 경우
+    if (koreaTime >= secondHalfStart && koreaTime <= secondHalfEnd) {
+      return {
+        firstPeriod: {
+          from: second_half_from,
+          to: second_half_to,
+          label: '1차',
+        },
+        secondPeriod: null,
+      };
+    }
+
+    // 현재 날짜가 모든 기간을 지난 경우
+    return {
+      firstPeriod: null,
+      secondPeriod: null,
+    };
+  };
+
+  const currentPeriods = getCurrentPeriods();
+
+  // 표시할 기간이 없는 경우
+  if (!currentPeriods.firstPeriod && !currentPeriods.secondPeriod) {
+    return (
+      <div className="flex gap-3 text-1 font-500 text-gray-600">
+        <div>신청일</div>
+        <div className="flex flex-col gap-1">
+          <span className="text-red-500">신청 기간이 종료되었습니다.</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex gap-3 text-1 font-500 text-gray-600">
       <div>신청일</div>
       <div className="flex flex-col gap-1">
-        <span>
-          1차: {formatDate(first_half_from)} ~ {formatDate(first_half_to)}
-        </span>
-        <span>
-          2차: {formatDate(second_half_from)} ~ {formatDate(second_half_to)}
-        </span>
+        {currentPeriods.firstPeriod && (
+          <span>
+            {currentPeriods.firstPeriod.label}:{' '}
+            {formatDate(currentPeriods.firstPeriod.from)} ~{' '}
+            {formatDate(currentPeriods.firstPeriod.to)}
+          </span>
+        )}
+        {currentPeriods.secondPeriod && (
+          <span>
+            {currentPeriods.secondPeriod.label}:{' '}
+            {formatDate(currentPeriods.secondPeriod.from)} ~{' '}
+            {formatDate(currentPeriods.secondPeriod.to)}
+          </span>
+        )}
       </div>
     </div>
   );

@@ -20,15 +20,17 @@ interface DesignDraft {
   is_approved: boolean;
   created_at: string;
   updated_at: string;
+  draft_delivery_method?: string;
 }
 
 interface Order {
   id: string;
   order_number: string;
+  total_price: number;
   payment_status: string;
   admin_approval_status: string;
-  design_drafts_id: string | null;
   created_at: string;
+  updated_at: string;
   design_drafts?: DesignDraft[];
 }
 
@@ -54,11 +56,12 @@ export default function DesignPage() {
       const data = await response.json();
 
       if (data.success) {
-        // 결제 완료된 주문만 필터링
+        // 결제 완료된 주문만 필터링 (일반 결제 완료 또는 어드민 승인 후 결제 완료)
         const completedOrders = data.data.filter(
           (order: Order) =>
             order.payment_status === 'completed' ||
-            order.admin_approval_status === 'approved'
+            (order.admin_approval_status === 'approved' &&
+              order.payment_status === 'completed')
         );
         setOrders(completedOrders);
       }
@@ -172,32 +175,40 @@ export default function DesignPage() {
         ) : (
           <div className="space-y-6">
             {orders.map((order) => (
-              <div key={order.id} className="border rounded-lg p-6">
+              <div
+                key={order.id}
+                className="border border-gray-200 rounded-lg p-6 bg-white shadow-sm"
+              >
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h3 className="text-lg font-semibold">
                       주문번호: {order.order_number}
                     </h3>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-gray-600">
                       주문일: {new Date(order.created_at).toLocaleDateString()}
                     </p>
+                    {order.design_drafts &&
+                      order.design_drafts.length > 0 &&
+                      order.design_drafts[0].draft_delivery_method && (
+                        <p className="text-sm text-blue-600">
+                          시안 전송 방식:{' '}
+                          {order.design_drafts[0].draft_delivery_method ===
+                          'email'
+                            ? '이메일'
+                            : '홈페이지 업로드'}
+                        </p>
+                      )}
                   </div>
                   <div className="text-right">
-                    <span
-                      className={`px-2 py-1 rounded text-xs ${
-                        order.payment_status === 'completed'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}
-                    >
-                      {order.payment_status === 'completed'
-                        ? '결제완료'
-                        : '승인완료'}
-                    </span>
+                    <p className="text-lg font-bold">
+                      {order.total_price?.toLocaleString()}원
+                    </p>
+                    <p className="text-sm text-green-600 font-medium">
+                      결제완료
+                    </p>
                   </div>
                 </div>
 
-                {/* 시안 업로드 영역 */}
                 <div className="border-t pt-4">
                   <h4 className="font-medium mb-3">시안 업로드</h4>
 

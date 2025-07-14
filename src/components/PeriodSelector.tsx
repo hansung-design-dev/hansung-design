@@ -4,6 +4,8 @@ import { Button } from './button/button';
 
 interface PeriodSelectorProps {
   halfPeriod?: 'first_half' | 'second_half';
+  selectedYear?: number;
+  selectedMonth?: number;
   onPeriodChange: (
     year: number,
     month: number,
@@ -14,21 +16,43 @@ interface PeriodSelectorProps {
 
 export default function PeriodSelector({
   halfPeriod,
+  selectedYear,
+  selectedMonth,
   onPeriodChange,
   disabled = false,
 }: PeriodSelectorProps) {
-  const currentYear = new Date().getFullYear();
-  const currentMonth = new Date().getMonth() + 1;
+  // 카트 아이템에 저장된 년월이 있으면 사용, 없으면 현재 날짜 기준으로 계산
+  const now = new Date();
+  const koreaTime = new Date(now.getTime() + 9 * 60 * 60 * 1000); // UTC+9 (한국시간)
+  const currentYear = koreaTime.getFullYear();
+  const currentMonth = koreaTime.getMonth() + 1;
+  const currentDay = koreaTime.getDate();
 
-  // 다음달 계산
+  // 카트 아이템에 저장된 년월이 있으면 사용
+  let displayYear = selectedYear;
+  let displayMonth = selectedMonth;
+
+  // 저장된 년월이 없으면 현재 날짜에 따라 올바른 년월 설정
+  if (!displayYear || !displayMonth) {
+    if (currentDay <= 15) {
+      // 현재가 15일 이전이면 이번달
+      displayYear = currentYear;
+      displayMonth = currentMonth;
+    } else {
+      // 현재가 16일 이후면 다음달
+      const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+      displayYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+      displayMonth = nextMonth;
+    }
+  }
 
   const [period, setPeriod] = useState<'first_half' | 'second_half'>(
     halfPeriod || 'first_half'
   );
 
   useEffect(() => {
-    onPeriodChange(currentYear, currentMonth, period);
-  }, [period]);
+    onPeriodChange(displayYear, displayMonth, period);
+  }, [period, displayYear, displayMonth]);
 
   const getPeriodText = (period: 'first_half' | 'second_half') => {
     return period === 'first_half' ? '상반기 (1-15일)' : '하반기 (16-31일)';
@@ -40,7 +64,7 @@ export default function PeriodSelector({
 
       <div className="text-sm text-gray-600">
         <span className="font-semibold">
-          {currentYear}년 {currentMonth}월
+          {displayYear}년 {displayMonth}월
         </span>
       </div>
 
@@ -69,7 +93,7 @@ export default function PeriodSelector({
       </div>
 
       <div className="text-xs text-gray-500 mt-2">
-        선택된 기간: {currentYear}년 {currentMonth}월 {getPeriodText(period)}
+        선택된 기간: {displayYear}년 {displayMonth}월 {getPeriodText(period)}
       </div>
     </div>
   );
