@@ -1,12 +1,12 @@
--- 기간별 재고 관리 수정
--- 기존 트리거를 수정하여 특정 기간의 재고만 관리하도록 개선
+-- 기간별 재고 관리 문제 해결
+-- 사용자가 특정 기간(상반기/하반기)에 신청했는데 전체 기간 재고가 빠지는 문제 수정
 
 -- 1. 기존 트리거 삭제
 DROP TRIGGER IF EXISTS banner_inventory_insert_trigger ON order_details;
 DROP TRIGGER IF EXISTS banner_inventory_delete_trigger ON order_details;
 DROP TRIGGER IF EXISTS inventory_check_trigger ON order_details;
 
--- 2. 기간별 재고 관리 함수들 (수정된 버전)
+-- 2. 개선된 기간별 재고 관리 함수들
 
 -- 주문 시 특정 기간의 재고만 감소
 CREATE OR REPLACE FUNCTION update_banner_slot_inventory_on_order()
@@ -162,10 +162,7 @@ CREATE TRIGGER inventory_check_trigger
   EXECUTE FUNCTION check_inventory_before_order();
 
 -- 4. 기간별 재고 현황 확인을 위한 뷰 업데이트
--- 기존 뷰 삭제 후 재생성
-DROP VIEW IF EXISTS inventory_status_view;
-
-CREATE VIEW inventory_status_view AS
+CREATE OR REPLACE VIEW inventory_status_view AS
 SELECT 
   pi.id as panel_info_id,
   pi.nickname as panel_name,
@@ -191,5 +188,99 @@ LEFT JOIN region_gu_display_periods rgdp ON bsi.region_gu_display_period_id = rg
 WHERE pi.display_type_id = (SELECT id FROM display_types WHERE name = 'banner_display')
 ORDER BY rgdp.year_month DESC, rgdp.period, bsi.updated_at DESC;
 
--- 5. 현재 재고 현황 확인 쿼리 (테스트용)
--- SELECT * FROM inventory_status_view WHERE district = '관악구' ORDER BY year_month DESC, period; 
+-- 5. 디버깅을 위한 유틸리티 함수
+CREATE OR REPLACE FUNCTION debug_order_period_matching(
+  p_panel_info_id UUID,
+  p_display_start_date DATE,
+  p_display_end_date DATE
+) RETURNS TABLE(
+  period_id UUID,
+  year_month TEXT,
+  period TEXT,
+  period_from DATE,
+  period_to DATE,
+  matched BOOLEAN
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    rgdp.id as period_id,
+    rgdp.year_month,
+    rgdp.period,
+    rgdp.period_from,
+    rgdp.period_to,
+    CASE 
+      WHEN (
+        (p_display_start_date >= rgdp.period_from AND p_display_end_date <= rgdp.period_to)
+        OR
+        (p_display_start_date <= rgdp.period_to AND p_display_end_date >= rgdp.period_from)
+      ) THEN true
+      ELSE false
+    END as matched
+  FROM region_gu_display_periods rgdp
+  JOIN panel_info pi ON pi.region_gu_id = rgdp.region_gu_id
+  WHERE pi.id = p_panel_info_id
+    AND rgdp.display_type_id = pi.display_type_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 6. 재고 현황 확인 함수
+CREATE OR REPLACE FUNCTION get_inventory_status(
+  p_panel_info_id UUID DEFAULT NULL
+) RETURNS TABLE(
+  panel_info_id UUID,
+  panel_name TEXT,
+  district TEXT,
+  year_month TEXT,
+  period TEXT,
+  period_from DATE,
+  period_to DATE,
+  total_slots INTEGER,
+  available_slots INTEGER,
+  closed_slots INTEGER,
+  inventory_status TEXT
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    pi.id as panel_info_id,
+    pi.nickname as panel_name,
+    rgu.name as district,
+    rgdp.year_month,
+    rgdp.period,
+    rgdp.period_from,
+    rgdp.period_to,
+    bsi.total_slots,
+    bsi.available_slots,
+    bsi.closed_slots,
+    CASE 
+      WHEN bsi.available_slots = 0 THEN '매진'
+      WHEN bsi.available_slots <= bsi.total_slots * 0.2 THEN '재고부족'
+      ELSE '재고있음'
+    END as inventory_status
+  FROM panel_info pi
+  LEFT JOIN region_gu rgu ON pi.region_gu_id = rgu.id
+  LEFT JOIN banner_slot_inventory bsi ON pi.id = bsi.panel_info_id
+  LEFT JOIN region_gu_display_periods rgdp ON bsi.region_gu_display_period_id = rgdp.id
+  WHERE pi.display_type_id = (SELECT id FROM display_types WHERE name = 'banner_display')
+    AND (p_panel_info_id IS NULL OR pi.id = p_panel_info_id)
+  ORDER BY rgdp.year_month DESC, rgdp.period, bsi.updated_at DESC;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 7. 성능 최적화를 위한 인덱스 추가
+CREATE INDEX IF NOT EXISTS idx_banner_slot_inventory_panel_period 
+ON banner_slot_inventory(panel_info_id, region_gu_display_period_id);
+
+CREATE INDEX IF NOT EXISTS idx_order_details_display_dates 
+ON order_details(panel_info_id, display_start_date, display_end_date);
+
+CREATE INDEX IF NOT EXISTS idx_region_gu_display_periods_dates 
+ON region_gu_display_periods(region_gu_id, display_type_id, period_from, period_to);
+
+-- 8. 적용 완료 메시지
+DO $$
+BEGIN
+  RAISE NOTICE '기간별 재고 관리 문제 해결이 완료되었습니다!';
+  RAISE NOTICE '이제 사용자가 특정 기간에 신청하면 해당 기간의 재고만 정확하게 감소합니다.';
+END $$; 

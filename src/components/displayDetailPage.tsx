@@ -65,9 +65,9 @@ export default function DisplayDetailPage({
       name: string;
     };
   } | null;
-  panelTypeFilter?: 'panel' | 'top_fixed';
+  panelTypeFilter?: 'panel' | 'top_fixed' | 'semi_auto';
   setPanelTypeFilter?: React.Dispatch<
-    React.SetStateAction<'panel' | 'top_fixed'>
+    React.SetStateAction<'panel' | 'top_fixed' | 'semi_auto'>
   >;
 }) {
   const [selectedOption, setSelectedOption] = useState<{
@@ -173,6 +173,8 @@ export default function DisplayDetailPage({
           guidelineTypes = ['banner', 'bulletin_board'];
           break;
         case '용산구':
+          guidelineTypes = ['banner'];
+          break;
         case '송파구':
           guidelineTypes = ['banner', 'top_fixed'];
           break;
@@ -306,17 +308,17 @@ export default function DisplayDetailPage({
         // banner_slot_info에서 banner_type 확인
         if (item.type === 'banner' && item.banner_slot_info) {
           if (currentPanelTypeFilter === 'top_fixed') {
-            // 상단광고 탭: banner_type이 'top_fixed'인 슬롯이 있는 아이템만
+            // 상단광고 탭: banner_type이 'top_fixed'인 슬롯이 있는 아이템만 (송파구만)
             return item.banner_slot_info.some(
               (slot) => slot.banner_type === 'top_fixed'
             );
           } else if (currentPanelTypeFilter === 'panel') {
-            // 현수막게시대 탭: banner_type이 'panel' 또는 'semi_auto'인 슬롯이 있는 아이템 (서대문구 포함)
+            // 현수막게시대 탭: banner_type이 'panel'인 슬롯이 있는 아이템
             return item.banner_slot_info.some(
-              (slot) =>
-                slot.banner_type === 'panel' || slot.banner_type === 'semi_auto'
+              (slot) => slot.banner_type === 'panel'
             );
           } else if (currentPanelTypeFilter === 'semi_auto') {
+            // 반자동 탭: banner_type이 'semi_auto'인 슬롯이 있는 아이템 (용산구만)
             return item.banner_slot_info.some(
               (slot) => slot.banner_type === 'semi_auto'
             );
@@ -355,6 +357,8 @@ export default function DisplayDetailPage({
     if (isSongpaOrYongsan && item.type === 'banner') {
       if (currentPanelTypeFilter === 'top_fixed') {
         return '상단광고';
+      } else if (currentPanelTypeFilter === 'semi_auto') {
+        return '반자동';
       } else {
         // 현수막게시대 탭: panel_type에서 값 가져오기
         const panelType = item.panel_type;
@@ -365,8 +369,6 @@ export default function DisplayDetailPage({
             return '조명형';
           case 'no_lighting':
             return '비조명형';
-          case 'semi_auto':
-            return '반자동';
           case 'panel':
             return '패널형';
           default:
@@ -558,15 +560,25 @@ export default function DisplayDetailPage({
               hasPricePolicy: !!slot.banner_slot_price_policy?.length,
             })),
           });
-        } else {
-          // 현수막게시대 탭: banner_type이 'panel' 또는 'semi_auto'인 슬롯 찾기
+        } else if (currentPanelTypeFilter === 'semi_auto') {
+          // 반자동 탭: banner_type이 'semi_auto'인 슬롯 찾기
           slotInfo = item.banner_slot_info.find(
-            (slot) =>
-              (slot.banner_type === 'panel' ||
-                slot.banner_type === 'semi_auto') &&
-              slot.slot_number > 0
+            (slot) => slot.banner_type === 'semi_auto'
           );
-          console.log('🔍 Looking for panel slot (non-top_fixed):', {
+          console.log('🔍 Looking for semi_auto slot:', {
+            foundSemiAutoSlot: !!slotInfo,
+            allSlots: item.banner_slot_info.map((slot) => ({
+              banner_type: slot.banner_type,
+              slot_number: slot.slot_number,
+              hasPricePolicy: !!slot.banner_slot_price_policy?.length,
+            })),
+          });
+        } else {
+          // 현수막게시대 탭: banner_type이 'panel'인 슬롯 찾기
+          slotInfo = item.banner_slot_info.find(
+            (slot) => slot.banner_type === 'panel' && slot.slot_number > 0
+          );
+          console.log('🔍 Looking for panel slot:', {
             foundPanelSlot: !!slotInfo,
             allSlots: item.banner_slot_info.map((slot) => ({
               banner_type: slot.banner_type,
@@ -1105,16 +1117,30 @@ export default function DisplayDetailPage({
               >
                 현수막게시대
               </button>
-              <button
-                onClick={() => currentSetPanelTypeFilter('top_fixed')}
-                className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-6 font-medium ${
-                  currentPanelTypeFilter === 'top_fixed'
-                    ? 'text-white bg-black rounded-full '
-                    : 'text-gray-600 hover:text-gray-800'
-                }`}
-              >
-                상단광고
-              </button>
+              {/* 용산구에서는 반자동 탭 추가, 송파구에서는 상단광고 탭 추가 */}
+              {districtObj?.code === 'yongsan' ? (
+                <button
+                  onClick={() => currentSetPanelTypeFilter('semi_auto')}
+                  className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-6 font-medium ${
+                    currentPanelTypeFilter === 'semi_auto'
+                      ? 'text-white bg-black rounded-full '
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  반자동
+                </button>
+              ) : (
+                <button
+                  onClick={() => currentSetPanelTypeFilter('top_fixed')}
+                  className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-6 font-medium ${
+                    currentPanelTypeFilter === 'top_fixed'
+                      ? 'text-white bg-black rounded-full '
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  상단광고
+                </button>
+              )}
             </div>
           </div>
         )}

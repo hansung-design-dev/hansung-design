@@ -159,9 +159,9 @@ export default function BannerDisplayPage({
   const [bankInfo, setBankInfo] = useState<BankInfo | null>(null);
 
   // 송파구, 용산구 탭 필터 추가 (DisplayDetailPage에서 사용)
-  const [panelTypeFilter, setPanelTypeFilter] = useState<'panel' | 'top_fixed'>(
-    'panel'
-  );
+  const [panelTypeFilter, setPanelTypeFilter] = useState<
+    'panel' | 'top_fixed' | 'semi_auto'
+  >('panel');
 
   // const { dispatch } = useCart();
   // const router = useRouter();

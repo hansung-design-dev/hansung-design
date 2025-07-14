@@ -576,7 +576,11 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        if (item.halfPeriod === 'first_half') {
+        // 선택된 기간이 있으면 그것을 사용, 없으면 halfPeriod로 계산
+        if (item.selectedPeriodFrom && item.selectedPeriodTo) {
+          displayStartDate = item.selectedPeriodFrom;
+          displayEndDate = item.selectedPeriodTo;
+        } else if (item.halfPeriod === 'first_half') {
           // 상반기: 1일-15일
           displayStartDate = `${year}-${String(month).padStart(2, '0')}-01`;
           displayEndDate = `${year}-${String(month).padStart(2, '0')}-15`;

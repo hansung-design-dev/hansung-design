@@ -573,16 +573,20 @@ export default function Cart() {
 
         // 현수막게시대 분류
         if (item.type === 'banner-display') {
-          // 상단광고는 모두 상담신청 (용산구, 송파구)
+          // 상단광고는 모두 상담신청 (송파구만)
           if (panelType === 'top_fixed') {
             return true;
           }
 
           // 결제신청 조건
           const isPaymentEligible =
-            // 용산구, 송파구의 현수막게시대
-            ((district === '용산구' || district === '송파구') &&
-              panelType === 'panel') ||
+            // 송파구의 현수막게시대
+            (district === '송파구' && panelType === 'panel') ||
+            // 용산구의 현수막게시대 (panel, with_lighting, no_lighting)
+            (district === '용산구' &&
+              (panelType === 'panel' ||
+                panelType === 'with_lighting' ||
+                panelType === 'no_lighting')) ||
             // 마포구 연립형과 저단형
             (district === '마포구' &&
               (panelType === 'multi_panel' || panelType === 'lower_panel')) ||
