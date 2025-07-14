@@ -81,6 +81,25 @@ interface BannerDisplayData {
   panel_height?: number;
   first_half_closure_quantity?: number;
   second_half_closure_quantity?: number;
+  inventory_info?: {
+    current_period: {
+      total_slots: number;
+      available_slots: number;
+      closed_slots: number;
+      period: string;
+      year_month: string;
+    } | null;
+    first_half: {
+      total_slots: number;
+      available_slots: number;
+      closed_slots: number;
+    } | null;
+    second_half: {
+      total_slots: number;
+      available_slots: number;
+      closed_slots: number;
+    } | null;
+  };
 }
 
 interface BankInfo {
@@ -474,6 +493,7 @@ export default function BannerDisplayPage({
                 second_half_closure_quantity: secondHalfClosureQuantity,
                 panel_info_id: item.id, // 원본 panel_info UUID
                 banner_slot_info: item.banner_slot_info, // banner_slot_info 보존
+                inventory_info: item.inventory_info, // 실시간 재고 정보 추가
               };
             }
           );

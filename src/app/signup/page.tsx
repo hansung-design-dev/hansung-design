@@ -418,7 +418,7 @@ export default function Signup() {
             />
           </div>
           {validation.name.message && (
-            <div className="text-blue-500 text-0.75 mt-2 ml-2">
+            <div className="text-red text-0.75 mt-2 ml-2">
               {validation.name.message}
             </div>
           )}
@@ -454,7 +454,7 @@ export default function Signup() {
             </Button>
           </div>
           {validation.id.message && (
-            <div className="text-blue-500 text-0.75 mt-2 ml-2">
+            <div className="text-red text-0.75 mt-2 ml-2">
               {validation.id.message}
             </div>
           )}
@@ -485,7 +485,7 @@ export default function Signup() {
             />
           </div>
           {validation.email.message && (
-            <div className="text-blue-500 text-0.75 mt-2 ml-2">
+            <div className="text-red text-0.75 mt-2 ml-2">
               {validation.email.message}
             </div>
           )}
@@ -521,7 +521,7 @@ export default function Signup() {
             </Button>
           </div>
           {validation.phone.message && (
-            <div className="text-blue-500 text-0.75 mt-2 ml-2">
+            <div className="text-red text-0.75 mt-2 ml-2">
               {validation.phone.message}
             </div>
           )}
@@ -565,7 +565,7 @@ export default function Signup() {
             </button>
           </div>
           {validation.password.message && (
-            <div className="text-blue-500 text-0.75 mt-2 ml-2">
+            <div className="text-red text-0.75 mt-2 ml-2">
               {validation.password.message}
             </div>
           )}
@@ -608,7 +608,7 @@ export default function Signup() {
             </button>
           </div>
           {validation.passwordConfirm.message && (
-            <div className="text-blue-500 text-0.75 mt-2 ml-2">
+            <div className="text-red text-0.75 mt-2 ml-2">
               {validation.passwordConfirm.message}
             </div>
           )}
@@ -650,7 +650,7 @@ export default function Signup() {
                   회원이용약관 <span className="">(필수)</span>
                 </label>
                 <button
-                  className="text-blue-600 text-0-75 underline"
+                  className="text-red text-0-75 underline"
                   onClick={() => openModal('terms')}
                 >
                   보기
@@ -672,7 +672,7 @@ export default function Signup() {
                   개인정보처리방침 <span className="">(필수)</span>
                 </label>
                 <button
-                  className="text-blue-600 text-0-75 underline"
+                  className="text-red text-0-75 underline"
                   onClick={() => openModal('privacy')}
                 >
                   보기
@@ -695,7 +695,7 @@ export default function Signup() {
                   <span className="">(필수)</span>
                 </label>
                 <button
-                  className="text-blue-600 text-0-75 underline"
+                  className="text-red text-0-75 underline"
                   onClick={() => openModal('collection')}
                 >
                   보기
@@ -718,7 +718,7 @@ export default function Signup() {
                   <span className="">(필수)</span>
                 </label>
                 <button
-                  className="text-blue-600 text-0-75 underline"
+                  className="text-red text-0-75 underline"
                   onClick={() => openModal('thirdParty')}
                 >
                   보기

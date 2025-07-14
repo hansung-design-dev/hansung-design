@@ -8,6 +8,8 @@ import { useCart } from '@/src/contexts/cartContext';
 import { useProfile } from '@/src/contexts/profileContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CartItem } from '@/src/contexts/cartContext';
+import { PaymentSuccessModal } from '@/src/components/modal/UserProfileModal';
+import CustomFileUpload from '@/src/components/ui/CustomFileUpload';
 
 interface BankInfo {
   id: string;
@@ -46,6 +48,110 @@ function PaymentPageContent() {
   const [isApprovedOrder, setIsApprovedOrder] = useState(false);
   const [taxInvoice, setTaxInvoice] = useState(false);
   const [isAgreedCaution, setIsAgreedCaution] = useState(false);
+  const [showPaymentSuccessModal, setShowPaymentSuccessModal] = useState(false);
+  const [paymentSuccessData, setPaymentSuccessData] = useState({
+    orderNumber: '',
+    totalAmount: 0,
+  });
+  const [projectName, setProjectName] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [validationErrors, setValidationErrors] = useState<{
+    projectName: string;
+    fileUpload: string;
+    agreement: string;
+  }>({
+    projectName: '',
+    fileUpload: '',
+    agreement: '',
+  });
+  const [userProfiles, setUserProfiles] = useState<
+    {
+      id: string;
+      profile_title: string;
+      company_name?: string;
+      business_registration_number?: string;
+      business_registration_file?: string;
+      phone: string;
+      email: string;
+      contact_person_name: string;
+      fax_number?: string;
+      is_default: boolean;
+      is_public_institution?: boolean;
+      is_company?: boolean;
+      created_at: string;
+    }[]
+  >([]);
+
+  // 사용자 프로필 데이터 가져오기
+  useEffect(() => {
+    const fetchUserProfiles = async () => {
+      if (!user?.id) return;
+
+      try {
+        const response = await fetch(`/api/user-profiles?userId=${user.id}`);
+        const data = await response.json();
+
+        if (data.success) {
+          console.log('🔍 가져온 프로필 데이터:', data.data);
+          // user_auth_id가 없는 경우 추가
+          const profilesWithAuthId = data.data.map(
+            (profile: Record<string, unknown>) => ({
+              ...profile,
+              user_auth_id: (profile.user_auth_id as string) || user.id,
+            })
+          );
+          console.log(
+            '🔍 user_auth_id 추가된 프로필 데이터:',
+            profilesWithAuthId
+          );
+          setUserProfiles(profilesWithAuthId);
+        }
+      } catch (error) {
+        console.error('🔍 프로필 데이터 가져오기 실패:', error);
+      }
+    };
+
+    fetchUserProfiles();
+  }, [user?.id]);
+
+  // 유효성 검사 함수
+  const validateForm = () => {
+    console.log('🔍 validateForm 시작');
+    console.log('🔍 projectName:', projectName);
+    console.log('🔍 sendByEmail:', sendByEmail);
+    console.log('🔍 selectedFile:', selectedFile?.name || '없음');
+    console.log('🔍 isAgreedCaution:', isAgreedCaution);
+
+    const errors = {
+      projectName: '',
+      fileUpload: '',
+      agreement: '',
+    };
+
+    // 1. 작업이름 검사
+    if (!projectName.trim()) {
+      errors.projectName = '작업이름을 입력해주세요.';
+      console.log('🔍 작업이름 검사 실패');
+    }
+
+    // 2. 파일업로드 방식 검사
+    if (!sendByEmail && !selectedFile) {
+      errors.fileUpload = '파일을 업로드하거나 이메일 전송을 선택해주세요.';
+      console.log('🔍 파일업로드 방식 검사 실패');
+    }
+
+    // 3. 유의사항 동의 검사
+    if (!isAgreedCaution) {
+      errors.agreement = '유의사항에 동의해주세요.';
+      console.log('🔍 유의사항 동의 검사 실패');
+    }
+
+    console.log('🔍 검사 결과 errors:', errors);
+    setValidationErrors(errors);
+    const isValid = !Object.values(errors).some((error) => error !== '');
+    console.log('🔍 최종 유효성 검사 결과:', isValid);
+    return isValid;
+  };
 
   // 패널 타입 표시 함수
   const getPanelTypeDisplay = (panelType: string) => {
@@ -108,6 +214,71 @@ function PaymentPageContent() {
   useEffect(() => {
     setDraftDeliveryMethod(sendByEmail ? 'email' : 'upload');
   }, [sendByEmail]);
+
+  // paymentMethod 상태 변경 감지
+  useEffect(() => {
+    console.log('🔍 paymentMethod 상태 변경됨:', paymentMethod);
+  }, [paymentMethod]);
+
+  // selectedItems 상태 변경 감지
+  useEffect(() => {
+    console.log(
+      '🔍 selectedItems 상태 변경됨:',
+      selectedItems.length,
+      selectedItems.map((item) => ({
+        id: item.id,
+        name: item.name,
+        fileName: item.fileName,
+        fileUploadMethod: item.fileUploadMethod,
+      }))
+    );
+
+    // selectedItems가 비어있게 되면 경고
+    if (selectedItems.length === 0) {
+      console.warn('🔍 WARNING: selectedItems가 비어있음!');
+      console.warn('🔍 현재 cart 상태:', cart.length);
+      console.warn('🔍 현재 URL params:', searchParams.get('items'));
+    }
+  }, [selectedItems, cart, searchParams]);
+
+  // selectedFile 상태 변경 감지
+  useEffect(() => {
+    console.log('🔍 selectedFile 상태 변경됨:', selectedFile?.name || '없음');
+  }, [selectedFile]);
+
+  // 실시간 유효성 검사
+  useEffect(() => {
+    if (selectedItems.length > 0) {
+      const errors = {
+        projectName: '',
+        fileUpload: '',
+        agreement: '',
+      };
+
+      // 1. 작업이름 검사
+      if (!projectName.trim()) {
+        errors.projectName = '작업이름을 입력해주세요.';
+      }
+
+      // 2. 파일업로드 방식 검사
+      if (!sendByEmail && !selectedFile) {
+        errors.fileUpload = '파일을 업로드하거나 이메일 전송을 선택해주세요.';
+      }
+
+      // 3. 유의사항 동의 검사
+      if (!isAgreedCaution) {
+        errors.agreement = '유의사항에 동의해주세요.';
+      }
+
+      setValidationErrors(errors);
+    }
+  }, [
+    projectName,
+    selectedFile,
+    sendByEmail,
+    isAgreedCaution,
+    selectedItems.length,
+  ]);
 
   // 승인된 주문의 아이템 정보 가져오기
   const fetchApprovedOrderItems = async (orderId: string) => {
@@ -174,9 +345,38 @@ function PaymentPageContent() {
     }
   };
 
-  // 기본 프로필 찾기
-  const defaultProfile =
-    profiles.find((profile) => profile.is_default) || profiles[0];
+  // 장바구니에서 선택된 프로필 정보 가져오기
+  console.log('🔍 profiles 상태:', profiles?.length || 0, profiles);
+  console.log('🔍 userProfiles 상태:', userProfiles?.length || 0, userProfiles);
+  console.log(
+    '🔍 selectedItems:',
+    selectedItems.length,
+    selectedItems.map((item) => ({
+      id: item.id,
+      contact_person_name: item.contact_person_name,
+      phone: item.phone,
+      company_name: item.company_name,
+      email: item.email,
+      user_profile_id: item.user_profile_id,
+    }))
+  );
+
+  // selectedItems에서 실제 프로필 ID 확인 (첫 번째 아이템 기준)
+  const selectedProfileId =
+    selectedItems.length > 0 ? selectedItems[0].user_profile_id : null;
+
+  console.log('🔍 selectedProfileId:', selectedProfileId);
+
+  // 실제 프로필 ID가 있으면 해당 프로필 사용, 없으면 기본 프로필 사용
+  const defaultProfile = selectedProfileId
+    ? userProfiles?.find((profile) => profile.id === selectedProfileId) ||
+      profiles?.find((profile) => profile.id === selectedProfileId)
+    : userProfiles?.find((profile) => profile.is_default) ||
+      userProfiles?.[0] ||
+      profiles?.find((profile) => profile.is_default) ||
+      profiles?.[0];
+
+  console.log('🔍 defaultProfile:', defaultProfile);
 
   // 가격 계산
   const priceSummary = selectedItems.reduce(
@@ -232,20 +432,51 @@ function PaymentPageContent() {
 
   // 결제 처리
   const handlePayment = async () => {
+    console.log('🔍 handlePayment 시작');
+    console.log('🔍 user:', user);
+    console.log('🔍 selectedItems.length:', selectedItems.length);
+    console.log('🔍 selectedFile:', selectedFile?.name || '없음');
+    console.log('🔍 sendByEmail:', sendByEmail);
+    console.log('🔍 defaultProfile:', defaultProfile);
+    console.log('🔍 userProfiles:', userProfiles);
+    console.log('🔍 profiles:', profiles);
+    console.log('🔍 projectName:', projectName);
+
     if (!user) {
       setError('로그인이 필요합니다.');
       return;
     }
 
+    if (!defaultProfile) {
+      console.error('🔍 defaultProfile이 undefined입니다.');
+      console.error('🔍 userProfiles:', userProfiles);
+      console.error('🔍 profiles:', profiles);
+      console.error('🔍 selectedProfileId:', selectedProfileId);
+      setError(
+        '사용자 프로필 정보가 없습니다. 마이페이지에서 프로필을 설정해주세요.'
+      );
+      return;
+    }
+
+    console.log('🔍 defaultProfile 검증 통과:', defaultProfile.id);
+
     if (selectedItems.length === 0) {
+      console.error('🔍 selectedItems가 비어있음!');
       setError('선택된 상품이 없습니다.');
       return;
     }
 
-    if (!isAgreedCaution) {
-      setError('유의사항에 동의해주세요.');
+    console.log('🔍 selectedItems 검증 통과:', selectedItems.length);
+
+    // 폼 유효성 검사
+    console.log('🔍 폼 유효성 검사 시작');
+    if (!validateForm()) {
+      console.error('🔍 폼 유효성 검사 실패');
+      setError('필수 항목을 모두 입력해주세요.');
       return;
     }
+
+    console.log('🔍 폼 유효성 검사 통과');
 
     setIsProcessing(true);
     setError(null);
@@ -290,44 +521,10 @@ function PaymentPageContent() {
         throw new Error('패널 정보 ID를 추출할 수 없습니다.');
       };
 
-      // 1. 주문 생성 API 호출
-      const orderResponse = await fetch('/api/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          items: selectedItems.map((item) => ({
-            id: item.id,
-            name: item.name,
-            price: item.price,
-            quantity: 1,
-            panel_info_id: extractPanelInfoId(item),
-            panel_slot_snapshot: item.panel_slot_snapshot,
-            panel_slot_usage_id: item.panel_slot_usage_id,
-            halfPeriod: item.halfPeriod,
-            selectedYear: item.selectedYear,
-            selectedMonth: item.selectedMonth,
-            startDate: new Date().toISOString().split('T')[0],
-            endDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
-              .toISOString()
-              .split('T')[0],
-          })),
-          paymentMethod: paymentMethod,
-          draftDeliveryMethod: draftDeliveryMethod, // 시안 전송 방식 추가
-          isRequireTaxFiling: taxInvoice, // 세금계산서 신청 여부 추가
-          isAgreedCaution: isAgreedCaution, // 유의사항 동의 여부 추가
-        }),
-      });
-
-      const orderData = await orderResponse.json();
-
-      if (!orderData.success) {
-        throw new Error(orderData.error || '주문 생성에 실패했습니다.');
-      }
-
-      const orderId = orderData.data.id;
-      const totalAmount = priceSummary.totalPrice;
+      // 1. 주문 생성 API 호출 (파일 업로드는 주문 생성 후)
+      console.log('🔍 주문 생성 시작 - selectedItems:', selectedItems.length);
+      console.log('🔍 user.id:', user.id);
+      console.log('🔍 defaultProfile?.id:', defaultProfile?.id);
 
       // 2. 결제수단 ID 결정
       let paymentMethodId: string;
@@ -342,6 +539,13 @@ function PaymentPageContent() {
           (method: { method_code: string; id: string }) =>
             method.method_code === 'credit_card'
         );
+
+        if (!creditCard) {
+          throw new Error(
+            '신용카드 결제수단을 찾을 수 없습니다. 관리자에게 문의하세요.'
+          );
+        }
+
         paymentMethodId = creditCard.id;
       } else if (paymentMethod === 'bank_transfer') {
         // 계좌이체 결제수단 ID 조회
@@ -353,10 +557,73 @@ function PaymentPageContent() {
           (method: { method_code: string; id: string }) =>
             method.method_code === 'bank_transfer'
         );
+
+        if (!bankTransfer) {
+          throw new Error(
+            '계좌이체 결제수단을 찾을 수 없습니다. 관리자에게 문의하세요.'
+          );
+        }
+
         paymentMethodId = bankTransfer.id;
       } else {
         throw new Error('지원하지 않는 결제수단입니다.');
       }
+
+      // 선택된 프로필 정보를 주문에 포함
+      const orderPayload = {
+        items: selectedItems.map((item) => ({
+          id: item.id,
+          price: item.price,
+          quantity: 1,
+          panel_info_id: extractPanelInfoId(item),
+          panel_slot_snapshot: item.panel_slot_snapshot,
+          panel_slot_usage_id: item.panel_slot_usage_id,
+          halfPeriod: item.halfPeriod,
+          selectedYear: item.selectedYear,
+          selectedMonth: item.selectedMonth,
+          startDate: new Date().toISOString().split('T')[0],
+          endDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
+            .toISOString()
+            .split('T')[0],
+        })),
+        userAuthId: user.id, // 사용자 인증 ID 추가
+        userProfileId: defaultProfile?.id, // 실제 프로필 ID 사용
+        paymentMethodId: paymentMethodId, // 결제수단 ID 추가
+        draftDeliveryMethod: draftDeliveryMethod, // 시안 전송 방식 추가
+        isRequireTaxFiling: taxInvoice, // 세금계산서 신청 여부 추가
+        isAgreedCaution: isAgreedCaution, // 유의사항 동의 여부 추가
+        projectName: projectName, // 작업 이름 추가
+      };
+
+      console.log('🔍 주문 페이로드:', orderPayload);
+
+      const orderResponse = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderPayload),
+      });
+
+      const orderData = await orderResponse.json();
+
+      if (!orderData.success) {
+        throw new Error(orderData.error || '주문 생성에 실패했습니다.');
+      }
+
+      const orderId = orderData.order.orderId;
+      const totalAmount = priceSummary.totalPrice;
+
+      // 2. selectedItems에서 파일 정보 추출
+      const fileInfo = selectedItems[0]?.selectedFile;
+      const fileUploadMethod = selectedItems[0]?.fileUploadMethod;
+      const fileName = selectedItems[0]?.fileName;
+
+      console.log('🔍 파일 업로드 정보:', {
+        fileInfo: fileInfo?.name,
+        fileUploadMethod,
+        fileName,
+      });
 
       // 3. 결제 처리 API 호출
       const paymentResponse = await fetch('/api/payment', {
@@ -388,13 +655,38 @@ function PaymentPageContent() {
         dispatch({ type: 'REMOVE_ITEM', id: item.id });
       });
 
-      // 결제 상태에 따른 리다이렉트
-      if (paymentData.data.orderStatus === 'completed') {
-        // 결제 완료 시 항상 시안관리 페이지로 이동
-        router.push('/mypage/design');
-      } else {
-        router.push('/mypage/orders');
+      // 3. 결제 완료 후 파일 업로드 (selectedItems에서 파일 정보 추출)
+      if (fileInfo && fileUploadMethod === 'upload') {
+        console.log('🔍 결제 완료 후 파일 업로드 시작:', fileName);
+        const formData = new FormData();
+        formData.append('file', fileInfo);
+        formData.append('orderId', orderId);
+
+        try {
+          const uploadResponse = await fetch('/api/design-drafts/upload', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (uploadResponse.ok) {
+            const uploadData = await uploadResponse.json();
+            if (uploadData.success) {
+              console.log('🔍 파일 업로드 성공:', uploadData.data);
+            }
+          } else {
+            console.warn('🔍 파일 업로드 실패:', uploadResponse.status);
+          }
+        } catch (error) {
+          console.error('🔍 파일 업로드 오류:', error);
+        }
       }
+
+      // 결제 완료 모달 표시
+      setPaymentSuccessData({
+        orderNumber: orderData.order.orderNumber || orderId.slice(0, 8),
+        totalAmount: totalAmount,
+      });
+      setShowPaymentSuccessModal(true);
     } catch (error) {
       console.error('Payment error:', error);
       setError(
@@ -407,6 +699,9 @@ function PaymentPageContent() {
 
   // 승인된 주문의 결제 처리
   const handleApprovedOrderPayment = async () => {
+    console.log('🔍 handleApprovedOrderPayment 시작');
+    console.log('🔍 projectName:', projectName);
+
     if (!user) {
       setError('로그인이 필요합니다.');
       return;
@@ -434,6 +729,13 @@ function PaymentPageContent() {
           (method: { method_code: string; id: string }) =>
             method.method_code === 'credit_card'
         );
+
+        if (!creditCard) {
+          throw new Error(
+            '신용카드 결제수단을 찾을 수 없습니다. 관리자에게 문의하세요.'
+          );
+        }
+
         paymentMethodId = creditCard.id;
       } else if (paymentMethod === 'bank_transfer') {
         const bankResponse = await fetch(
@@ -444,6 +746,13 @@ function PaymentPageContent() {
           (method: { method_code: string; id: string }) =>
             method.method_code === 'bank_transfer'
         );
+
+        if (!bankTransfer) {
+          throw new Error(
+            '계좌이체 결제수단을 찾을 수 없습니다. 관리자에게 문의하세요.'
+          );
+        }
+
         paymentMethodId = bankTransfer.id;
       } else {
         throw new Error('지원하지 않는 결제수단입니다.');
@@ -527,7 +836,7 @@ function PaymentPageContent() {
         <div className="space-y-8 border border-solid border-gray-3 rounded-[0.375rem] p-[2.5rem] sm:p-[1.5rem]">
           {/* 주문 상품 목록 */}
           {selectedItems.map((item) => (
-            <>
+            <div key={item.id}>
               <section
                 key={item.id}
                 className="p-6 border rounded-lg shadow-sm flex flex-col gap-4 sm:p-2"
@@ -579,11 +888,33 @@ function PaymentPageContent() {
                         <label className="w-full md:w-[9rem] text-gray-600 font-medium">
                           작업이름
                         </label>
-                        <input
-                          type="text"
-                          className="w-full md:w-[21.25rem] sm:w-[13rem] border border-gray-300 border-solid shadow-none rounded px-4 h-[3rem]"
-                          placeholder="파일 이름"
-                        />
+                        <div className="flex flex-col gap-1">
+                          <input
+                            type="text"
+                            value={projectName}
+                            onChange={(e) => {
+                              setProjectName(e.target.value);
+                              // 입력 시 유효성 검사 에러 초기화
+                              if (validationErrors.projectName) {
+                                setValidationErrors((prev) => ({
+                                  ...prev,
+                                  projectName: '',
+                                }));
+                              }
+                            }}
+                            className={`w-full md:w-[21.25rem] sm:w-[13rem] border border-solid shadow-none rounded px-4 h-[3rem] ${
+                              validationErrors.projectName
+                                ? 'border-red-500'
+                                : 'border-gray-300'
+                            }`}
+                            placeholder="작업 이름을 입력하세요"
+                          />
+                          {validationErrors.projectName && (
+                            <span className="text-red-500 text-sm">
+                              {validationErrors.projectName}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       {/* 파일업로드 */}
@@ -592,26 +923,223 @@ function PaymentPageContent() {
                           파일업로드
                         </label>
                         <div className="flex-1 space-y-2">
-                          <input
-                            type="file"
-                            className={`border border-gray-300 py-2 w-full rounded ${
-                              sendByEmail ? 'opacity-50 cursor-not-allowed' : ''
-                            }`}
+                          {/* 커스텀 파일 업로드 */}
+                          <CustomFileUpload
+                            onFileSelect={(file) => {
+                              console.log(
+                                '🔍 결제 페이지에서 파일 선택됨:',
+                                file.name
+                              );
+                              console.log(
+                                '🔍 파일 선택 전 selectedItems:',
+                                selectedItems.length
+                              );
+
+                              // selectedItems에 파일 정보 추가 - 함수형 업데이트 사용
+                              setSelectedItems((prevItems) => {
+                                console.log(
+                                  '🔍 setSelectedItems 함수형 업데이트 시작'
+                                );
+                                console.log('🔍 prevItems:', prevItems.length);
+
+                                if (prevItems.length === 0) {
+                                  console.warn(
+                                    '🔍 WARNING: prevItems가 비어있음! 복구 시도...'
+                                  );
+
+                                  // URL에서 아이템 정보를 다시 가져와서 복구 시도
+                                  const itemsParam = searchParams.get('items');
+                                  if (itemsParam) {
+                                    try {
+                                      const selectedItemIds = JSON.parse(
+                                        decodeURIComponent(itemsParam)
+                                      ) as string[];
+                                      const recoveredItems = cart.filter(
+                                        (item) =>
+                                          selectedItemIds.includes(item.id)
+                                      );
+                                      console.log(
+                                        '🔍 복구된 아이템:',
+                                        recoveredItems.length
+                                      );
+
+                                      if (recoveredItems.length > 0) {
+                                        const updatedItems = recoveredItems.map(
+                                          (item) => ({
+                                            ...item,
+                                            selectedFile: file,
+                                            fileUploadMethod: 'upload' as const,
+                                            fileName: file.name,
+                                            fileSize: file.size,
+                                            fileType: file.type,
+                                          })
+                                        );
+                                        console.log(
+                                          '🔍 복구 후 파일 정보 추가:',
+                                          updatedItems.length
+                                        );
+                                        return updatedItems;
+                                      }
+                                    } catch (error) {
+                                      console.error('🔍 복구 실패:', error);
+                                    }
+                                  }
+
+                                  return prevItems;
+                                }
+
+                                const updatedItems = prevItems.map((item) => ({
+                                  ...item,
+                                  selectedFile: file,
+                                  fileUploadMethod: 'upload' as const,
+                                  fileName: file.name,
+                                  fileSize: file.size,
+                                  fileType: file.type,
+                                }));
+
+                                console.log(
+                                  '🔍 파일 정보가 추가된 updatedItems:',
+                                  updatedItems.length
+                                );
+                                return updatedItems;
+                              });
+
+                              setSelectedFile(file);
+                            }}
                             disabled={sendByEmail}
-                            readOnly={sendByEmail}
-                            defaultValue={
-                              sendByEmail ? 'hansung-design@example.com' : ''
-                            }
+                            placeholder="시안 파일을 선택해주세요"
+                            className="w-full md:w-[21.25rem] sm:w-[13rem]"
                           />
+
                           <div className="flex flex-col gap-2 items-start">
                             <div className="flex items-center gap-2">
                               <input
                                 type="checkbox"
                                 id="sendByEmail"
                                 checked={sendByEmail}
-                                onChange={(e) =>
-                                  setSendByEmail(e.target.checked)
-                                }
+                                onChange={(e) => {
+                                  const isEmail = e.target.checked;
+                                  setSendByEmail(isEmail);
+
+                                  // 이메일 선택 시 selectedItems에 정보 추가 - 함수형 업데이트 사용
+                                  setSelectedItems((prevItems) => {
+                                    console.log(
+                                      '🔍 이메일 체크박스 변경 - prevItems:',
+                                      prevItems.length
+                                    );
+
+                                    if (prevItems.length === 0) {
+                                      console.warn(
+                                        '🔍 WARNING: 이메일 변경 시 prevItems가 비어있음! 복구 시도...'
+                                      );
+
+                                      // URL에서 아이템 정보를 다시 가져와서 복구 시도
+                                      const itemsParam =
+                                        searchParams.get('items');
+                                      if (itemsParam) {
+                                        try {
+                                          const selectedItemIds = JSON.parse(
+                                            decodeURIComponent(itemsParam)
+                                          ) as string[];
+                                          const recoveredItems = cart.filter(
+                                            (item) =>
+                                              selectedItemIds.includes(item.id)
+                                          );
+                                          console.log(
+                                            '🔍 이메일 변경 시 복구된 아이템:',
+                                            recoveredItems.length
+                                          );
+
+                                          if (recoveredItems.length > 0) {
+                                            if (isEmail) {
+                                              const updatedItems =
+                                                recoveredItems.map((item) => ({
+                                                  ...item,
+                                                  fileUploadMethod:
+                                                    'email' as const,
+                                                  emailAddress:
+                                                    'banner114@hanmail.net',
+                                                  selectedFile: null,
+                                                  fileName: null,
+                                                  fileSize: null,
+                                                  fileType: null,
+                                                }));
+                                              console.log(
+                                                '🔍 이메일 선택 복구 후:',
+                                                updatedItems.length
+                                              );
+                                              return updatedItems;
+                                            } else {
+                                              const updatedItems =
+                                                recoveredItems.map((item) => ({
+                                                  ...item,
+                                                  fileUploadMethod: null,
+                                                  emailAddress: null,
+                                                  selectedFile: null,
+                                                  fileName: null,
+                                                  fileSize: null,
+                                                  fileType: null,
+                                                }));
+                                              console.log(
+                                                '🔍 이메일 해제 복구 후:',
+                                                updatedItems.length
+                                              );
+                                              return updatedItems;
+                                            }
+                                          }
+                                        } catch (error) {
+                                          console.error(
+                                            '🔍 이메일 변경 시 복구 실패:',
+                                            error
+                                          );
+                                        }
+                                      }
+
+                                      return prevItems;
+                                    }
+
+                                    if (isEmail) {
+                                      const updatedItems = prevItems.map(
+                                        (item) => ({
+                                          ...item,
+                                          fileUploadMethod: 'email' as const,
+                                          emailAddress: 'banner114@hanmail.net',
+                                          selectedFile: null,
+                                          fileName: null,
+                                          fileSize: null,
+                                          fileType: null,
+                                        })
+                                      );
+                                      console.log(
+                                        '🔍 이메일 선택 - updatedItems:',
+                                        updatedItems.length
+                                      );
+                                      return updatedItems;
+                                    } else {
+                                      // 이메일 해제 시 파일 정보 제거
+                                      const updatedItems = prevItems.map(
+                                        (item) => ({
+                                          ...item,
+                                          fileUploadMethod: null,
+                                          emailAddress: null,
+                                          selectedFile: null,
+                                          fileName: null,
+                                          fileSize: null,
+                                          fileType: null,
+                                        })
+                                      );
+                                      console.log(
+                                        '🔍 이메일 해제 - updatedItems:',
+                                        updatedItems.length
+                                      );
+                                      return updatedItems;
+                                    }
+                                  });
+
+                                  if (isEmail) {
+                                    setSelectedFile(null); // 파일 선택 해제
+                                  }
+                                }}
                                 className="w-4 h-4"
                               />
                               <label
@@ -625,13 +1153,6 @@ function PaymentPageContent() {
                               <span className="text-gray-600 font-medium text-sm h-[3rem] w-full md:w-[20rem] sm:w-[14.4rem] placeholder:pl-4">
                                 banner114@hanmail.net
                               </span>
-                            )}
-                            {!sendByEmail && (
-                              <input
-                                type="text"
-                                className="border border-gray-300 border-solid shadow-none rounded h-[3rem] w-full md:w-[20rem] sm:w-[14.4rem] placeholder:pl-4"
-                                placeholder="파일 이름"
-                              />
                             )}
                             <p className="text-xs text-gray-500 mt-2">
                               * 선택한 방식과 관계없이 결제 완료 후 시안관리
@@ -737,32 +1258,48 @@ function PaymentPageContent() {
                   </label>
                 </div>
               </section>
-            </>
+            </div>
           ))}
 
           {/* 결제수단 선택 */}
-          {selectedItems.length > 0 ? (
+          {(() => {
+            console.log(
+              '🔍 렌더링 시 selectedItems.length:',
+              selectedItems.length
+            );
+            return selectedItems.length > 0;
+          })() ? (
             <section className="p-6 bg-white rounded-lg shadow-md">
               <h3 className="text-1.25 font-700 mb-4 sm:text-1">결제수단</h3>
               <div className="flex flex-col gap-3 items-center justify-center">
                 <button
-                  className={`hover:cursor-pointer border rounded-[0.375rem] px-4 py-6 w-full text-1.25 font-700 sm:text-1 sm:py-4 ${
+                  className={`hover:cursor-pointer border-solid rounded-[0.375rem] px-4 py-6 w-full text-1.25 font-700 sm:text-1 sm:py-4 ${
                     paymentMethod === 'card'
-                      ? 'border-black bg-black text-white'
+                      ? 'border-black border-[0.1rem] hover:bg-gray-3 text-black shadow-sm'
                       : 'border-gray-3 bg-gray-11'
                   }`}
-                  onClick={() => setPaymentMethod('card')}
+                  onClick={() => {
+                    console.log('🔍 신용카드 버튼 클릭됨');
+                    console.log('🔍 현재 paymentMethod:', paymentMethod);
+                    console.log('🔍 클릭 후 paymentMethod:', 'card');
+                    setPaymentMethod('card');
+                  }}
                 >
                   신용 · 체크카드
                 </button>
 
                 <button
-                  className={`border rounded-[0.375rem] px-4 py-6 w-full text-1.25 font-700 sm:text-1 sm:py-4 ${
+                  className={`hover:cursor-pointer border-solid rounded-[0.375rem] px-4 py-6 w-full text-1.25 font-700 sm:text-1 sm:py-4 ${
                     paymentMethod === 'bank_transfer'
-                      ? 'border-black bg-black text-white'
+                      ? 'border-black border-[0.1rem] hover:bg-gray-3 text-black shadow-sm'
                       : 'border-gray-3 bg-gray-11'
                   }`}
-                  onClick={() => setPaymentMethod('bank_transfer')}
+                  onClick={() => {
+                    console.log('🔍 계좌이체 버튼 클릭됨');
+                    console.log('🔍 현재 paymentMethod:', paymentMethod);
+                    console.log('🔍 클릭 후 paymentMethod:', 'bank_transfer');
+                    setPaymentMethod('bank_transfer');
+                  }}
                 >
                   계좌이체
                 </button>
@@ -874,13 +1411,40 @@ function PaymentPageContent() {
             </div>
           </div>
 
+          {/* 유효성 검사 에러 메시지 */}
+          {(validationErrors.projectName ||
+            validationErrors.fileUpload ||
+            validationErrors.agreement) && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-2">
+              {validationErrors.projectName && (
+                <div className="text-red-600 text-sm">
+                  • {validationErrors.projectName}
+                </div>
+              )}
+              {validationErrors.fileUpload && (
+                <div className="text-red-600 text-sm">
+                  • {validationErrors.fileUpload}
+                </div>
+              )}
+              {validationErrors.agreement && (
+                <div className="text-red-600 text-sm">
+                  • {validationErrors.agreement}
+                </div>
+              )}
+            </div>
+          )}
+
           <button
             className={`w-full py-6 rounded-lg transition-colors hover:cursor-pointer ${
-              isProcessing
+              isProcessing ||
+              Object.values(validationErrors).some((error) => error !== '')
                 ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
                 : 'bg-black text-white hover:bg-gray-800'
             }`}
-            disabled={isProcessing}
+            disabled={
+              isProcessing ||
+              Object.values(validationErrors).some((error) => error !== '')
+            }
             onClick={() => {
               if (paymentMethod === 'bank_transfer') {
                 setShowBankTransferModal(true);
@@ -944,6 +1508,14 @@ function PaymentPageContent() {
           </div>
         </div>
       )}
+
+      {/* 결제 완료 모달 */}
+      <PaymentSuccessModal
+        isOpen={showPaymentSuccessModal}
+        onClose={() => setShowPaymentSuccessModal(false)}
+        orderNumber={paymentSuccessData.orderNumber}
+        totalAmount={paymentSuccessData.totalAmount}
+      />
     </main>
   );
 }

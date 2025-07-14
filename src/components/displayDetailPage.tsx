@@ -10,6 +10,8 @@ import GalleryIcon from '@/src/icons/gallery.svg';
 import ListIcon from '@/src/icons/list.svg';
 import { useState, useEffect } from 'react';
 import { useCart } from '../contexts/cartContext';
+import { useProfile } from '../contexts/profileContext';
+import { useAuth } from '../contexts/authContext';
 import {
   District,
   DropdownOption,
@@ -157,6 +159,8 @@ export default function DisplayDetailPage({
     setPanelTypeFilter || setInternalPanelTypeFilter;
 
   const { dispatch } = useCart();
+  const { profiles } = useProfile();
+  const { user } = useAuth();
   const router = useRouter();
 
   // 가이드라인 가져오기 함수
@@ -336,14 +340,35 @@ export default function DisplayDetailPage({
       : filteredByPanelType;
 
   // 상하반기에 따른 필터링
-  const filteredByHalfPeriod = filteredByDistrict.map((item) => ({
-    ...item,
-    // 선택된 상하반기에 따른 마감수 표시
-    faces:
-      selectedHalfPeriod === 'first_half'
-        ? item.first_half_closure_quantity || item.faces
-        : item.second_half_closure_quantity || item.faces,
-  }));
+  const filteredByHalfPeriod = filteredByDistrict.map((item) => {
+    // 실시간 재고 정보가 있으면 사용, 없으면 기존 방식 사용
+    let faces = item.faces;
+
+    if (item.inventory_info) {
+      if (
+        selectedHalfPeriod === 'first_half' &&
+        item.inventory_info.first_half
+      ) {
+        faces = item.inventory_info.first_half.available_slots;
+      } else if (
+        selectedHalfPeriod === 'second_half' &&
+        item.inventory_info.second_half
+      ) {
+        faces = item.inventory_info.second_half.available_slots;
+      }
+    } else {
+      // 기존 방식: 선택된 상하반기에 따른 마감수 표시
+      faces =
+        selectedHalfPeriod === 'first_half'
+          ? item.first_half_closure_quantity || item.faces
+          : item.second_half_closure_quantity || item.faces;
+    }
+
+    return {
+      ...item,
+      faces,
+    };
+  });
 
   const filteredBillboards = isAllDistrictsView
     ? [...filteredByHalfPeriod].sort((a, b) =>
@@ -790,6 +815,9 @@ export default function DisplayDetailPage({
         }
       }
 
+      // 기본 프로필 정보 가져오기
+      const defaultProfile = profiles.find((profile) => profile.is_default);
+
       const cartItem = {
         id: uniqueCartItemId, // 상반기/하반기 정보를 포함한 고유 ID
         type: 'banner-display' as const,
@@ -810,6 +838,13 @@ export default function DisplayDetailPage({
         isTopFixed: isTopFixed, // 상단광고 여부
         ...(panelSlotSnapshot && { panel_slot_snapshot: panelSlotSnapshot }), // 가격 상세 정보 추가
         panel_code: item.panel_code?.toString(),
+        // 사용자 프로필 정보 추가
+        contact_person_name: defaultProfile?.contact_person_name,
+        phone: defaultProfile?.phone,
+        company_name: defaultProfile?.company_name,
+        email: defaultProfile?.email,
+        user_profile_id: defaultProfile?.id,
+        user_auth_id: defaultProfile?.user_auth_id || user?.id,
       };
 
       console.log('🔍 Final cart item with snapshot:', {

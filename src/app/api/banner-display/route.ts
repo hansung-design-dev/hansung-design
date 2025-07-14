@@ -45,6 +45,25 @@ export interface BannerDisplayData {
       total_price: number;
     }[];
   }[];
+  inventory_info?: {
+    current_period: {
+      total_slots: number;
+      available_slots: number;
+      closed_slots: number;
+      period: string;
+      year_month: string;
+    } | null;
+    first_half: {
+      total_slots: number;
+      available_slots: number;
+      closed_slots: number;
+    } | null;
+    second_half: {
+      total_slots: number;
+      available_slots: number;
+      closed_slots: number;
+    } | null;
+  };
 }
 
 // 현수막 게시대 타입 ID 조회
@@ -75,6 +94,31 @@ async function getBannerDisplaysByDistrict(districtName: string) {
   try {
     console.log('🔍 조회 중인 구:', districtName);
 
+    // 현재 년월 계산 (한국 시간 기준)
+    const now = new Date();
+    const koreaTime = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+    const currentYear = koreaTime.getFullYear();
+    const currentMonth = koreaTime.getMonth() + 1;
+    const currentDay = koreaTime.getDate();
+
+    // 7일 전까지 신청 가능하므로 6일 전부터는 다음 기간 표시
+    let targetYear = currentYear;
+    let targetMonth = currentMonth;
+    if (currentDay >= 13) {
+      if (currentMonth === 12) {
+        targetYear = currentYear + 1;
+        targetMonth = 1;
+      } else {
+        targetMonth = currentMonth + 1;
+      }
+    }
+
+    const targetYearMonth = `${targetYear}-${String(targetMonth).padStart(
+      2,
+      '0'
+    )}`;
+    console.log('🔍 Target year month for inventory:', targetYearMonth);
+
     let query = supabase
       .from('panel_info')
       .select(
@@ -100,6 +144,19 @@ async function getBannerDisplaysByDistrict(districtName: string) {
             road_usage_fee,
             advertising_fee,
             total_price
+          )
+        ),
+        banner_slot_inventory (
+          id,
+          total_slots,
+          available_slots,
+          closed_slots,
+          region_gu_display_periods (
+            id,
+            year_month,
+            period,
+            period_from,
+            period_to
           )
         ),
         region_gu!inner (
@@ -140,36 +197,80 @@ async function getBannerDisplaysByDistrict(districtName: string) {
       throw error;
     }
 
+    // 재고 정보를 기간별로 매핑하여 데이터에 추가
+    const dataWithInventory = data?.map((item) => {
+      // 현재 기간의 재고 정보 찾기
+      const currentPeriodInventory = item.banner_slot_inventory?.find(
+        (inv: { region_gu_display_periods?: { year_month?: string } }) =>
+          inv.region_gu_display_periods?.year_month === targetYearMonth
+      );
+
+      // 상하반기별 재고 정보 매핑
+      const firstHalfInventory = item.banner_slot_inventory?.find(
+        (inv: {
+          region_gu_display_periods?: { year_month?: string; period?: string };
+        }) =>
+          inv.region_gu_display_periods?.year_month === targetYearMonth &&
+          inv.region_gu_display_periods?.period === 'first_half'
+      );
+
+      const secondHalfInventory = item.banner_slot_inventory?.find(
+        (inv: {
+          region_gu_display_periods?: { year_month?: string; period?: string };
+        }) =>
+          inv.region_gu_display_periods?.year_month === targetYearMonth &&
+          inv.region_gu_display_periods?.period === 'second_half'
+      );
+
+      return {
+        ...item,
+        inventory_info: {
+          current_period: currentPeriodInventory
+            ? {
+                total_slots: currentPeriodInventory.total_slots,
+                available_slots: currentPeriodInventory.available_slots,
+                closed_slots: currentPeriodInventory.closed_slots,
+                period:
+                  currentPeriodInventory.region_gu_display_periods?.period,
+                year_month:
+                  currentPeriodInventory.region_gu_display_periods?.year_month,
+              }
+            : null,
+          first_half: firstHalfInventory
+            ? {
+                total_slots: firstHalfInventory.total_slots,
+                available_slots: firstHalfInventory.available_slots,
+                closed_slots: firstHalfInventory.closed_slots,
+              }
+            : null,
+          second_half: secondHalfInventory
+            ? {
+                total_slots: secondHalfInventory.total_slots,
+                available_slots: secondHalfInventory.available_slots,
+                closed_slots: secondHalfInventory.closed_slots,
+              }
+            : null,
+        },
+      };
+    });
+
     console.log('🔍 조회 결과:', {
       district: districtName,
-      totalCount: data?.length || 0,
+      totalCount: dataWithInventory?.length || 0,
+      targetYearMonth,
       panelTypes:
-        data?.map((item) => ({
+        dataWithInventory?.map((item) => ({
           panel_code: item.panel_code,
           panel_type: item.panel_type,
           nickname: item.nickname,
           banner_slot_info_count: item.banner_slot_info?.length || 0,
+          inventory_info: item.inventory_info,
         })) || [],
     });
 
-    // 용산구 6번 패널 특별 디버깅
-    if (districtName === '용산구') {
-      const panel6 = data?.find((item) => item.panel_code === 6);
-      if (panel6) {
-        console.log('🔍 용산구 6번 패널 API 응답:', {
-          panel_code: panel6.panel_code,
-          panel_type: panel6.panel_type,
-          banner_slot_info: panel6.banner_slot_info,
-          banner_slot_info_count: panel6.banner_slot_info?.length || 0,
-        });
-      } else {
-        console.log('🔍 용산구 6번 패널이 API 응답에 없음');
-      }
-    }
-
     return NextResponse.json({
       success: true,
-      data: data as BannerDisplayData[],
+      data: dataWithInventory as BannerDisplayData[],
     });
   } catch (error) {
     throw error;

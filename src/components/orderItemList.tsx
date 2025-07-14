@@ -165,8 +165,12 @@ const OrderItemList: React.FC<ItemTableProps> = ({
   };
 
   const handleCancelClick = (item: ListItem) => {
-    setItemToCancel(item);
-    setIsConfirmModalOpen(true);
+    if (onCancelOrder) {
+      onCancelOrder(item);
+    } else {
+      setItemToCancel(item);
+      setIsConfirmModalOpen(true);
+    }
   };
 
   const handleConfirmCancel = async () => {
@@ -318,9 +322,7 @@ const OrderItemList: React.FC<ItemTableProps> = ({
             {expandedItemId && expandedContent && (
               <tr>
                 <td colSpan={showCheckbox ? 5 : 4} className="p-0">
-                  <div className="border-solid border-gray-1">
-                    {expandedContent}
-                  </div>
+                  <div>{expandedContent}</div>
                 </td>
               </tr>
             )}

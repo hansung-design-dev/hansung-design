@@ -102,6 +102,79 @@ function AlertModal({
   );
 }
 
+// 결제 완료 모달 컴포넌트
+function PaymentSuccessModal({
+  isOpen,
+  onClose,
+  orderNumber,
+  totalAmount,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  orderNumber: string;
+  totalAmount: number;
+}) {
+  const router = useRouter();
+
+  const handleGoToOrders = () => {
+    router.push('/mypage/orders');
+    onClose();
+  };
+
+  const handleGoToHome = () => {
+    router.push('/');
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
+      <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+        <div className="text-center">
+          <div className="text-green-500 text-6xl mb-4">✓</div>
+          <h3 className="text-2xl font-bold mb-4 text-green-600">
+            결제가 완료되었습니다!
+          </h3>
+          <div className="bg-gray-50 rounded-lg p-4 mb-6">
+            <p className="text-gray-600 mb-2">주문번호</p>
+            <p className="text-lg font-semibold text-gray-800">{orderNumber}</p>
+            <p className="text-gray-600 mt-2 mb-1">결제금액</p>
+            <p className="text-xl font-bold text-green-600">
+              {totalAmount.toLocaleString()}원
+            </p>
+          </div>
+          <p className="text-gray-600 mb-6">
+            주문이 성공적으로 완료되었습니다.
+            <br />
+            주문 내역에서 시안 업로드 및 진행 상황을 확인하실 수 있습니다.
+          </p>
+          <div className="flex flex-col gap-3">
+            <Button
+              size="md"
+              variant="filledBlack"
+              onClick={handleGoToOrders}
+              className="w-full"
+            >
+              주문 내역 보기
+            </Button>
+            <Button
+              size="md"
+              variant="outline"
+              onClick={handleGoToHome}
+              className="w-full"
+            >
+              홈으로 돌아가기
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export { PaymentSuccessModal };
+
 export default function UserProfileModal({
   isOpen,
   onClose,

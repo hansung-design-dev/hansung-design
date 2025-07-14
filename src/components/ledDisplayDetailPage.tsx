@@ -11,6 +11,8 @@ import GalleryIcon from '@/src/icons/gallery.svg';
 import ListIcon from '@/src/icons/list.svg';
 import { useState } from 'react';
 import { useCart } from '../contexts/cartContext';
+import { useProfile } from '../contexts/profileContext';
+import { useAuth } from '../contexts/authContext';
 import { District, DropdownOption } from '@/src/types/displaydetail';
 import { LEDBillboard } from '@/src/types/leddetail';
 import DistrictInfo from './districtInfo';
@@ -68,6 +70,8 @@ export default function LEDDisplayDetailPage({
   //   'first_half' | 'second_half'
   // >('first_half');
   const { dispatch } = useCart();
+  const { profiles } = useProfile();
+  const { user } = useAuth();
   const router = useRouter();
 
   // selectedIds 상태 변화 추적 (디버깅용 - 주석 처리)
@@ -216,6 +220,9 @@ export default function LEDDisplayDetailPage({
                 return !isNaN(priceNumber) ? priceNumber : 0;
               })();
 
+        // 기본 프로필 정보 가져오기
+        const defaultProfile = profiles.find((profile) => profile.is_default);
+
         const cartItem = {
           id: item.id, // 복합 ID (gwanak-03-uuid)
           type: 'led-display' as const,
@@ -226,6 +233,13 @@ export default function LEDDisplayDetailPage({
           panel_type: item.panel_type,
           panel_info_id: item.panel_info_id, // 원본 UUID
           panel_code: item.panel_code?.toString(),
+          // 사용자 프로필 정보 추가
+          contact_person_name: defaultProfile?.contact_person_name,
+          phone: defaultProfile?.phone,
+          company_name: defaultProfile?.company_name,
+          email: defaultProfile?.email,
+          user_profile_id: defaultProfile?.id,
+          user_auth_id: defaultProfile?.user_auth_id || user?.id,
         };
 
         console.log('🔍 Adding LED item to cart:', cartItem);
@@ -259,6 +273,9 @@ export default function LEDDisplayDetailPage({
               return !isNaN(priceNumber) ? priceNumber : 0;
             })();
 
+      // 기본 프로필 정보 가져오기
+      const defaultProfile = profiles.find((profile) => profile.is_default);
+
       const cartItem = {
         id: item.id, // 복합 ID (gwanak-03-uuid)
         type: 'led-display' as const,
@@ -269,6 +286,13 @@ export default function LEDDisplayDetailPage({
         panel_type: item.panel_type,
         panel_info_id: item.panel_info_id, // 원본 UUID
         panel_code: item.panel_code?.toString(),
+        // 사용자 프로필 정보 추가
+        contact_person_name: defaultProfile?.contact_person_name,
+        phone: defaultProfile?.phone,
+        company_name: defaultProfile?.company_name,
+        email: defaultProfile?.email,
+        user_profile_id: defaultProfile?.id,
+        user_auth_id: defaultProfile?.user_auth_id || user?.id,
       };
 
       console.log('🔍 Adding LED item to cart:', cartItem);
