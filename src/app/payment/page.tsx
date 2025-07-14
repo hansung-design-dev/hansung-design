@@ -8,6 +8,7 @@ import { useCart } from '@/src/contexts/cartContext';
 import { useProfile } from '@/src/contexts/profileContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CartItem } from '@/src/contexts/cartContext';
+import { PaymentSuccessModal } from '@/src/components/modal/UserProfileModal';
 
 interface BankInfo {
   id: string;
@@ -46,6 +47,12 @@ function PaymentPageContent() {
   const [isApprovedOrder, setIsApprovedOrder] = useState(false);
   const [taxInvoice, setTaxInvoice] = useState(false);
   const [isAgreedCaution, setIsAgreedCaution] = useState(false);
+  const [showPaymentSuccessModal, setShowPaymentSuccessModal] = useState(false);
+  const [paymentSuccessData, setPaymentSuccessData] = useState({
+    orderNumber: '',
+    totalAmount: 0,
+  });
+  const [projectName, setProjectName] = useState('');
 
   // 패널 타입 표시 함수
   const getPanelTypeDisplay = (panelType: string) => {
@@ -299,7 +306,6 @@ function PaymentPageContent() {
         body: JSON.stringify({
           items: selectedItems.map((item) => ({
             id: item.id,
-            name: item.name,
             price: item.price,
             quantity: 1,
             panel_info_id: extractPanelInfoId(item),
@@ -313,6 +319,7 @@ function PaymentPageContent() {
               .toISOString()
               .split('T')[0],
           })),
+          projectName: projectName, // 작업 이름 추가
           paymentMethod: paymentMethod,
           draftDeliveryMethod: draftDeliveryMethod, // 시안 전송 방식 추가
           isRequireTaxFiling: taxInvoice, // 세금계산서 신청 여부 추가
@@ -326,7 +333,7 @@ function PaymentPageContent() {
         throw new Error(orderData.error || '주문 생성에 실패했습니다.');
       }
 
-      const orderId = orderData.data.id;
+      const orderId = orderData.order.orderId;
       const totalAmount = priceSummary.totalPrice;
 
       // 2. 결제수단 ID 결정
@@ -342,6 +349,13 @@ function PaymentPageContent() {
           (method: { method_code: string; id: string }) =>
             method.method_code === 'credit_card'
         );
+
+        if (!creditCard) {
+          throw new Error(
+            '신용카드 결제수단을 찾을 수 없습니다. 관리자에게 문의하세요.'
+          );
+        }
+
         paymentMethodId = creditCard.id;
       } else if (paymentMethod === 'bank_transfer') {
         // 계좌이체 결제수단 ID 조회
@@ -353,6 +367,13 @@ function PaymentPageContent() {
           (method: { method_code: string; id: string }) =>
             method.method_code === 'bank_transfer'
         );
+
+        if (!bankTransfer) {
+          throw new Error(
+            '계좌이체 결제수단을 찾을 수 없습니다. 관리자에게 문의하세요.'
+          );
+        }
+
         paymentMethodId = bankTransfer.id;
       } else {
         throw new Error('지원하지 않는 결제수단입니다.');
@@ -388,13 +409,12 @@ function PaymentPageContent() {
         dispatch({ type: 'REMOVE_ITEM', id: item.id });
       });
 
-      // 결제 상태에 따른 리다이렉트
-      if (paymentData.data.orderStatus === 'completed') {
-        // 결제 완료 시 항상 시안관리 페이지로 이동
-        router.push('/mypage/design');
-      } else {
-        router.push('/mypage/orders');
-      }
+      // 결제 완료 모달 표시
+      setPaymentSuccessData({
+        orderNumber: orderData.order.orderNumber || orderId.slice(0, 8),
+        totalAmount: totalAmount,
+      });
+      setShowPaymentSuccessModal(true);
     } catch (error) {
       console.error('Payment error:', error);
       setError(
@@ -434,6 +454,13 @@ function PaymentPageContent() {
           (method: { method_code: string; id: string }) =>
             method.method_code === 'credit_card'
         );
+
+        if (!creditCard) {
+          throw new Error(
+            '신용카드 결제수단을 찾을 수 없습니다. 관리자에게 문의하세요.'
+          );
+        }
+
         paymentMethodId = creditCard.id;
       } else if (paymentMethod === 'bank_transfer') {
         const bankResponse = await fetch(
@@ -444,6 +471,13 @@ function PaymentPageContent() {
           (method: { method_code: string; id: string }) =>
             method.method_code === 'bank_transfer'
         );
+
+        if (!bankTransfer) {
+          throw new Error(
+            '계좌이체 결제수단을 찾을 수 없습니다. 관리자에게 문의하세요.'
+          );
+        }
+
         paymentMethodId = bankTransfer.id;
       } else {
         throw new Error('지원하지 않는 결제수단입니다.');
@@ -581,8 +615,10 @@ function PaymentPageContent() {
                         </label>
                         <input
                           type="text"
+                          value={projectName}
+                          onChange={(e) => setProjectName(e.target.value)}
                           className="w-full md:w-[21.25rem] sm:w-[13rem] border border-gray-300 border-solid shadow-none rounded px-4 h-[3rem]"
-                          placeholder="파일 이름"
+                          placeholder="작업 이름을 입력하세요"
                         />
                       </div>
 
@@ -944,6 +980,14 @@ function PaymentPageContent() {
           </div>
         </div>
       )}
+
+      {/* 결제 완료 모달 */}
+      <PaymentSuccessModal
+        isOpen={showPaymentSuccessModal}
+        onClose={() => setShowPaymentSuccessModal(false)}
+        orderNumber={paymentSuccessData.orderNumber}
+        totalAmount={paymentSuccessData.totalAmount}
+      />
     </main>
   );
 }

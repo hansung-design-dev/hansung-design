@@ -336,14 +336,35 @@ export default function DisplayDetailPage({
       : filteredByPanelType;
 
   // 상하반기에 따른 필터링
-  const filteredByHalfPeriod = filteredByDistrict.map((item) => ({
-    ...item,
-    // 선택된 상하반기에 따른 마감수 표시
-    faces:
-      selectedHalfPeriod === 'first_half'
-        ? item.first_half_closure_quantity || item.faces
-        : item.second_half_closure_quantity || item.faces,
-  }));
+  const filteredByHalfPeriod = filteredByDistrict.map((item) => {
+    // 실시간 재고 정보가 있으면 사용, 없으면 기존 방식 사용
+    let faces = item.faces;
+
+    if (item.inventory_info) {
+      if (
+        selectedHalfPeriod === 'first_half' &&
+        item.inventory_info.first_half
+      ) {
+        faces = item.inventory_info.first_half.available_slots;
+      } else if (
+        selectedHalfPeriod === 'second_half' &&
+        item.inventory_info.second_half
+      ) {
+        faces = item.inventory_info.second_half.available_slots;
+      }
+    } else {
+      // 기존 방식: 선택된 상하반기에 따른 마감수 표시
+      faces =
+        selectedHalfPeriod === 'first_half'
+          ? item.first_half_closure_quantity || item.faces
+          : item.second_half_closure_quantity || item.faces;
+    }
+
+    return {
+      ...item,
+      faces,
+    };
+  });
 
   const filteredBillboards = isAllDistrictsView
     ? [...filteredByHalfPeriod].sort((a, b) =>
