@@ -165,8 +165,12 @@ const OrderItemList: React.FC<ItemTableProps> = ({
   };
 
   const handleCancelClick = (item: ListItem) => {
-    setItemToCancel(item);
-    setIsConfirmModalOpen(true);
+    if (onCancelOrder) {
+      onCancelOrder(item);
+    } else {
+      setItemToCancel(item);
+      setIsConfirmModalOpen(true);
+    }
   };
 
   const handleConfirmCancel = async () => {

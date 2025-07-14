@@ -1,57 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/src/app/api/supabase';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-export async function DELETE(request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    // 세션에서 사용자 정보 가져오기 (쿠키에서)
-    const cookieHeader = request.headers.get('cookie');
-    if (!cookieHeader) {
+    const { orderNumber } = await request.json();
+
+    if (!orderNumber) {
       return NextResponse.json(
-        { success: false, error: '인증이 필요합니다.' },
-        { status: 401 }
-      );
-    }
-
-    // 쿠키에서 사용자 ID 추출
-    const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
-      const [key, value] = cookie.trim().split('=');
-      acc[key] = value;
-      return acc;
-    }, {} as Record<string, string>);
-
-    const userId = cookies['user_id'];
-
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: '로그인이 필요합니다.' },
-        { status: 401 }
-      );
-    }
-
-    // URL에서 주문 ID 가져오기
-    const { searchParams } = new URL(request.url);
-    const orderId = searchParams.get('orderId');
-
-    if (!orderId) {
-      return NextResponse.json(
-        { success: false, error: '주문 ID가 필요합니다.' },
+        { success: false, error: '주문번호가 필요합니다.' },
         { status: 400 }
       );
     }
 
-    console.log('🔍 주문 취소 시작 - 주문 ID:', orderId, '사용자 ID:', userId);
-
-    // 주문이 해당 사용자의 것인지 확인 (실제 주문 ID로 검색)
+    // 주문 정보 조회
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select('id, is_paid, is_checked')
-      .eq('id', orderId)
-      .eq('user_auth_id', userId)
+      .select('id, design_drafts_id')
+      .eq('order_number', orderNumber)
       .single();
 
     if (orderError || !order) {
@@ -61,93 +26,81 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // 테스트 중이므로 결제 완료된 주문도 취소 가능
-    // TODO: 실제 운영 시에는 아래 주석을 해제하고 위의 체크를 활성화
-    /*
-    // 이미 결제 완료된 주문은 취소 불가
-    if (order.is_paid) {
-      return NextResponse.json(
-        { success: false, error: '이미 결제된 주문은 취소할 수 없습니다.' },
-        { status: 400 }
-      );
-    }
-    */
+    // 순차적으로 관련 데이터 삭제
+    try {
+      // 1. payments 삭제
+      const { error: paymentsError } = await supabase
+        .from('payments')
+        .delete()
+        .eq('order_id', order.id);
 
-    // 트랜잭션 시작
-    const { data: orderDetails, error: detailsError } = await supabase
-      .from('order_details')
-      .select('panel_slot_usage_id, slot_order_quantity, panel_info_id')
-      .eq('order_id', orderId);
+      if (paymentsError) {
+        console.error('Payments deletion error:', paymentsError);
+        return NextResponse.json(
+          { success: false, error: '결제 정보 삭제에 실패했습니다.' },
+          { status: 500 }
+        );
+      }
 
-    if (detailsError) {
-      console.error('Order details fetch error:', detailsError);
-      return NextResponse.json(
-        { success: false, error: '주문 상세 정보를 불러오는데 실패했습니다.' },
-        { status: 500 }
-      );
-    }
+      // 2. order_details 삭제 (재고 복구는 트리거가 자동 처리)
+      const { error: detailsError } = await supabase
+        .from('order_details')
+        .delete()
+        .eq('order_id', order.id);
 
-    // 1. panel_slot_usage 비활성화 (재고는 DB 트리거가 자동 처리)
-    for (const detail of orderDetails || []) {
-      if (detail.panel_slot_usage_id) {
-        // panel_slot_usage 비활성화
-        const { error: usageError } = await supabase
-          .from('panel_slot_usage')
-          .update({
-            is_active: false,
-            is_closed: true,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', detail.panel_slot_usage_id);
+      if (detailsError) {
+        console.error('Order details deletion error:', detailsError);
+        return NextResponse.json(
+          { success: false, error: '주문 상세 정보 삭제에 실패했습니다.' },
+          { status: 500 }
+        );
+      }
 
-        if (usageError) {
-          console.error('Panel slot usage update error:', usageError);
+      // 3. orders 삭제
+      const { error: orderDeleteError } = await supabase
+        .from('orders')
+        .delete()
+        .eq('id', order.id);
+
+      if (orderDeleteError) {
+        console.error('Order deletion error:', orderDeleteError);
+        return NextResponse.json(
+          { success: false, error: '주문 삭제에 실패했습니다.' },
+          { status: 500 }
+        );
+      }
+
+      // 4. design_drafts 삭제 (orders.design_drafts_id를 통해 연결된 것만)
+      if (order.design_drafts_id) {
+        const { error: draftsError } = await supabase
+          .from('design_drafts')
+          .delete()
+          .eq('id', order.design_drafts_id);
+
+        if (draftsError) {
+          console.error('Design drafts deletion error:', draftsError);
           return NextResponse.json(
-            { success: false, error: '슬롯 사용량 복원에 실패했습니다.' },
+            { success: false, error: '디자인 드래프트 삭제에 실패했습니다.' },
             { status: 500 }
           );
         }
       }
-    }
 
-    // 2. order_details 삭제
-    const { error: deleteDetailsError } = await supabase
-      .from('order_details')
-      .delete()
-      .eq('order_id', orderId);
-
-    if (deleteDetailsError) {
-      console.error('Order details delete error:', deleteDetailsError);
+      return NextResponse.json({
+        success: true,
+        message: '주문이 성공적으로 취소되었습니다.',
+      });
+    } catch (error) {
+      console.error('Deletion process error:', error);
       return NextResponse.json(
-        { success: false, error: '주문 상세 정보 삭제에 실패했습니다.' },
+        { success: false, error: '주문 삭제 중 오류가 발생했습니다.' },
         { status: 500 }
       );
     }
-
-    // 3. orders 삭제
-    const { error: deleteOrderError } = await supabase
-      .from('orders')
-      .delete()
-      .eq('id', orderId);
-
-    if (deleteOrderError) {
-      console.error('Order delete error:', deleteOrderError);
-      return NextResponse.json(
-        { success: false, error: '주문 삭제에 실패했습니다.' },
-        { status: 500 }
-      );
-    }
-
-    console.log('🔍 주문 취소 완료 - 주문 ID:', orderId);
-
-    return NextResponse.json({
-      success: true,
-      message: '주문이 성공적으로 취소되었습니다.',
-    });
   } catch (error) {
-    console.error('Order cancel error:', error);
+    console.error('Order cancellation error:', error);
     return NextResponse.json(
-      { success: false, error: '주문 취소 중 오류가 발생했습니다.' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }

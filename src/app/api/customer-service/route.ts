@@ -159,3 +159,75 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// 1:1 상담 문의 삭제 (취소)
+export async function DELETE(request: NextRequest) {
+  try {
+    const { inquiryId } = await request.json();
+
+    if (!inquiryId) {
+      return NextResponse.json(
+        { success: false, error: '상담 ID가 필요합니다.' },
+        { status: 400 }
+      );
+    }
+
+    // 임시 사용자 ID 사용 (실제로는 인증된 사용자 ID를 사용해야 함)
+    const userId = '00000000-0000-0000-0000-000000000000';
+
+    // 상담 내역이 해당 사용자의 것인지 확인
+    const { data: existingInquiry, error: checkError } = await supabase
+      .from('customer_inquiries')
+      .select('id, inquiry_status')
+      .eq('id', inquiryId)
+      .eq('user_auth_id', userId)
+      .single();
+
+    if (checkError || !existingInquiry) {
+      return NextResponse.json(
+        { success: false, error: '상담 내역을 찾을 수 없습니다.' },
+        { status: 404 }
+      );
+    }
+
+    // 이미 답변이 완료된 상담은 취소할 수 없음
+    if (
+      existingInquiry.inquiry_status === 'answered' ||
+      existingInquiry.inquiry_status === 'closed'
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: '이미 답변이 완료된 상담은 취소할 수 없습니다.',
+        },
+        { status: 400 }
+      );
+    }
+
+    // 상담 내역 삭제
+    const { error: deleteError } = await supabase
+      .from('customer_inquiries')
+      .delete()
+      .eq('id', inquiryId)
+      .eq('user_auth_id', userId);
+
+    if (deleteError) {
+      console.error('Inquiry deletion error:', deleteError);
+      return NextResponse.json(
+        { success: false, error: '상담 취소에 실패했습니다.' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: '상담이 성공적으로 취소되었습니다.',
+    });
+  } catch (error) {
+    console.error('Inquiry deletion error:', error);
+    return NextResponse.json(
+      { success: false, error: '서버 오류가 발생했습니다.' },
+      { status: 500 }
+    );
+  }
+}

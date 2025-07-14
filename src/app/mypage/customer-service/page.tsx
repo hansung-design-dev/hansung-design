@@ -7,6 +7,7 @@ import { BankAccount, contactNumber } from '@/src/mock/contact-bank';
 import { useRouter } from 'next/navigation';
 import React from 'react';
 import { useAuth } from '@/src/contexts/authContext';
+import { Button } from '@/src/components/button/button';
 
 interface Inquiry {
   id: string;
@@ -50,10 +51,62 @@ export default function CustomerServicePage() {
     closed: 0,
   });
 
+  // 상담취소 관련 상태
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [isCancelSuccessModalOpen, setIsCancelSuccessModalOpen] =
+    useState(false);
+  const [inquiryToCancel, setInquiryToCancel] = useState<string | null>(null);
+
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
 
   const itemsPerPage = 5;
+
+  // 상담취소 핸들러
+  const handleCancelClick = (inquiryId: string) => {
+    setInquiryToCancel(inquiryId);
+    setIsCancelModalOpen(true);
+  };
+
+  const handleCancelConfirm = async () => {
+    if (!inquiryToCancel) return;
+
+    try {
+      const response = await fetch(`/api/customer-service`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          inquiryId: inquiryToCancel,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setIsCancelSuccessModalOpen(true);
+        // 상담 목록 새로고침
+        fetchInquiries();
+        // 아코디언 닫기
+        setOpenItemId(null);
+      } else {
+        console.error('상담 취소 실패:', data.error);
+        alert('상담 취소에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('상담 취소 중 오류:', error);
+      alert('상담 취소 중 오류가 발생했습니다.');
+    } finally {
+      setIsCancelModalOpen(false);
+      setInquiryToCancel(null);
+    }
+  };
+
+  const handleCancelModalClose = () => {
+    setIsCancelModalOpen(false);
+    setInquiryToCancel(null);
+  };
 
   useEffect(() => {
     if (authLoading) return;
@@ -213,6 +266,20 @@ export default function CustomerServicePage() {
                             >
                               {getStatusDisplay(item.status)}
                             </span>
+                            {/* 답변 대기 중인 상담만 취소 버튼 표시 */}
+                            {item.status === 'pending' && (
+                              <Button
+                                variant="outlinedGray"
+                                size="xs"
+                                className={`text-black sm:text-0.75 rounded-full `}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCancelClick(item.id);
+                                }}
+                              >
+                                취소
+                              </Button>
+                            )}
                             <Image
                               src={
                                 openItemId === item.id
@@ -377,6 +444,55 @@ export default function CustomerServicePage() {
           </div>
         </div>
       </div>
+
+      {/* 상담취소 확인 모달 */}
+      {isCancelModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4 py-10">
+            <div className="text-center">
+              <h3 className="text-xl font-bold mb-4">상담 취소</h3>
+              <p className="text-gray-600 mb-6">상담을 취소하시겠습니까?</p>
+              <div className="flex gap-4 justify-center">
+                <Button
+                  size="md"
+                  variant="filledBlack"
+                  onClick={handleCancelModalClose}
+                  className="w-[6.5rem] h-[2.5rem] text-0.875 font-200 hover:cursor-pointer"
+                >
+                  아니오
+                </Button>
+                <Button
+                  size="md"
+                  variant="filledBlack"
+                  onClick={handleCancelConfirm}
+                  className="w-[6.5rem] h-[2.5rem] text-0.875 font-200 hover:cursor-pointer"
+                >
+                  예
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 상담취소 성공 모달 */}
+      {isCancelSuccessModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
+          <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+            <div className="text-center">
+              <div className="text-green-500 text-4xl mb-4">✓</div>
+              <h3 className="text-xl font-bold mb-4">완료</h3>
+              <p className="text-gray-600 mb-6">상담이 취소되었습니다.</p>
+              <button
+                onClick={() => setIsCancelSuccessModalOpen(false)}
+                className="w-full bg-gray-800 text-white py-2 rounded hover:bg-gray-900 transition-colors"
+              >
+                확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </MypageContainer>
   );
 }

@@ -440,6 +440,7 @@ function PaymentPageContent() {
     console.log('🔍 defaultProfile:', defaultProfile);
     console.log('🔍 userProfiles:', userProfiles);
     console.log('🔍 profiles:', profiles);
+    console.log('🔍 projectName:', projectName);
 
     if (!user) {
       setError('로그인이 필요합니다.');
@@ -591,6 +592,7 @@ function PaymentPageContent() {
         draftDeliveryMethod: draftDeliveryMethod, // 시안 전송 방식 추가
         isRequireTaxFiling: taxInvoice, // 세금계산서 신청 여부 추가
         isAgreedCaution: isAgreedCaution, // 유의사항 동의 여부 추가
+        projectName: projectName, // 작업 이름 추가
       };
 
       console.log('🔍 주문 페이로드:', orderPayload);
@@ -697,6 +699,9 @@ function PaymentPageContent() {
 
   // 승인된 주문의 결제 처리
   const handleApprovedOrderPayment = async () => {
+    console.log('🔍 handleApprovedOrderPayment 시작');
+    console.log('🔍 projectName:', projectName);
+
     if (!user) {
       setError('로그인이 필요합니다.');
       return;
@@ -883,13 +888,33 @@ function PaymentPageContent() {
                         <label className="w-full md:w-[9rem] text-gray-600 font-medium">
                           작업이름
                         </label>
-                        <input
-                          type="text"
-                          value={projectName}
-                          onChange={(e) => setProjectName(e.target.value)}
-                          className="w-full md:w-[21.25rem] sm:w-[13rem] border border-gray-300 border-solid shadow-none rounded px-4 h-[3rem]"
-                          placeholder="작업 이름을 입력하세요"
-                        />
+                        <div className="flex flex-col gap-1">
+                          <input
+                            type="text"
+                            value={projectName}
+                            onChange={(e) => {
+                              setProjectName(e.target.value);
+                              // 입력 시 유효성 검사 에러 초기화
+                              if (validationErrors.projectName) {
+                                setValidationErrors((prev) => ({
+                                  ...prev,
+                                  projectName: '',
+                                }));
+                              }
+                            }}
+                            className={`w-full md:w-[21.25rem] sm:w-[13rem] border border-solid shadow-none rounded px-4 h-[3rem] ${
+                              validationErrors.projectName
+                                ? 'border-red-500'
+                                : 'border-gray-300'
+                            }`}
+                            placeholder="작업 이름을 입력하세요"
+                          />
+                          {validationErrors.projectName && (
+                            <span className="text-red-500 text-sm">
+                              {validationErrors.projectName}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       {/* 파일업로드 */}

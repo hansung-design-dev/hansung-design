@@ -13,7 +13,7 @@ interface OrderDetail {
   productName: string;
   price: number;
   vat: number;
-  designFee: number;
+  advertisingFee: number;
   roadUsageFee: number;
   totalAmount: number;
   paymentMethod: string;
@@ -21,13 +21,23 @@ interface OrderDetail {
   orderDate: string;
   canCancel: boolean;
   daysSinceOrder: number;
+  // 추가 필드들
+  projectName?: string; // 파일이름 (design_draft.project_name)
+  displayStartDate?: string; // 송출 시작일
+  displayEndDate?: string; // 송출 종료일
 }
 
 interface OrderItemCardProps {
   orderDetail: OrderDetail;
+  onClose?: () => void; // 아코디언 닫기 콜백 추가
+  onCancel?: () => void; // 신청취소 콜백 추가
 }
 
-export default function OrderItemCard({ orderDetail }: OrderItemCardProps) {
+export default function OrderItemCard({
+  orderDetail,
+  onClose,
+  onCancel,
+}: OrderItemCardProps) {
   return (
     <div className="rounded-lg overflow-hidden py-[2rem] sm:py-4">
       <div className="flex items-center justify-center ">
@@ -41,7 +51,7 @@ export default function OrderItemCard({ orderDetail }: OrderItemCardProps) {
               <div className="flex flex-col text-start gap-2 pt-4 sm:pt-2 pl-6">
                 <div className="text-1.25 font-500 sm:text-1">파일이름</div>
                 <div className="text-1.75 font-700 mb-4 sm:text-1.5">
-                  {orderDetail.companyName || '기본정보'}
+                  {orderDetail.projectName || ''}
                 </div>
               </div>
 
@@ -82,12 +92,17 @@ export default function OrderItemCard({ orderDetail }: OrderItemCardProps) {
 
                 <div className="text-gray-600 mb-2">품명</div>
                 <div className="font-700 text-1.25 sm:text-1">
-                  {orderDetail.productName}
+                  {orderDetail.category}
                 </div>
 
                 <div className="text-gray-600 mb-2">위치</div>
                 <div className="font-700 text-1.25 sm:text-1">
-                  {orderDetail.title}
+                  {orderDetail.location}
+                </div>
+
+                <div className="text-gray-600 mb-2">송출기간</div>
+                <div className="font-700 text-1.25 sm:text-1">
+                  {orderDetail.displayStartDate}
                 </div>
 
                 <div className="col-span-2 border-t border-gray-3 my-2 sm:col-span-2">
@@ -102,29 +117,24 @@ export default function OrderItemCard({ orderDetail }: OrderItemCardProps) {
                     <path d="M828 1L2.00272e-05 1" stroke="#E0E0E0" />
                   </svg>
                 </div>
-                <div className="text-gray-600 mb-2">상품가</div>
+                <div className="text-gray-600 mb-2">광고 대행료</div>
                 <div className="text-1.25 sm:text-1">
-                  {orderDetail.price.toLocaleString()}원
+                  {orderDetail.advertisingFee?.toLocaleString?.() ?? '-'}원
                 </div>
 
                 <div className="text-gray-600 mb-2">부가세</div>
                 <div className="text-1.25 sm:text-1">
-                  {orderDetail.vat.toLocaleString()}원
-                </div>
-
-                <div className="text-gray-600 mb-2">디자인비</div>
-                <div className="text-1.25 sm:text-1">
-                  {orderDetail.designFee.toLocaleString()}원
+                  {orderDetail.vat?.toLocaleString?.() ?? '-'}원
                 </div>
 
                 <div className="text-gray-600 mb-2">도로사용료</div>
                 <div className="text-1.25 sm:text-1">
-                  {orderDetail.roadUsageFee.toLocaleString()}원
+                  {orderDetail.roadUsageFee?.toLocaleString?.() ?? '-'}원
                 </div>
 
                 <div className="font-bold text-gray-600">총액</div>
                 <div className="font-700 text-1.25 sm:text-1">
-                  {orderDetail.totalAmount.toLocaleString()}원
+                  {orderDetail.totalAmount?.toLocaleString?.() ?? '-'}원
                 </div>
 
                 <div className="col-span-2 border-t border-[#E0E0E0] my-2 sm:col-span-2">
@@ -151,33 +161,35 @@ export default function OrderItemCard({ orderDetail }: OrderItemCardProps) {
           <div className="flex flex-col gap-2 py-[3rem] items-center justify-center sm:py-6">
             <div className="flex gap-[1rem] sm:w-full items-center justify-center">
               <Button
-                variant="outlineGray"
+                variant="outlinedGray"
                 size="xs"
-                className={`text-black sm:text-0.75 ${
-                  !orderDetail.canCancel ? 'opacity-50 cursor-not-allowed' : ''
+                className={`text-black sm:text-0.75 rounded-full ${
+                  !orderDetail.canCancel ? 'cursor-not-allowed' : ''
                 }`}
                 disabled={!orderDetail.canCancel}
+                onClick={onCancel}
               >
                 신청 취소
               </Button>
               <Button
-                variant="outlineGray"
+                variant="outlinedGray"
                 size="xs"
-                className="text-black sm:text-0.75 sm:w-[9rem]"
+                className="text-black sm:text-0.75 sm:w-[9rem] rounded-full"
               >
                 파일재전송
               </Button>
               <Button
-                variant="outlineGray"
+                variant="outlinedGray"
                 size="xs"
-                className="text-black sm:text-0.75"
+                className="text-black sm:text-0.75 rounded-full"
               >
                 영수증
               </Button>
               <Button
-                variant="outlineGray"
+                variant="outlinedGray"
                 size="xs"
-                className="text-black sm:text-0.75"
+                className="text-black sm:text-0.75 rounded-full"
+                onClick={onClose}
               >
                 목록
               </Button>

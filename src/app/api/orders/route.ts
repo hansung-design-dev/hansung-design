@@ -111,6 +111,7 @@ export async function POST(request: NextRequest) {
       isPaid = false,
       draftDeliveryMethod,
       paymentMethodId, // 결제수단 ID 추가
+      projectName, // 작업이름 필수
     } = body;
 
     console.log('🔍 주문 요청 데이터:', {
@@ -132,6 +133,17 @@ export async function POST(request: NextRequest) {
     if (!userAuthId) {
       return NextResponse.json(
         { error: '사용자 인증 ID가 필요합니다.' },
+        { status: 400 }
+      );
+    }
+
+    if (
+      !projectName ||
+      typeof projectName !== 'string' ||
+      !projectName.trim()
+    ) {
+      return NextResponse.json(
+        { error: '작업이름(projectName)은 필수입니다.' },
         { status: 400 }
       );
     }
@@ -379,23 +391,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 4. 결제 완료 시 시안관리 레코드 자동 생성
-    if (isPaid && userProfile.id) {
+    // 3. design_drafts row 생성 (항상)
+    let designDraftId: string | null = null;
+    if (userProfile.id) {
       const { data: draft, error: draftError } = await supabase
         .from('design_drafts')
         .insert({
           user_profile_id: userProfile.id,
           draft_category: 'initial',
-          notes: `결제 완료 후 초기 시안 업로드 대기 (전송방식: ${
+          project_name: projectName,
+          notes: `주문 생성 시 자동 생성 (전송방식: ${
             draftDeliveryMethod || 'upload'
           })`,
         })
-        .select()
+        .select('id')
         .single();
-
       if (draftError) {
         console.warn('Failed to create draft record:', draftError);
       } else {
+        designDraftId = draft.id;
         // orders 테이블의 design_drafts_id와 draft_delivery_method 업데이트
         await supabase
           .from('orders')
@@ -406,6 +420,9 @@ export async function POST(request: NextRequest) {
           .eq('id', order.id);
       }
     }
+
+    // 4. 결제 완료 시 시안관리 레코드 자동 생성
+    // (기존 결제완료 시 design_drafts 생성 로직은 제거)
 
     console.log('🔍 주문 생성 성공:', {
       orderId: order.id,
