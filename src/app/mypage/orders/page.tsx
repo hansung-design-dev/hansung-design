@@ -4,20 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import Nav from '../../../components/layouts/nav';
 import MypageContainer from '@/src/components/mypageContainer';
 import { useAuth } from '@/src/contexts/authContext';
-import { useRouter } from 'next/navigation';
 import OrderItemList from '@/src/components/orderItemList';
-import OrderDetailExpanded from '@/src/components/orderDetailExpanded';
-
-interface OrderItem {
-  id: number;
-  title: string;
-  location: string;
-  status: string;
-  orderId: string;
-  totalAmount: string;
-  startDate: string;
-  endDate: string;
-}
+import OrderItemCard from '@/src/components/orderItemCard';
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -27,23 +15,26 @@ export default function OrdersPage() {
     null
   );
   const { user } = useAuth();
-  const router = useRouter();
 
   // 주문 데이터 fetch
   const fetchOrders = useCallback(async () => {
+    if (!user?.id) return;
+
     setLoading(true);
     try {
-      const response = await fetch('/api/orders');
+      const response = await fetch(`/api/orders?userId=${user.id}`);
       const data = await response.json();
-      if (data.success) {
-        setOrders(data.data || []);
+      if (data.orders) {
+        setOrders(data.orders || []);
+      } else {
+        console.error('주문 조회 실패:', data.error);
       }
     } catch (e) {
-      // 에러 처리
+      console.error('주문 조회 중 오류:', e);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     if (user) fetchOrders();
@@ -55,11 +46,16 @@ export default function OrdersPage() {
     return orders.flatMap((order) =>
       (order.order_details || []).map((item: any) => ({
         id: globalIndex++,
-        title: item.project_name || order.order_number,
-        location: item.panel_info?.region_dong || '',
+        // 게시대명: address (nickname)
+        title:
+          (item.panel_info?.address || '') +
+          (item.panel_info?.nickname ? ` (${item.panel_info.nickname})` : ''),
+        // 행정동
+        location: item.panel_info?.region_gu?.name || '',
+        // 마감여부(주문상태)
         status: getStatusDisplay(order.payment_status),
         orderId: order.order_number,
-        totalAmount: (item.total_price || 0).toLocaleString() + '원',
+        totalAmount: (order.payments?.[0]?.amount || 0).toLocaleString() + '원',
         startDate: item.display_start_date,
         endDate: item.display_end_date,
       }))
@@ -89,17 +85,41 @@ export default function OrdersPage() {
       try {
         const response = await fetch(`/api/orders/${orderId}`);
         const data = await response.json();
-        if (data.success) {
-          setSelectedOrderDetail(data.orderDetail);
+        if (data.success && data.data) {
+          setSelectedOrderDetail(data.data);
         } else {
-          setSelectedOrderDetail(null);
+          setSelectedOrderDetail({}); // 실패해도 빈 객체로 설정해 아코디언이 열리게
         }
       } catch {
-        setSelectedOrderDetail(null);
+        setSelectedOrderDetail({}); // 에러 시에도 빈 객체
       }
     } else {
       setSelectedOrderDetail(null);
     }
+  };
+
+  // 아코디언 상세에 사용할 더미 데이터 (모든 필드 '-')
+  const dummyOrderDetail = {
+    id: '-',
+    order_number: '-',
+    title: '-',
+    location: '-',
+    status: '-',
+    category: '-',
+    customerName: '-',
+    phone: '-',
+    companyName: '-',
+    productName: '-',
+    price: 0,
+    vat: 0,
+    designFee: 0,
+    roadUsageFee: 0,
+    totalAmount: 0,
+    paymentMethod: '-',
+    depositorName: '-',
+    orderDate: '-',
+    canCancel: false,
+    daysSinceOrder: 0,
   };
 
   if (loading) {
@@ -122,8 +142,8 @@ export default function OrdersPage() {
             else setExpandedItemId(null);
           }}
           expandedContent={
-            selectedOrderDetail ? (
-              <OrderDetailExpanded orderDetail={selectedOrderDetail} />
+            expandedItemId ? (
+              <OrderItemCard orderDetail={dummyOrderDetail} />
             ) : null
           }
         />

@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 interface UserProfile {
   id: string;
+  user_auth_id: string;
   profile_title: string;
   company_name?: string;
   business_registration_number?: string;

@@ -270,6 +270,7 @@ CREATE TABLE public.orders (
   payment_status text DEFAULT 'pending'::text CHECK (payment_status = ANY (ARRAY['pending'::text, 'waiting_admin_approval'::text, 'approved'::text, 'completed'::text, 'cancelled'::text])),
   design_drafts_id uuid,
   draft_delivery_method text CHECK (draft_delivery_method = ANY (ARRAY['email'::text, 'upload'::text])),
+  order_status text DEFAULT 'pending'::text CHECK (order_status = ANY (ARRAY['pending'::text, 'completed'::text])),
   CONSTRAINT orders_pkey PRIMARY KEY (id),
   CONSTRAINT orders_payment_method_id_fkey FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id),
   CONSTRAINT orders_user_profile_id_fkey FOREIGN KEY (user_profile_id) REFERENCES public.user_profiles(id),

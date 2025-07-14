@@ -27,8 +27,7 @@ export async function GET(
           draft_category,
           file_name,
           created_at,
-          is_approved,
-          draft_delivery_method
+          is_approved
         )
       `
       )

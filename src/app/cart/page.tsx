@@ -66,6 +66,7 @@ function CartGroupCard({
   isSelected,
   onSelect,
   onDelete,
+  isConsulting = false,
 }: {
   title: string;
   children: React.ReactNode;
@@ -73,16 +74,19 @@ function CartGroupCard({
   isSelected?: boolean;
   onSelect?: (selected: boolean) => void;
   onDelete?: () => void;
+  isConsulting?: boolean;
 }) {
   return (
     <div className="mb-8 bg-white rounded-lg overflow-hidden py-4">
       <div className=" relative flex items-center pt-4 pb-2 border-b border-black px-[3rem]">
-        <input
-          type="checkbox"
-          className="w-6 h-6 mr-4 cursor-pointer"
-          checked={isSelected}
-          onChange={(e) => onSelect?.(e.target.checked)}
-        />
+        {!isConsulting && (
+          <input
+            type="checkbox"
+            className="w-6 h-6 mr-4 cursor-pointer"
+            checked={isSelected}
+            onChange={(e) => onSelect?.(e.target.checked)}
+          />
+        )}
         <span className="text-xl font-semibold">{title}</span>
         {phoneList && (
           <span className="ml-4 text-sm text-gray-500">
@@ -547,13 +551,23 @@ export default function Cart() {
     };
   }, [cart]);
 
-  // 상담신청 아이템들을 타입별로 분리
-  const bannerConsultingItems = groupedItems.consulting.filter(
-    (item) => item.type === 'banner-display'
-  );
-  const ledConsultingItemsOnly = groupedItems.consulting.filter(
-    (item) => item.type === 'led-display'
-  );
+  // 상담신청 아이템들을 타입별로 분리 (상담문의가 완료된 아이템 제외)
+  const bannerConsultingItems = groupedItems.consulting.filter((item) => {
+    const inquiryStatus = inquiryStatuses[item.id];
+    // 상담문의가 완료된 아이템은 제외
+    if (inquiryStatus && inquiryStatus.status === 'answered') {
+      return false;
+    }
+    return item.type === 'banner-display';
+  });
+  const ledConsultingItemsOnly = groupedItems.consulting.filter((item) => {
+    const inquiryStatus = inquiryStatuses[item.id];
+    // 상담문의가 완료된 아이템은 제외
+    if (inquiryStatus && inquiryStatus.status === 'answered') {
+      return false;
+    }
+    return item.type === 'led-display';
+  });
 
   // 상담신청 아이템들의 문의 상태 확인
   const fetchInquiryStatuses = useCallback(async () => {
@@ -622,35 +636,60 @@ export default function Cart() {
     }
   }, [cart]);
 
-  // 문의 상태 확인을 수동으로만 호출하도록 변경
-  // useEffect(() => {
-  //   if (user && cart.length > 0) {
-  //     // 상담신청 아이템이 있는지 확인
-  //     const hasConsultingItems = cart.some((item) => {
-  //       const panelType =
-  //         item.panel_slot_snapshot?.banner_type || item.panel_type || 'panel';
-  //       const district = item.district;
+  // 페이지 로드 시 상담문의 상태 확인
+  useEffect(() => {
+    if (user && cart.length > 0) {
+      // 상담신청 아이템이 있는지 확인
+      const hasConsultingItems = cart.some((item) => {
+        const panelType =
+          item.panel_slot_snapshot?.banner_type || item.panel_type || 'panel';
+        const district = item.district;
 
-  //       if (item.type === 'led-display') return true;
-  //       if (item.type === 'banner-display' && panelType === 'top_fixed')
-  //         return true;
+        if (item.type === 'led-display') return true;
+        if (item.type === 'banner-display' && panelType === 'top_fixed')
+          return true;
 
-  //       const isPaymentEligible =
-  //         ((district === '용산구' || district === '송파구') &&
-  //           panelType === 'panel') ||
-  //         (district === '마포구' &&
-  //           (panelType === 'multi-panel' || panelType === 'lower-panel')) ||
-  //         district === '서대문구' ||
-  //         district === '관악구';
+        const isPaymentEligible =
+          ((district === '용산구' || district === '송파구') &&
+            panelType === 'panel') ||
+          (district === '마포구' &&
+            (panelType === 'multi-panel' || panelType === 'lower-panel')) ||
+          district === '서대문구' ||
+          district === '관악구';
 
-  //       return !(isPaymentEligible && item.price > 0);
-  //     });
+        return !(isPaymentEligible && item.price > 0);
+      });
 
-  //     if (hasConsultingItems) {
-  //       fetchInquiryStatuses();
-  //     }
-  //   }
-  // }, [user, fetchInquiryStatuses]);
+      if (hasConsultingItems) {
+        fetchInquiryStatuses();
+      }
+    }
+  }, [user, cart, fetchInquiryStatuses]);
+
+  // 상담문의가 완료된 아이템들을 자동으로 장바구니에서 제거
+  useEffect(() => {
+    if (Object.keys(inquiryStatuses).length > 0) {
+      const itemsToRemove = cart.filter((item) => {
+        const inquiryStatus = inquiryStatuses[item.id];
+        return inquiryStatus && inquiryStatus.status === 'answered';
+      });
+
+      if (itemsToRemove.length > 0) {
+        itemsToRemove.forEach((item) => {
+          dispatch({ type: 'REMOVE_ITEM', id: item.id });
+          // 선택된 아이템에서도 제거
+          const newSelected = new Set(selectedItems);
+          newSelected.delete(item.id);
+          setSelectedItems(newSelected);
+        });
+
+        console.log(
+          '상담문의가 완료된 아이템들을 장바구니에서 제거했습니다:',
+          itemsToRemove.map((item) => item.name)
+        );
+      }
+    }
+  }, [inquiryStatuses, cart, selectedItems, dispatch]);
 
   // 선택된 아이템들의 총계 계산
   const cartSummary = useMemo(() => {
@@ -923,7 +962,28 @@ export default function Cart() {
   const handleConsultationSuccess = () => {
     setIsConsultationModalOpen(false);
     // 문의 성공 후 상태 다시 확인
-    fetchInquiryStatuses();
+    fetchInquiryStatuses().then(() => {
+      // 상담문의가 완료된 아이템들을 장바구니에서 제거
+      const itemsToRemove = cart.filter((item) => {
+        const inquiryStatus = inquiryStatuses[item.id];
+        return inquiryStatus && inquiryStatus.status === 'answered';
+      });
+
+      itemsToRemove.forEach((item) => {
+        dispatch({ type: 'REMOVE_ITEM', id: item.id });
+        // 선택된 아이템에서도 제거
+        const newSelected = new Set(selectedItems);
+        newSelected.delete(item.id);
+        setSelectedItems(newSelected);
+      });
+
+      if (itemsToRemove.length > 0) {
+        console.log(
+          '상담문의가 완료된 아이템들을 장바구니에서 제거했습니다:',
+          itemsToRemove.map((item) => item.name)
+        );
+      }
+    });
   };
 
   // 기간 변경 핸들러 추가
@@ -1417,6 +1477,7 @@ export default function Cart() {
                   onDelete={() =>
                     handleGroupDeleteClick('general', '', '상단광고')
                   }
+                  isConsulting={true}
                 >
                   {bannerConsultingItems.map((item) => {
                     const userInfo = {
@@ -1459,6 +1520,7 @@ export default function Cart() {
                   onDelete={() =>
                     handleGroupDeleteClick('general', '', 'LED전자게시대')
                   }
+                  isConsulting={true}
                 >
                   {ledConsultingItemsOnly.map((item) => {
                     const userInfo = {
@@ -1492,7 +1554,7 @@ export default function Cart() {
 
               {bannerConsultingItems.length === 0 &&
                 ledConsultingItemsOnly.length === 0 && (
-                  <CartGroupCard title="상담신청">
+                  <CartGroupCard title="상담신청" isConsulting={true}>
                     <div className="flex items-center justify-center py-12 text-gray-500">
                       상담신청할 상품이 없습니다.
                     </div>
@@ -1503,57 +1565,74 @@ export default function Cart() {
         </motion.div>
       </div>
 
-      <div
-        className={`fixed bottom-0 left-0 w-full bg-white border-t border-gray-300 py-0 px-8 flex items-center justify-around gap-4 ${
-          cartSummary.hasDetailedPriceItems ? 'h-[14rem]' : 'h-[11rem]'
-        }`}
-      >
-        <div className="flex flex-col space-y-2 text-lg font-semibold">
-          <div>선택수량 {cartSummary.quantity}개</div>
-          {cartSummary.hasDetailedPriceItems && cartSummary.priceDetails && (
-            <div className="flex items-center justify-center gap-4 text-1">
-              <div>
-                광고대행료{' '}
-                {cartSummary.priceDetails.advertising_fee.toLocaleString()}원
+      {activeTab === 'payment' && (
+        <div
+          className={`fixed bottom-0 left-0 w-full bg-white border-t border-gray-300 py-0 px-8 flex items-center justify-around gap-4 ${
+            cartSummary.hasDetailedPriceItems ? 'h-[14rem]' : 'h-[11rem]'
+          }`}
+        >
+          <div className="flex flex-col space-y-2 text-lg font-semibold">
+            <div>선택수량 {cartSummary.quantity}개</div>
+            {cartSummary.hasDetailedPriceItems && cartSummary.priceDetails && (
+              <div className="flex items-center justify-center gap-4 text-1">
+                <div>
+                  광고대행료{' '}
+                  {cartSummary.priceDetails.advertising_fee.toLocaleString()}원
+                </div>
+                <div>+</div>
+                <div>
+                  수수료 {cartSummary.priceDetails.tax_price.toLocaleString()}원
+                </div>
+                <div>+</div>
+                <div>
+                  도로사용료{' '}
+                  {cartSummary.priceDetails.road_usage_fee.toLocaleString()}원
+                </div>
               </div>
-              <div>+</div>
-              <div>
-                수수료 {cartSummary.priceDetails.tax_price.toLocaleString()}원
-              </div>
-              <div>+</div>
-              <div>
-                도로사용료{' '}
-                {cartSummary.priceDetails.road_usage_fee.toLocaleString()}원
-              </div>
+            )}
+            <div>
+              = 총 주문금액 {cartSummary.totalAmount.toLocaleString()}원
             </div>
-          )}
-          <div>= 총 주문금액 {cartSummary.totalAmount.toLocaleString()}원</div>
-          {cartSummary.hasPublicInstitutionItems && (
-            <div className="text-red text-xs">
-              행정용결제는 사용자 승인과정 후에 결제가 진행됩니다.
+            {cartSummary.hasPublicInstitutionItems && (
+              <div className="text-red text-xs">
+                행정용결제는 사용자 승인과정 후에 결제가 진행됩니다.
+              </div>
+            )}
+          </div>
+          <div className="flex flex-col items-center gap-2">
+            <Button
+              className={`px-12 py-4 text-lg font-bold rounded ${
+                cartSummary.hasMixedUserTypes
+                  ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                  : 'bg-black text-white'
+              }`}
+              onClick={handlePayment}
+              disabled={cartSummary.hasMixedUserTypes}
+            >
+              {cartSummary.hasCompanyItems ||
+              cartSummary.hasPublicInstitutionItems
+                ? '결제대기 신청하기'
+                : `총 ${cartSummary.quantity}건 결제하기`}
+            </Button>
+            {cartSummary.hasMixedUserTypes && (
+              <div className="text-red text-xs">개별결제 해주세요.</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'consulting' && (
+        <div className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-300 py-4 px-8">
+          <div className="text-center text-gray-600">
+            <div className="text-lg font-semibold mb-2">
+              상담문의 버튼을 통해 상담신청해주세요
             </div>
-          )}
+            <div className="text-sm">
+              상담전화: 1533-0570, 1899-0596, 02-719-0083
+            </div>
+          </div>
         </div>
-        <div className="flex flex-col items-center gap-2">
-          <Button
-            className={`px-12 py-4 text-lg font-bold rounded ${
-              cartSummary.hasMixedUserTypes
-                ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                : 'bg-black text-white'
-            }`}
-            onClick={handlePayment}
-            disabled={cartSummary.hasMixedUserTypes}
-          >
-            {cartSummary.hasCompanyItems ||
-            cartSummary.hasPublicInstitutionItems
-              ? '결제대기 신청하기'
-              : `총 ${cartSummary.quantity}건 결제하기`}
-          </Button>
-          {cartSummary.hasMixedUserTypes && (
-            <div className="text-red text-xs">개별결제 해주세요.</div>
-          )}
-        </div>
-      </div>
+      )}
 
       {/* 모달들 */}
       <UserProfileModal

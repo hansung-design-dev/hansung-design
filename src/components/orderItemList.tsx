@@ -318,9 +318,7 @@ const OrderItemList: React.FC<ItemTableProps> = ({
             {expandedItemId && expandedContent && (
               <tr>
                 <td colSpan={showCheckbox ? 5 : 4} className="p-0">
-                  <div className="border-solid border-gray-1">
-                    {expandedContent}
-                  </div>
+                  <div>{expandedContent}</div>
                 </td>
               </tr>
             )}

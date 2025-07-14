@@ -127,7 +127,6 @@ export async function POST(request: NextRequest) {
           const { data: draft, error: draftError } = await supabase
             .from('design_drafts')
             .insert({
-              order_id: orderId,
               user_profile_id: userProfileId,
               draft_category: 'initial',
               notes: `결제 완료 후 초기 시안 업로드 대기 (전송방식: ${
@@ -211,7 +210,6 @@ export async function POST(request: NextRequest) {
           const { data: draft, error: draftError } = await supabase
             .from('design_drafts')
             .insert({
-              order_id: orderId,
               user_profile_id: userProfileId,
               draft_category: 'initial',
               notes: `승인된 주문 결제 완료 후 초기 시안 업로드 대기 (전송방식: ${
