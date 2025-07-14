@@ -53,47 +53,47 @@ export async function GET(request: NextRequest) {
   }
 }
 
-interface OrderItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  panel_info_id: string;
-  halfPeriod?: 'first_half' | 'second_half';
-  selectedYear?: number; // 선택한 년도
-  selectedMonth?: number; // 선택한 월
-  startDate?: string;
-  endDate?: string;
-  // 기간 데이터 추가 (구별 카드에서 전달받은 데이터)
-  periodData?: {
-    first_half_from: string;
-    first_half_to: string;
-    second_half_from: string;
-    second_half_to: string;
-  };
-  // 선택된 기간의 시작/종료 날짜
-  selectedPeriodFrom?: string;
-  selectedPeriodTo?: string;
-  panel_slot_snapshot?: {
-    id: string | null;
-    notes: string | null;
-    max_width: number | null;
-    slot_name: string | null;
-    tax_price: number | null;
-    created_at: string | null;
-    max_height: number | null;
-    price_unit: string | null;
-    updated_at: string | null;
-    banner_type: string | null;
-    slot_number: number | null;
-    total_price: number | null;
-    panel_info_id: string | null;
-    road_usage_fee: number | null;
-    advertising_fee: number | null;
-    panel_slot_status: string | null;
-  };
-  panel_slot_usage_id?: string;
-}
+// interface OrderItem {
+//   id: string;
+//   name: string;
+//   price: number;
+//   quantity: number;
+//   panel_info_id: string;
+//   halfPeriod?: 'first_half' | 'second_half';
+//   selectedYear?: number; // 선택한 년도
+//   selectedMonth?: number; // 선택한 월
+//   startDate?: string;
+//   endDate?: string;
+//   // 기간 데이터 추가 (구별 카드에서 전달받은 데이터)
+//   periodData?: {
+//     first_half_from: string;
+//     first_half_to: string;
+//     second_half_from: string;
+//     second_half_to: string;
+//   };
+//   // 선택된 기간의 시작/종료 날짜
+//   selectedPeriodFrom?: string;
+//   selectedPeriodTo?: string;
+//   panel_slot_snapshot?: {
+//     id: string | null;
+//     notes: string | null;
+//     max_width: number | null;
+//     slot_name: string | null;
+//     tax_price: number | null;
+//     created_at: string | null;
+//     max_height: number | null;
+//     price_unit: string | null;
+//     updated_at: string | null;
+//     banner_type: string | null;
+//     slot_number: number | null;
+//     total_price: number | null;
+//     panel_info_id: string | null;
+//     road_usage_fee: number | null;
+//     advertising_fee: number | null;
+//     panel_slot_status: string | null;
+//   };
+//   panel_slot_usage_id?: string;
+// }
 
 export async function POST(request: NextRequest) {
   try {
