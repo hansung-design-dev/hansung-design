@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Map, MapMarker } from 'react-kakao-maps-sdk';
 import useKakaoLoader from './hooks/use-kakao-loader';
 
@@ -27,6 +27,8 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const maxRetries = 100; // 최대 재시도 횟수를 100회로 늘림 (20초)
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useKakaoLoader();
 
@@ -53,51 +55,69 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
         setIsLoaded(true);
         setError(null);
         console.log('✅ KakaoMap SDK 로딩 성공');
+        return;
+      }
+
+      // 재시도 횟수 제한
+      if (retryCount < maxRetries) {
+        console.log(
+          `⏳ SDK 로딩 재시도 중... (${retryCount + 1}/${maxRetries})`
+        );
+        retryTimeoutRef.current = setTimeout(() => {
+          setRetryCount((prev) => prev + 1);
+        }, 200); // 재시도 간격을 200ms로 유지
       } else {
-        // 재시도 횟수 제한 (최대 50회, 5초)
-        if (retryCount < 50) {
-          console.log(`⏳ SDK 로딩 재시도 중... (${retryCount + 1}/50)`);
-          setTimeout(() => {
-            setRetryCount((prev) => prev + 1);
-            checkKakaoMapLoaded();
-          }, 100);
-        } else {
-          const errorMsg =
-            '카카오맵을 로딩할 수 없습니다. API 키와 도메인 설정을 확인해주세요.';
-          setError(errorMsg);
-          console.error('❌ KakaoMap SDK 로딩 실패 - 최대 재시도 횟수 초과');
-          console.error('❌ 최종 상태 - window.kakao:', !!window.kakao);
-          console.error(
-            '❌ 최종 상태 - window.kakao.maps:',
-            !!(window.kakao && window.kakao.maps)
-          );
-        }
+        // 최대 재시도 횟수 초과 시에도 에러를 바로 표시하지 않고 더 기다림
+        console.log('⚠️ 최대 재시도 횟수 도달, 추가 대기 중...');
+        // 30초 더 기다린 후 에러 표시
+        setTimeout(() => {
+          if (!window.kakao || !window.kakao.maps) {
+            const errorMsg =
+              '카카오맵을 로딩할 수 없습니다. API 키와 도메인 설정을 확인해주세요.';
+            setError(errorMsg);
+            console.error('❌ KakaoMap SDK 로딩 실패 - 최종 타임아웃');
+            console.error('❌ 최종 상태 - window.kakao:', !!window.kakao);
+            console.error(
+              '❌ 최종 상태 - window.kakao.maps:',
+              !!(window.kakao && window.kakao.maps)
+            );
+          }
+        }, 30000);
       }
     };
 
     // 초기 체크 시작
     checkKakaoMapLoaded();
 
-    // 15초 후에도 로딩되지 않으면 에러 처리
+    // 30초 후에도 로딩되지 않으면 에러 처리 (기존 10초에서 30초로 늘림)
     const timeout = setTimeout(() => {
       if (!window.kakao || !window.kakao.maps) {
-        const errorMsg =
-          '카카오맵을 로딩할 수 없습니다. API 키와 도메인 설정을 확인해주세요.';
-        setError(errorMsg);
-        console.error('❌ KakaoMap SDK 로딩 실패 - 타임아웃');
-        console.error('❌ 타임아웃 시점 - window.kakao:', !!window.kakao);
-        console.error(
-          '❌ 타임아웃 시점 - window.kakao.maps:',
-          !!(window.kakao && window.kakao.maps)
-        );
+        console.log('⚠️ 30초 타임아웃 도달, 추가 대기 중...');
+        // 30초 더 기다린 후 에러 표시
+        setTimeout(() => {
+          if (!window.kakao || !window.kakao.maps) {
+            const errorMsg =
+              '카카오맵을 로딩할 수 없습니다. API 키와 도메인 설정을 확인해주세요.';
+            setError(errorMsg);
+            console.error('❌ KakaoMap SDK 로딩 실패 - 최종 타임아웃');
+            console.error('❌ 타임아웃 시점 - window.kakao:', !!window.kakao);
+            console.error(
+              '❌ 타임아웃 시점 - window.kakao.maps:',
+              !!(window.kakao && window.kakao.maps)
+            );
+          }
+        }, 30000);
       }
-    }, 15000);
+    }, 30000);
 
     return () => {
       console.log('🔍 카카오맵 컴포넌트 언마운트됨');
       clearTimeout(timeout);
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
     };
-  }, [retryCount]);
+  }, [retryCount, maxRetries]);
 
   // 디버깅용 로그
   console.log('🔍 KakaoMap markers:', markers);
@@ -165,10 +185,15 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
       <div className="w-full h-80 flex items-center justify-center bg-gray-100 rounded-lg">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
-          <p className="text-gray-600">카카오맵을 로딩 중입니다...</p>
-          <p className="text-xs text-gray-500 mt-1">
-            재시도 횟수: {retryCount}/50
+          <p className="text-gray-600 mb-1">카카오맵을 로딩 중입니다...</p>
+          <p className="text-xs text-gray-500">
+            재시도 횟수: {retryCount}/{maxRetries}
           </p>
+          {retryCount > 50 && (
+            <p className="text-xs text-orange-500 mt-2">
+              로딩이 오래 걸리고 있습니다. 잠시만 기다려주세요...
+            </p>
+          )}
         </div>
       </div>
     );
