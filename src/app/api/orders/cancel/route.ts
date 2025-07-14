@@ -76,7 +76,7 @@ export async function DELETE(request: NextRequest) {
     // 트랜잭션 시작
     const { data: orderDetails, error: detailsError } = await supabase
       .from('order_details')
-      .select('panel_slot_usage_id, slot_order_quantity')
+      .select('panel_slot_usage_id, slot_order_quantity, panel_info_id')
       .eq('order_id', orderId);
 
     if (detailsError) {
@@ -87,34 +87,15 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // 1. panel_slot_usage 테이블에서 사용량 복원
+    // 1. panel_slot_usage 비활성화 (재고는 DB 트리거가 자동 처리)
     for (const detail of orderDetails || []) {
       if (detail.panel_slot_usage_id) {
-        // 현재 사용량을 먼저 조회
-        const { data: currentUsage, error: fetchError } = await supabase
-          .from('panel_slot_usage')
-          .select('used_quantity')
-          .eq('id', detail.panel_slot_usage_id)
-          .single();
-
-        if (fetchError) {
-          console.error('Panel slot usage fetch error:', fetchError);
-          return NextResponse.json(
-            { success: false, error: '슬롯 사용량 조회에 실패했습니다.' },
-            { status: 500 }
-          );
-        }
-
-        // 사용량 감소
-        const newUsedQuantity = Math.max(
-          0,
-          (currentUsage?.used_quantity || 0) - detail.slot_order_quantity
-        );
-
+        // panel_slot_usage 비활성화
         const { error: usageError } = await supabase
           .from('panel_slot_usage')
           .update({
-            used_quantity: newUsedQuantity,
+            is_active: false,
+            is_closed: true,
             updated_at: new Date().toISOString(),
           })
           .eq('id', detail.panel_slot_usage_id);

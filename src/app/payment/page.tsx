@@ -40,6 +40,10 @@ function PaymentPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [sendByEmail, setSendByEmail] = useState(false);
   const [showBankTransferModal, setShowBankTransferModal] = useState(false);
+  const [draftDeliveryMethod, setDraftDeliveryMethod] = useState<
+    'email' | 'upload'
+  >('upload');
+  const [isApprovedOrder, setIsApprovedOrder] = useState(false);
 
   // 패널 타입 표시 함수
   const getPanelTypeDisplay = (panelType: string) => {
@@ -62,8 +66,14 @@ function PaymentPageContent() {
   // URL 파라미터에서 선택된 아이템 ID들 가져오기
   useEffect(() => {
     const itemsParam = searchParams.get('items');
+    const approvedParam = searchParams.get('approved');
     console.log('🔍 Payment page - itemsParam:', itemsParam);
+    console.log('🔍 Payment page - approvedParam:', approvedParam);
     console.log('🔍 Payment page - cart:', cart);
+
+    if (approvedParam === 'true') {
+      setIsApprovedOrder(true);
+    }
 
     if (itemsParam) {
       try {
@@ -72,10 +82,17 @@ function PaymentPageContent() {
         ) as string[];
         console.log('🔍 Payment page - selectedItemIds:', selectedItemIds);
 
-        const items = cart.filter((item) => selectedItemIds.includes(item.id));
-        console.log('🔍 Payment page - filtered items:', items);
-
-        setSelectedItems(items);
+        // 승인된 주문의 경우 cart에서 아이템을 찾지 않고 주문 ID를 직접 사용
+        if (isApprovedOrder) {
+          // 승인된 주문의 경우 주문 정보를 가져와서 selectedItems 설정
+          fetchApprovedOrderItems(selectedItemIds[0]);
+        } else {
+          const items = cart.filter((item) =>
+            selectedItemIds.includes(item.id)
+          );
+          console.log('🔍 Payment page - filtered items:', items);
+          setSelectedItems(items);
+        }
       } catch (error) {
         console.error('Error parsing selected items:', error);
         setError('선택된 상품 정보를 불러오는데 실패했습니다.');
@@ -83,7 +100,72 @@ function PaymentPageContent() {
     } else {
       console.log('🔍 Payment page - no items param found');
     }
-  }, [searchParams, cart]);
+  }, [searchParams, cart, isApprovedOrder]);
+
+  // 승인된 주문의 아이템 정보 가져오기
+  const fetchApprovedOrderItems = async (orderId: string) => {
+    try {
+      const response = await fetch(`/api/orders/${orderId}`);
+      const data = await response.json();
+
+      if (data.success) {
+        // 주문 정보를 CartItem 형태로 변환
+        const orderItems: CartItem[] =
+          data.data.order_details?.map(
+            (detail: {
+              id: string;
+              name: string;
+              price: number;
+              quantity: number;
+              district?: string;
+              panel_type?: string;
+              panel_info_id?: string;
+              panel_slot_snapshot?: {
+                id?: string;
+                notes?: string;
+                max_width?: number;
+                slot_name?: string;
+                tax_price?: number;
+                created_at?: string;
+                max_height?: number;
+                price_unit?: string;
+                updated_at?: string;
+                banner_type?: string;
+                slot_number?: number;
+                total_price?: number;
+                panel_info_id?: string;
+                road_usage_fee?: number;
+                advertising_fee?: number;
+                panel_slot_status?: string;
+              };
+              panel_slot_usage_id?: string;
+              period?: string;
+              selected_year?: number;
+              selected_month?: number;
+            }) => ({
+              id: detail.id,
+              name: detail.name,
+              price: detail.price,
+              quantity: detail.quantity,
+              district: detail.district || '',
+              type: 'banner-display' as const,
+              panel_type: detail.panel_type || 'panel',
+              panel_info_id: detail.panel_info_id,
+              panel_slot_snapshot: detail.panel_slot_snapshot,
+              panel_slot_usage_id: detail.panel_slot_usage_id,
+              halfPeriod: detail.period,
+              selectedYear: detail.selected_year,
+              selectedMonth: detail.selected_month,
+            })
+          ) || [];
+
+        setSelectedItems(orderItems);
+      }
+    } catch (error) {
+      console.error('Failed to fetch approved order items:', error);
+      setError('승인된 주문 정보를 불러오는데 실패했습니다.');
+    }
+  };
 
   // 기본 프로필 찾기
   const defaultProfile =
@@ -157,6 +239,12 @@ function PaymentPageContent() {
     setError(null);
 
     try {
+      // 승인된 주문의 경우 기존 주문을 업데이트
+      if (isApprovedOrder) {
+        await handleApprovedOrderPayment();
+        return;
+      }
+
       // 복합 ID에서 원본 UUID 추출 함수
       const extractPanelInfoId = (item: CartItem) => {
         const uuidPattern =
@@ -214,6 +302,7 @@ function PaymentPageContent() {
               .split('T')[0],
           })),
           paymentMethod: paymentMethod,
+          draftDeliveryMethod: draftDeliveryMethod, // 시안 전송 방식 추가
         }),
       });
 
@@ -268,6 +357,7 @@ function PaymentPageContent() {
           amount: totalAmount,
           userAuthId: user.id,
           userProfileId: defaultProfile?.id,
+          draftDeliveryMethod: draftDeliveryMethod, // 시안 전송 방식 추가
         }),
       });
 
@@ -284,13 +374,95 @@ function PaymentPageContent() {
 
       // 결제 상태에 따른 리다이렉트
       if (paymentData.data.orderStatus === 'completed') {
+        // 결제 완료 시 항상 시안관리 페이지로 이동
         router.push('/mypage/design');
       } else {
         router.push('/mypage/orders');
       }
     } catch (error) {
       console.error('Payment error:', error);
-      setError('결제 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+      setError(
+        error instanceof Error ? error.message : '결제 처리에 실패했습니다.'
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // 승인된 주문의 결제 처리
+  const handleApprovedOrderPayment = async () => {
+    if (!user) {
+      setError('로그인이 필요합니다.');
+      return;
+    }
+
+    try {
+      // URL에서 주문 ID 가져오기
+      const itemsParam = searchParams.get('items');
+      if (!itemsParam) {
+        throw new Error('주문 정보를 찾을 수 없습니다.');
+      }
+
+      const orderIds = JSON.parse(decodeURIComponent(itemsParam)) as string[];
+      const orderId = orderIds[0];
+
+      // 결제수단 ID 결정
+      let paymentMethodId: string;
+
+      if (paymentMethod === 'card') {
+        const cardResponse = await fetch(
+          '/api/payment?action=getPaymentMethods'
+        );
+        const cardData = await cardResponse.json();
+        const creditCard = cardData.data.find(
+          (method: { method_code: string; id: string }) =>
+            method.method_code === 'credit_card'
+        );
+        paymentMethodId = creditCard.id;
+      } else if (paymentMethod === 'bank_transfer') {
+        const bankResponse = await fetch(
+          '/api/payment?action=getPaymentMethods'
+        );
+        const bankData = await bankResponse.json();
+        const bankTransfer = bankData.data.find(
+          (method: { method_code: string; id: string }) =>
+            method.method_code === 'bank_transfer'
+        );
+        paymentMethodId = bankTransfer.id;
+      } else {
+        throw new Error('지원하지 않는 결제수단입니다.');
+      }
+
+      // 결제 처리
+      const paymentResponse = await fetch('/api/payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'processApprovedOrderPayment',
+          orderId: orderId,
+          paymentMethodId: paymentMethodId,
+          amount: priceSummary.totalPrice,
+          userAuthId: user.id,
+          userProfileId: defaultProfile?.id,
+          draftDeliveryMethod: draftDeliveryMethod,
+        }),
+      });
+
+      const paymentData = await paymentResponse.json();
+
+      if (!paymentData.success) {
+        throw new Error(paymentData.error || '결제 처리에 실패했습니다.');
+      }
+
+      // 성공 시 시안관리 페이지로 이동
+      router.push('/mypage/design');
+    } catch (error) {
+      console.error('Approved order payment error:', error);
+      setError(
+        error instanceof Error ? error.message : '결제 처리에 실패했습니다.'
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -440,6 +612,10 @@ function PaymentPageContent() {
                               placeholder="파일 이름"
                             />
                           )}
+                          <p className="text-xs text-gray-500 mt-2">
+                            * 선택한 방식과 관계없이 결제 완료 후 시안관리
+                            페이지에서 시안을 업로드할 수 있습니다.
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -460,15 +636,6 @@ function PaymentPageContent() {
                       </div>
                     </div>
                   </div>
-
-                  <div className="flex justify-end">
-                    <Button
-                      variant="ghost"
-                      className="bg-gray-4 w-full md:w-[8rem] text-0.875 p-1 sm:w-[10rem] sm:mb-6"
-                    >
-                      변경된 내용 저장
-                    </Button>
-                  </div>
                 </form>
               </div>
             </section>
@@ -479,7 +646,7 @@ function PaymentPageContent() {
             <h3 className="text-1.25 font-700 mb-4 sm:text-1">결제수단</h3>
             <div className="flex flex-col gap-3 items-center justify-center">
               <button
-                className={`border rounded-[0.375rem] px-4 py-6 w-full text-1.25 font-700 sm:text-1 sm:py-4 ${
+                className={`hover:cursor-pointer border rounded-[0.375rem] px-4 py-6 w-full text-1.25 font-700 sm:text-1 sm:py-4 ${
                   paymentMethod === 'card'
                     ? 'border-black bg-black text-white'
                     : 'border-gray-3 bg-gray-11'
@@ -545,6 +712,19 @@ function PaymentPageContent() {
               </div>
             )}
           </section>
+
+          {/* 승인된 주문 안내 메시지 */}
+          {isApprovedOrder && (
+            <section className="p-6 bg-blue-50 border border-blue-200 rounded-lg">
+              <h3 className="text-1.25 font-700 mb-2 text-blue-800 sm:text-1">
+                승인된 주문
+              </h3>
+              <p className="text-sm text-blue-700">
+                어드민 승인이 완료된 주문입니다. 결제를 완료하면 시안관리
+                페이지에서 시안을 업로드할 수 있습니다.
+              </p>
+            </section>
+          )}
         </div>
 
         {/* 우측 - 결제 영역 */}

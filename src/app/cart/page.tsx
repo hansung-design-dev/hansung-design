@@ -299,6 +299,8 @@ function CartItemRow({
             <div className="mt-2">
               <PeriodSelector
                 halfPeriod={item.halfPeriod}
+                selectedYear={item.selectedYear}
+                selectedMonth={item.selectedMonth}
                 onPeriodChange={(year, month, halfPeriod) => {
                   onPeriodChange?.(item.id, year, month, halfPeriod);
                 }}
@@ -467,9 +469,35 @@ export default function Cart() {
     const consultingItems: CartItem[] = [];
     const paymentItems: CartItem[] = [];
 
+    // 디버깅: 장바구니 아이템들의 정보 출력
+    console.log(
+      '🔍 Cart - All cart items for classification:',
+      cart.map((item) => ({
+        id: item.id,
+        name: item.name,
+        type: item.type,
+        panel_type: item.panel_type,
+        panel_slot_snapshot_banner_type: item.panel_slot_snapshot?.banner_type,
+        district: item.district,
+        price: item.price,
+      }))
+    );
+
     cart.forEach((item) => {
       const panelType =
         item.panel_type || item.panel_slot_snapshot?.banner_type || 'panel';
+
+      console.log('🔍 Cart - Item classification:', {
+        itemId: item.id,
+        itemName: item.name,
+        itemType: item.type,
+        panelType: panelType,
+        isLED: item.type === 'led-display',
+        isTopFixed: item.type === 'banner-display' && panelType === 'top_fixed',
+        shouldBeConsulting:
+          item.type === 'led-display' ||
+          (item.type === 'banner-display' && panelType === 'top_fixed'),
+      });
 
       // 상담신청: LED 전자게시대 전체, 상단광고(용산구/송파구)
       if (
@@ -477,11 +505,13 @@ export default function Cart() {
         (item.type === 'banner-display' && panelType === 'top_fixed')
       ) {
         consultingItems.push(item);
+        console.log('🔍 Cart - Added to consulting items:', item.name);
         return;
       }
 
       // 결제신청: 현수막게시대 전체 구
       paymentItems.push(item);
+      console.log('🔍 Cart - Added to payment items:', item.name);
     });
 
     // 결제신청 아이템들을 구별로 분류
@@ -493,6 +523,22 @@ export default function Cart() {
         districtGroups[district] = [];
       }
       districtGroups[district].push(item);
+    });
+
+    console.log('🔍 Cart - Final classification result:', {
+      consultingItemsCount: consultingItems.length,
+      paymentItemsCount: paymentItems.length,
+      consultingItems: consultingItems.map((item) => ({
+        id: item.id,
+        name: item.name,
+        type: item.type,
+      })),
+      paymentItems: paymentItems.map((item) => ({
+        id: item.id,
+        name: item.name,
+        type: item.type,
+        district: item.district,
+      })),
     });
 
     return {
@@ -1071,7 +1117,7 @@ export default function Cart() {
         },
         body: JSON.stringify({
           action: 'requestAdminApproval',
-          orderId: orderData.data.id,
+          orderId: orderData.order.orderId,
         }),
       });
 

@@ -47,9 +47,14 @@ export default function DistrictCard({
 }: DistrictCardProps) {
   const isGangbuk = district.code === 'gangbuk';
   const isMaintenance = district.panel_status === 'maintenance';
+  // 기간 데이터를 URL 파라미터로 전달
+  const periodParams = district.period
+    ? `?period=${encodeURIComponent(JSON.stringify(district.period))}`
+    : '';
+
   const href = isGangbuk
     ? 'https://gangbuk.uriad.com/sub03-01.jsp'
-    : `/${basePath}/${encodeURIComponent(district.code)}`;
+    : `/${basePath}/${encodeURIComponent(district.code)}${periodParams}`;
 
   const [imageError, setImageError] = useState(false);
 

@@ -392,80 +392,78 @@ async function getAllDistrictsData() {
     // 5. 각 구별로 신청기간과 계좌번호 정보를 가져와서 조합
     const processedDistricts = await Promise.all(
       basicDistricts.map(async (district) => {
-        // 현재 월 계산
-        const currentDate = new Date();
-        const currentYearMonth = `${currentDate.getFullYear()}-${String(
-          currentDate.getMonth() + 1
-        ).padStart(2, '0')}`;
+        // 한국 시간대로 현재 날짜 계산
+        const now = new Date();
+        const koreaTime = new Date(now.getTime() + 9 * 60 * 60 * 1000); // UTC+9 (한국시간)
+        const currentYear = koreaTime.getFullYear();
+        const currentMonth = koreaTime.getMonth() + 1;
+        const currentDay = koreaTime.getDate();
 
-        // 신청기간 가져오기 (현재 월 데이터 - 상반기와 하반기 모두)
+        // 현재 날짜에 따라 신청 가능한 기간 계산
+        let targetYear = currentYear;
+        let targetMonth = currentMonth;
+
+        // 7일 전까지 신청 가능하므로 6일 전부터는 다음 기간 표시
+        // 예: 7월 13일이면 8월 상하반기 신청 가능
+        if (currentDay >= 13) {
+          // 13일 이후면 다음달로 설정
+          if (currentMonth === 12) {
+            targetYear = currentYear + 1;
+            targetMonth = 1;
+          } else {
+            targetMonth = currentMonth + 1;
+          }
+        }
+
+        const targetYearMonth = `${targetYear}-${String(targetMonth).padStart(
+          2,
+          '0'
+        )}`;
+
+        console.log(`🔍 기간 계산 for ${district.name}:`, {
+          koreaTime: koreaTime.toISOString().split('T')[0],
+          currentYear,
+          currentMonth,
+          currentDay,
+          targetYear,
+          targetMonth,
+          targetYearMonth,
+        });
+
         const { data: periodDataList, error: periodError } = await supabase
           .from('region_gu_display_periods')
           .select('*')
           .eq('region_gu_id', district.id)
           .eq('display_type_id', (await getBannerDisplayTypeId()).id)
-          .eq('year_month', currentYearMonth);
+          .eq('year_month', targetYearMonth)
+          .order('period_from', { ascending: true });
 
-        // DB에 데이터가 없어도 에러를 반환하지 않고 이번달 기간으로 계산
         console.log(`🔍 Period data for ${district.name}:`, {
           periodDataList,
           periodError,
-          currentYearMonth,
         });
 
-        // 이번달 16일~말일 계산 (2차는 항상 고정)
-        const now = new Date();
-        console.log('🔍 Current year:', now.getFullYear());
-        console.log('🔍 Current month:', now.getMonth() + 1); // 1-based (1=January, 7=July)
-        const secondHalfStart = new Date(now.getFullYear(), now.getMonth(), 16);
-        const secondHalfEnd = new Date(
-          now.getFullYear(),
-          now.getMonth() + 1,
-          0
-        );
-
-        // 날짜를 YYYY-MM-DD 형식으로 변환 (로컬 시간 기준)
-        const formatDate = (date: Date) => {
-          const year = date.getFullYear();
-          const month = String(date.getMonth() + 1).padStart(2, '0');
-          const day = String(date.getDate()).padStart(2, '0');
-          return `${year}-${month}-${day}`;
-        };
-
-        let currentPeriodData;
+        let currentPeriodData = null;
 
         if (periodDataList && periodDataList.length > 0 && !periodError) {
-          // DB에서 상반기와 하반기 데이터 찾기
-          const firstHalfData = periodDataList.find(
-            (p) => p.half_period === 'first_half'
-          );
-          const secondHalfData = periodDataList.find(
-            (p) => p.half_period === 'second_half'
-          );
+          // DB에서 가져온 기간 데이터 사용
+          const periods = periodDataList.map((p) => ({
+            period_from: p.period_from,
+            period_to: p.period_to,
+            period: p.period,
+            year_month: p.year_month,
+          }));
 
-          currentPeriodData = {
-            first_half_from:
-              firstHalfData?.period_from ||
-              formatDate(new Date(now.getFullYear(), now.getMonth(), 1)),
-            first_half_to:
-              firstHalfData?.period_to ||
-              formatDate(new Date(now.getFullYear(), now.getMonth(), 15)),
-            second_half_from:
-              secondHalfData?.period_from || formatDate(secondHalfStart),
-            second_half_to:
-              secondHalfData?.period_to || formatDate(secondHalfEnd),
-          };
-        } else {
-          // DB에 데이터가 없으면 둘 다 이번달 계산값 사용
-          const firstHalfStart = new Date(now.getFullYear(), now.getMonth(), 1);
-          const firstHalfEnd = new Date(now.getFullYear(), now.getMonth(), 15);
-
-          currentPeriodData = {
-            first_half_from: formatDate(firstHalfStart),
-            first_half_to: formatDate(firstHalfEnd),
-            second_half_from: formatDate(secondHalfStart),
-            second_half_to: formatDate(secondHalfEnd),
-          };
+          // 첫 번째와 두 번째 기간을 상하반기로 매핑
+          if (periods.length >= 1) {
+            currentPeriodData = {
+              first_half_from: periods[0].period_from,
+              first_half_to: periods[0].period_to,
+              second_half_from:
+                periods.length >= 2 ? periods[1].period_from : null,
+              second_half_to: periods.length >= 2 ? periods[1].period_to : null,
+            };
+          }
         }
 
         // 계좌번호 정보 가져오기

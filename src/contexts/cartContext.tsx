@@ -17,6 +17,16 @@ export interface CartItem {
   is_company?: boolean; // 기업용 여부
   is_for_admin?: boolean; // 행정용 패널 여부
   panel_code?: string; // 패널 코드(번호)
+  // 기간 데이터 추가 (구별 카드에서 전달받은 데이터)
+  periodData?: {
+    first_half_from: string;
+    first_half_to: string;
+    second_half_from: string;
+    second_half_to: string;
+  };
+  // 선택된 기간의 시작/종료 날짜
+  selectedPeriodFrom?: string;
+  selectedPeriodTo?: string;
   panel_slot_snapshot?: {
     id: string | null;
     notes: string | null;

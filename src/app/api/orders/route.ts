@@ -49,55 +49,43 @@ export async function GET(request: NextRequest) {
 
     console.log('🔍 주문 목록 조회 시작 - 사용자 ID:', userId);
 
-    // 주문 내역 조회
-    const {
-      data: orders,
-      error: ordersError,
-      count,
-    } = await supabase
+    // 주문 목록 조회 (design_drafts 포함)
+    const { data: orders, error } = await supabase
       .from('orders')
       .select(
         `
         *,
+        design_drafts (
+          id,
+          draft_category,
+          file_name,
+          created_at,
+          is_approved
+        ),
         order_details (
           id,
+          name,
+          price,
+          quantity,
+          district,
+          panel_type,
           panel_info_id,
+          panel_slot_snapshot,
           panel_slot_usage_id,
-          slot_order_quantity,
-          display_start_date,
-          display_end_date,
-          half_period,
-          panel_info:panel_info_id (
-            nickname,
-            address,
-            panel_status,
-            panel_type,
-            region_gu:region_gu_id (
-              name
-            ),
-            region_dong:region_dong_id (
-              name
-            )
-          )
+          period,
+          selected_year,
+          selected_month
         )
-      `,
-        { count: 'exact' }
+      `
       )
       .eq('user_auth_id', userId)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
-    console.log('🔍 주문 목록 조회 결과:', {
-      ordersCount: orders?.length || 0,
-      ordersError,
-      count,
-      orderNumbers: orders?.map((o) => o.order_number) || [],
-    });
-
-    if (ordersError) {
-      console.error('Orders fetch error:', ordersError);
+    if (error) {
+      console.error('Orders fetch error:', error);
       return NextResponse.json(
-        { success: false, error: '주문 내역을 불러오는데 실패했습니다.' },
+        { success: false, error: '주문 목록을 불러오는데 실패했습니다.' },
         { status: 500 }
       );
     }
@@ -159,7 +147,7 @@ export async function GET(request: NextRequest) {
           payment_status: order.is_paid ? 'paid' : 'pending',
           order_date: order.created_at,
           year_month: order.year_month,
-          half_period: order.half_period,
+          period: order.period,
           order_items:
             order.order_details?.map(
               (detail: {
@@ -169,7 +157,7 @@ export async function GET(request: NextRequest) {
                 slot_order_quantity: number;
                 display_start_date: string;
                 display_end_date: string;
-                half_period?: string;
+                period?: string;
                 panel_info?: {
                   address: string;
                   nickname: string;
@@ -257,8 +245,8 @@ export async function GET(request: NextRequest) {
       pagination: {
         page,
         limit,
-        total: count || 0,
-        totalPages: Math.ceil((count || 0) / limit),
+        total: orders?.length || 0, // count 대신 실제 데이터 개수 사용
+        totalPages: Math.ceil((orders?.length || 0) / limit),
       },
       statusSummary,
     });
@@ -282,6 +270,16 @@ interface OrderItem {
   selectedMonth?: number; // 선택한 월
   startDate?: string;
   endDate?: string;
+  // 기간 데이터 추가 (구별 카드에서 전달받은 데이터)
+  periodData?: {
+    first_half_from: string;
+    first_half_to: string;
+    second_half_from: string;
+    second_half_to: string;
+  };
+  // 선택된 기간의 시작/종료 날짜
+  selectedPeriodFrom?: string;
+  selectedPeriodTo?: string;
   panel_slot_snapshot?: {
     id: string | null;
     notes: string | null;
@@ -311,9 +309,18 @@ export async function POST(request: NextRequest) {
     const {
       items,
       paymentMethod,
-    }: { items: OrderItem[]; paymentMethod?: string } = await request.json();
+      draftDeliveryMethod, // 시안 전송 방식 추가
+    }: {
+      items: OrderItem[];
+      paymentMethod?: string;
+      draftDeliveryMethod?: 'email' | 'upload';
+    } = await request.json();
 
-    console.log('🔍 받은 데이터:', { items, paymentMethod });
+    console.log('🔍 받은 데이터:', {
+      items,
+      paymentMethod,
+      draftDeliveryMethod,
+    });
 
     if (!items || items.length === 0) {
       console.log('🔍 주문할 상품이 없음');
@@ -378,16 +385,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 주문 메타데이터용으로 첫 번째 아이템의 기간 정보 사용 (실제로는 각 아이템별로 개별 처리)
-    const halfPeriod = firstItem.halfPeriod;
-    const selectedYear = firstItem.selectedYear;
-    const selectedMonth = firstItem.selectedMonth;
+    // 첫 번째 아이템의 기간 정보 추출
+    // const halfPeriod = firstItem.halfPeriod; // 사용하지 않으므로 주석 처리
+    // const yearMonth = firstItem.selectedYear && firstItem.selectedMonth
+    //   ? `${firstItem.selectedYear}년 ${firstItem.selectedMonth}월`
+    //   : '기간 미설정';
 
-    // year_month 계산 (선택된 년월이 있으면 사용, 없으면 현재 년월)
-    const yearMonth =
-      selectedYear && selectedMonth
-        ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`
-        : new Date().toISOString().slice(0, 7);
+    // 첫 번째 아이템의 panel_slot_snapshot 추출
+    const firstItemSnapshot = firstItem.panel_slot_snapshot;
 
     // 사용자의 기본 프로필 ID 가져오기
     const { data: userProfile, error: profileError } = await supabase
@@ -408,9 +413,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 첫 번째 아이템의 panel_slot_snapshot 가져오기 (가격 정보용)
-    const firstItemSnapshot = items[0]?.panel_slot_snapshot;
-
     // 결제 방법에 따른 결제 상태 결정
     const isPaid = paymentMethod === 'bank_transfer' ? false : true;
 
@@ -420,13 +422,14 @@ export async function POST(request: NextRequest) {
       .insert({
         user_profile_id: userProfile.id, // 기본 프로필 ID 사용
         user_auth_id: userId,
-        total_price: totalPrice,
-        is_paid: isPaid, // 계좌이체는 입금대기, 카드결제는 즉시 완료
-        is_checked: false,
-        payment_method: paymentMethod || 'card', // 기본값 설정
-        year_month: yearMonth,
-        half_period: halfPeriod, // 상반기/하반기 정보 추가
+        // total_price: totalPrice, // orders 테이블에 total_price 컬럼이 없으므로 제거
+        // is_paid: isPaid, // orders 테이블에 is_paid 컬럼이 없으므로 제거
+        // is_checked: false, // orders 테이블에 is_checked 컬럼이 없으므로 제거
+        // payment_method: paymentMethod || 'card', // orders 테이블에 payment_method 컬럼이 없으므로 제거
+        // year_month: yearMonth, // orders 테이블에 year_month 컬럼이 없으므로 제거
+        // half_period: halfPeriod, // orders 테이블에 half_period 컬럼이 없으므로 제거
         panel_slot_snapshot: firstItemSnapshot, // 가격 정보 저장
+        // draft_delivery_method는 design_drafts 테이블에 저장
       })
       .select()
       .single();
@@ -475,26 +478,102 @@ export async function POST(request: NextRequest) {
     for (const item of items) {
       console.log('🔍 주문 상세 생성 중:', item);
 
-      // 선택한 기간에 따른 시작/종료 날짜 계산
+      // 기간 데이터 사용 (구별 카드에서 전달받은 데이터)
       let displayStartDate: string;
       let displayEndDate: string;
 
-      if (item.selectedYear && item.selectedMonth && item.halfPeriod) {
-        // 사용자가 선택한 년월과 상반기/하반기로 날짜 계산
+      if (item.selectedPeriodFrom && item.selectedPeriodTo) {
+        // 장바구니에서 전달받은 기간 데이터 사용
+        displayStartDate = item.selectedPeriodFrom;
+        displayEndDate = item.selectedPeriodTo;
+
+        console.log('🔍 기간 데이터 사용:', {
+          itemId: item.id,
+          selectedPeriodFrom: item.selectedPeriodFrom,
+          selectedPeriodTo: item.selectedPeriodTo,
+        });
+      } else if (item.selectedYear && item.selectedMonth && item.halfPeriod) {
+        // 기존 로직 (fallback)
         const year = item.selectedYear;
         const month = item.selectedMonth;
 
-        // 다음달 검증
+        // 상하반기 신청 3일전까지 받는 조건으로 수정
         const currentDate = new Date();
         const currentYear = currentDate.getFullYear();
         const currentMonth = currentDate.getMonth() + 1;
-        const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
-        const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+        const currentDay = currentDate.getDate();
 
-        if (year !== nextYear || month !== nextMonth) {
-          throw new Error(
-            `다음달(${nextYear}년 ${nextMonth}월)만 선택 가능합니다.`
-          );
+        // 현재 월의 상반기(1-15일) 신청 가능 여부 확인
+        const isFirstHalfAvailable = currentDay <= 12; // 12일까지 신청 가능
+
+        // 현재 월의 하반기(16-마지막일) 신청 가능 여부 확인
+        const lastDayOfMonth = new Date(currentYear, currentMonth, 0).getDate();
+        const isSecondHalfAvailable = currentDay <= lastDayOfMonth - 3; // 마지막일 3일전까지 신청 가능
+
+        // 디버깅 로그 추가
+        console.log('🔍 기간 검증 디버깅 (fallback):', {
+          requestedYear: year,
+          requestedMonth: month,
+          requestedHalfPeriod: item.halfPeriod,
+          currentYear,
+          currentMonth,
+          currentDay,
+          isFirstHalfAvailable,
+          isSecondHalfAvailable,
+          lastDayOfMonth,
+        });
+
+        // 신청 가능한 기간인지 확인
+        let isPeriodAvailable = false;
+
+        if (year === currentYear && month === currentMonth) {
+          // 현재 월 신청
+          if (item.halfPeriod === 'first_half' && isFirstHalfAvailable) {
+            isPeriodAvailable = true;
+          } else if (
+            item.halfPeriod === 'second_half' &&
+            isSecondHalfAvailable
+          ) {
+            isPeriodAvailable = true;
+          }
+        } else if (year === currentYear && month === currentMonth + 1) {
+          // 다음 월 신청 (항상 가능)
+          isPeriodAvailable = true;
+        } else if (
+          currentMonth === 12 &&
+          year === currentYear + 1 &&
+          month === 1
+        ) {
+          // 12월에서 다음해 1월 신청 (항상 가능)
+          isPeriodAvailable = true;
+        }
+
+        console.log('🔍 기간 검증 결과:', {
+          isPeriodAvailable,
+          year,
+          month,
+          currentYear,
+          currentMonth,
+        });
+
+        if (!isPeriodAvailable) {
+          if (year === currentYear && month === currentMonth) {
+            if (item.halfPeriod === 'first_half') {
+              throw new Error(
+                `${currentMonth}월 상반기 신청은 ${currentMonth}월 ${
+                  Math.floor(lastDayOfMonth / 2) - 3
+                }일까지 가능합니다.`
+              );
+            } else {
+              throw new Error(
+                `${currentMonth}월 하반기 신청은 ${currentMonth}월 ${
+                  lastDayOfMonth - 3
+                }일까지 가능합니다.`
+              );
+            }
+          } else {
+            throw new Error(`신청 가능한 기간이 아닙니다.`);
+          }
         }
 
         if (item.halfPeriod === 'first_half') {
@@ -511,17 +590,30 @@ export async function POST(request: NextRequest) {
           )}-${lastDay}`;
         }
       } else {
-        // 기존 로직 (기본값)
-        displayStartDate =
-          item.startDate || new Date().toISOString().split('T')[0];
-        displayEndDate =
-          item.endDate ||
-          new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
-            .toISOString()
-            .split('T')[0];
+        // price_unit에 따른 자동 기간 계산 (기본값)
+        const priceUnit = item.panel_slot_snapshot?.price_unit || '15 days';
+        const startDate = new Date();
+        const endDate = new Date(startDate);
+
+        // price_unit에 따라 기간 계산
+        if (priceUnit === '15 days') {
+          endDate.setDate(startDate.getDate() + 15);
+        } else if (priceUnit === '30 days') {
+          endDate.setDate(startDate.getDate() + 30);
+        } else if (priceUnit === '7 days') {
+          endDate.setDate(startDate.getDate() + 7);
+        } else {
+          // 기본값: 15일
+          endDate.setDate(startDate.getDate() + 15);
+        }
+
+        displayStartDate = startDate.toISOString().split('T')[0];
+        displayEndDate = endDate.toISOString().split('T')[0];
       }
 
-      // 1. panel_slot_usage 레코드 생성 (order_details_id는 나중에 업데이트)
+      // 재고 중복 확인은 DB 트리거가 자동으로 처리
+
+      // 2. panel_slot_usage 레코드 생성 (order_details_id는 나중에 업데이트)
       let panelSlotUsageId = item.panel_slot_usage_id;
 
       if (!panelSlotUsageId && item.panel_slot_snapshot) {
@@ -536,27 +628,40 @@ export async function POST(request: NextRequest) {
         if (bannerError) {
           console.error('🔍 banner_slot_info 조회 오류:', bannerError);
         } else if (bannerSlotInfo) {
-          // panel_slot_usage 레코드 생성 (order_details_id는 나중에 설정)
-          const { data: newPanelSlotUsage, error: usageError } = await supabase
-            .from('panel_slot_usage')
-            .insert({
-              panel_info_id: item.panel_info_id,
-              slot_number: item.panel_slot_snapshot.slot_number,
-              banner_slot_info_id: bannerSlotInfo.id,
-              usage_type: 'banner_display',
-              attach_date_from: displayStartDate,
-              is_active: true,
-              is_closed: false,
-              banner_type: item.panel_slot_snapshot.banner_type || 'panel',
-            })
-            .select('id')
+          // panel_info에서 display_type_id 가져오기
+          const { data: panelInfo, error: panelError } = await supabase
+            .from('panel_info')
+            .select('display_type_id')
+            .eq('id', item.panel_info_id)
             .single();
 
-          if (usageError) {
-            console.error('🔍 panel_slot_usage 생성 오류:', usageError);
+          if (panelError) {
+            console.error('🔍 panel_info 조회 오류:', panelError);
           } else {
-            panelSlotUsageId = newPanelSlotUsage.id;
-            console.log('🔍 생성된 panel_slot_usage_id:', panelSlotUsageId);
+            // panel_slot_usage 레코드 생성 (order_details_id는 나중에 설정)
+            const { data: newPanelSlotUsage, error: usageError } =
+              await supabase
+                .from('panel_slot_usage')
+                .insert({
+                  display_type_id: panelInfo.display_type_id,
+                  panel_info_id: item.panel_info_id,
+                  slot_number: item.panel_slot_snapshot.slot_number,
+                  banner_slot_info_id: bannerSlotInfo.id,
+                  usage_type: 'banner_display',
+                  attach_date_from: displayStartDate,
+                  is_active: true,
+                  is_closed: false,
+                  banner_type: item.panel_slot_snapshot.banner_type || 'panel',
+                })
+                .select('id')
+                .single();
+
+            if (usageError) {
+              console.error('🔍 panel_slot_usage 생성 오류:', usageError);
+            } else {
+              panelSlotUsageId = newPanelSlotUsage.id;
+              console.log('🔍 생성된 panel_slot_usage_id:', panelSlotUsageId);
+            }
           }
         }
       }
@@ -569,7 +674,7 @@ export async function POST(request: NextRequest) {
         slot_order_quantity: item.quantity,
         display_start_date: displayStartDate,
         display_end_date: displayEndDate,
-        half_period: item.halfPeriod, // 상반기/하반기 정보 추가
+        // half_period 컬럼이 없으므로 제거
       };
 
       orderDetails.push(orderDetail);
@@ -581,7 +686,7 @@ export async function POST(request: NextRequest) {
     const orderDetailsResult = await supabase
       .from('order_details')
       .insert(orderDetails)
-      .select('id, panel_slot_usage_id');
+      .select('id, panel_slot_usage_id, panel_info_id, slot_order_quantity');
 
     console.log('🔍 주문 상세 정보 생성 결과:', orderDetailsResult);
 
@@ -593,27 +698,62 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 생성된 order_details의 panel_slot_usage_id 업데이트
+    // 생성된 order_details의 panel_slot_usage_id 업데이트 (재고는 DB 트리거가 자동 처리)
     if (orderDetailsResult.data) {
       for (const orderDetail of orderDetailsResult.data) {
         if (orderDetail.panel_slot_usage_id) {
-          const { error: updateError } = await supabase
-            .from('panel_slot_usage')
-            .update({ order_details_id: orderDetail.id })
-            .eq('id', orderDetail.panel_slot_usage_id);
+          try {
+            // panel_slot_usage의 order_details_id 업데이트
+            const { error: updateError } = await supabase
+              .from('panel_slot_usage')
+              .update({ order_details_id: orderDetail.id })
+              .eq('id', orderDetail.panel_slot_usage_id);
 
-          if (updateError) {
-            console.error(
-              '🔍 panel_slot_usage order_details_id 업데이트 오류:',
-              updateError
-            );
-          } else {
-            console.log(
-              '🔍 panel_slot_usage order_details_id 업데이트 성공:',
-              orderDetail.id
-            );
+            if (updateError) {
+              console.error(
+                '🔍 panel_slot_usage order_details_id 업데이트 오류:',
+                updateError
+              );
+            } else {
+              console.log(
+                '🔍 panel_slot_usage order_details_id 업데이트 성공:',
+                orderDetail.id
+              );
+            }
+          } catch (error) {
+            console.error('🔍 panel_slot_usage 업데이트 중 예외 발생:', error);
+            // 이 에러는 치명적이지 않으므로 계속 진행
           }
         }
+      }
+    }
+
+    // 결제 완료 시 시안관리 레코드 자동 생성
+    if (isPaid && userProfile.id) {
+      const { data: draft, error: draftError } = await supabase
+        .from('design_drafts')
+        .insert({
+          order_id: order.id,
+          user_profile_id: userProfile.id,
+          draft_category: 'initial',
+          notes: `결제 완료 후 초기 시안 업로드 대기 (전송방식: ${
+            draftDeliveryMethod || 'upload'
+          })`,
+        })
+        .select()
+        .single();
+
+      if (draftError) {
+        console.warn('Failed to create draft record:', draftError);
+      } else {
+        // orders 테이블의 design_drafts_id와 draft_delivery_method 업데이트
+        await supabase
+          .from('orders')
+          .update({
+            design_drafts_id: draft.id,
+            draft_delivery_method: draftDeliveryMethod || 'upload',
+          })
+          .eq('id', order.id);
       }
     }
 
@@ -623,6 +763,17 @@ export async function POST(request: NextRequest) {
       totalPrice: totalPrice,
       itemCount: items.length,
     });
+
+    // 재고 현황 확인을 위한 로그 추가
+    console.log('🔍 재고 현황 확인:');
+    for (const item of items) {
+      const { data: inventoryData } = await supabase
+        .from('banner_slot_inventory')
+        .select('*')
+        .eq('panel_info_id', item.panel_info_id);
+
+      console.log(`  - 패널 ${item.panel_info_id}:`, inventoryData);
+    }
 
     return NextResponse.json({
       success: true,

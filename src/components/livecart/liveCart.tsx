@@ -38,6 +38,8 @@ export default function LiveCart() {
         return '패널형';
       case 'led':
         return 'LED전자게시대';
+      case 'top_fixed':
+        return '상단광고';
       default:
         return '현수막게시대';
     }
@@ -45,6 +47,24 @@ export default function LiveCart() {
   // 디버깅용: cart 배열 상태 확인
   console.log('🔍 Cart state in LiveCart:', cart);
   console.log('🔍 Cart length in LiveCart:', cart.length);
+
+  // 상단광고 아이템 디버깅
+  cart.forEach((item, index) => {
+    if (
+      item.panel_type === 'top_fixed' ||
+      item.panel_slot_snapshot?.banner_type === 'top_fixed'
+    ) {
+      console.log(`🔍 상단광고 아이템 ${index}:`, {
+        id: item.id,
+        name: item.name,
+        panel_type: item.panel_type,
+        panel_slot_snapshot: item.panel_slot_snapshot,
+        type: item.type,
+        district: item.district,
+        price: item.price,
+      });
+    }
+  });
 
   // 남은 시간 계산 (일반 아이템이 있을 때만)
   useEffect(() => {

@@ -1,3 +1,120 @@
+# 데이터베이스 스키마 및 설정
+
+## 재고관리 트리거 설정
+
+동시유저가 많은 서비스에서 재고 정확성을 보장하기 위해 PostgreSQL 트리거를 사용합니다.
+
+### 1. 트리거 설정 실행
+
+Supabase SQL Editor에서 다음 파일을 실행하세요:
+
+```sql
+-- sqls/inventory_triggers.sql 파일의 내용을 실행
+-- 기존 트리거와 충돌하지 않도록 새 이름으로 생성됨
+```
+
+### 2. 트리거 기능
+
+#### **자동 재고 감소**
+
+- `order_details` 테이블에 새 레코드 삽입 시 자동으로 `banner_slot_inventory`의 `available_slots` 감소
+- `closed_slots` 자동 증가
+- 재고 정보가 없으면 새로 생성
+
+#### **자동 재고 복구**
+
+- `order_details` 테이블에서 레코드 삭제 시 자동으로 `banner_slot_inventory`의 `available_slots` 복구
+- `closed_slots` 자동 감소
+
+#### **중복 예약 방지**
+
+- `panel_slot_usage` 테이블에 새 레코드 삽입 전에 같은 기간의 중복 예약 확인
+- 일반 현수막게시대만 확인 (상단광고는 제외)
+- 중복 발견 시 예외 발생
+
+#### **재고 부족 방지**
+
+- 주문 생성 전 재고 부족 여부 확인
+- 재고 부족 시 주문 생성 차단
+
+### 3. 성능 최적화
+
+#### **인덱스**
+
+- `banner_slot_inventory(panel_info_id)`
+- `panel_slot_usage(panel_info_id, is_active, is_closed)`
+- `order_details(panel_info_id)`
+
+#### **동시성 제어**
+
+- DB 레벨에서 트리거가 자동으로 동시성 제어
+- 애플리케이션 레벨에서 별도 처리 불필요
+
+### 4. 모니터링
+
+트리거 동작을 확인하려면:
+
+```sql
+-- 재고 현황 확인
+SELECT
+  panel_info_id,
+  total_slots,
+  available_slots,
+  closed_slots,
+  updated_at
+FROM banner_slot_inventory
+ORDER BY updated_at DESC;
+
+-- 최근 주문 확인
+SELECT
+  od.id,
+  od.panel_info_id,
+  od.slot_order_quantity,
+  od.display_start_date,
+  od.display_end_date,
+  od.created_at
+FROM order_details od
+ORDER BY od.created_at DESC
+LIMIT 10;
+```
+
+### 5. 트러블슈팅
+
+#### **트리거 비활성화**
+
+```sql
+-- 트리거 일시 비활성화
+ALTER TABLE order_details DISABLE TRIGGER banner_inventory_insert_trigger;
+ALTER TABLE order_details DISABLE TRIGGER banner_inventory_delete_trigger;
+ALTER TABLE order_details DISABLE TRIGGER inventory_check_trigger;
+ALTER TABLE panel_slot_usage DISABLE TRIGGER duplicate_banner_booking_trigger;
+```
+
+#### **트리거 재활성화**
+
+```sql
+-- 트리거 재활성화
+ALTER TABLE order_details ENABLE TRIGGER banner_inventory_insert_trigger;
+ALTER TABLE order_details ENABLE TRIGGER banner_inventory_delete_trigger;
+ALTER TABLE order_details ENABLE TRIGGER inventory_check_trigger;
+ALTER TABLE panel_slot_usage ENABLE TRIGGER duplicate_banner_booking_trigger;
+```
+
+#### **재고 현황 모니터링**
+
+```sql
+-- 재고 현황 뷰 조회
+SELECT * FROM inventory_status_view;
+
+-- 재고 부족 패널 확인
+SELECT * FROM inventory_status_view WHERE inventory_status = '재고부족';
+
+-- 매진 패널 확인
+SELECT * FROM inventory_status_view WHERE inventory_status = '매진';
+```
+
+## 기존 스키마 정보
+
 # 한성웹 프로젝트 데이터베이스 스키마
 
 ## 개요

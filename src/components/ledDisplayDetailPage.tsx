@@ -63,24 +63,7 @@ export default function LEDDisplayDetailPage({
     defaultView
   );
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [selectedDistrictBankInfo, setSelectedDistrictBankInfo] = useState<{
-    id: string;
-    bank_name: string;
-    account_number: string;
-    depositor: string;
-    region_gu: {
-      id: string;
-      name: string;
-    };
-    display_types: {
-      id: string;
-      name: string;
-    };
-  } | null>(null);
 
-  const [selectedDistrictLogo, setSelectedDistrictLogo] = useState<
-    string | null
-  >(null);
   // const [selectedHalfPeriod, setSelectedHalfPeriod] = useState<
   //   'first_half' | 'second_half'
   // >('first_half');
@@ -177,31 +160,10 @@ export default function LEDDisplayDetailPage({
       return;
     }
 
-    // 개별 구 페이지에서 다른 구를 선택했을 때 해당 구의 데이터 가져오기
+    // 개별 구 페이지에서 다른 구를 선택했을 때 해당 구의 페이지로 이동
     if (!isAllDistrictsView && item.option !== '전체보기') {
-      try {
-        // 선택된 구의 계좌번호 정보와 로고 가져오기
-        const bankResponse = await fetch(
-          `/api/region-gu?action=getByDistrict&district=${encodeURIComponent(
-            item.option
-          )}&displayType=led_display`
-        );
-        const bankResult = await bankResponse.json();
-        if (bankResult.success) {
-          setSelectedDistrictBankInfo(bankResult.data.bank_info);
-          setSelectedDistrictLogo(bankResult.data.logo_image_url);
-          console.log(
-            'Selected district bank info:',
-            bankResult.data.bank_info
-          );
-          console.log(
-            'Selected district logo:',
-            bankResult.data.logo_image_url
-          );
-        }
-      } catch (err) {
-        console.warn(`Failed to fetch data for ${item.option}:`, err);
-      }
+      const districtCode = getDistrictCode(item.option);
+      router.push(`/led-display/${districtCode}`);
     }
   };
 
@@ -557,13 +519,11 @@ export default function LEDDisplayDetailPage({
             {districtObj && (
               <Image
                 src={
-                  selectedDistrictLogo ||
-                  (selectedOption?.option &&
-                  selectedOption.option !== '전체보기'
+                  selectedOption?.option && selectedOption.option !== '전체보기'
                     ? `/images/district-icon/${getDistrictCode(
                         selectedOption.option
                       )}-gu.png`
-                    : districtObj.logo)
+                    : districtObj.logo
                 }
                 alt={selectedOption?.option || districtObj.name}
                 width={50}
@@ -579,10 +539,7 @@ export default function LEDDisplayDetailPage({
           {/* LED 전자게시대는 상시접수 */}
           <div className="mt-2 text-green-600 font-medium">상시접수</div>
 
-          <DistrictInfo
-            bankInfo={selectedDistrictBankInfo || bankInfo}
-            flexRow={true}
-          />
+          <DistrictInfo bankInfo={bankInfo} flexRow={true} />
         </div>
         {/* 상하반기 탭 - 개별 구 페이지에서만 표시
         {period && !isAllDistrictsView && (
