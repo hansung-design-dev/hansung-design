@@ -16,20 +16,14 @@ export async function GET(
         *,
         order_details (
           id,
-          name,
-          price,
-          quantity,
-          district,
-          panel_type,
+          slot_order_quantity,
+          display_start_date,
+          display_end_date,
           panel_info_id,
-          panel_slot_snapshot,
-          panel_slot_usage_id,
-          period,
-          selected_year,
-          selected_month
+          panel_slot_usage_id
         ),
         design_drafts (
-            id,
+          id,
           draft_category,
           file_name,
           created_at,

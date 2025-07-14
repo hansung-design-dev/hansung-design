@@ -9,6 +9,7 @@ import { useProfile } from '@/src/contexts/profileContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CartItem } from '@/src/contexts/cartContext';
 import { PaymentSuccessModal } from '@/src/components/modal/UserProfileModal';
+import CustomFileUpload from '@/src/components/ui/CustomFileUpload';
 
 interface BankInfo {
   id: string;
@@ -115,6 +116,11 @@ function PaymentPageContent() {
   useEffect(() => {
     setDraftDeliveryMethod(sendByEmail ? 'email' : 'upload');
   }, [sendByEmail]);
+
+  // paymentMethod 상태 변경 감지
+  useEffect(() => {
+    console.log('🔍 paymentMethod 상태 변경됨:', paymentMethod);
+  }, [paymentMethod]);
 
   // 승인된 주문의 아이템 정보 가져오기
   const fetchApprovedOrderItems = async (orderId: string) => {
@@ -628,17 +634,17 @@ function PaymentPageContent() {
                           파일업로드
                         </label>
                         <div className="flex-1 space-y-2">
-                          <input
-                            type="file"
-                            className={`border border-gray-300 py-2 w-full rounded ${
-                              sendByEmail ? 'opacity-50 cursor-not-allowed' : ''
-                            }`}
+                          {/* 커스텀 파일 업로드 */}
+                          <CustomFileUpload
+                            onFileSelect={(file) => {
+                              // 파일 선택 시 처리 (필요시 구현)
+                              console.log('Selected file:', file.name);
+                            }}
                             disabled={sendByEmail}
-                            readOnly={sendByEmail}
-                            defaultValue={
-                              sendByEmail ? 'hansung-design@example.com' : ''
-                            }
+                            placeholder="시안 파일을 선택해주세요"
+                            className="w-full md:w-[21.25rem] sm:w-[13rem] border border-gray-300 border-solid shadow-none rounded px-4 "
                           />
+
                           <div className="flex flex-col gap-2 items-start">
                             <div className="flex items-center gap-2">
                               <input
@@ -661,13 +667,6 @@ function PaymentPageContent() {
                               <span className="text-gray-600 font-medium text-sm h-[3rem] w-full md:w-[20rem] sm:w-[14.4rem] placeholder:pl-4">
                                 banner114@hanmail.net
                               </span>
-                            )}
-                            {!sendByEmail && (
-                              <input
-                                type="text"
-                                className="border border-gray-300 border-solid shadow-none rounded h-[3rem] w-full md:w-[20rem] sm:w-[14.4rem] placeholder:pl-4"
-                                placeholder="파일 이름"
-                              />
                             )}
                             <p className="text-xs text-gray-500 mt-2">
                               * 선택한 방식과 관계없이 결제 완료 후 시안관리
@@ -782,23 +781,33 @@ function PaymentPageContent() {
               <h3 className="text-1.25 font-700 mb-4 sm:text-1">결제수단</h3>
               <div className="flex flex-col gap-3 items-center justify-center">
                 <button
-                  className={`hover:cursor-pointer border rounded-[0.375rem] px-4 py-6 w-full text-1.25 font-700 sm:text-1 sm:py-4 ${
+                  className={`hover:cursor-pointer border-solid rounded-[0.375rem] px-4 py-6 w-full text-1.25 font-700 sm:text-1 sm:py-4 ${
                     paymentMethod === 'card'
-                      ? 'border-black bg-black text-white'
+                      ? 'border-black border-[0.1rem] hover:bg-gray-3 text-black shadow-sm'
                       : 'border-gray-3 bg-gray-11'
                   }`}
-                  onClick={() => setPaymentMethod('card')}
+                  onClick={() => {
+                    console.log('🔍 신용카드 버튼 클릭됨');
+                    console.log('🔍 현재 paymentMethod:', paymentMethod);
+                    console.log('🔍 클릭 후 paymentMethod:', 'card');
+                    setPaymentMethod('card');
+                  }}
                 >
                   신용 · 체크카드
                 </button>
 
                 <button
-                  className={`border rounded-[0.375rem] px-4 py-6 w-full text-1.25 font-700 sm:text-1 sm:py-4 ${
+                  className={`hover:cursor-pointer border-solid rounded-[0.375rem] px-4 py-6 w-full text-1.25 font-700 sm:text-1 sm:py-4 ${
                     paymentMethod === 'bank_transfer'
-                      ? 'border-black bg-black text-white'
+                      ? 'border-black border-[0.1rem] hover:bg-gray-3 text-black shadow-sm'
                       : 'border-gray-3 bg-gray-11'
                   }`}
-                  onClick={() => setPaymentMethod('bank_transfer')}
+                  onClick={() => {
+                    console.log('🔍 계좌이체 버튼 클릭됨');
+                    console.log('🔍 현재 paymentMethod:', paymentMethod);
+                    console.log('🔍 클릭 후 paymentMethod:', 'bank_transfer');
+                    setPaymentMethod('bank_transfer');
+                  }}
                 >
                   계좌이체
                 </button>

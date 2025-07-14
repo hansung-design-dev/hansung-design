@@ -50,7 +50,8 @@ export async function GET(request: NextRequest) {
         created_at,
         updated_at,
         draft_delivery_method,
-        design_drafts!design_drafts_order_id_fkey (
+        design_draft_id,
+        design_drafts (
           id,
           project_name,
           draft_category,
@@ -131,14 +132,23 @@ export async function GET(request: NextRequest) {
           draft_delivery_method: order.draft_delivery_method,
           design_drafts: order.design_drafts || [],
           order_details:
-            order.order_details?.map((detail: any) => ({
-              id: detail.id,
-              project_name:
-                order.design_drafts?.[0]?.project_name || '작업명 없음',
-              quantity: detail.slot_order_quantity || 1,
-              unit_price: 0, // 임시로 0 설정
-              total_price: 0, // 임시로 0 설정
-            })) || [],
+            order.order_details?.map((detail: any) => {
+              let unitPrice = 0;
+              if (detail.panel_slot_usage_id) {
+                const slotUsage = order.panel_slot_usages?.find(
+                  (u: any) => u.id === detail.panel_slot_usage_id
+                );
+                unitPrice = slotUsage?.unit_price || 0;
+              }
+              return {
+                id: detail.id,
+                project_name:
+                  order.design_drafts?.[0]?.project_name || '작업명 없음',
+                quantity: detail.slot_order_quantity || 1,
+                unit_price: unitPrice,
+                total_price: unitPrice * (detail.slot_order_quantity || 1),
+              };
+            }) || [],
         };
       }) || [];
 

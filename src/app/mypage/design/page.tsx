@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/src/contexts/authContext';
-
-import { useRouter } from 'next/navigation';
+import { Button } from '@/src/components/button/button';
 import MypageContainer from '@/src/components/mypageContainer';
+import { useAuth } from '@/src/contexts/authContext';
+import { useRouter } from 'next/navigation';
+import CustomFileUpload from '@/src/components/ui/CustomFileUpload';
 
 interface DesignDraft {
   id: string;
@@ -28,33 +29,23 @@ interface Order {
 }
 
 export default function DesignPage() {
-  const { user } = useAuth();
-  const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'upload' | 'view'>('upload');
   const [uploadingFile, setUploadingFile] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!user) {
-      router.push('/signin');
-      return;
-    }
-
-    fetchOrders();
-  }, [user, router]);
+  const { user } = useAuth();
+  const router = useRouter();
 
   const fetchOrders = async () => {
     try {
+      setLoading(true);
       const response = await fetch('/api/orders');
       const data = await response.json();
 
       if (data.success) {
-        // 결제 완료된 주문만 필터링 (일반 결제 완료 또는 어드민 승인 후 결제 완료)
-        const completedOrders = data.data.filter(
-          (order: Order) =>
-            order.payment_status === 'completed' ||
-            (order.admin_approval_status === 'approved' &&
-              order.payment_status === 'completed')
+        // 결제 완료된 주문만 필터링
+        const completedOrders = (data.data || []).filter(
+          (order: Order) => order.payment_status === 'completed'
         );
         setOrders(completedOrders);
       }
@@ -65,48 +56,29 @@ export default function DesignPage() {
     }
   };
 
+  useEffect(() => {
+    if (user) {
+      fetchOrders();
+    }
+  }, [user]);
+
   const handleFileUpload = async (orderId: string, file: File) => {
-    if (!file) return;
-
-    setUploadingFile(orderId);
-
     try {
-      // 파일 업로드 (실제 구현에서는 파일 스토리지 서비스 사용)
+      setUploadingFile(orderId);
       const formData = new FormData();
       formData.append('file', file);
       formData.append('orderId', orderId);
 
-      const uploadResponse = await fetch('/api/design-drafts/upload', {
+      const response = await fetch('/api/design-drafts/upload', {
         method: 'POST',
         body: formData,
       });
 
-      const uploadData = await uploadResponse.json();
-
-      if (uploadData.success) {
-        // 시안 정보 업데이트
-        const updateResponse = await fetch('/api/design-drafts', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            action: 'updateDraft',
-            draftId: uploadData.data.draftId,
-            file_name: file.name,
-            file_url: uploadData.data.fileUrl,
-            file_extension: file.name.split('.').pop(),
-            file_size: file.size,
-            notes: '사용자가 업로드한 시안',
-          }),
-        });
-
-        const updateData = await updateResponse.json();
-
-        if (updateData.success) {
-          // 주문 목록 새로고침
-          fetchOrders();
-        }
+      if (response.ok) {
+        // 업로드 성공 후 주문 목록 새로고침
+        fetchOrders();
+      } else {
+        alert('파일 업로드에 실패했습니다.');
       }
     } catch (error) {
       console.error('File upload failed:', error);
@@ -151,33 +123,47 @@ export default function DesignPage() {
     <MypageContainer activeTab="시안관리">
       <h1 className="text-2xl font-bold mb-8">시안 관리</h1>
 
-      <div className="space-y-6">
-        {orders.length === 0 ? (
-          <div className="border border-gray-200 rounded-lg p-6 bg-white shadow-sm">
-            <div className="text-center py-8">
-              <p className="text-gray-500 mb-4">
-                시안 업로드할 주문이 없습니다.
-              </p>
-            </div>
+      {/* 탭 네비게이션 */}
+      <div className="flex border-b border-gray-200 mb-6">
+        <button
+          onClick={() => setActiveTab('upload')}
+          className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
+            activeTab === 'upload'
+              ? 'border-blue-500 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          시안 업로드
+        </button>
+        <button
+          onClick={() => setActiveTab('view')}
+          className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
+            activeTab === 'view'
+              ? 'border-blue-500 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          업로드된 시안
+        </button>
+      </div>
 
-            {/* 시안 업로드 탭 */}
-            <div className="border-t pt-4">
-              <h4 className="font-medium mb-3">시안 업로드</h4>
-              <div className="text-center py-4 text-gray-500">
-                업로드할 주문이 없습니다.
-              </div>
-            </div>
-
-            {/* 업로드된 시안 탭 */}
-            <div className="border-t pt-4 mt-4">
-              <h4 className="font-medium mb-3">업로드된 시안</h4>
-              <div className="text-center py-4 text-gray-500">
-                업로드된 시안이 없습니다.
-              </div>
-            </div>
-          </div>
-        ) : (
-          orders.map((order) => (
+      {orders.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-gray-500 mb-4">
+            {activeTab === 'upload'
+              ? '시안 업로드할 주문이 없습니다.'
+              : '업로드된 시안이 없습니다.'}
+          </p>
+          <Button
+            onClick={() => router.push('/')}
+            className="bg-black text-white px-6 py-2 rounded"
+          >
+            홈으로 가기
+          </Button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {orders.map((order) => (
             <div
               key={order.id}
               className="border border-gray-200 rounded-lg p-6 bg-white shadow-sm"
@@ -195,16 +181,6 @@ export default function DesignPage() {
                       작업명: {order.design_drafts[0].project_name}
                     </p>
                   )}
-                  {order.draft_delivery_method === 'email' && (
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className="text-sm text-blue-600 font-medium">
-                        이메일로 보내기 신청
-                      </span>
-                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                        {user?.email}
-                      </span>
-                    </div>
-                  )}
                 </div>
                 <div className="text-right">
                   <p className="text-lg font-bold">
@@ -214,54 +190,56 @@ export default function DesignPage() {
                 </div>
               </div>
 
-              <div className="border-t pt-4">
-                <h4 className="font-medium mb-3">시안 업로드</h4>
-
-                {/* 이메일로 보내기 신청한 경우 안내 메시지 */}
-                {order.draft_delivery_method === 'email' && (
-                  <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-sm text-blue-800 mb-2">
-                      이메일로 시안을 받기로 신청하셨지만, 추가로 홈페이지에서도
-                      시안을 업로드할 수 있습니다.
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id={`upload-checkbox-${order.id}`}
-                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <label
-                        htmlFor={`upload-checkbox-${order.id}`}
-                        className="text-sm text-blue-700"
-                      >
-                        홈페이지에서도 시안 업로드하기
-                      </label>
-                    </div>
-                  </div>
-                )}
-
-                {/* 파일 업로드 */}
-                <div className="mb-4">
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx,.txt,.hwp,.ai,.jpg,.jpeg,.png"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        handleFileUpload(order.id, file);
-                      }
-                    }}
-                    disabled={uploadingFile === order.id}
-                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-black file:text-white hover:file:bg-gray-800"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    지원 형식: PDF, Word, 텍스트, 한글, AI, JPG, JPEG, PNG
-                  </p>
+              {order.draft_delivery_method === 'email' && (
+                <div className="flex items-center gap-2 mt-2 mb-4">
+                  <span className="text-sm text-blue-600 font-medium">
+                    이메일로 보내기:
+                  </span>
+                  <span className="text-xs  text-blue-800 px-2 py-1 rounded">
+                    banner114@hanmail.net
+                  </span>
                 </div>
+              )}
 
-                {/* 기존 시안 목록 */}
-                <div className="space-y-2">
-                  <h5 className="font-medium text-sm">업로드된 시안</h5>
+              {activeTab === 'upload' ? (
+                <div className="space-y-4">
+                  {/* 이메일로 보내기 신청한 경우 안내 메시지 */}
+                  {order.draft_delivery_method === 'email' && (
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id={`upload-checkbox-${order.id}`}
+                          className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <label
+                          htmlFor={`upload-checkbox-${order.id}`}
+                          className="text-sm text-blue-700"
+                        >
+                          홈페이지에서도 시안 업로드하기
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 커스텀 파일 업로드 */}
+                  <CustomFileUpload
+                    onFileSelect={(file) => handleFileUpload(order.id, file)}
+                    disabled={uploadingFile === order.id}
+                    placeholder="시안 파일을 선택해주세요"
+                  />
+
+                  {uploadingFile === order.id && (
+                    <div className="text-center py-2">
+                      <span className="text-sm text-gray-500">
+                        업로드 중...
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {/* 업로드된 시안 목록 */}
                   {order.design_drafts && order.design_drafts.length > 0 ? (
                     order.design_drafts.map((draft) => (
                       <div
@@ -298,17 +276,11 @@ export default function DesignPage() {
                     </div>
                   )}
                 </div>
-
-                {uploadingFile === order.id && (
-                  <div className="text-center py-2">
-                    <span className="text-sm text-gray-500">업로드 중...</span>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
     </MypageContainer>
   );
 }
