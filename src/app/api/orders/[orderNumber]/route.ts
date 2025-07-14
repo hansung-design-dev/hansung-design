@@ -29,7 +29,7 @@ export async function GET(
           selected_month
         ),
         design_drafts (
-          id,
+            id,
           draft_category,
           file_name,
           created_at,

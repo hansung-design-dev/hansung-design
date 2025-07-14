@@ -3,7 +3,9 @@ import { supabase } from '@/src/lib/supabase';
 
 export async function POST() {
   try {
-    console.log('🔧 Fixing period-based inventory management...');
+    console.log(
+      '🔧 Fixing period-based inventory management with new approach...'
+    );
 
     // 1. 기존 트리거 삭제
     await supabase.rpc('exec_sql', {
@@ -14,7 +16,7 @@ export async function POST() {
       `,
     });
 
-    // 2. 기간별 재고 관리 함수들 생성
+    // 2. 개선된 기간별 재고 관리 함수들 생성
     await supabase.rpc('exec_sql', {
       sql: `
         -- 주문 시 특정 기간의 재고만 감소
@@ -184,41 +186,124 @@ export async function POST() {
       `,
     });
 
-    // 4. 기간별 재고 현황 확인을 위한 뷰 업데이트
+    // 4. 디버깅을 위한 유틸리티 함수 생성
     await supabase.rpc('exec_sql', {
       sql: `
-        CREATE OR REPLACE VIEW inventory_status_view AS
-        SELECT 
-          pi.id as panel_info_id,
-          pi.nickname as panel_name,
-          pi.address,
-          rgu.name as district,
-          rgdp.year_month,
-          rgdp.period,
-          rgdp.period_from,
-          rgdp.period_to,
-          bsi.total_slots,
-          bsi.available_slots,
-          bsi.closed_slots,
-          CASE 
-            WHEN bsi.available_slots = 0 THEN '매진'
-            WHEN bsi.available_slots <= bsi.total_slots * 0.2 THEN '재고부족'
-            ELSE '재고있음'
-          END as inventory_status,
-          bsi.updated_at as last_updated
-        FROM panel_info pi
-        LEFT JOIN region_gu rgu ON pi.region_gu_id = rgu.id
-        LEFT JOIN banner_slot_inventory bsi ON pi.id = bsi.panel_info_id
-        LEFT JOIN region_gu_display_periods rgdp ON bsi.region_gu_display_period_id = rgdp.id
-        WHERE pi.display_type_id = (SELECT id FROM display_types WHERE name = 'banner_display')
-        ORDER BY rgdp.year_month DESC, rgdp.period, bsi.updated_at DESC;
+        -- 디버깅을 위한 유틸리티 함수
+        CREATE OR REPLACE FUNCTION debug_order_period_matching(
+          p_panel_info_id UUID,
+          p_display_start_date DATE,
+          p_display_end_date DATE
+        ) RETURNS TABLE(
+          period_id UUID,
+          year_month TEXT,
+          period TEXT,
+          period_from DATE,
+          period_to DATE,
+          matched BOOLEAN
+        ) AS $$
+        BEGIN
+          RETURN QUERY
+          SELECT 
+            rgdp.id as period_id,
+            rgdp.year_month,
+            rgdp.period,
+            rgdp.period_from,
+            rgdp.period_to,
+            CASE 
+              WHEN (
+                (p_display_start_date >= rgdp.period_from AND p_display_end_date <= rgdp.period_to)
+                OR
+                (p_display_start_date <= rgdp.period_to AND p_display_end_date >= rgdp.period_from)
+              ) THEN true
+              ELSE false
+            END as matched
+          FROM region_gu_display_periods rgdp
+          JOIN panel_info pi ON pi.region_gu_id = rgdp.region_gu_id
+          WHERE pi.id = p_panel_info_id
+            AND rgdp.display_type_id = pi.display_type_id;
+        END;
+        $$ LANGUAGE plpgsql;
       `,
     });
 
-    console.log('✅ Period-based inventory management fixed successfully');
+    // 5. 재고 현황 확인 함수 생성
+    await supabase.rpc('exec_sql', {
+      sql: `
+        -- 재고 현황 확인 함수
+        CREATE OR REPLACE FUNCTION get_inventory_status(
+          p_panel_info_id UUID DEFAULT NULL
+        ) RETURNS TABLE(
+          panel_info_id UUID,
+          panel_name TEXT,
+          district TEXT,
+          year_month TEXT,
+          period TEXT,
+          period_from DATE,
+          period_to DATE,
+          total_slots INTEGER,
+          available_slots INTEGER,
+          closed_slots INTEGER,
+          inventory_status TEXT
+        ) AS $$
+        BEGIN
+          RETURN QUERY
+          SELECT 
+            pi.id as panel_info_id,
+            pi.nickname as panel_name,
+            rgu.name as district,
+            rgdp.year_month,
+            rgdp.period,
+            rgdp.period_from,
+            rgdp.period_to,
+            bsi.total_slots,
+            bsi.available_slots,
+            bsi.closed_slots,
+            CASE 
+              WHEN bsi.available_slots = 0 THEN '매진'
+              WHEN bsi.available_slots <= bsi.total_slots * 0.2 THEN '재고부족'
+              ELSE '재고있음'
+            END as inventory_status
+          FROM panel_info pi
+          LEFT JOIN region_gu rgu ON pi.region_gu_id = rgu.id
+          LEFT JOIN banner_slot_inventory bsi ON pi.id = bsi.panel_info_id
+          LEFT JOIN region_gu_display_periods rgdp ON bsi.region_gu_display_period_id = rgdp.id
+          WHERE pi.display_type_id = (SELECT id FROM display_types WHERE name = 'banner_display')
+            AND (p_panel_info_id IS NULL OR pi.id = p_panel_info_id)
+          ORDER BY rgdp.year_month DESC, rgdp.period, bsi.updated_at DESC;
+        END;
+        $$ LANGUAGE plpgsql;
+      `,
+    });
+
+    // 6. 성능 최적화를 위한 인덱스 추가
+    await supabase.rpc('exec_sql', {
+      sql: `
+        CREATE INDEX IF NOT EXISTS idx_banner_slot_inventory_panel_period 
+        ON banner_slot_inventory(panel_info_id, region_gu_display_period_id);
+
+        CREATE INDEX IF NOT EXISTS idx_order_details_display_dates 
+        ON order_details(panel_info_id, display_start_date, display_end_date);
+
+        CREATE INDEX IF NOT EXISTS idx_region_gu_display_periods_dates 
+        ON region_gu_display_periods(region_gu_id, display_type_id, period_from, period_to);
+      `,
+    });
+
+    console.log(
+      '✅ Period-based inventory management fixed successfully with new approach'
+    );
     return NextResponse.json({
       success: true,
-      message: '기간별 재고 관리가 성공적으로 수정되었습니다.',
+      message:
+        '기간별 재고 관리가 성공적으로 수정되었습니다. (새로운 접근 방식)',
+      features: [
+        '정확한 기간 매칭 (display_start_date + display_end_date 사용)',
+        '기간 겹침 로직 개선 (완전 겹침 + 부분 겹침)',
+        '디버깅 유틸리티 함수 추가',
+        '재고 현황 확인 함수 추가',
+        '성능 최적화 인덱스 추가',
+      ],
     });
   } catch (error) {
     console.error('❌ Error fixing inventory management:', error);

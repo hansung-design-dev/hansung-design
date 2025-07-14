@@ -45,6 +45,7 @@ function PaymentPageContent() {
   >('upload');
   const [isApprovedOrder, setIsApprovedOrder] = useState(false);
   const [taxInvoice, setTaxInvoice] = useState(false);
+  const [isAgreedCaution, setIsAgreedCaution] = useState(false);
 
   // 패널 타입 표시 함수
   const getPanelTypeDisplay = (panelType: string) => {
@@ -241,6 +242,11 @@ function PaymentPageContent() {
       return;
     }
 
+    if (!isAgreedCaution) {
+      setError('유의사항에 동의해주세요.');
+      return;
+    }
+
     setIsProcessing(true);
     setError(null);
 
@@ -310,6 +316,7 @@ function PaymentPageContent() {
           paymentMethod: paymentMethod,
           draftDeliveryMethod: draftDeliveryMethod, // 시안 전송 방식 추가
           isRequireTaxFiling: taxInvoice, // 세금계산서 신청 여부 추가
+          isAgreedCaution: isAgreedCaution, // 유의사항 동의 여부 추가
         }),
       });
 
@@ -366,6 +373,7 @@ function PaymentPageContent() {
           userProfileId: defaultProfile?.id,
           draftDeliveryMethod: draftDeliveryMethod, // 시안 전송 방식 추가
           isRequireTaxFiling: taxInvoice, // 세금계산서 신청 여부 추가
+          isAgreedCaution: isAgreedCaution, // 유의사항 동의 여부 추가
         }),
       });
 
@@ -456,6 +464,7 @@ function PaymentPageContent() {
           userProfileId: defaultProfile?.id,
           draftDeliveryMethod: draftDeliveryMethod,
           isRequireTaxFiling: taxInvoice, // 세금계산서 신청 여부 추가
+          isAgreedCaution: isAgreedCaution, // 유의사항 동의 여부 추가
         }),
       });
 
@@ -518,211 +527,309 @@ function PaymentPageContent() {
         <div className="space-y-8 border border-solid border-gray-3 rounded-[0.375rem] p-[2.5rem] sm:p-[1.5rem]">
           {/* 주문 상품 목록 */}
           {selectedItems.map((item) => (
-            <section
-              key={item.id}
-              className="p-6 border rounded-lg shadow-sm flex flex-col gap-4 sm:p-2"
-            >
-              <div>
-                <h2 className="text-1.25 text-gray-2 font-bold mb-4 border-b-solid border-black border-b-[0.1rem] pb-4">
-                  {item.type === 'banner-display'
-                    ? '현수막 게시대'
-                    : 'LED 전자게시대'}
-                </h2>
-                <div className="mb-4 text-1.25 font-700 text-[#222] sm:text-0.875">
-                  {item.name}
-                  <span className="text-gray-500 text-0.875 ml-2">
-                    (
-                    {getPanelTypeDisplay(
-                      item.panel_type ||
-                        item.panel_slot_snapshot?.banner_type ||
-                        'panel'
-                    )}
-                    {item.district === '서대문구' &&
-                      item.is_for_admin &&
-                      '-행정용패널'}
-                    )
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 border border-solid border-gray-12 rounded-[0.375rem] p-4 bg-gray-11 sm:p-2">
-                  <div className="text-1.25 font-700 sm:text-0.875">
-                    {item.is_public_institution
-                      ? '공공기관용'
-                      : item.is_company
-                      ? '기업용'
-                      : '개인용'}{' '}
-                    -{' '}
-                    {defaultProfile?.contact_person_name ||
-                      user?.name ||
-                      '사용자'}
+            <>
+              <section
+                key={item.id}
+                className="p-6 border rounded-lg shadow-sm flex flex-col gap-4 sm:p-2"
+              >
+                <div>
+                  <h2 className="text-1.25 text-gray-2 font-bold mb-4 border-b-solid border-black border-b-[0.1rem] pb-4">
+                    {item.type === 'banner-display'
+                      ? '현수막 게시대'
+                      : 'LED 전자게시대'}
+                  </h2>
+                  <div className="mb-4 text-1.25 font-700 text-[#222] sm:text-0.875">
+                    {item.name}
+                    <span className="text-gray-500 text-0.875 ml-2">
+                      (
+                      {getPanelTypeDisplay(
+                        item.panel_type ||
+                          item.panel_slot_snapshot?.banner_type ||
+                          'panel'
+                      )}
+                      {item.district === '서대문구' &&
+                        item.is_for_admin &&
+                        '-행정용패널'}
+                      )
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 border border-solid border-gray-12 rounded-[0.375rem] p-4 bg-gray-11 sm:p-2">
+                    <div className="text-1.25 font-700 sm:text-0.875">
+                      {item.is_public_institution
+                        ? '공공기관용'
+                        : item.is_company
+                        ? '기업용'
+                        : '개인용'}{' '}
+                      -{' '}
+                      {defaultProfile?.contact_person_name ||
+                        user?.name ||
+                        '사용자'}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="text-1 text-gray-10">
-                <h3 className="text-1.25 font-600 mb-2 text-[#222] sm:pb-5">
-                  고객 정보
-                </h3>
-                <form className="flex flex-col gap-5">
-                  <div className="flex flex-col gap-4 sm:gap-8">
-                    {/* 작업이름 */}
-                    <div className="flex flex-col sm:flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4 sm:gap-2">
-                      <label className="w-full md:w-[9rem] text-gray-600 font-medium">
-                        작업이름
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full md:w-[21.25rem] sm:w-[13rem] border border-gray-300 border-solid shadow-none rounded px-4 h-[3rem]"
-                        placeholder="파일 이름"
-                      />
-                    </div>
-
-                    {/* 파일업로드 */}
-                    <div className="flex flex-col sm:flex-col md:flex-row items-start justify-between gap-2 md:gap-4 sm:gap-2">
-                      <label className="w-full md:w-[9rem] text-gray-600 font-medium pt-2">
-                        파일업로드
-                      </label>
-                      <div className="flex-1 space-y-2">
+                <div className="text-1 text-gray-10">
+                  <h3 className="text-1.25 font-600 mb-2 text-[#222] sm:pb-5">
+                    고객 정보
+                  </h3>
+                  <form className="flex flex-col gap-5">
+                    <div className="flex flex-col gap-4 sm:gap-8">
+                      {/* 작업이름 */}
+                      <div className="flex flex-col sm:flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4 sm:gap-2">
+                        <label className="w-full md:w-[9rem] text-gray-600 font-medium">
+                          작업이름
+                        </label>
                         <input
-                          type="file"
-                          className={`border border-gray-300 py-2 w-full rounded ${
-                            sendByEmail ? 'opacity-50 cursor-not-allowed' : ''
-                          }`}
-                          disabled={sendByEmail}
-                          readOnly={sendByEmail}
-                          defaultValue={
-                            sendByEmail ? 'hansung-design@example.com' : ''
-                          }
+                          type="text"
+                          className="w-full md:w-[21.25rem] sm:w-[13rem] border border-gray-300 border-solid shadow-none rounded px-4 h-[3rem]"
+                          placeholder="파일 이름"
                         />
-                        <div className="flex flex-col gap-2 items-start">
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              id="sendByEmail"
-                              checked={sendByEmail}
-                              onChange={(e) => setSendByEmail(e.target.checked)}
-                              className="w-4 h-4"
-                            />
-                            <label
-                              htmlFor="sendByEmail"
-                              className="text-sm text-gray-500"
-                            >
-                              이메일로 파일 보낼게요
-                            </label>
+                      </div>
+
+                      {/* 파일업로드 */}
+                      <div className="flex flex-col sm:flex-col md:flex-row items-start justify-between gap-2 md:gap-4 sm:gap-2">
+                        <label className="w-full md:w-[9rem] text-gray-600 font-medium pt-2">
+                          파일업로드
+                        </label>
+                        <div className="flex-1 space-y-2">
+                          <input
+                            type="file"
+                            className={`border border-gray-300 py-2 w-full rounded ${
+                              sendByEmail ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
+                            disabled={sendByEmail}
+                            readOnly={sendByEmail}
+                            defaultValue={
+                              sendByEmail ? 'hansung-design@example.com' : ''
+                            }
+                          />
+                          <div className="flex flex-col gap-2 items-start">
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                id="sendByEmail"
+                                checked={sendByEmail}
+                                onChange={(e) =>
+                                  setSendByEmail(e.target.checked)
+                                }
+                                className="w-4 h-4"
+                              />
+                              <label
+                                htmlFor="sendByEmail"
+                                className="text-sm text-gray-500"
+                              >
+                                이메일로 파일 보낼게요
+                              </label>
+                            </div>
+                            {sendByEmail && (
+                              <span className="text-gray-600 font-medium text-sm h-[3rem] w-full md:w-[20rem] sm:w-[14.4rem] placeholder:pl-4">
+                                banner114@hanmail.net
+                              </span>
+                            )}
+                            {!sendByEmail && (
+                              <input
+                                type="text"
+                                className="border border-gray-300 border-solid shadow-none rounded h-[3rem] w-full md:w-[20rem] sm:w-[14.4rem] placeholder:pl-4"
+                                placeholder="파일 이름"
+                              />
+                            )}
+                            <p className="text-xs text-gray-500 mt-2">
+                              * 선택한 방식과 관계없이 결제 완료 후 시안관리
+                              페이지에서 시안을 업로드할 수 있습니다.
+                            </p>
                           </div>
-                          {sendByEmail && (
-                            <span className="text-gray-600 font-medium text-sm h-[3rem] w-full md:w-[20rem] sm:w-[14.4rem] placeholder:pl-4">
-                              hansung-design@example.com
-                            </span>
-                          )}
-                          {!sendByEmail && (
-                            <input
-                              type="text"
-                              className="border border-gray-300 border-solid shadow-none rounded h-[3rem] w-full md:w-[20rem] sm:w-[14.4rem] placeholder:pl-4"
-                              placeholder="파일 이름"
-                            />
-                          )}
-                          <p className="text-xs text-gray-500 mt-2">
-                            * 선택한 방식과 관계없이 결제 완료 후 시안관리
-                            페이지에서 시안을 업로드할 수 있습니다.
-                          </p>
+                        </div>
+                      </div>
+
+                      {/* 세금계산서 */}
+                      <div className="flex flex-col sm:flex-col md:flex-row items-start md:items-center gap-2 md:gap-4 sm:gap-2">
+                        <label className="w-full md:w-[9rem] text-gray-600 font-medium">
+                          세금계산서
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={taxInvoice}
+                            onChange={(e) => setTaxInvoice(e.target.checked)}
+                            className="w-5 h-5 sm:w-4 sm:h-4"
+                          />
+                          <label className="text-gray-600 font-medium sm:text-0.875">
+                            세금계산서 신청
+                          </label>
                         </div>
                       </div>
                     </div>
-
-                    {/* 세금계산서 */}
-                    <div className="flex flex-col sm:flex-col md:flex-row items-start md:items-center gap-2 md:gap-4 sm:gap-2">
-                      <label className="w-full md:w-[9rem] text-gray-600 font-medium">
-                        세금계산서
-                      </label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={taxInvoice}
-                          onChange={(e) => setTaxInvoice(e.target.checked)}
-                          className="w-5 h-5 sm:w-4 sm:h-4"
-                        />
-                        <label className="text-gray-600 font-medium sm:text-0.875">
-                          세금계산서 신청
-                        </label>
+                  </form>
+                </div>
+              </section>
+              {/* 동의서 */}
+              <section className="flex flex-col gap-2">
+                <div>
+                  <div className="flex flex-col gap-2">
+                    <div>
+                      <div className="text-blue-500">
+                        ○ 현수막 표시내용의 금지, 제한사항
                       </div>
+                      <ul>
+                        <li>
+                          성적인 표현 암시, 인권침해(국제결혼, --- 신부 등)
+                        </li>
+                        <li>
+                          음란, 퇴폐성 및 청소년 보호, 선도에 저해 우려가 있는
+                          내용
+                        </li>
+                        <li>
+                          사채, 대부업, 채권추심등이 관련된 내용, 시민정서에
+                          적합하지 않은 내용
+                        </li>
+                        <li>
+                          특정 개인, 단체 등의 가치관을 비방 또는 홍보하려는
+                          내용
+                        </li>
+                        <li>
+                          기타 반사회적 내용 또는 시민정서에 적합하지 않다고
+                          판단되는 내용
+                        </li>
+                      </ul>
                     </div>
                   </div>
-                </form>
-              </div>
-            </section>
+                  <div>
+                    <div className="text-blue-500">
+                      ○ 현수막게시의 지연 또는 일시 중지
+                    </div>
+                    <ul>
+                      <li>
+                        법정공휴일 또는 강풍,우천,폭설 시에는 현수막 게시일정이
+                        전후날로 변경 될 수 있습니다.{' '}
+                      </li>
+                      <li>
+                        현수막 게시 기간 중, 태풍,재난긴급 공사 등의 사유가
+                        발생할 때에는 광고주에게 사전 통보 없이 게시를 일시 중지
+                        할 수 있습니다.
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                <div className="text-red text-1 font-500 flex flex-col gap-2 items-center">
+                  <span className="">[유의사항]</span>
+                  <div>
+                    현수막게시대 신청 시 아래 규약사항을 반드시 숙지하시기
+                    바라며,
+                    <br />
+                    숙지하지 못한 책임은 신청인에게 있습니다. <br />
+                    또한 관련 규정을 위반한 경우에도 신청 및 게시대가
+                    불가합니다.
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 mt-4">
+                  <input
+                    type="checkbox"
+                    id="agreeCaution"
+                    checked={isAgreedCaution}
+                    onChange={(e) => setIsAgreedCaution(e.target.checked)}
+                    className="w-4 h-4"
+                  />
+                  <label
+                    htmlFor="agreeCaution"
+                    className="text-sm text-gray-700"
+                  >
+                    위 유의사항을 모두 읽고 동의합니다.
+                  </label>
+                </div>
+              </section>
+            </>
           ))}
 
           {/* 결제수단 선택 */}
-          <section className="p-6 bg-white rounded-lg shadow-md">
-            <h3 className="text-1.25 font-700 mb-4 sm:text-1">결제수단</h3>
-            <div className="flex flex-col gap-3 items-center justify-center">
-              <button
-                className={`hover:cursor-pointer border rounded-[0.375rem] px-4 py-6 w-full text-1.25 font-700 sm:text-1 sm:py-4 ${
-                  paymentMethod === 'card'
-                    ? 'border-black bg-black text-white'
-                    : 'border-gray-3 bg-gray-11'
-                }`}
-                onClick={() => setPaymentMethod('card')}
-              >
-                신용 · 체크카드
-              </button>
-
-              <button
-                className={`border rounded-[0.375rem] px-4 py-6 w-full text-1.25 font-700 sm:text-1 sm:py-4 ${
-                  paymentMethod === 'bank_transfer'
-                    ? 'border-black bg-black text-white'
-                    : 'border-gray-3 bg-gray-11'
-                }`}
-                onClick={() => setPaymentMethod('bank_transfer')}
-              >
-                계좌이체
-              </button>
-
-              <div className="w-full flex flex-col sm:flex-row gap-4 items-center justify-between">
-                <button className="border border-gray-3 rounded-[0.375rem] p-4 w-full sm:h-[3rem] sm:flex sm:items-center sm:justify-center">
-                  <Image
-                    src="/svg/naver-pay.svg"
-                    alt="Naver Pay"
-                    width={80}
-                    height={80}
-                    className="sm:w-[3rem] sm:h-[3rem]"
-                  />
+          {selectedItems.length > 0 ? (
+            <section className="p-6 bg-white rounded-lg shadow-md">
+              <h3 className="text-1.25 font-700 mb-4 sm:text-1">결제수단</h3>
+              <div className="flex flex-col gap-3 items-center justify-center">
+                <button
+                  className={`hover:cursor-pointer border rounded-[0.375rem] px-4 py-6 w-full text-1.25 font-700 sm:text-1 sm:py-4 ${
+                    paymentMethod === 'card'
+                      ? 'border-black bg-black text-white'
+                      : 'border-gray-3 bg-gray-11'
+                  }`}
+                  onClick={() => setPaymentMethod('card')}
+                >
+                  신용 · 체크카드
                 </button>
-                <button className="border border-gray-3 rounded-[0.375rem] p-4 w-full sm:h-[3rem] sm:flex sm:items-center sm:justify-center">
-                  <Image
-                    src="/svg/kakao-pay.svg"
-                    alt="Kakao Pay"
-                    width={80}
-                    height={80}
-                    className="sm:w-[3rem] sm:h-[3rem]"
-                  />
+
+                <button
+                  className={`border rounded-[0.375rem] px-4 py-6 w-full text-1.25 font-700 sm:text-1 sm:py-4 ${
+                    paymentMethod === 'bank_transfer'
+                      ? 'border-black bg-black text-white'
+                      : 'border-gray-3 bg-gray-11'
+                  }`}
+                  onClick={() => setPaymentMethod('bank_transfer')}
+                >
+                  계좌이체
                 </button>
+
+                <div className="w-full flex flex-col sm:flex-row gap-4 items-center justify-between">
+                  <button className="border border-gray-3 rounded-[0.375rem] p-4 w-full sm:h-[3rem] sm:flex sm:items-center sm:justify-center">
+                    <Image
+                      src="/svg/naver-pay.svg"
+                      alt="Naver Pay"
+                      width={80}
+                      height={80}
+                      className="sm:w-[3rem] sm:h-[3rem]"
+                    />
+                  </button>
+                  <button className="border border-gray-3 rounded-[0.375rem] p-4 w-full sm:h-[3rem] sm:flex sm:items-center sm:justify-center">
+                    <Image
+                      src="/svg/kakao-pay.svg"
+                      alt="Kakao Pay"
+                      width={80}
+                      height={80}
+                      className="sm:w-[3rem] sm:h-[3rem]"
+                    />
+                  </button>
+                </div>
               </div>
-            </div>
 
-            {/* 계좌이체 선택 시 계좌번호 표시 */}
-            {paymentMethod === 'bank_transfer' && bankInfo && (
-              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <h4 className="font-semibold text-blue-800 mb-2">
-                  입금 계좌 정보 ({selectedItems[0]?.district || '선택된 구'})
-                </h4>
-                <div className="text-blue-700">
-                  <p>
-                    <strong>은행:</strong> {bankInfo.bank_name}
-                  </p>
-                  <p>
-                    <strong>계좌번호:</strong> {bankInfo.account_number}
-                  </p>
-                  <p>
-                    <strong>예금주:</strong> {bankInfo.depositor}
+              {/* 계좌이체 선택 시 계좌번호 표시 */}
+              {paymentMethod === 'bank_transfer' && bankInfo && (
+                <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <h4 className="font-semibold text-blue-800 mb-2">
+                    입금 계좌 정보 ({selectedItems[0]?.district || '선택된 구'})
+                  </h4>
+                  <div className="text-blue-700">
+                    <p>
+                      <strong>은행:</strong> {bankInfo.bank_name}
+                    </p>
+                    <p>
+                      <strong>계좌번호:</strong> {bankInfo.account_number}
+                    </p>
+                    <p>
+                      <strong>예금주:</strong> {bankInfo.depositor}
+                    </p>
+                  </div>
+                  <p className="text-sm text-blue-600 mt-2">
+                    * 계좌이체시 입금자명을 주문자명과 동일하게 입력해주세요.
                   </p>
                 </div>
-                <p className="text-sm text-blue-600 mt-2">
-                  * 계좌이체시 입금자명을 주문자명과 동일하게 입력해주세요.
+              )}
+            </section>
+          ) : (
+            <section className="p-6 bg-white rounded-lg shadow-md">
+              <div className="flex flex-col items-center justify-center py-8">
+                <div className="text-gray-500 text-lg font-medium mb-2">
+                  결제 상품이 없습니다
+                </div>
+                <p className="text-gray-400 text-sm text-center mb-4">
+                  장바구니에서 상품을 선택해주세요
                 </p>
+                <Button
+                  className="bg-black text-white px-6 py-2 rounded-lg hover:bg-gray-800"
+                  onClick={() => router.push('/cart')}
+                >
+                  장바구니로 이동
+                </Button>
               </div>
-            )}
-          </section>
+            </section>
+          )}
 
           {/* 승인된 주문 안내 메시지 */}
           {isApprovedOrder && (
