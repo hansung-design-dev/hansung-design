@@ -7,13 +7,13 @@ const Footer = () => {
             CONTACT US
           </button>
           <button className="text-1.125 text-gray font-weight-700 border-none">
-            FAQ
+            회사소개
           </button>
           <button className="text-1.125 text-gray font-weight-700 border-none">
             개인정보 처리방침
           </button>
         </div>
-        <div className="flex justify-between sm:flex-col sm:flex-col-reverse sm:gap-[3rem] ">
+        <div className="flex justify-between  sm:flex-col-reverse sm:gap-[3rem] ">
           <div className="lg:text-1.125 font-weight-500 flex flex-col gap-[1rem]">
             <div>
               상호 : (주)한성디자인기획 | 대표자 : 김수엽 | 사업자등록번호 :

@@ -51,11 +51,13 @@ function SuccessModal({
       <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4">
         <div className="text-center">
           <div className="text-green-500 text-4xl mb-4">✓</div>
-          <h3 className="text-xl font-bold mb-4">문의 완료</h3>
+          <h3 className="text-xl font-bold mb-4">상담신청 완료</h3>
           <p className="text-gray-600 mb-6">
-            문의가 완료되었습니다.
+            상담신청이 완료되었습니다.
             <br />
-            마이페이지 &gt; 1:1상담에서 확인해주세요.
+            해당 상품이 장바구니에서 제거되었습니다.
+            <br />
+            마이페이지 &gt; 1:1상담에서 진행상황을 확인해주세요.
           </p>
           <Button
             size="md"

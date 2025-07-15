@@ -1,5 +1,7 @@
 'use client';
 import React from 'react';
+import FaqSkeleton from '../../components/skeleton/FaqSkeleton';
+import NoticeSkeleton from '../../components/skeleton/NoticeSkeleton';
 
 const faqCategories = [
   '디지털사이니지',
@@ -19,6 +21,20 @@ interface NoticeItem {
   updated_at: string;
 }
 
+// FAQ 데이터 타입 정의
+interface FaqItem {
+  id: string;
+  title: string;
+  content: string;
+  status: string;
+  answer: string;
+  answered_at: string;
+  created_at: string;
+  homepage_menu_types: {
+    name: string;
+  };
+}
+
 export default function CustomerPage() {
   const [activeTab, setActiveTab] = React.useState<
     '공지사항' | '자주 묻는 질문'
@@ -28,7 +44,9 @@ export default function CustomerPage() {
     null
   );
   const [notices, setNotices] = React.useState<NoticeItem[]>([]);
+  const [faqs, setFaqs] = React.useState<FaqItem[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [faqLoading, setFaqLoading] = React.useState(false);
 
   // 공지사항 데이터 가져오기
   React.useEffect(() => {
@@ -48,6 +66,30 @@ export default function CustomerPage() {
 
     fetchNotices();
   }, []);
+
+  // FAQ 데이터 가져오기
+  React.useEffect(() => {
+    const fetchFaqs = async () => {
+      if (activeTab !== '자주 묻는 질문') return;
+
+      setFaqLoading(true);
+      try {
+        const response = await fetch(
+          `/api/customer-service/faq?category=${encodeURIComponent(activeFaq)}`
+        );
+        const data = await response.json();
+        if (data.faqs) {
+          setFaqs(data.faqs);
+        }
+      } catch (error) {
+        console.error('FAQ 조회 오류:', error);
+      } finally {
+        setFaqLoading(false);
+      }
+    };
+
+    fetchFaqs();
+  }, [activeTab, activeFaq]);
 
   const handleItemClick = (itemId: string) => {
     setExpandedItemId(expandedItemId === itemId ? null : itemId);
@@ -76,9 +118,14 @@ export default function CustomerPage() {
 
   // 우선순위에 따른 번호 표시
   const getNoticeNumber = (notice: NoticeItem, index: number) => {
+    if (notice.priority === 'important') return ''; // important는 번호 없음
     if (notice.priority === 'urgent') return '긴급';
     if (notice.priority === 'high') return '공지';
-    return String(notices.length - index).padStart(2, '0');
+
+    // important가 아닌 공지사항들만 카운트하여 번호 매기기
+    const normalNotices = notices.filter((n) => n.priority !== 'important');
+    const normalIndex = normalNotices.findIndex((n) => n.id === notice.id);
+    return String(normalIndex + 1).padStart(2, '0');
   };
 
   if (loading) {
@@ -87,7 +134,20 @@ export default function CustomerPage() {
         <section className="font-gmarket text-2.5 font-700 mb-12 lg:container lg:mx-auto lg:px-[8rem] sm:px-[1.5rem] pt-[6rem] pb-[3rem]">
           고객지원
         </section>
-        <div className="text-center py-8">공지사항을 불러오는 중...</div>
+        <section className="flex gap-24">
+          {/* Left Nav 스켈레톤 */}
+          <div className="w-72 flex-shrink-0">
+            <div className="mb-10">
+              <div className="h-8 bg-gray-200 rounded w-24 mb-6"></div>
+              <div className="h-6 bg-gray-200 rounded w-32 mb-3"></div>
+            </div>
+          </div>
+          {/* Main Content 스켈레톤 */}
+          <main className="flex-1 w-1/3">
+            <div className="h-8 bg-gray-200 rounded w-32 mb-6"></div>
+            <NoticeSkeleton />
+          </main>
+        </section>
       </div>
     );
   }
@@ -217,17 +277,52 @@ export default function CustomerPage() {
               </tbody>
             </table>
           ) : (
-            <div className="text-center py-8 text-gray-500">
-              자주 묻는 질문 내용이 여기에 표시됩니다.
+            <div>
+              {faqLoading ? (
+                <FaqSkeleton />
+              ) : faqs.length > 0 ? (
+                <div className="space-y-4">
+                  {faqs.map((faq) => (
+                    <div
+                      key={faq.id}
+                      className="border border-gray-200 rounded-lg"
+                    >
+                      <div
+                        className="p-4 cursor-pointer hover:bg-gray-50"
+                        onClick={() => handleItemClick(faq.id)}
+                      >
+                        <div className="flex justify-between items-center">
+                          <h3 className="text-lg font-medium text-gray-900">
+                            Q. {faq.title}
+                          </h3>
+                        </div>
+                      </div>
+                      {/* 아코디언 답변 */}
+                      {expandedItemId === faq.id && (
+                        <div className="border-t border-gray-200 p-4 bg-gray-50">
+                          <div className="bg-white rounded-lg p-4">
+                            <h4 className="text-md font-medium text-gray-900 mb-3">
+                              A. 답변
+                            </h4>
+                            <div
+                              className="text-gray-600 leading-relaxed"
+                              dangerouslySetInnerHTML={{
+                                __html: `<p>${renderMarkdown(faq.answer)}</p>`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  해당 카테고리의 FAQ가 없습니다.
+                </div>
+              )}
             </div>
           )}
-
-          {/* Pagination (예시) */}
-          <div className="flex justify-center mt-8 gap-3 text-gray-500 text-lg">
-            <span className="font-bold text-black">1</span>
-            <span>2</span>
-            <span>&gt;</span>
-          </div>
         </main>
       </section>
     </div>
