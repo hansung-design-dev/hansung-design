@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // 1. 주문 정보 조회
     const { data: orders, error } = await supabase
       .from('orders')
       .select(
@@ -49,7 +50,43 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ orders });
+    // 2. 각 주문에 대한 design_drafts 조회 (orders.design_drafts_id를 통해 연결)
+    const ordersWithDrafts = await Promise.all(
+      (orders || []).map(async (order) => {
+        let designDrafts: any[] = [];
+
+        if (order.design_drafts_id) {
+          const { data: draft, error: draftError } = await supabase
+            .from('design_drafts')
+            .select('*')
+            .eq('id', order.design_drafts_id)
+            .order('created_at', { ascending: false });
+
+          if (draftError) {
+            console.error(
+              `🔍 주문 ${order.id}의 design_drafts 조회 오류:`,
+              draftError
+            );
+          } else if (draft) {
+            designDrafts = [draft]; // 단일 객체를 배열로 변환
+          }
+
+          console.log(
+            `🔍 주문 ${order.id}의 design_drafts:`,
+            designDrafts.length
+          );
+        } else {
+          console.log(`🔍 주문 ${order.id}의 design_drafts_id가 없음`);
+        }
+
+        return {
+          ...order,
+          design_drafts: designDrafts,
+        };
+      })
+    );
+
+    return NextResponse.json({ orders: ordersWithDrafts });
   } catch (error) {
     console.error('주문 조회 중 예외 발생:', error);
     return NextResponse.json(
@@ -393,6 +430,13 @@ export async function POST(request: NextRequest) {
 
     // 3. design_drafts row 생성 (항상)
     if (userProfile.id) {
+      console.log('🔍 design_drafts 생성 시작:', {
+        order_id: order.id,
+        user_profile_id: userProfile.id,
+        project_name: projectName,
+        draft_delivery_method: draftDeliveryMethod || 'upload',
+      });
+
       const { data: draft, error: draftError } = await supabase
         .from('design_drafts')
         .insert({
@@ -405,18 +449,29 @@ export async function POST(request: NextRequest) {
         })
         .select('id')
         .single();
+
       if (draftError) {
-        console.warn('Failed to create draft record:', draftError);
+        console.error('🔍 design_drafts 생성 실패:', draftError);
       } else {
+        console.log('🔍 design_drafts 생성 성공:', draft.id);
+
         // orders 테이블의 design_drafts_id와 draft_delivery_method 업데이트
-        await supabase
+        const { error: updateError } = await supabase
           .from('orders')
           .update({
             design_drafts_id: draft.id,
             draft_delivery_method: draftDeliveryMethod || 'upload',
           })
           .eq('id', order.id);
+
+        if (updateError) {
+          console.error('🔍 orders 테이블 업데이트 실패:', updateError);
+        } else {
+          console.log('🔍 orders 테이블 업데이트 성공');
+        }
       }
+    } else {
+      console.error('🔍 userProfile.id가 없어서 design_drafts 생성 불가');
     }
 
     // 4. 결제 완료 시 시안관리 레코드 자동 생성

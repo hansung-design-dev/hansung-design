@@ -37,13 +37,25 @@ export default function DesignPage() {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/orders');
+      const response = await fetch(`/api/orders?userId=${user?.id}`);
       const data = await response.json();
 
-      if (data.success) {
-        // 결제 완료된 주문만 필터링
-        const completedOrders = (data.data || []).filter(
-          (order: Order) => order.payment_status === 'completed'
+      if (data.orders) {
+        // 결제 완료된 주문만 필터링 (completed, approved, pending, waiting_admin_approval 상태 모두 포함)
+        const completedOrders = (data.orders || []).filter(
+          (order: Order) =>
+            order.payment_status === 'completed' ||
+            order.payment_status === 'approved' ||
+            order.payment_status === 'pending' ||
+            order.payment_status === 'waiting_admin_approval'
+        );
+        console.log(
+          '🔍 필터링된 주문:',
+          completedOrders.length,
+          completedOrders.map((o: Order) => ({
+            id: o.id,
+            payment_status: o.payment_status,
+          }))
         );
         setOrders(completedOrders);
       }
@@ -121,12 +133,12 @@ export default function DesignPage() {
       <h1 className="text-2xl font-bold mb-8">시안 관리</h1>
 
       {/* 탭 네비게이션 */}
-      <div className="flex border-b border-gray-200 mb-6">
+      <div className="flex border-b border-gray-200 mb-6 gap-10 items-center justify-around">
         <button
           onClick={() => setActiveTab('upload')}
-          className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
+          className={`px-6 py-3 font-medium text-sm  transition-colors ${
             activeTab === 'upload'
-              ? 'border-blue-500 text-blue-600'
+              ? 'border-blue-500 text-blue-600 border-solid rounded-full border-1'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
@@ -136,7 +148,7 @@ export default function DesignPage() {
           onClick={() => setActiveTab('view')}
           className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
             activeTab === 'view'
-              ? 'border-blue-500 text-blue-600'
+              ? 'border-blue-500 text-blue-600 border-solid rounded-full border-1'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
@@ -153,15 +165,15 @@ export default function DesignPage() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {orders.map((order) => (
             <div
               key={order.id}
-              className="border border-gray-200 rounded-lg p-6 bg-white shadow-sm"
+              className="border-solid border-1 border-gray-200 rounded-lg p-6 bg-white shadow-sm"
             >
-              <div className="flex justify-between items-start mb-4">
+              <div className="">
                 <div>
-                  <h3 className="text-lg font-semibold">
+                  <h3 className="text-1 font-semibold">
                     주문번호: {order.order_number}
                   </h3>
                   <p className="text-gray-600">
@@ -172,12 +184,7 @@ export default function DesignPage() {
                       작업명: {order.design_drafts[0].project_name}
                     </p>
                   )}
-                </div>
-                <div className="text-right">
-                  <p className="text-lg font-bold">
-                    {order.total_price?.toLocaleString()}원
-                  </p>
-                  <p className="text-sm text-green-600 font-medium">결제완료</p>
+                  <div className="items-end justify-end flex flex-col gap-2"></div>
                 </div>
               </div>
 
@@ -213,11 +220,29 @@ export default function DesignPage() {
                     </div>
                   )}
 
+                  {/* 홈페이지 업로드한 경우 이미 업로드된 파일 표시 */}
+                  {order.draft_delivery_method === 'upload' &&
+                    order.design_drafts &&
+                    order.design_drafts.length > 0 &&
+                    order.design_drafts[0].file_name && (
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-green-700 font-medium">
+                            ✓ 이미 업로드된 시안:
+                          </span>
+                          <span className="text-sm text-green-600">
+                            {order.design_drafts[0].file_name}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
                   {/* 커스텀 파일 업로드 */}
                   <CustomFileUpload
                     onFileSelect={(file) => handleFileUpload(order.id, file)}
                     disabled={uploadingFile === order.id}
                     placeholder="시안 파일을 선택해주세요"
+                    className="w-[13rem]"
                   />
 
                   {uploadingFile === order.id && (
@@ -245,9 +270,17 @@ export default function DesignPage() {
                           >
                             {getDraftStatus(draft)}
                           </span>
-                          {draft.file_name && (
+                          {draft.file_name ? (
                             <span className="text-sm text-gray-600">
                               {draft.file_name}
+                            </span>
+                          ) : order.draft_delivery_method === 'email' ? (
+                            <span className="text-sm text-blue-600">
+                              이메일로 전송됨
+                            </span>
+                          ) : (
+                            <span className="text-sm text-gray-500">
+                              파일 없음
                             </span>
                           )}
                           <span className="text-xs text-gray-500">
@@ -263,9 +296,7 @@ export default function DesignPage() {
                     ))
                   ) : (
                     <div className="text-center py-4 text-gray-500">
-                      {order.draft_delivery_method === 'email'
-                        ? '이메일로 시안이 전송되었습니다.'
-                        : '업로드된 시안이 없습니다.'}
+                      업로드된 시안이 없습니다.
                     </div>
                   )}
                 </div>

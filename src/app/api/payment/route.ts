@@ -46,7 +46,6 @@ export async function POST(request: NextRequest) {
       orderId,
       paymentMethodId,
       amount,
-      userProfileId,
       draftDeliveryMethod,
       cardInfo, // 카드 정보 추가
     } = body;
@@ -122,31 +121,41 @@ export async function POST(request: NextRequest) {
 
         if (orderError) throw orderError;
 
-        // 5. 시안 업로드 준비 (결제 완료 시)
-        if (orderStatus === 'completed' && userProfileId) {
-          const { data: draft, error: draftError } = await supabase
-            .from('design_drafts')
-            .insert({
-              user_profile_id: userProfileId,
-              draft_category: 'initial',
-              notes: `결제 완료 후 초기 시안 업로드 대기 (전송방식: ${
-                draftDeliveryMethod || 'upload'
-              })`,
-            })
-            .select()
+        // 5. 결제 완료 시 기존 design_drafts 업데이트 (주문 생성 시 이미 생성됨)
+        // 모든 결제수단에 대해 design_drafts 업데이트 수행
+        {
+          console.log('🔍 결제 완료 - design_drafts 업데이트 시작:', orderId);
+
+          // orders 테이블에서 design_drafts_id 조회
+          const { data: order, error: orderError } = await supabase
+            .from('orders')
+            .select('design_drafts_id')
+            .eq('id', orderId)
             .single();
 
-          if (draftError) {
-            console.warn('Failed to create draft record:', draftError);
-          } else {
-            // orders 테이블의 design_drafts_id와 draft_delivery_method 업데이트
-            await supabase
-              .from('orders')
+          if (orderError) {
+            console.error('🔍 orders 조회 실패:', orderError);
+          } else if (order?.design_drafts_id) {
+            console.log('🔍 design_drafts_id 발견:', order.design_drafts_id);
+
+            // 기존 시안 업데이트
+            const { error: updateError } = await supabase
+              .from('design_drafts')
               .update({
-                design_drafts_id: draft.id,
-                draft_delivery_method: draftDeliveryMethod || 'upload',
+                notes: `결제 완료 후 초기 시안 업로드 대기 (전송방식: ${
+                  draftDeliveryMethod || 'upload'
+                })`,
+                updated_at: new Date().toISOString(),
               })
-              .eq('id', orderId);
+              .eq('id', order.design_drafts_id);
+
+            if (updateError) {
+              console.error('🔍 design_drafts 업데이트 실패:', updateError);
+            } else {
+              console.log('🔍 design_drafts 업데이트 성공');
+            }
+          } else {
+            console.warn('🔍 design_drafts_id를 찾을 수 없음:', orderId);
           }
         }
 
@@ -205,32 +214,25 @@ export async function POST(request: NextRequest) {
 
         if (approvedOrderError) throw approvedOrderError;
 
-        // 4. 시안 업로드 준비
-        if (userProfileId) {
-          const { data: draft, error: draftError } = await supabase
+        // 4. 승인된 주문 결제 완료 시 기존 design_drafts 업데이트
+        const { data: approvedOrderData, error: approvedOrderDataError } =
+          await supabase
+            .from('orders')
+            .select('design_drafts_id')
+            .eq('id', orderId)
+            .single();
+
+        if (!approvedOrderDataError && approvedOrderData?.design_drafts_id) {
+          // 기존 시안 업데이트
+          await supabase
             .from('design_drafts')
-            .insert({
-              user_profile_id: userProfileId,
-              draft_category: 'initial',
+            .update({
               notes: `승인된 주문 결제 완료 후 초기 시안 업로드 대기 (전송방식: ${
                 draftDeliveryMethod || 'upload'
               })`,
+              updated_at: new Date().toISOString(),
             })
-            .select()
-            .single();
-
-          if (draftError) {
-            console.warn('Failed to create draft record:', draftError);
-          } else {
-            // orders 테이블의 design_drafts_id와 draft_delivery_method 업데이트
-            await supabase
-              .from('orders')
-              .update({
-                design_drafts_id: draft.id,
-                draft_delivery_method: draftDeliveryMethod || 'upload',
-              })
-              .eq('id', orderId);
-          }
+            .eq('id', approvedOrderData.design_drafts_id);
         }
 
         return NextResponse.json({
