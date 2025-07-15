@@ -465,6 +465,23 @@ export default function Cart() {
     }
   }, [profiles]);
 
+  // URL 해시를 확인하여 상담신청 탭으로 자동 이동
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash;
+      if (hash === '#consultation') {
+        setActiveTab('consulting');
+        // 상담신청 섹션으로 스크롤
+        setTimeout(() => {
+          const element = document.getElementById('consultation');
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 100);
+      }
+    }
+  }, []);
+
   // useEffect에서 cart를 바꾸는 로직 완전히 제거!
   // cart는 오직 아이템 추가/삭제/프로필 변경 등 명확한 액션에서만 dispatch로 바뀜
 
@@ -503,10 +520,11 @@ export default function Cart() {
           (item.type === 'banner-display' && panelType === 'top_fixed'),
       });
 
-      // 상담신청: LED 전자게시대 전체, 상단광고(용산구/송파구)
+      // 상담신청: LED 전자게시대 전체, 상단광고(용산구/송파구), 디지털사이니지
       if (
         item.type === 'led-display' ||
-        (item.type === 'banner-display' && panelType === 'top_fixed')
+        (item.type === 'banner-display' && panelType === 'top_fixed') ||
+        item.type === 'digital-signage'
       ) {
         consultingItems.push(item);
         console.log('🔍 Cart - Added to consulting items:', item.name);
@@ -568,6 +586,16 @@ export default function Cart() {
     }
     return item.type === 'led-display';
   });
+  const digitalSignageConsultingItems = groupedItems.consulting.filter(
+    (item) => {
+      const inquiryStatus = inquiryStatuses[item.id];
+      // 상담문의가 완료된 아이템은 제외
+      if (inquiryStatus && inquiryStatus.status === 'answered') {
+        return false;
+      }
+      return item.type === 'digital-signage';
+    }
+  );
 
   // 상담신청 아이템들의 문의 상태 확인
   const fetchInquiryStatuses = useCallback(async () => {
@@ -582,6 +610,11 @@ export default function Cart() {
 
         // LED 전자게시대는 모두 상담신청
         if (item.type === 'led-display') {
+          return true;
+        }
+
+        // 디지털사이니지는 모두 상담신청
+        if (item.type === 'digital-signage') {
           return true;
         }
 
@@ -646,6 +679,7 @@ export default function Cart() {
         const district = item.district;
 
         if (item.type === 'led-display') return true;
+        if (item.type === 'digital-signage') return true;
         if (item.type === 'banner-display' && panelType === 'top_fixed')
           return true;
 
@@ -1477,102 +1511,148 @@ export default function Cart() {
           )}
 
           {userWithPhone && activeTab === 'consulting' && (
-            <>
-              {bannerConsultingItems.length > 0 && (
-                <CartGroupCard
-                  title="상단광고"
-                  phoneList={['1533-0570', '1899-0596', '02-719-0083']}
-                  isSelected={isGroupSelected('general', '')}
-                  onSelect={(selected) =>
-                    handleGroupSelect('general', '', selected)
-                  }
-                  onDelete={() =>
-                    handleGroupDeleteClick('general', '', '상단광고')
-                  }
-                  isConsulting={true}
-                >
-                  {bannerConsultingItems.map((item) => {
-                    const userInfo = {
-                      name: item.contact_person_name || userWithPhone?.name,
-                      phone: item.phone || userWithPhone?.phone,
-                      company_name:
-                        item.company_name || userWithPhone?.company_name,
-                    };
-                    return (
-                      <CartItemRow
-                        key={item.id}
-                        item={item}
-                        user={userInfo}
-                        isSelected={selectedItems.has(item.id)}
-                        onSelect={(selected) =>
-                          handleItemSelect(item.id, selected)
-                        }
-                        isConsulting={true}
-                        onOrderModify={() => handleOrderModify(item.id)}
-                        onConsultation={() =>
-                          handleConsultation(item.name, item.id)
-                        }
-                        onDelete={() => handleDelete(item)}
-                        inquiryStatus={inquiryStatuses[item.id]}
-                        getPanelTypeDisplay={getPanelTypeDisplay}
-                      />
-                    );
-                  })}
-                </CartGroupCard>
-              )}
-
-              {ledConsultingItemsOnly.length > 0 && (
-                <CartGroupCard
-                  title="LED전자게시대"
-                  phoneList={['1533-0570', '1899-0596', '02-719-0083']}
-                  isSelected={isGroupSelected('general', '')}
-                  onSelect={(selected) =>
-                    handleGroupSelect('general', '', selected)
-                  }
-                  onDelete={() =>
-                    handleGroupDeleteClick('general', '', 'LED전자게시대')
-                  }
-                  isConsulting={true}
-                >
-                  {ledConsultingItemsOnly.map((item) => {
-                    const userInfo = {
-                      name: item.contact_person_name || userWithPhone?.name,
-                      phone: item.phone || userWithPhone?.phone,
-                      company_name:
-                        item.company_name || userWithPhone?.company_name,
-                    };
-                    return (
-                      <CartItemRow
-                        key={item.id}
-                        item={item}
-                        user={userInfo}
-                        isSelected={selectedItems.has(item.id)}
-                        onSelect={(selected) =>
-                          handleItemSelect(item.id, selected)
-                        }
-                        isConsulting={true}
-                        onOrderModify={() => handleOrderModify(item.id)}
-                        onConsultation={() =>
-                          handleConsultation(item.name, item.id)
-                        }
-                        onDelete={() => handleDelete(item)}
-                        inquiryStatus={inquiryStatuses[item.id]}
-                        getPanelTypeDisplay={getPanelTypeDisplay}
-                      />
-                    );
-                  })}
-                </CartGroupCard>
-              )}
-
-              {bannerConsultingItems.length === 0 &&
-                ledConsultingItemsOnly.length === 0 && (
-                  <CartGroupCard title="상담신청" isConsulting={true}>
-                    <div className="flex items-center justify-center py-12 text-gray-500">
-                      상담신청할 상품이 없습니다.
-                    </div>
+            <div id="consultation">
+              <>
+                {bannerConsultingItems.length > 0 && (
+                  <CartGroupCard
+                    title="상단광고"
+                    phoneList={['1533-0570', '1899-0596', '02-719-0083']}
+                    isSelected={isGroupSelected('general', '')}
+                    onSelect={(selected) =>
+                      handleGroupSelect('general', '', selected)
+                    }
+                    onDelete={() =>
+                      handleGroupDeleteClick('general', '', '상단광고')
+                    }
+                    isConsulting={true}
+                  >
+                    {bannerConsultingItems.map((item) => {
+                      const userInfo = {
+                        name: item.contact_person_name || userWithPhone?.name,
+                        phone: item.phone || userWithPhone?.phone,
+                        company_name:
+                          item.company_name || userWithPhone?.company_name,
+                      };
+                      return (
+                        <CartItemRow
+                          key={item.id}
+                          item={item}
+                          user={userInfo}
+                          isSelected={selectedItems.has(item.id)}
+                          onSelect={(selected) =>
+                            handleItemSelect(item.id, selected)
+                          }
+                          isConsulting={true}
+                          onOrderModify={() => handleOrderModify(item.id)}
+                          onConsultation={() =>
+                            handleConsultation(item.name, item.id)
+                          }
+                          onDelete={() => handleDelete(item)}
+                          inquiryStatus={inquiryStatuses[item.id]}
+                          getPanelTypeDisplay={getPanelTypeDisplay}
+                        />
+                      );
+                    })}
                   </CartGroupCard>
                 )}
-            </>
+
+                {ledConsultingItemsOnly.length > 0 && (
+                  <CartGroupCard
+                    title="LED전자게시대"
+                    phoneList={['1533-0570', '1899-0596', '02-719-0083']}
+                    isSelected={isGroupSelected('general', '')}
+                    onSelect={(selected) =>
+                      handleGroupSelect('general', '', selected)
+                    }
+                    onDelete={() =>
+                      handleGroupDeleteClick('general', '', 'LED전자게시대')
+                    }
+                    isConsulting={true}
+                  >
+                    {ledConsultingItemsOnly.map((item) => {
+                      const userInfo = {
+                        name: item.contact_person_name || userWithPhone?.name,
+                        phone: item.phone || userWithPhone?.phone,
+                        company_name:
+                          item.company_name || userWithPhone?.company_name,
+                      };
+                      return (
+                        <CartItemRow
+                          key={item.id}
+                          item={item}
+                          user={userInfo}
+                          isSelected={selectedItems.has(item.id)}
+                          onSelect={(selected) =>
+                            handleItemSelect(item.id, selected)
+                          }
+                          isConsulting={true}
+                          onOrderModify={() => handleOrderModify(item.id)}
+                          onConsultation={() =>
+                            handleConsultation(item.name, item.id)
+                          }
+                          onDelete={() => handleDelete(item)}
+                          inquiryStatus={inquiryStatuses[item.id]}
+                          getPanelTypeDisplay={getPanelTypeDisplay}
+                        />
+                      );
+                    })}
+                  </CartGroupCard>
+                )}
+
+                {digitalSignageConsultingItems.length > 0 && (
+                  <CartGroupCard
+                    title="디지털사이니지"
+                    phoneList={['1533-0570', '1899-0596', '02-719-0083']}
+                    isSelected={isGroupSelected('general', '')}
+                    onSelect={(selected) =>
+                      handleGroupSelect('general', '', selected)
+                    }
+                    onDelete={() =>
+                      handleGroupDeleteClick('general', '', '디지털사이니지')
+                    }
+                    isConsulting={true}
+                  >
+                    {digitalSignageConsultingItems.map((item) => {
+                      const userInfo = {
+                        name: item.contact_person_name || userWithPhone?.name,
+                        phone: item.phone || userWithPhone?.phone,
+                        company_name:
+                          item.company_name || userWithPhone?.company_name,
+                      };
+                      return (
+                        <CartItemRow
+                          key={item.id}
+                          item={item}
+                          user={userInfo}
+                          isSelected={selectedItems.has(item.id)}
+                          onSelect={(selected) =>
+                            handleItemSelect(item.id, selected)
+                          }
+                          isConsulting={true}
+                          onOrderModify={() => handleOrderModify(item.id)}
+                          onConsultation={() =>
+                            handleConsultation(item.name, item.id)
+                          }
+                          onDelete={() => handleDelete(item)}
+                          inquiryStatus={inquiryStatuses[item.id]}
+                          getPanelTypeDisplay={getPanelTypeDisplay}
+                        />
+                      );
+                    })}
+                  </CartGroupCard>
+                )}
+
+                {bannerConsultingItems.length === 0 &&
+                  ledConsultingItemsOnly.length === 0 &&
+                  digitalSignageConsultingItems.length === 0 && (
+                    <CartGroupCard title="상담신청" isConsulting={true}>
+                      <div className="flex items-center justify-center py-12 text-gray-500">
+                        상담신청할 상품이 없습니다.
+                      </div>
+                    </CartGroupCard>
+                  )}
+              </>
+            </div>
           )}
         </motion.div>
       </div>

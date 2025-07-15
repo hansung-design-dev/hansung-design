@@ -1,8 +1,9 @@
 import Image from 'next/image';
+import Link from 'next/link';
 
 interface ItemCardProps {
   item: {
-    id: number;
+    id: string | number;
     title: string;
     tags: string[];
     src: string;
@@ -11,7 +12,10 @@ interface ItemCardProps {
 
 export default function ItemCard({ item }: ItemCardProps) {
   return (
-    <div className="bg-white flex flex-col items-center justify-center ">
+    <Link
+      href={`/digital-signage/${item.id}`}
+      className="bg-white flex flex-col items-center justify-center hover:opacity-80 transition-opacity"
+    >
       <div className="flex flex-col items-start justify-center ">
         <Image
           src={item.src}
@@ -34,6 +38,6 @@ export default function ItemCard({ item }: ItemCardProps) {
           <div className="text-xl font-bold text-black mt-2">{item.title}</div>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
