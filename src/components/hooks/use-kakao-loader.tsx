@@ -1,5 +1,5 @@
 import { useKakaoLoader as useKakaoLoaderOrigin } from 'react-kakao-maps-sdk';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 // 참고 https://apis.map.kakao.com/web/guide/
 export default function useKakaoLoader() {
   const appkey = process.env.NEXT_PUBLIC_KAKAO_KEY || '';
@@ -24,7 +24,7 @@ export default function useKakaoLoader() {
   );
 
   // 수동으로 카카오맵 SDK 로드하는 함수
-  const loadKakaoMapSDK = () => {
+  const loadKakaoMapSDK = useCallback(() => {
     if (
       typeof window === 'undefined' ||
       isManualLoading ||
@@ -76,7 +76,7 @@ export default function useKakaoLoader() {
     };
 
     document.head.appendChild(script);
-  };
+  }, [appkey, isManualLoading]);
 
   // 기본 Hook 사용 (react-kakao-maps-sdk) - 하지만 실패할 경우를 대비
   try {

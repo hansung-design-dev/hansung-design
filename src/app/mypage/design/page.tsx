@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import MypageContainer from '@/src/components/mypageContainer';
 import { useAuth } from '@/src/contexts/authContext';
 import CustomFileUpload from '@/src/components/ui/CustomFileUpload';
@@ -28,13 +28,15 @@ interface Order {
 }
 
 export default function DesignPage() {
+  const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'upload' | 'view'>('upload');
   const [uploadingFile, setUploadingFile] = useState<string | null>(null);
-  const { user } = useAuth();
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
+    if (!user) return;
+
     try {
       setLoading(true);
       const response = await fetch(`/api/orders?userId=${user?.id}`);
@@ -64,13 +66,13 @@ export default function DesignPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     if (user) {
       fetchOrders();
     }
-  }, [user]);
+  }, [user, fetchOrders]);
 
   const handleFileUpload = async (orderId: string, file: File) => {
     try {
