@@ -361,7 +361,7 @@ export default function CustomerServicePage() {
         </div>
 
         {/* 하단 정보 */}
-        <div className="flex flex-col lg:flex-row justify-between items-start gap-4 pt-[2rem] md:pt-[3rem]">
+        <div className="flex flex-col lg:flex-row justify-center items-center gap-4 pt-[2rem] md:pt-[3rem]">
           {/* 자주 묻는 질문 */}
           <div className="flex flex-col gap-4 md:gap-8 lg:w-[25rem] md:w-[25rem] border rounded-lg flex-shrink-0 md:mr-4 p-6">
             <div className="text-center">
@@ -376,68 +376,67 @@ export default function CustomerServicePage() {
               </Button>
             </div>
           </div>
-
-          <div className="flex flex-col gap-4 md:gap-8 w-full md:flex-1 md:pt-10">
-            {/* 전화번호 */}
-            <div>
-              <div className="lg:text-1.375 md:text-1.125 font-semibold mb-4">
-                전화번호
-              </div>
-              <div className="grid lg:grid-cols-2 md:grid-cols-2 sm:grid-cols-2 gap-3 md:gap-4">
-                {contactNumber.map((item) => (
-                  <div
-                    key={item.id}
-                    className="bg-[#F9F9F9] lg:p-4 md:p-4 rounded-[0.25rem] lg:text-0.875 md:font-0.75 lg:min-w-[9rem] md:min-w-[10rem] lg:h-[2.7rem] md:h-[3.5rem] sm:w-[7rem] sm:min-w-[9rem] sm:p-2"
-                  >
-                    <div className="w-full flex flex-col gap-2">
-                      <div className="flex justify-between">
-                        <div className="text-[#939393] font-500 pb-1 md:pb-2">
-                          {item.region_gu}
-                        </div>
-                        <Image
-                          src="/svg/copy.svg"
-                          alt="copy"
-                          width={12}
-                          height={12}
-                        />
-                      </div>
-                      <div className="font-700">{item.number}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+        </div>
+        <div className="flex flex-col gap-4 md:gap-8 w-full md:flex-1 md:pt-10">
+          {/* 전화번호 */}
+          <div>
+            <div className="lg:text-1.375 md:text-1.125 font-semibold mb-4 pl-16">
+              전화번호
             </div>
+            <div className="grid lg:grid-cols-2 md:grid-cols-2 sm:grid-cols-2 gap-3 md:gap-4 justify-items-center">
+              {contactNumber.map((item) => (
+                <div
+                  key={item.id}
+                  className="bg-[#F9F9F9] lg:p-4 md:p-4 rounded-[0.25rem] lg:text-0.875 md:font-0.75 lg:min-w-[9rem] md:min-w-[10rem] lg:h-[2.7rem] md:h-[3.5rem] sm:w-[7rem] sm:min-w-[9rem] sm:p-2"
+                >
+                  <div className="w-full flex flex-col gap-2">
+                    <div className="flex justify-between">
+                      <div className="text-[#939393] font-500 pb-1 md:pb-2">
+                        {item.region_gu}
+                      </div>
+                      <Image
+                        src="/svg/copy.svg"
+                        alt="copy"
+                        width={12}
+                        height={12}
+                      />
+                    </div>
+                    <div className="font-700">{item.number}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
 
-            {/* 계좌번호 */}
-            <div>
-              <div className="lg:text-1.375 md:text-1.125  font-semibold mb-4">
-                계좌번호
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
-                {BankAccount.map((item) => (
-                  <div
-                    key={item.id}
-                    className="bg-[#F9F9F9] p-3 md:p-4 rounded-[0.25rem] text-sm md:font-0.75 lg:min-w-[11rem] md:min-w-[12rem] h-[3rem] md:h-[3.5rem] sm:w-[7rem] sm:min-w-[9rem] sm:p-2"
-                  >
-                    <div className="w-full">
-                      <div className="flex justify-between">
-                        <div className="text-[#939393] font-500 pb-1 md:pb-2">
-                          {item.region_gu}
-                        </div>
-                        <Image
-                          src="/svg/copy.svg"
-                          alt="copy"
-                          width={10}
-                          height={10}
-                        />
+          {/* 계좌번호 */}
+          <div>
+            <div className="lg:text-1.375 md:text-1.125  font-semibold mb-4 pl-14">
+              계좌번호
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 justify-items-center">
+              {BankAccount.map((item) => (
+                <div
+                  key={item.id}
+                  className="bg-[#F9F9F9] p-3 md:p-4 rounded-[0.25rem] text-sm md:font-0.75 lg:min-w-[11rem] md:min-w-[12rem] h-[3rem] md:h-[3.5rem] sm:w-[7rem] sm:min-w-[9rem] sm:p-2"
+                >
+                  <div className="w-full">
+                    <div className="flex justify-between">
+                      <div className="text-[#939393] font-500 pb-1 md:pb-2">
+                        {item.region_gu}
                       </div>
-                      <div className="font-700">
-                        {item.bank_name} {item.bank_account}
-                      </div>
+                      <Image
+                        src="/svg/copy.svg"
+                        alt="copy"
+                        width={10}
+                        height={10}
+                      />
+                    </div>
+                    <div className="font-700">
+                      {item.bank_name} {item.bank_account}
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
