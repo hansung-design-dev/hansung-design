@@ -1,3 +1,4 @@
+/*
 'use client';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
@@ -38,7 +39,7 @@ export default function PhotoModal({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, currentIndex, photos.length]);
+  }, [isOpen, currentIndex, photos.length, handlePrevious, handleNext]);
 
   const handlePrevious = () => {
     if (currentIndex > 0) {
@@ -63,25 +64,21 @@ export default function PhotoModal({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[9999]">
       <div className="relative w-full h-full flex items-center justify-center">
-        {/* 닫기 버튼 */}
         <button
           onClick={onClose}
           className="absolute top-4 right-4 z-10 text-white hover:text-gray-300 transition-colors"
         ></button>
 
-        {/* 게시대 이름 */}
         {currentItemName && (
           <div className="absolute top-4 left-4 z-10 text-white text-lg font-medium">
             {currentItemName}
           </div>
         )}
 
-        {/* 사진 정보 */}
         <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10 text-white text-sm">
           {currentIndex + 1} / {photos.length}
         </div>
 
-        {/* 왼쪽 화살표 */}
         {currentIndex > 0 && (
           <button
             onClick={handlePrevious}
@@ -91,7 +88,6 @@ export default function PhotoModal({
           </button>
         )}
 
-        {/* 오른쪽 화살표 */}
         {currentIndex < photos.length - 1 && (
           <button
             onClick={handleNext}
@@ -101,7 +97,6 @@ export default function PhotoModal({
           </button>
         )}
 
-        {/* 사진 */}
         <div className="relative max-w-[90vw] max-h-[90vh] flex items-center justify-center">
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
@@ -121,4 +116,10 @@ export default function PhotoModal({
       </div>
     </div>
   );
+}
+*/
+
+// PhotoModal 컴포넌트가 임시로 비활성화되었습니다.
+export default function PhotoModal() {
+  return null;
 }
