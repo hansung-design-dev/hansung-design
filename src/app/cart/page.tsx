@@ -961,29 +961,34 @@ export default function Cart() {
 
   const handleConsultationSuccess = () => {
     setIsConsultationModalOpen(false);
-    // 문의 성공 후 상태 다시 확인
-    fetchInquiryStatuses().then(() => {
-      // 상담문의가 완료된 아이템들을 장바구니에서 제거
-      const itemsToRemove = cart.filter((item) => {
-        const inquiryStatus = inquiryStatuses[item.id];
-        return inquiryStatus && inquiryStatus.status === 'answered';
-      });
 
-      itemsToRemove.forEach((item) => {
-        dispatch({ type: 'REMOVE_ITEM', id: item.id });
-        // 선택된 아이템에서도 제거
-        const newSelected = new Set(selectedItems);
-        newSelected.delete(item.id);
-        setSelectedItems(newSelected);
-      });
+    // 상담신청이 완료된 아이템을 장바구니에서 즉시 제거
+    if (selectedProductId) {
+      console.log('🔍 상담신청 완료 - 제거할 아이템 ID:', selectedProductId);
+      console.log(
+        '🔍 상담신청 완료 - 제거 전 장바구니 아이템 수:',
+        cart.length
+      );
 
-      if (itemsToRemove.length > 0) {
-        console.log(
-          '상담문의가 완료된 아이템들을 장바구니에서 제거했습니다:',
-          itemsToRemove.map((item) => item.name)
-        );
-      }
-    });
+      dispatch({ type: 'REMOVE_ITEM', id: selectedProductId });
+
+      // 선택된 아이템에서도 제거
+      const newSelected = new Set(selectedItems);
+      newSelected.delete(selectedProductId);
+      setSelectedItems(newSelected);
+
+      console.log(
+        '🔍 상담신청 완료된 아이템을 장바구니에서 제거했습니다:',
+        selectedProductId
+      );
+      console.log(
+        '🔍 상담신청 완료 - 제거 후 장바구니 아이템 수:',
+        cart.length - 1
+      );
+    }
+
+    // 문의 상태 다시 확인 (기존 로직 유지)
+    fetchInquiryStatuses();
   };
 
   // 기간 변경 핸들러 추가

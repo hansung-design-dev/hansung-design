@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface FAQItem {
   category: string;
@@ -10,65 +10,106 @@ interface FAQItem {
   }[];
 }
 
-const faqData: FAQItem[] = [
-  {
-    category: '공공디자인',
-    questions: [
-      {
-        question: '견적은 어떻게 받나요?',
-        answer: '견적 요청 양식을 작성해주세요.',
-      },
-    ],
-  },
-  {
-    category: 'LED전자게시대',
-    questions: [
-      {
-        question: '신청은 어떻게 하나요?',
-        answer: '신청 페이지에서 신청 가능합니다.',
-      },
-      {
-        question: '결제가 되지 않아요.',
-        answer: '결제 방법을 다시 확인해주세요.',
-      },
-      {
-        question: '게시 일자 확인은 어디서 하나요?',
-        answer: '마이페이지에서 확인 가능합니다.',
-      },
-      {
-        question: '광고 이미지를 변경하고 싶어요.',
-        answer: '고객센터로 문의해주세요.',
-      },
-    ],
-  },
-  {
-    category: '현수막게시대',
-    questions: [
-      {
-        question: '설치 기간은 얼마나 걸리나요?',
-        answer: '보통 2~3일 소요됩니다.',
-      },
-    ],
-  },
-  {
-    category: '디지털사이니지',
-    questions: [
-      {
-        question: '유지보수는 어떻게 하나요?',
-        answer: '정기 점검이 제공됩니다.',
-      },
-    ],
-  },
-];
+interface FaqDataItem {
+  id: string;
+  title: string;
+  answer: string;
+  homepage_menu_types: {
+    name: string;
+  };
+}
 
 const FAQ = () => {
-  const [openCategory, setOpenCategory] = useState<string | null>(
-    'LED전자게시대'
-  );
+  const [faqData, setFaqData] = useState<FAQItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [openCategory, setOpenCategory] = useState<string | null>(null);
   const [selectedQuestion, setSelectedQuestion] = useState<{
     question: string;
     answer: string;
-  } | null>(faqData[1].questions[0]);
+  } | null>(null);
+
+  // 영문 카테고리를 한글로 변환하는 함수
+  const translateCategory = (englishName: string): string => {
+    const categoryMapping: { [key: string]: string } = {
+      digital_signage: '디지털사이니지',
+      public_design: '공공디자인',
+      led_display: 'LED전자게시대',
+      banner_display: '현수막게시대',
+    };
+    return categoryMapping[englishName] || englishName;
+  };
+
+  // 마크다운 텍스트를 HTML로 변환하는 함수
+  const renderMarkdown = (text: string) => {
+    return text
+      .replace(/\n\n/g, '</p><p>') // 이중 줄바꿈을 단락으로
+      .replace(/\n/g, '<br>') // 단일 줄바꿈을 <br>로
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // **텍스트**를 굵게
+      .replace(/\*(.*?)\*/g, '<em>$1</em>') // *텍스트*를 기울임
+      .replace(/■\s*(.*?)(?=\n|$)/g, '<strong>■ $1</strong>') // ■ 텍스트를 굵게
+      .replace(/^<p>/, '') // 첫 번째 <p> 태그 제거
+      .replace(/<\/p>$/, ''); // 마지막 </p> 태그 제거
+  };
+
+  // FAQ 데이터 가져오기
+  useEffect(() => {
+    const fetchFaqData = async () => {
+      try {
+        const response = await fetch('/api/customer-service/faq');
+        const data = await response.json();
+
+        if (data.faqs) {
+          // 카테고리별로 그룹화
+          const groupedData = data.faqs.reduce(
+            (acc: FAQItem[], faq: FaqDataItem) => {
+              const categoryName = translateCategory(
+                faq.homepage_menu_types.name
+              );
+              const existingCategory = acc.find(
+                (item) => item.category === categoryName
+              );
+
+              if (existingCategory) {
+                existingCategory.questions.push({
+                  question: faq.title,
+                  answer: faq.answer,
+                });
+              } else {
+                acc.push({
+                  category: categoryName,
+                  questions: [
+                    {
+                      question: faq.title,
+                      answer: faq.answer,
+                    },
+                  ],
+                });
+              }
+
+              return acc;
+            },
+            []
+          );
+
+          setFaqData(groupedData);
+
+          // 첫 번째 카테고리와 첫 번째 질문을 기본값으로 설정
+          if (groupedData.length > 0) {
+            setOpenCategory(groupedData[0].category);
+            if (groupedData[0].questions.length > 0) {
+              setSelectedQuestion(groupedData[0].questions[0]);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('FAQ 데이터 조회 오류:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFaqData();
+  }, []);
 
   return (
     <section className="py-[5rem] md:py-[10rem]  bg-[#F5F5F5] rounded-sm mb-0">
@@ -91,109 +132,129 @@ const FAQ = () => {
         <div className="lg:w-[60rem] items-start flex flex-col md:flex-row gap-[2rem] md:gap-[1rem] justify-center min-h-[30rem] md:min-w-[40rem] md:px-[2rem]">
           {/* 질문파트 */}
           <div className="w-[30rem] md:w-[80%] bg-white rounded-lg shadow p-[1.5rem] md:p-[2.5rem] sm:w-[16rem] sm:px-[1rem] ">
-            {faqData.map((item) => (
-              <div
-                key={item.category}
-                className={`mb-[1rem] md:mb-[2rem] ${
-                  openCategory === item.category && 'shadow'
-                }`}
-              >
-                <button
-                  onClick={() =>
-                    setOpenCategory(
-                      openCategory === item.category ? null : item.category
-                    )
-                  }
-                  className={`w-full text-left p-[1rem] md:p-[1.5rem] flex justify-between items-center border-none rounded-lg shadow bg-white ${
-                    openCategory === item.category &&
-                    'shadow-none rounded-b-none'
-                  } flex flex-col`}
+            {loading ? (
+              <div className="text-center py-8">FAQ를 불러오는 중...</div>
+            ) : faqData.length > 0 ? (
+              faqData.map((item) => (
+                <div
+                  key={item.category}
+                  className={`mb-[1rem] md:mb-[2rem] ${
+                    openCategory === item.category && 'shadow'
+                  }`}
                 >
-                  <div className="flex items-center justify-between text-1 md:text-1.25 font-medium w-full">
-                    <span>{item.category}</span>
-                    <span>
-                      {openCategory === item.category ? (
+                  <button
+                    onClick={() =>
+                      setOpenCategory(
+                        openCategory === item.category ? null : item.category
+                      )
+                    }
+                    className={`w-full text-left p-[1rem] md:p-[1.5rem] flex justify-between items-center border-none rounded-lg shadow bg-white ${
+                      openCategory === item.category &&
+                      'shadow-none rounded-b-none'
+                    } flex flex-col`}
+                  >
+                    <div className="flex items-center justify-between text-1 md:text-1.25 font-medium w-full">
+                      <span>{item.category}</span>
+                      <span>
+                        {openCategory === item.category ? (
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                          >
+                            <path
+                              d="M18 15L12 9L6 15"
+                              stroke="black"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        ) : (
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                          >
+                            <path
+                              d="M6 9L12 15L18 9"
+                              stroke="black"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        )}
+                      </span>
+                    </div>
+
+                    {openCategory === item.category && (
+                      <div className="w-full flex justify-center mt-[1rem] ">
                         <svg
+                          className="w-5/6"
                           xmlns="http://www.w3.org/2000/svg"
-                          width="24"
-                          height="24"
-                          viewBox="0 0 24 24"
+                          height="2"
+                          viewBox="0 0 346 2"
                           fill="none"
                         >
                           <path
-                            d="M18 15L12 9L6 15"
-                            stroke="black"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
+                            d="M346 1L-1.4782e-05 0.99997"
+                            stroke="#E0E0E0"
                           />
                         </svg>
-                      ) : (
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="24"
-                          height="24"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                        >
-                          <path
-                            d="M6 9L12 15L18 9"
-                            stroke="black"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      )}
-                    </span>
-                  </div>
+                      </div>
+                    )}
+                  </button>
 
                   {openCategory === item.category && (
-                    <div className="w-full flex justify-center mt-[1rem] ">
-                      <svg
-                        className="w-5/6"
-                        xmlns="http://www.w3.org/2000/svg"
-                        height="2"
-                        viewBox="0 0 346 2"
-                        fill="none"
-                      >
-                        <path d="M346 1L-1.4782e-05 0.99997" stroke="#E0E0E0" />
-                      </svg>
+                    <div className="pl-[1rem] md:pl-[1.5rem] py-[1rem] bg-white rounded-b-lg">
+                      {item.questions.map((q) => (
+                        <button
+                          key={q.question}
+                          onClick={() => setSelectedQuestion(q)}
+                          className={`block w-full text-left p-[0.75rem] md:p-[1rem] text-0.875  border-none ${
+                            selectedQuestion?.question === q.question
+                              ? 'font-bold text-black'
+                              : 'text-gray-600'
+                          }`}
+                        >
+                          {q.question}
+                        </button>
+                      ))}
                     </div>
                   )}
-                </button>
-
-                {openCategory === item.category && (
-                  <div className="pl-[1rem] md:pl-[1.5rem] py-[1rem] bg-white rounded-b-lg">
-                    {item.questions.map((q) => (
-                      <button
-                        key={q.question}
-                        onClick={() => setSelectedQuestion(q)}
-                        className={`block w-full text-left p-[0.75rem] md:p-[1rem] text-0.875  border-none ${
-                          selectedQuestion?.question === q.question
-                            ? 'font-bold text-black'
-                            : 'text-gray-600'
-                        }`}
-                      >
-                        {q.question}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                FAQ 데이터가 없습니다.
               </div>
-            ))}
+            )}
           </div>
 
           {/*답변섹션 */}
-          <div className="lg:w-[30rem] md:w-[80%] bg-white rounded-lg shadow p-[1.5rem] md:p-[2.5rem] sm:w-[16rem] sm:px-[1rem] lg:max-h-[27rem] lg:h-[32rem]">
-            {selectedQuestion && (
+          <div className="lg:w-[35rem] md:w-[80%] bg-white rounded-lg shadow p-[1.5rem] md:p-[2.5rem] sm:w-[16rem] sm:px-[1rem] lg:max-h-[50rem] lg:h-[38.5rem]">
+            {loading ? (
+              <div className="text-center py-8">답변을 불러오는 중...</div>
+            ) : selectedQuestion ? (
               <div>
                 <h2 className="text-1.25 md:text-1.125 font-600 mb-[1.5rem]">
                   {selectedQuestion.question}
                 </h2>
-                <p className="text-1 text-gray-700 ">
-                  {selectedQuestion.answer}
-                </p>
+                <div
+                  className="text-1 text-gray-700 leading-relaxed"
+                  dangerouslySetInnerHTML={{
+                    __html: `<p>${renderMarkdown(selectedQuestion.answer)}</p>`,
+                  }}
+                />
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                질문을 선택해주세요.
               </div>
             )}
           </div>

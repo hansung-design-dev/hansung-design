@@ -11,20 +11,41 @@ export async function GET(request: NextRequest) {
       ? parseInt(searchParams.get('offset')!)
       : 0;
 
-    const { data: notices, error } = await supabase
+    // important 우선순위 공지사항 먼저 가져오기
+    const { data: importantNotices, error: importantError } = await supabase
       .from('homepage_notice')
       .select('*')
       .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+      .eq('priority', 'important')
+      .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('공지사항 조회 오류:', error);
+    if (importantError) {
+      console.error('중요 공지사항 조회 오류:', importantError);
       return NextResponse.json(
         { error: '공지사항 조회 중 오류가 발생했습니다.' },
         { status: 500 }
       );
     }
+
+    // 일반 공지사항 가져오기
+    const { data: normalNotices, error: normalError } = await supabase
+      .from('homepage_notice')
+      .select('*')
+      .eq('is_active', true)
+      .neq('priority', 'important')
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (normalError) {
+      console.error('일반 공지사항 조회 오류:', normalError);
+      return NextResponse.json(
+        { error: '공지사항 조회 중 오류가 발생했습니다.' },
+        { status: 500 }
+      );
+    }
+
+    // important 공지사항을 먼저, 그 다음 일반 공지사항 순으로 합치기
+    const notices = [...importantNotices, ...normalNotices];
 
     return NextResponse.json({ notices });
   } catch (error) {
