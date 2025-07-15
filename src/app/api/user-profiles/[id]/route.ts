@@ -16,7 +16,7 @@ export async function PUT(
     const {
       profile_title,
       company_name,
-      business_registration_number,
+      business_registration_file,
       phone,
       email,
       contact_person_name,
@@ -57,7 +57,7 @@ export async function PUT(
       .update({
         profile_title,
         company_name,
-        business_registration_number,
+        business_registration_file,
         phone,
         email,
         contact_person_name,

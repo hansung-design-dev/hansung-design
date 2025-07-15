@@ -1,4 +1,9 @@
+'use client';
+import { useRouter } from 'next/navigation';
+
 const Footer = () => {
+  const router = useRouter();
+
   return (
     <footer className="text-gray py-[10rem] bg-gray-1 md:px-[8rem] sm:px-[2rem]">
       <div className="container mx-auto px-4 flex flex-col gap-[4.5rem]">
@@ -6,7 +11,10 @@ const Footer = () => {
           <button className="text-1.125 text-gray font-weight-700 border-none">
             CONTACT US
           </button>
-          <button className="text-1.125 text-gray font-weight-700 border-none">
+          <button
+            className="text-1.125 text-gray font-weight-700 border-none"
+            onClick={() => router.push('/about')}
+          >
             회사소개
           </button>
           <button className="text-1.125 text-gray font-weight-700 border-none">

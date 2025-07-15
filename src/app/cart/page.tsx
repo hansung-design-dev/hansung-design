@@ -11,7 +11,7 @@ import { CartItem } from '@/src/contexts/cartContext';
 //   id: string;
 //   profile_title: string;
 //   company_name?: string;
-//   business_registration_number?: string;
+//   business_registration_file?: string;
 //   business_registration_file?: string;
 //   phone: string;
 //   email: string;
@@ -857,7 +857,7 @@ export default function Cart() {
     profileData: {
       profile_title: string;
       company_name: string;
-      business_registration_number: string;
+      business_registration_file: string;
       phone: string;
       email: string;
       contact_person_name: string;

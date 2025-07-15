@@ -1,7 +1,7 @@
 export default function FaqSkeleton() {
   return (
     <div className="w-full animate-pulse">
-      {[...Array(6)].map((_, index) => (
+      {[...Array(2)].map((_, index) => (
         <div key={index} className="border-b border-gray-200">
           {/* FAQ 질문 스켈레톤 */}
           <div className="p-4 cursor-pointer ">

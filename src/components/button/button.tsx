@@ -37,7 +37,7 @@ export function Button({
         ? 'border-[#B8B8B8] border border-[0.1rem] border-solid'
         : 'border-none'
     }`,
-    filledBlack: 'text-white bg-black font-bold text-1.25',
+    filledBlack: 'text-white bg-black text-1.25',
     outlinedGray:
       'border-solid border-[0.1rem] border-gray-14 text-gray-14 font-bold text-1.25 bg-white',
     outlinedBlack:

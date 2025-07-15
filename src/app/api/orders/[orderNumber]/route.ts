@@ -60,7 +60,7 @@ export async function GET(
           id,
           profile_title,
           company_name,
-          business_registration_number,
+          business_registration_file,
           phone,
           email,
           contact_person_name,
@@ -279,7 +279,7 @@ export async function GET(
         email: userProfile?.email || userAuth?.email || '이메일 없음',
         phone: userProfile?.phone || userAuth?.phone || '전화번호 없음',
         businessNumber:
-          userProfile?.business_registration_number || '사업자번호 없음',
+          userProfile?.business_registration_file || '사업자등록증 없음',
         isCompany: userProfile?.is_company || false,
         isPublicInstitution: userProfile?.is_public_institution || false,
       };

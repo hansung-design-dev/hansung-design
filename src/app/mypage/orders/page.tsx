@@ -7,6 +7,7 @@ import { useAuth } from '@/src/contexts/authContext';
 import OrderItemList from '@/src/components/orderItemList';
 import OrderItemCard from '@/src/components/orderItemCard';
 import { Button } from '@/src/components/button/button';
+import TableSkeleton from '@/src/components/skeleton/TableSkeleton';
 
 // 타입 정의
 interface PanelInfo {
@@ -92,7 +93,7 @@ interface UserProfile {
   id: string;
   profile_title?: string;
   company_name?: string;
-  business_registration_number?: string;
+  business_registration_file?: string;
   phone?: string;
   email?: string;
   contact_person_name?: string;
@@ -480,7 +481,15 @@ export default function OrdersPage() {
   }
 
   if (loading) {
-    return <div className="text-center py-8">주문 내역을 불러오는 중...</div>;
+    return (
+      <main className="min-h-screen flex flex-col bg-gray-100 w-full">
+        <Nav variant="default" className="bg-white sm:px-0" />
+        <MypageContainer activeTab="주문내역">
+          <h1 className="text-2xl font-bold mb-8">주문내역</h1>
+          <TableSkeleton />
+        </MypageContainer>
+      </main>
+    );
   }
 
   const items = transformOrdersForDisplay();

@@ -246,7 +246,7 @@ const OrderItemList: React.FC<ItemTableProps> = ({
         <table className="w-full border-collapse border-t border-gray-200 text-1.25 font-500">
           {showHeader && (
             <thead>
-              <tr className="border-b border-gray-200 h-[3rem] text-gray-500 font-medium">
+              <tr className="border-b-solid border-b-1 border-gray-300 h-[3rem] text-gray-2 text-1.25 ">
                 {showCheckbox && <th className="w-10">no</th>}
                 <th className="text-left pl-10">게시대 명</th>
                 <th className="text-center">행정동</th>
@@ -259,7 +259,7 @@ const OrderItemList: React.FC<ItemTableProps> = ({
             {paginatedItems.map((item) => (
               <tr
                 key={item.id}
-                className={`border-b border-gray-200 h-[3.5rem] hover:bg-gray-50 ${
+                className={`border-b-solid border-b-1 border-gray-200 h-[3.5rem] hover:bg-gray-50 ${
                   enableRowClick ? 'cursor-pointer' : ''
                 }`}
                 onClick={(e) => handleRowClick(e, item.id, item.orderId)}
