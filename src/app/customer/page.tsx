@@ -15,7 +15,7 @@ interface NoticeItem {
   id: string;
   title: string;
   content: string;
-  priority: 'normal' | 'high' | 'urgent';
+  priority: 'normal' | 'high' | 'urgent' | 'important';
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -117,7 +117,7 @@ export default function CustomerPage() {
   };
 
   // 우선순위에 따른 번호 표시
-  const getNoticeNumber = (notice: NoticeItem, index: number) => {
+  const getNoticeNumber = (notice: NoticeItem) => {
     if (notice.priority === 'important') return ''; // important는 번호 없음
     if (notice.priority === 'urgent') return '긴급';
     if (notice.priority === 'high') return '공지';
@@ -209,34 +209,36 @@ export default function CustomerPage() {
           {activeTab === '공지사항' ? (
             <table className="w-full border-collapse text-lg">
               <thead>
-                <tr className="bg-gray-1 text-gray-400 text-1.25 font-500">
+                <tr className="border-b-solid border-b-1 border-gray-1 text-gray-400 text-1.25 font-500">
                   <th className="py-5 px-5 text-left ">no</th>
                   <th className="py-5 px-5 text-left">공지안내</th>
                   <th className="py-5 px-5 text-left ">등록일</th>
                 </tr>
               </thead>
               <tbody className="py-4">
-                {notices.map((notice, index) => (
+                {notices.map((notice) => (
                   <React.Fragment key={notice.id}>
                     <tr
-                      className="border-b border-b-solid border-b-gray-1 hover:bg-gray-50 cursor-pointer"
+                      className={`border-b border-b-solid border-b-gray-1 hover:bg-gray-50 cursor-pointer ${
+                        notice.priority === 'important' ? 'bg-gray-50' : ''
+                      }`}
                       onClick={() => handleItemClick(notice.id)}
                     >
                       <td className="py-3 px-5">
                         <span
                           className={
-                            notice.priority === 'urgent'
-                              ? 'text-red-600 font-bold'
+                            notice.priority === 'important'
+                              ? 'text-red font-bold'
                               : ''
                           }
                         >
-                          {getNoticeNumber(notice, index)}
+                          {getNoticeNumber(notice)}
                         </span>
                       </td>
                       <td
                         className={`py-3 px-5${
-                          notice.priority === 'high' ||
-                          notice.priority === 'urgent'
+                          notice.priority === 'important' ||
+                          notice.priority === 'normal'
                             ? ' font-bold'
                             : ''
                         }`}
