@@ -133,5 +133,5 @@ export default function useKakaoLoader() {
     setTimeout(checkSDKLoading, 1000);
 
     console.log('✅ 카카오맵 로더 초기화 완료');
-  }, [appkey, isManualLoading]);
+  }, [appkey, isManualLoading, loadKakaoMapSDK]);
 }
