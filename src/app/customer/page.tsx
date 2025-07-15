@@ -8,24 +8,89 @@ const faqCategories = [
   '현수막게시대',
 ];
 
-const tableData = [
-  { no: '공지', title: '6월 휴무 안내', date: '2025-05-30', id: 1, bold: true },
-  { no: '공지', title: '6월 휴무 안내', date: '2025-05-30', id: 2, bold: true },
-  { no: '08', title: '일반 안내', date: '2025-05-30', id: 3 },
-  { no: '07', title: '일반 안내', date: '2025-05-30', id: 4 },
-  { no: '06', title: '일반 안내', date: '2025-05-30', id: 5 },
-  { no: '05', title: '일반 안내', date: '2025-05-30', id: 6 },
-  { no: '04', title: '일반 안내', date: '2025-05-30', id: 7 },
-  { no: '03', title: '일반 안내', date: '2025-05-30', id: 8 },
-  { no: '02', title: '일반 안내', date: '2025-05-30', id: 9 },
-  { no: '01', title: '일반 안내', date: '2025-05-30', id: 10 },
-];
+// 공지사항 데이터 타입 정의
+interface NoticeItem {
+  id: string;
+  title: string;
+  content: string;
+  priority: 'normal' | 'high' | 'urgent';
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
 export default function CustomerPage() {
   const [activeTab, setActiveTab] = React.useState<
     '공지사항' | '자주 묻는 질문'
   >('공지사항');
   const [activeFaq, setActiveFaq] = React.useState(faqCategories[0]);
+  const [expandedItemId, setExpandedItemId] = React.useState<string | null>(
+    null
+  );
+  const [notices, setNotices] = React.useState<NoticeItem[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  // 공지사항 데이터 가져오기
+  React.useEffect(() => {
+    const fetchNotices = async () => {
+      try {
+        const response = await fetch('/api/notices?limit=20');
+        const data = await response.json();
+        if (data.notices) {
+          setNotices(data.notices);
+        }
+      } catch (error) {
+        console.error('공지사항 조회 오류:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNotices();
+  }, []);
+
+  const handleItemClick = (itemId: string) => {
+    setExpandedItemId(expandedItemId === itemId ? null : itemId);
+  };
+
+  // 마크다운 텍스트를 HTML로 변환하는 간단한 함수
+  const renderMarkdown = (text: string) => {
+    return text
+      .replace(/\n\n/g, '</p><p>') // 이중 줄바꿈을 단락으로
+      .replace(/\n/g, '<br>') // 단일 줄바꿈을 <br>로
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // **텍스트**를 굵게
+      .replace(/\*(.*?)\*/g, '<em>$1</em>') // *텍스트*를 기울임
+      .replace(/■\s*(.*?)(?=\n|$)/g, '<strong>■ $1</strong>') // ■ 텍스트를 굵게
+      .replace(/^<p>/, '') // 첫 번째 <p> 태그 제거
+      .replace(/<\/p>$/, ''); // 마지막 </p> 태그 제거
+  };
+
+  // 날짜 포맷팅
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+  };
+
+  // 우선순위에 따른 번호 표시
+  const getNoticeNumber = (notice: NoticeItem, index: number) => {
+    if (notice.priority === 'urgent') return '긴급';
+    if (notice.priority === 'high') return '공지';
+    return String(notices.length - index).padStart(2, '0');
+  };
+
+  if (loading) {
+    return (
+      <div className="py-12 mx-[10rem] min-h-[80vh]">
+        <section className="font-gmarket text-2.5 font-700 mb-12 lg:container lg:mx-auto lg:px-[8rem] sm:px-[1.5rem] pt-[6rem] pb-[3rem]">
+          고객지원
+        </section>
+        <div className="text-center py-8">공지사항을 불러오는 중...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="py-12 mx-[10rem] min-h-[80vh]">
@@ -80,30 +145,83 @@ export default function CustomerPage() {
               ? '공지사항'
               : `자주 묻는 질문 - ${activeFaq}`}
           </div>
-          <table className="w-full border-collapse text-lg">
-            <thead>
-              <tr className="bg-gray-1 text-gray-400 text-1.25 font-500">
-                <th className="py-5 px-5 text-left ">no</th>
-                <th className="py-5 px-5 text-left">공지안내</th>
-                <th className="py-5 px-5 text-left ">등록일</th>
-              </tr>
-            </thead>
-            <tbody className="py-4">
-              {tableData.map((row) => (
-                <tr
-                  key={row.id}
-                  className="border-b border-b-solid border-b-gray-1 hover:bg-gray-50 cursor-pointer"
-                  onClick={() => (window.location.href = `/customer/${row.id}`)}
-                >
-                  <td className="py-3 px-5">{row.no}</td>
-                  <td className={`py-3 px-5${row.bold ? ' font-bold' : ''}`}>
-                    {row.title}
-                  </td>
-                  <td className="py-3 px-5">{row.date}</td>
+
+          {activeTab === '공지사항' ? (
+            <table className="w-full border-collapse text-lg">
+              <thead>
+                <tr className="bg-gray-1 text-gray-400 text-1.25 font-500">
+                  <th className="py-5 px-5 text-left ">no</th>
+                  <th className="py-5 px-5 text-left">공지안내</th>
+                  <th className="py-5 px-5 text-left ">등록일</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="py-4">
+                {notices.map((notice, index) => (
+                  <React.Fragment key={notice.id}>
+                    <tr
+                      className="border-b border-b-solid border-b-gray-1 hover:bg-gray-50 cursor-pointer"
+                      onClick={() => handleItemClick(notice.id)}
+                    >
+                      <td className="py-3 px-5">
+                        <span
+                          className={
+                            notice.priority === 'urgent'
+                              ? 'text-red-600 font-bold'
+                              : ''
+                          }
+                        >
+                          {getNoticeNumber(notice, index)}
+                        </span>
+                      </td>
+                      <td
+                        className={`py-3 px-5${
+                          notice.priority === 'high' ||
+                          notice.priority === 'urgent'
+                            ? ' font-bold'
+                            : ''
+                        }`}
+                      >
+                        {notice.title}
+                      </td>
+                      <td className="py-3 px-5">
+                        {formatDate(notice.created_at)}
+                      </td>
+                    </tr>
+                    {/* 아코디언 상세 내용 */}
+                    {expandedItemId === notice.id && (
+                      <tr>
+                        <td colSpan={3} className="p-0">
+                          <div className="bg-gray-50 p-6 border-b border-gray-200">
+                            <div className="bg-white rounded-lg p-6 shadow-sm">
+                              <h3 className="text-xl font-bold mb-4">
+                                {notice.title}
+                              </h3>
+                              <div
+                                className="text-gray-600 leading-relaxed"
+                                dangerouslySetInnerHTML={{
+                                  __html: `<p>${renderMarkdown(
+                                    notice.content
+                                  )}</p>`,
+                                }}
+                              />
+                              <div className="mt-4 text-sm text-gray-500">
+                                등록일: {formatDate(notice.created_at)}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              자주 묻는 질문 내용이 여기에 표시됩니다.
+            </div>
+          )}
+
           {/* Pagination (예시) */}
           <div className="flex justify-center mt-8 gap-3 text-gray-500 text-lg">
             <span className="font-bold text-black">1</span>
