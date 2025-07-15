@@ -51,13 +51,23 @@ export async function POST(request: NextRequest) {
     // 여기서는 임시로 파일 정보만 반환
     const fileUrl = `/uploads/${fileName}`; // 실제 URL로 변경 필요
 
-    // 시안 레코드 생성 또는 업데이트
-    const { data: existingDraft } = await supabase
-      .from('design_drafts')
-      .select('id')
-      .eq('order_id', orderId)
-      .eq('draft_category', 'initial')
+    // orders 테이블에서 design_drafts_id 조회
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .select('design_drafts_id')
+      .eq('id', orderId)
       .single();
+
+    let existingDraft = null;
+    if (!orderError && order?.design_drafts_id) {
+      const { data: draft } = await supabase
+        .from('design_drafts')
+        .select('id')
+        .eq('id', order.design_drafts_id)
+        .eq('draft_category', 'initial')
+        .single();
+      existingDraft = draft;
+    }
 
     let draftId: string;
 
@@ -80,29 +90,8 @@ export async function POST(request: NextRequest) {
       if (updateError) throw updateError;
       draftId = updatedDraft.id;
     } else {
-      // 새로운 시안 생성
-      const { data: newDraft, error: createError } = await supabase
-        .from('design_drafts')
-        .insert({
-          order_id: orderId,
-          draft_category: 'initial',
-          file_name: file.name,
-          file_url: fileUrl,
-          file_extension: file.name.split('.').pop(),
-          file_size: file.size,
-          notes: '사용자가 업로드한 시안',
-        })
-        .select()
-        .single();
-
-      if (createError) throw createError;
-      draftId = newDraft.id;
-
-      // orders 테이블의 design_drafts_id 업데이트
-      await supabase
-        .from('orders')
-        .update({ design_drafts_id: newDraft.id })
-        .eq('id', orderId);
+      // 새로운 시안 생성 (이 경우는 주문 생성 시 이미 design_drafts가 생성되어 있어야 함)
+      throw new Error('주문에 해당하는 design_drafts를 찾을 수 없습니다.');
     }
 
     return NextResponse.json({

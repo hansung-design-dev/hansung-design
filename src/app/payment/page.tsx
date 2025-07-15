@@ -1274,7 +1274,7 @@ function PaymentPageContent() {
                 <button
                   className={`hover:cursor-pointer border-solid rounded-[0.375rem] px-4 py-6 w-full text-1.25 font-700 sm:text-1 sm:py-4 ${
                     paymentMethod === 'card'
-                      ? 'border-black border-[0.1rem] hover:bg-gray-3 text-black shadow-sm'
+                      ? 'bg-black border-[0.1rem]  text-white shadow-sm'
                       : 'border-gray-3 bg-gray-11'
                   }`}
                   onClick={() => {
@@ -1290,7 +1290,7 @@ function PaymentPageContent() {
                 <button
                   className={`hover:cursor-pointer border-solid rounded-[0.375rem] px-4 py-6 w-full text-1.25 font-700 sm:text-1 sm:py-4 ${
                     paymentMethod === 'bank_transfer'
-                      ? 'border-black border-[0.1rem] hover:bg-gray-3 text-black shadow-sm'
+                      ? 'bg-black border-[0.1rem]  text-white shadow-sm'
                       : 'border-gray-3 bg-gray-11'
                   }`}
                   onClick={() => {

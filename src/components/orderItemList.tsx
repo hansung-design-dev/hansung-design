@@ -241,199 +241,213 @@ const OrderItemList: React.FC<ItemTableProps> = ({
         onConfirm={alertModal.onConfirm}
       />
 
-      {/* ✅ 데스크탑/tablet 이상: table로 표시 */}
-      <div className="overflow-x-auto hidden lg:block">
-        <table className="w-full border-collapse border-t border-gray-200 text-1.25 font-500">
-          {showHeader && (
-            <thead>
-              <tr className="border-b-solid border-b-1 border-gray-300 h-[3rem] text-gray-2 text-1.25 ">
-                {showCheckbox && <th className="w-10">no</th>}
-                <th className="text-left pl-10">게시대 명</th>
-                <th className="text-center">행정동</th>
-                <th className="text-center">마감여부</th>
-                <th className="text-center">&nbsp;</th>
-              </tr>
-            </thead>
-          )}
-          <tbody>
+      {/* 주문내역이 없을 때 */}
+      {items.length === 0 && (
+        <div className="text-center py-20 text-gray-500 text-1.25">
+          주문내역이 없습니다
+        </div>
+      )}
+
+      {/* 주문내역이 있을 때만 테이블/카드 표시 */}
+      {items.length > 0 && (
+        <>
+          {/* ✅ 데스크탑/tablet 이상: table로 표시 */}
+          <div className="overflow-x-auto hidden lg:block">
+            <table className="w-full border-collapse border-t border-gray-200 text-1.25 font-500">
+              {showHeader && (
+                <thead>
+                  <tr className="border-b-solid border-b-1 border-gray-300 h-[3rem] text-gray-2 text-1.25 ">
+                    {showCheckbox && <th className="w-10">no</th>}
+                    <th className="text-left pl-10">게시대 명</th>
+                    <th className="text-center">행정동</th>
+                    <th className="text-center">마감여부</th>
+                    <th className="text-center">&nbsp;</th>
+                  </tr>
+                </thead>
+              )}
+              <tbody>
+                {paginatedItems.map((item) => (
+                  <tr
+                    key={item.id}
+                    className={`border-b-solid border-b-1 border-gray-200 h-[3.5rem] hover:bg-gray-50 ${
+                      enableRowClick ? 'cursor-pointer' : ''
+                    }`}
+                    onClick={(e) => handleRowClick(e, item.id, item.orderId)}
+                  >
+                    {showCheckbox && (
+                      <td
+                        className="text-center px-4"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(item.id)}
+                          onChange={(e) =>
+                            onItemSelect?.(item.id, e.target.checked)
+                          }
+                        />
+                      </td>
+                    )}
+                    <td className="px-4 text-left pl-10 text-1.25 font-500">
+                      <span className="font-medium text-black">
+                        {item.title}
+                        {item.subtitle && (
+                          <span className="ml-1 text-gray-500">
+                            {item.subtitle}
+                          </span>
+                        )}
+                      </span>
+                    </td>
+                    <td className="text-center text-1.25 font-500">
+                      {item.location}
+                    </td>
+                    <td
+                      className={`text-center font-semibold text-1.25 font-500 ${getStatusClass(
+                        item.status
+                      )}`}
+                    >
+                      {item.status}
+                    </td>
+                    <td className="text-center">
+                      <Button
+                        size="xs"
+                        variant="outlinedGray"
+                        className={` px-4 py-1 rounded-full text-gray-700 font-200`}
+                        // 테스트 중이므로 모든 상태에서 취소 가능
+                        // TODO: 실제 운영 시에는 아래 주석을 해제
+                        // disabled={
+                        //   item.status === '마감' || item.status === '송출중'
+                        // }
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCancelClick(item);
+                        }}
+                      >
+                        신청 취소
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+                {/* 확장된 상세 정보 표시 */}
+                {expandedItemId && expandedContent && (
+                  <tr>
+                    <td colSpan={showCheckbox ? 5 : 4} className="p-0">
+                      <div>{expandedContent}</div>
+                    </td>
+                  </tr>
+                )}
+
+                {/* 빈 row로 높이 맞추기 */}
+                {Array.from({
+                  length: ITEMS_PER_PAGE - paginatedItems.length,
+                }).map((_, i) => (
+                  <tr key={`empty-${i}`} className="h-[3.5rem]">
+                    <td colSpan={showCheckbox ? 5 : 4} />
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* ✅ 모바일(sm, md): 카드형으로 표시 */}
+          <div className="flex flex-col gap-4 lg:hidden items-center ">
             {paginatedItems.map((item) => (
-              <tr
+              <div
                 key={item.id}
-                className={`border-b-solid border-b-1 border-gray-200 h-[3.5rem] hover:bg-gray-50 ${
+                className={`border-solid border-gray-200 rounded-lg p-12 flex flex-col gap-2 shadow-sm hover:bg-gray-50 ${
                   enableRowClick ? 'cursor-pointer' : ''
                 }`}
-                onClick={(e) => handleRowClick(e, item.id, item.orderId)}
-              >
-                {showCheckbox && (
-                  <td
-                    className="text-center px-4"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(item.id)}
-                      onChange={(e) =>
-                        onItemSelect?.(item.id, e.target.checked)
+                onClick={() => {
+                  if (enableRowClick && !showCheckbox) {
+                    // 확장 기능이 있으면 확장 처리
+                    if (onExpandItem) {
+                      if (expandedItemId === item.id) {
+                        onExpandItem(null); // 이미 확장된 아이템이면 닫기
+                      } else {
+                        onExpandItem(item.id); // 새로운 아이템 확장
                       }
-                    />
-                  </td>
-                )}
-                <td className="px-4 text-left pl-10 text-1.25 font-500">
-                  <span className="font-medium text-black">
-                    {item.title}
-                    {item.subtitle && (
-                      <span className="ml-1 text-gray-500">
-                        {item.subtitle}
-                      </span>
-                    )}
-                  </span>
-                </td>
-                <td className="text-center text-1.25 font-500">
-                  {item.location}
-                </td>
-                <td
-                  className={`text-center font-semibold text-1.25 font-500 ${getStatusClass(
-                    item.status
-                  )}`}
-                >
-                  {item.status}
-                </td>
-                <td className="text-center">
-                  <Button
-                    size="xs"
-                    variant="outlinedGray"
-                    className={` px-4 py-1 rounded-full text-gray-700 font-200`}
-                    // 테스트 중이므로 모든 상태에서 취소 가능
-                    // TODO: 실제 운영 시에는 아래 주석을 해제
-                    // disabled={
-                    //   item.status === '마감' || item.status === '송출중'
-                    // }
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleCancelClick(item);
-                    }}
-                  >
-                    신청 취소
-                  </Button>
-                </td>
-              </tr>
-            ))}
-            {/* 확장된 상세 정보 표시 */}
-            {expandedItemId && expandedContent && (
-              <tr>
-                <td colSpan={showCheckbox ? 5 : 4} className="p-0">
-                  <div>{expandedContent}</div>
-                </td>
-              </tr>
-            )}
-
-            {/* 빈 row로 높이 맞추기 */}
-            {Array.from({ length: ITEMS_PER_PAGE - paginatedItems.length }).map(
-              (_, i) => (
-                <tr key={`empty-${i}`} className="h-[3.5rem]">
-                  <td colSpan={showCheckbox ? 5 : 4} />
-                </tr>
-              )
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* ✅ 모바일(sm, md): 카드형으로 표시 */}
-      <div className="flex flex-col gap-4 lg:hidden items-center ">
-        {paginatedItems.map((item) => (
-          <div
-            key={item.id}
-            className={`border-solid border-gray-200 rounded-lg p-12 flex flex-col gap-2 shadow-sm hover:bg-gray-50 ${
-              enableRowClick ? 'cursor-pointer' : ''
-            }`}
-            onClick={() => {
-              if (enableRowClick && !showCheckbox) {
-                // 확장 기능이 있으면 확장 처리
-                if (onExpandItem) {
-                  if (expandedItemId === item.id) {
-                    onExpandItem(null); // 이미 확장된 아이템이면 닫기
-                  } else {
-                    onExpandItem(item.id); // 새로운 아이템 확장
+                    } else {
+                      handleItemClick(item.id, item.orderId);
+                    }
                   }
-                } else {
-                  handleItemClick(item.id, item.orderId);
-                }
-              }
-            }}
-          >
-            <div className="font-medium text-black text-1.25 font-500">
-              {item.title}
-            </div>
-            {item.subtitle && (
-              <div className="text-gray-500">{item.subtitle}</div>
-            )}
-            <div className="text-1.25 font-500">행정동: {item.location}</div>
-            <div className="text-1.25 font-500">
-              상태:&nbsp;
-              <span
-                className={`text-1.25 font-500 ${getStatusClass(
-                  item.status
-                )} font-medium`}
+                }}
               >
-                {item.status}
-              </span>
-            </div>
-            <button
-              className={`border px-4 py-1 rounded mt-2 text-black border-black hover:bg-gray-100`}
-              // 테스트 중이므로 모든 상태에서 취소 가능
-              // TODO: 실제 운영 시에는 아래 주석을 해제
-              // className={`border px-4 py-1 rounded mt-2 ${
-              //   item.status === '마감' || item.status === '송출중'
-              //     ? 'text-gray-400 border-gray-200 bg-gray-100 cursor-not-allowed'
-              //     : 'text-black border-black hover:bg-gray-100'
-              // }`}
-              // disabled={item.status === '마감' || item.status === '송출중'}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleCancelClick(item);
-              }}
-            >
-              신청 취소
-            </button>
+                <div className="font-medium text-black text-1.25 font-500">
+                  {item.title}
+                </div>
+                {item.subtitle && (
+                  <div className="text-gray-500">{item.subtitle}</div>
+                )}
+                <div className="text-1.25 font-500">
+                  행정동: {item.location}
+                </div>
+                <div className="text-1.25 font-500">
+                  상태:&nbsp;
+                  <span
+                    className={`text-1.25 font-500 ${getStatusClass(
+                      item.status
+                    )} font-medium`}
+                  >
+                    {item.status}
+                  </span>
+                </div>
+                <button
+                  className={`border px-4 py-1 rounded mt-2 text-black border-black hover:bg-gray-100`}
+                  // 테스트 중이므로 모든 상태에서 취소 가능
+                  // TODO: 실제 운영 시에는 아래 주석을 해제
+                  // className={`border px-4 py-1 rounded mt-2 ${
+                  //   item.status === '마감' || item.status === '송출중'
+                  //     ? 'text-gray-400 border-gray-200 bg-gray-100 cursor-not-allowed'
+                  //     : 'text-black border-black hover:bg-gray-100'
+                  // }`}
+                  // disabled={item.status === '마감' || item.status === '송출중'}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCancelClick(item);
+                  }}
+                >
+                  신청 취소
+                </button>
 
-            {/* 모바일에서 확장된 상세 정보 표시 */}
-            {expandedItemId === item.id && expandedContent && (
-              <div className="mt-4 p-4 bg-gray-50 rounded border-t border-gray-200">
-                {expandedContent}
+                {/* 모바일에서 확장된 상세 정보 표시 */}
+                {expandedItemId === item.id && expandedContent && (
+                  <div className="mt-4 p-4 bg-gray-50 rounded border-t border-gray-200">
+                    {expandedContent}
+                  </div>
+                )}
               </div>
-            )}
+            ))}
           </div>
-        ))}
-      </div>
-      {/* 페이지네이션 UI */}
-      <div className="flex justify-center items-center gap-1 mt-4 pb-10">
-        <button
-          onClick={() => setPage((p) => Math.max(1, p - 1))}
-          disabled={page === 1}
-          className="w-7 h-7 flex items-center justify-center"
-        >
-          <ArrowLeft className="w-4 h-4 text-gray-14" />
-        </button>
-        {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
-          <button
-            key={num}
-            onClick={() => setPage(num)}
-            className={`w-7 h-7 flex items-center justify-center text-1.25 font-500 rounded ${
-              page === num ? 'text-black' : 'text-gray-14'
-            }`}
-          >
-            {num}
-          </button>
-        ))}
-        <button
-          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-          disabled={page === totalPages}
-          className="w-7 h-7 flex items-center justify-center"
-        >
-          <ArrowRight className="w-4 h-4 text-gray-14" />
-        </button>
-      </div>
+          {/* 페이지네이션 UI */}
+          <div className="flex justify-center items-center gap-1 mt-4 pb-10">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="w-7 h-7 flex items-center justify-center"
+            >
+              <ArrowLeft className="w-4 h-4 text-gray-14" />
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
+              <button
+                key={num}
+                onClick={() => setPage(num)}
+                className={`w-7 h-7 flex items-center justify-center text-1.25 font-500 rounded ${
+                  page === num ? 'text-black' : 'text-gray-14'
+                }`}
+              >
+                {num}
+              </button>
+            ))}
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="w-7 h-7 flex items-center justify-center"
+            >
+              <ArrowRight className="w-4 h-4 text-gray-14" />
+            </button>
+          </div>
+        </>
+      )}
     </>
   );
 };

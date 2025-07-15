@@ -1,6 +1,114 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/src/lib/supabase';
 
+// Type definitions for the orders API
+interface PanelInfo {
+  id: string;
+  name: string;
+  location: string;
+  description?: string;
+  created_at: string;
+  updated_at: string;
+  region_gu?: {
+    name: string;
+  };
+}
+
+interface OrderDetail {
+  id: string;
+  order_id: string;
+  panel_info_id: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  half_period?: 'first_half' | 'second_half';
+  selected_year?: number;
+  selected_month?: number;
+  start_date?: string;
+  end_date?: string;
+  created_at: string;
+  updated_at: string;
+  panel_info?: PanelInfo;
+}
+
+interface PaymentMethod {
+  id: string;
+  name: string;
+  method_type: string;
+  method_code: string;
+  is_active: boolean;
+  description?: string;
+  is_online: boolean;
+  requires_admin_approval: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface Payment {
+  id: string;
+  order_id: string;
+  payment_method_id: string;
+  payment_provider?: string;
+  amount: number;
+  payment_status: 'pending' | 'completed' | 'failed' | 'cancelled' | 'refunded';
+  transaction_id?: string;
+  payment_date?: string;
+  admin_approval_status: 'pending' | 'approved' | 'rejected';
+  admin_notes?: string;
+  depositor_name?: string;
+  deposit_date?: string;
+  created_at: string;
+  updated_at: string;
+  payment_method?: PaymentMethod;
+}
+
+interface UserProfile {
+  id: string;
+  user_auth_id: string;
+  profile_title: string;
+  company_name?: string;
+  business_registration_file?: string;
+  phone: string;
+  email: string;
+  contact_person_name: string;
+  is_public_institution: boolean;
+  is_company: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface DesignDraft {
+  id: string;
+  project_name?: string;
+  draft_category: 'initial' | 'feedback' | 'revision' | 'final';
+  file_name?: string;
+  file_url?: string;
+  file_extension?: string;
+  file_size?: number;
+  notes?: string;
+  is_approved: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface Order {
+  id: string;
+  user_auth_id: string;
+  user_profile_id: string;
+  order_number: string;
+  total_price: number;
+  payment_status: 'pending' | 'completed' | 'failed' | 'cancelled' | 'refunded';
+  admin_approval_status: 'pending' | 'approved' | 'rejected';
+  draft_delivery_method?: 'email' | 'upload';
+  design_drafts_id?: string;
+  created_at: string;
+  updated_at: string;
+  order_details?: OrderDetail[];
+  payments?: Payment[];
+  user_profiles?: UserProfile;
+  design_drafts?: DesignDraft[];
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -13,6 +121,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // 1. 주문 정보 조회
     const { data: orders, error } = await supabase
       .from('orders')
       .select(
@@ -49,7 +158,45 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ orders });
+    // 2. 각 주문에 대한 design_drafts 조회 (orders.design_drafts_id를 통해 연결)
+    const ordersWithDrafts = await Promise.all(
+      (orders || []).map(async (order: Order) => {
+        let designDrafts: DesignDraft[] = [];
+
+        if (order.design_drafts_id) {
+          const { data: draft, error: draftError } = await supabase
+            .from('design_drafts')
+            .select('*')
+            .eq('id', order.design_drafts_id)
+            .order('created_at', { ascending: false });
+
+          if (draftError) {
+            console.error(
+              `🔍 주문 ${order.id}의 design_drafts 조회 오류:`,
+              draftError
+            );
+          } else if (draft && Array.isArray(draft) && draft.length > 0) {
+            designDrafts = draft as DesignDraft[];
+          } else if (draft && !Array.isArray(draft)) {
+            designDrafts = [draft as DesignDraft];
+          }
+
+          console.log(
+            `🔍 주문 ${order.id}의 design_drafts:`,
+            designDrafts.length
+          );
+        } else {
+          console.log(`🔍 주문 ${order.id}의 design_drafts_id가 없음`);
+        }
+
+        return {
+          ...order,
+          design_drafts: designDrafts,
+        };
+      })
+    );
+
+    return NextResponse.json({ orders: ordersWithDrafts });
   } catch (error) {
     console.error('주문 조회 중 예외 발생:', error);
     return NextResponse.json(
@@ -393,6 +540,13 @@ export async function POST(request: NextRequest) {
 
     // 3. design_drafts row 생성 (항상)
     if (userProfile.id) {
+      console.log('🔍 design_drafts 생성 시작:', {
+        order_id: order.id,
+        user_profile_id: userProfile.id,
+        project_name: projectName,
+        draft_delivery_method: draftDeliveryMethod || 'upload',
+      });
+
       const { data: draft, error: draftError } = await supabase
         .from('design_drafts')
         .insert({
@@ -405,18 +559,29 @@ export async function POST(request: NextRequest) {
         })
         .select('id')
         .single();
+
       if (draftError) {
-        console.warn('Failed to create draft record:', draftError);
+        console.error('🔍 design_drafts 생성 실패:', draftError);
       } else {
+        console.log('🔍 design_drafts 생성 성공:', draft.id);
+
         // orders 테이블의 design_drafts_id와 draft_delivery_method 업데이트
-        await supabase
+        const { error: updateError } = await supabase
           .from('orders')
           .update({
             design_drafts_id: draft.id,
             draft_delivery_method: draftDeliveryMethod || 'upload',
           })
           .eq('id', order.id);
+
+        if (updateError) {
+          console.error('🔍 orders 테이블 업데이트 실패:', updateError);
+        } else {
+          console.log('🔍 orders 테이블 업데이트 성공');
+        }
       }
+    } else {
+      console.error('🔍 userProfile.id가 없어서 design_drafts 생성 불가');
     }
 
     // 4. 결제 완료 시 시안관리 레코드 자동 생성
