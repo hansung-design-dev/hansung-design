@@ -3,6 +3,7 @@ import ArrowLeft from '@/src/icons/arrow-left.svg';
 import ArrowRight from '@/src/icons/arrow-right.svg';
 import Image from 'next/image';
 import { DisplayBillboard } from '@/src/types/displaydetail';
+import PhotoModal from '@/src/components/modal/PhotoModal';
 
 const statusColorMap: Record<string, string> = {
   진행중: 'text-[#109251]',
@@ -50,6 +51,10 @@ const ItemList: React.FC<ItemTableProps> = ({
   hideQuantityColumns = false,
 }) => {
   const [page, setPage] = useState(1);
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [currentItemIndex, setCurrentItemIndex] = useState(0);
+
   const totalPages = Math.ceil(items.length / ITEMS_PER_PAGE);
   const paginatedItems = items.slice(
     (page - 1) * ITEMS_PER_PAGE,
@@ -75,6 +80,37 @@ const ItemList: React.FC<ItemTableProps> = ({
     }
 
     handleItemClick(itemId.toString());
+  };
+
+  // 사진 모달 관련 함수들
+  const openPhotoModal = (itemIndex: number) => {
+    setCurrentItemIndex(itemIndex);
+    setCurrentPhotoIndex(0);
+    setIsPhotoModalOpen(true);
+  };
+
+  const closePhotoModal = () => {
+    setIsPhotoModalOpen(false);
+  };
+
+  const handlePhotoChange = (index: number) => {
+    setCurrentPhotoIndex(index);
+  };
+
+  const getCurrentItemPhotos = (): string[] => {
+    if (currentItemIndex >= 0 && currentItemIndex < items.length) {
+      const item = items[currentItemIndex];
+      return item.photo_url ? [item.photo_url] : [];
+    }
+    return [];
+  };
+
+  const getCurrentItemName = (): string => {
+    if (currentItemIndex >= 0 && currentItemIndex < items.length) {
+      const item = items[currentItemIndex];
+      return item.nickname || item.name || '';
+    }
+    return '';
   };
 
   // 구분 컬럼에 표시할 값 계산 함수
@@ -219,8 +255,21 @@ const ItemList: React.FC<ItemTableProps> = ({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          console.log('camera');
+                          const itemIndex = items.findIndex(
+                            (item) => item.id === item.id
+                          );
+                          if (item.photo_url) {
+                            openPhotoModal(itemIndex);
+                          } else {
+                            console.log('이 게시대에는 사진이 없습니다.');
+                          }
                         }}
+                        className={`${
+                          item.photo_url
+                            ? 'cursor-pointer'
+                            : 'cursor-not-allowed opacity-50'
+                        }`}
+                        title={item.photo_url ? '사진 보기' : '사진 없음'}
                       >
                         <Image
                           src={'/svg/list/camera.svg'}
@@ -419,6 +468,16 @@ const ItemList: React.FC<ItemTableProps> = ({
           <ArrowRight className="w-4 h-4 text-gray-14" />
         </button>
       </div>
+
+      {/* 사진 모달 */}
+      <PhotoModal
+        isOpen={isPhotoModalOpen}
+        onClose={closePhotoModal}
+        photos={getCurrentItemPhotos()}
+        currentIndex={currentPhotoIndex}
+        onPhotoChange={handlePhotoChange}
+        currentItemName={getCurrentItemName()}
+      />
     </>
   );
 };

@@ -149,20 +149,12 @@ export default function DistrictCard({
                 마감안내 및 안내내용 <br /> 최종 2줄
               </div>
               <div className="text-gray-14 text-0.875 font-500">
-                {district.name === '전체' ? (
-                  <div className="sm:pt-0 lg:pt-0 md:pt-0">
-                    전체 구의 신청기간을 확인하려면{' '}
-                    <br className="sm:inline lg:hidden md:hidden" /> 구별 카드를
-                    클릭하세요.
-                  </div>
-                ) : (
-                  <DistrictInfo
-                    period={district.period}
-                    bankInfo={district.bankInfo}
-                    flexRow={false}
-                    isLEDDisplay={isLEDDisplay}
-                  />
-                )}
+                <DistrictInfo
+                  period={district.period}
+                  bankInfo={district.bankInfo}
+                  flexRow={false}
+                  isLEDDisplay={isLEDDisplay}
+                />
               </div>
             </div>
           </div>
