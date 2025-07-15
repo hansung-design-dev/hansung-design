@@ -883,7 +883,7 @@ export default function DisplayDetailPage({
           >
             <div className="relative aspect-[1/1] w-full overflow-hidden rounded-lg">
               <Image
-                src="/images/banner-display/landing.png"
+                src={item.photo_url || '/images/banner-display/landing.png'}
                 alt={item.name}
                 fill
                 className={`md:object-cover sm:object-cover `}
@@ -997,7 +997,9 @@ export default function DisplayDetailPage({
                 >
                   <div className="relative aspect-[1/1] w-full overflow-hidden rounded-lg">
                     <Image
-                      src="/images/banner-display/landing.png"
+                      src={
+                        item.photo_url || '/images/banner-display/landing.png'
+                      }
                       alt={item.name}
                       fill
                       className="object-cover"
@@ -1152,30 +1154,16 @@ export default function DisplayDetailPage({
               >
                 현수막게시대
               </button>
-              {/* 용산구에서는 반자동 탭 추가, 송파구에서는 상단광고 탭 추가 */}
-              {districtObj?.code === 'yongsan' ? (
-                <button
-                  onClick={() => currentSetPanelTypeFilter('semi_auto')}
-                  className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-6 font-medium ${
-                    currentPanelTypeFilter === 'semi_auto'
-                      ? 'text-white bg-black rounded-full '
-                      : 'text-gray-600 hover:text-gray-800'
-                  }`}
-                >
-                  반자동
-                </button>
-              ) : (
-                <button
-                  onClick={() => currentSetPanelTypeFilter('top_fixed')}
-                  className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-6 font-medium ${
-                    currentPanelTypeFilter === 'top_fixed'
-                      ? 'text-white bg-black rounded-full '
-                      : 'text-gray-600 hover:text-gray-800'
-                  }`}
-                >
-                  상단광고
-                </button>
-              )}
+              <button
+                onClick={() => currentSetPanelTypeFilter('top_fixed')}
+                className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-6 font-medium ${
+                  currentPanelTypeFilter === 'top_fixed'
+                    ? 'text-white bg-black rounded-full '
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                상단광고
+              </button>
             </div>
           </div>
         )}

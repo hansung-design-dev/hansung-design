@@ -25,7 +25,9 @@ export default function BankInfo({ bankInfo, flexRow = false }: BankInfoProps) {
       <span> {bankInfo ? `입금계좌` : ''}</span>
 
       <div
-        className={`flex text-red  ${flexRow ? 'flex-row' : 'flex-col'} gap-1`}
+        className={`flex text-black  ${
+          flexRow ? 'flex-row' : 'flex-col'
+        } gap-1`}
       >
         <span>
           {bankInfo ? `${bankInfo.bank_name} ${bankInfo.account_number} ` : ''}

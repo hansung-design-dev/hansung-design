@@ -1465,7 +1465,14 @@ export default function Cart() {
                   }
                 )}
 
-              {/* 경고 메시지 */}
+              {/* 결제신청 아이템이 없을 때 메시지 */}
+              {Object.keys(groupedItems.districts).length === 0 && (
+                <CartGroupCard title="결제신청">
+                  <div className="flex items-center justify-center py-12 text-gray-500">
+                    결제신청할 상품이 없습니다.
+                  </div>
+                </CartGroupCard>
+              )}
             </>
           )}
 

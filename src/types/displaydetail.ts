@@ -43,6 +43,7 @@ export interface BaseBillboard {
   second_half_closure_quantity?: number;
   total_price?: number; // 실제 가격 (숫자)
   panel_info_id?: string; // panel_info 테이블의 실제 ID
+  photo_url?: string; // 사진 URL 추가
   inventory_info?: {
     current_period: {
       total_slots: number;

@@ -121,20 +121,6 @@ export default function BannerDisplayPage() {
         // 구별 가나다순 정렬
         processedDistricts.sort((a, b) => a.name.localeCompare(b.name));
 
-        // "전체" 카드 추가 (모든 구의 합계)
-        const totalCount = Object.values(
-          data.counts as Record<string, number>
-        ).reduce((sum: number, count: number) => sum + count, 0);
-        processedDistricts.unshift({
-          id: 1,
-          name: '전체',
-          code: 'all',
-          description: '모든 구 현수막 게시대',
-          count: totalCount,
-          logo: '/images/district-icon/all.svg',
-          src: '/images/led/landing.png',
-        });
-
         console.log('🔍 Final processed districts:', processedDistricts);
         setDistricts(processedDistricts);
       } catch (err) {

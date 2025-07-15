@@ -20,6 +20,7 @@ interface BannerDisplayData {
   panel_code?: number;
   panel_type?: string;
   max_banner?: number; // panel_info에서 가져오는 max_banner
+  photo_url?: string; // 사진 URL 추가
   latitude?: number; // 위도 추가
   longitude?: number; // 경도 추가
   created_at: string;
@@ -359,6 +360,7 @@ export default function BannerDisplayPage({
                 panelCode: item.panel_code,
                 nickname: item.nickname,
                 district: item.region_gu.name,
+                photo_url: item.photo_url, // 사진 URL 로그 추가
                 bannerSlotInfo: item.banner_slot_info?.map((slot) => ({
                   slot_number: slot.slot_number,
                   banner_type: slot.banner_type,
@@ -492,6 +494,7 @@ export default function BannerDisplayPage({
                 first_half_closure_quantity: firstHalfClosureQuantity,
                 second_half_closure_quantity: secondHalfClosureQuantity,
                 panel_info_id: item.id, // 원본 panel_info UUID
+                photo_url: item.photo_url, // 사진 URL 추가
                 banner_slot_info: item.banner_slot_info, // banner_slot_info 보존
                 inventory_info: item.inventory_info, // 실시간 재고 정보 추가
               };

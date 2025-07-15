@@ -10,6 +10,7 @@ export interface BannerDisplayData {
   panel_status: string;
   panel_type: string;
   max_banner: number; // panel_info에서 가져오는 max_banner
+  photo_url?: string; // 사진 URL 추가
   latitude?: number; // 위도 추가
   longitude?: number; // 경도 추가
   region_gu: {
