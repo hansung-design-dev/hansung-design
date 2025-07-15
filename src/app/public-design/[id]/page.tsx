@@ -2,87 +2,127 @@
 
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import ProjectRow, { ProjectItem } from '@/src/components/projectRow';
-
-// 목데이터: 디자인 구성 이미지 리스트
-const designImages = [
-  {
-    id: 0,
-    src: '/images/publicdesign-detailpage-image.png',
-    alt: '디자인 구성도',
-  },
-  {
-    id: 1,
-    src: '/images/public-design-image2.jpeg',
-    alt: '디자인 상세 이미지1',
-  },
-  {
-    id: 2,
-    src: '/images/public-design-image2.jpeg',
-    alt: '디자인 상세 이미지2',
-  },
-];
-
-// allProjects와 동일한 데이터(타입 포함)
-const allProjects: ProjectItem[] = [
-  {
-    id: 1,
-    imageSrc: '/images/public-design-image2.jpeg',
-    title: '브랜드 아이템',
-    subtitle: '간판개선사업',
-    description: '도시의 새로운 경험을 만드는 브랜드',
-  },
-  {
-    id: 2,
-    imageSrc: '/images/public-design-image2.jpeg',
-    title: '공공디자인',
-    subtitle: '서브타이틀',
-    description: '도시 경관을 아름답게 만드는 디자인',
-  },
-  {
-    id: 3,
-    imageSrc: '/images/public-design-image2.jpeg',
-    title: '공공시설물',
-    subtitle: '서브타이틀',
-    description: '도시의 기능을 높이는 시설물',
-  },
-  {
-    id: 4,
-    imageSrc: '/images/public-design-image2.jpeg',
-    title: '스마트 시티',
-    subtitle: '서브타이틀',
-    description: '미래 도시의 새로운 가능성',
-  },
-  {
-    id: 5,
-    imageSrc: '/images/public-design-image2.jpeg',
-    title: '도시 경관',
-    subtitle: '서브타이틀',
-    description: '도시 환경을 개선하는 디자인',
-  },
-];
+import { PublicDesignDetailResponse } from '@/src/types/public-design';
+import PublicDesignDesktopSkeleton from '@/src/components/skeleton/PublicDesignDesktopSkeleton';
 
 export default function PublicDesignDetailPage() {
   const params = useParams();
-  const id = Number(params.id);
+  const id = params.id as string;
+  const [projectData, setProjectData] =
+    useState<PublicDesignDetailResponse | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // allProjects에서 id의 index 찾기
-  const idx = allProjects.findIndex((p) => p.id === id);
+  useEffect(() => {
+    const fetchProjectDetail = async () => {
+      try {
+        const response = await fetch(`/api/public-design-projects/${id}`);
+        if (!response.ok) {
+          if (response.status === 404) {
+            console.error('Project not found');
+            setProjectData(null);
+            return;
+          }
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        setProjectData(data);
+      } catch (error) {
+        console.error('Error fetching project detail:', error);
+        // 에러 시 기본 데이터 사용
+        setProjectData({
+          project: {
+            id: '1',
+            project_id: '1',
+            design_contents_type: 'list',
+            title: '브랜드 아이템',
+            subtitle: '간판개선사업',
+            description: '도시의 새로운 경험을 만드는 브랜드',
+            image_url: '/images/public-design-image2.jpeg',
+            display_order: 1,
+            is_active: true,
+            created_at: '',
+            updated_at: '',
+          },
+          detailContents: [
+            {
+              id: '1',
+              project_id: '1',
+              design_contents_type: 'detail',
+              title: '디자인 구성도',
+              alt_text: '디자인 구성도',
+              image_url: '/images/publicdesign-detailpage-image.png',
+              display_order: 1,
+              is_active: true,
+              created_at: '',
+              updated_at: '',
+            },
+            {
+              id: '2',
+              project_id: '1',
+              design_contents_type: 'detail',
+              title: '디자인 상세 이미지1',
+              alt_text: '디자인 상세 이미지1',
+              image_url: '/images/public-design-image2.jpeg',
+              display_order: 2,
+              is_active: true,
+              created_at: '',
+              updated_at: '',
+            },
+            {
+              id: '3',
+              project_id: '1',
+              design_contents_type: 'detail',
+              title: '디자인 상세 이미지2',
+              alt_text: '디자인 상세 이미지2',
+              image_url: '/images/public-design-image2.jpeg',
+              display_order: 3,
+              is_active: true,
+              created_at: '',
+              updated_at: '',
+            },
+          ],
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  // 줄 패턴: 0~1(2개), 2~4(3개), 0~1(2개), 2~4(3개) 반복
-  let rowProjects: ProjectItem[] = [];
-  let largeCardFirst = true;
-  let splitSmallSection = false;
-  if (idx < 2) {
-    rowProjects = allProjects.slice(0, 2);
-    largeCardFirst = true;
-    splitSmallSection = false;
-  } else if (idx >= 2 && idx < 5) {
-    rowProjects = allProjects.slice(2, 5);
-    largeCardFirst = false;
-    splitSmallSection = true;
+    if (id) {
+      fetchProjectDetail();
+    }
+  }, [id]);
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-white py-[6rem] lg:px-[8rem] sm:px-2 md:px-2">
+        <PublicDesignDesktopSkeleton variant="detail" />
+      </main>
+    );
   }
-  // (더 많은 데이터가 있다면 패턴 반복)
+
+  if (!projectData) {
+    return (
+      <main className="min-h-screen bg-white py-[6rem] lg:px-[8rem] sm:px-2 md:px-2">
+        <div className="flex justify-center items-center h-64">
+          <div className="text-lg">프로젝트를 찾을 수 없습니다.</div>
+        </div>
+      </main>
+    );
+  }
+
+  // ProjectRow용 데이터 변환
+  const rowProjects: ProjectItem[] = [
+    {
+      id: 1,
+      imageSrc:
+        projectData.project.image_url || '/images/public-design-image2.jpeg',
+      title: projectData.project.title || '',
+      subtitle: projectData.project.subtitle || '',
+      description: projectData.project.description || '',
+    },
+  ];
 
   return (
     <main className="min-h-screen bg-white py-[6rem] lg:px-[8rem] sm:px-2 md:px-2">
@@ -90,19 +130,22 @@ export default function PublicDesignDetailPage() {
       <section className=" mx-auto mb-12  ">
         <ProjectRow
           projects={rowProjects}
-          largeCardFirst={largeCardFirst}
-          splitSmallSection={splitSmallSection}
+          largeCardFirst={true}
+          splitSmallSection={false}
           showTitleOnLargeOnly={true}
         />
       </section>
 
       {/* 디자인 구성 이미지 리스트 */}
       <section className="container mx-auto px-4 flex flex-col gap-12">
-        {designImages.map((img) => (
-          <div key={img.id} className="relative w-full h-auto min-h-[200px]">
+        {projectData.detailContents.map((content) => (
+          <div
+            key={content.id}
+            className="relative w-full h-auto min-h-[200px]"
+          >
             <Image
-              src={img.src}
-              alt={img.alt}
+              src={content.image_url || '/images/public-design-image2.jpeg'}
+              alt={content.alt_text || content.title || '디자인 이미지'}
               width={1200}
               height={600}
               className="w-full h-auto rounded-2xl object-contain"

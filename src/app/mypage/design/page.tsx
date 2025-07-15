@@ -1,10 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Button } from '@/src/components/button/button';
 import MypageContainer from '@/src/components/mypageContainer';
 import { useAuth } from '@/src/contexts/authContext';
-import { useRouter } from 'next/navigation';
 import CustomFileUpload from '@/src/components/ui/CustomFileUpload';
 import DesignSkeleton from '@/src/components/skeleton/DesignSkeleton';
 
@@ -35,7 +33,6 @@ export default function DesignPage() {
   const [activeTab, setActiveTab] = useState<'upload' | 'view'>('upload');
   const [uploadingFile, setUploadingFile] = useState<string | null>(null);
   const { user } = useAuth();
-  const router = useRouter();
 
   const fetchOrders = async () => {
     try {
@@ -113,6 +110,7 @@ export default function DesignPage() {
   if (loading) {
     return (
       <MypageContainer activeTab="시안관리">
+        <h1 className="text-2xl font-bold mb-8">시안 관리</h1>
         <DesignSkeleton />
       </MypageContainer>
     );
@@ -153,12 +151,6 @@ export default function DesignPage() {
               ? '시안 업로드할 주문이 없습니다.'
               : '업로드된 시안이 없습니다.'}
           </p>
-          <Button
-            onClick={() => router.push('/')}
-            className="bg-black text-white px-6 py-2 rounded"
-          >
-            홈으로 가기
-          </Button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -194,7 +186,7 @@ export default function DesignPage() {
                   <span className="text-sm text-blue-600 font-medium">
                     이메일로 보내기:
                   </span>
-                  <span className="text-xs  text-blue-800 px-2 py-1 rounded">
+                  <span className="text-xs text-blue-800 px-2 py-1 rounded">
                     banner114@hanmail.net
                   </span>
                 </div>
@@ -271,7 +263,9 @@ export default function DesignPage() {
                     ))
                   ) : (
                     <div className="text-center py-4 text-gray-500">
-                      업로드된 시안이 없습니다.
+                      {order.draft_delivery_method === 'email'
+                        ? '이메일로 시안이 전송되었습니다.'
+                        : '업로드된 시안이 없습니다.'}
                     </div>
                   )}
                 </div>

@@ -12,7 +12,7 @@ export default function CustomerServiceSkeleton() {
       </div>
 
       {/* 테이블 행 스켈레톤 */}
-      {[...Array(3)].map((_, index) => (
+      {[...Array(2)].map((_, index) => (
         <div key={index} className="border-b border-gray-200">
           <div className="p-4">
             <div className="grid grid-cols-4 gap-4">

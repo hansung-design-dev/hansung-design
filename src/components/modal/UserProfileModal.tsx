@@ -195,7 +195,7 @@ export default function UserProfileModal({
     is_public_institution: false,
     is_company: false,
   });
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
   const [fileName, setFileName] = useState<string>('');
   const [userProfiles, setUserProfiles] = useState<UserProfile[]>([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -271,7 +271,6 @@ export default function UserProfileModal({
       });
       setSelectedProfileId(null);
       setFileName('');
-      setSelectedFile(null);
     }
   }, [profileToEdit, user]);
 
@@ -347,7 +346,6 @@ export default function UserProfileModal({
         const uploadResult = await uploadResponse.json();
 
         if (uploadResult.success) {
-          setSelectedFile(file);
           setFileName(file.name);
           setFormData((prev) => ({
             ...prev,
@@ -376,7 +374,6 @@ export default function UserProfileModal({
   };
 
   const handleFileRemove = () => {
-    setSelectedFile(null);
     setFileName('');
     setFormData((prev) => ({ ...prev, business_registration_file: '' }));
   };
@@ -430,7 +427,6 @@ export default function UserProfileModal({
     } else {
       setFileName('');
     }
-    setSelectedFile(null);
   };
 
   const handleDropdownToggle = () => {

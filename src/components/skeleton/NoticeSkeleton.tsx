@@ -11,7 +11,7 @@ export default function NoticeSkeleton() {
       </div>
 
       {/* 테이블 행 스켈레톤 */}
-      {[...Array(5)].map((_, index) => (
+      {[...Array(2)].map((_, index) => (
         <div key={index} className="border-b border-gray-200 p-4">
           <div className="grid grid-cols-3 gap-4">
             <div className="h-5 bg-gray-200 rounded w-8"></div>

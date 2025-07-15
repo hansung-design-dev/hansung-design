@@ -58,7 +58,6 @@ export async function POST(request: NextRequest) {
     // 파일명 생성 (timestamp + original name)
     const timestamp = Date.now();
     const originalName = file.name;
-    const extension = originalName.split('.').pop();
     const fileName = `${timestamp}_${originalName}`;
     const filePath = join(uploadDir, fileName);
 
