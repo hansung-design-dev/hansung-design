@@ -3,7 +3,8 @@ import ArrowLeft from '@/src/icons/arrow-left.svg';
 import ArrowRight from '@/src/icons/arrow-right.svg';
 import Image from 'next/image';
 import { DisplayBillboard } from '@/src/types/displaydetail';
-import PhotoModal from '@/src/components/modal/PhotoModal';
+// PhotoModal is temporarily disabled
+// import PhotoModal from '@/src/components/modal/PhotoModal';
 
 const statusColorMap: Record<string, string> = {
   진행중: 'text-[#109251]',
@@ -51,9 +52,10 @@ const ItemList: React.FC<ItemTableProps> = ({
   hideQuantityColumns = false,
 }) => {
   const [page, setPage] = useState(1);
-  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
-  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
-  const [currentItemIndex, setCurrentItemIndex] = useState(0);
+  // PhotoModal related states are temporarily disabled
+  // const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
+  // const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  // const [currentItemIndex, setCurrentItemIndex] = useState(0);
 
   const totalPages = Math.ceil(items.length / ITEMS_PER_PAGE);
   const paginatedItems = items.slice(
@@ -82,7 +84,8 @@ const ItemList: React.FC<ItemTableProps> = ({
     handleItemClick(itemId.toString());
   };
 
-  // 사진 모달 관련 함수들
+  // 사진 모달 관련 함수들 (임시 비활성화)
+  /*
   const openPhotoModal = (itemIndex: number) => {
     setCurrentItemIndex(itemIndex);
     setCurrentPhotoIndex(0);
@@ -112,6 +115,7 @@ const ItemList: React.FC<ItemTableProps> = ({
     }
     return '';
   };
+  */
 
   // 구분 컬럼에 표시할 값 계산 함수
   const getPanelTypeLabel = (panelType?: string) => {
@@ -255,14 +259,10 @@ const ItemList: React.FC<ItemTableProps> = ({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          const itemIndex = items.findIndex(
-                            (item) => item.id === item.id
+                          // PhotoModal is temporarily disabled
+                          console.log(
+                            '사진 보기 기능이 임시로 비활성화되었습니다.'
                           );
-                          if (item.photo_url) {
-                            openPhotoModal(itemIndex);
-                          } else {
-                            console.log('이 게시대에는 사진이 없습니다.');
-                          }
                         }}
                         className={`${
                           item.photo_url
@@ -470,7 +470,8 @@ const ItemList: React.FC<ItemTableProps> = ({
       </div>
 
       {/* 사진 모달 */}
-      <PhotoModal
+      {/* PhotoModal is temporarily disabled
+   <PhotoModal
         isOpen={isPhotoModalOpen}
         onClose={closePhotoModal}
         photos={getCurrentItemPhotos()}
@@ -478,6 +479,7 @@ const ItemList: React.FC<ItemTableProps> = ({
         onPhotoChange={handlePhotoChange}
         currentItemName={getCurrentItemName()}
       />
+   */}
     </>
   );
 };
