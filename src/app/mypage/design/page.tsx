@@ -6,6 +6,7 @@ import MypageContainer from '@/src/components/mypageContainer';
 import { useAuth } from '@/src/contexts/authContext';
 import { useRouter } from 'next/navigation';
 import CustomFileUpload from '@/src/components/ui/CustomFileUpload';
+import DesignSkeleton from '@/src/components/skeleton/DesignSkeleton';
 
 interface DesignDraft {
   id: string;
@@ -111,11 +112,9 @@ export default function DesignPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-white pt-[5.5rem]">
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center">로딩 중...</div>
-        </div>
-      </main>
+      <MypageContainer activeTab="시안관리">
+        <DesignSkeleton />
+      </MypageContainer>
     );
   }
 

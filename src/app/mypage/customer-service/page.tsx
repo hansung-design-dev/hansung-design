@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import React from 'react';
 import { useAuth } from '@/src/contexts/authContext';
 import { Button } from '@/src/components/button/button';
+import CustomerServiceSkeleton from '@/src/components/skeleton/CustomerServiceSkeleton';
 
 interface Inquiry {
   id: string;
@@ -235,7 +236,7 @@ export default function CustomerServicePage() {
 
         <div className="w-full overflow-x-auto">
           {loading ? (
-            <div className="text-center py-8">상담 내역을 불러오는 중...</div>
+            <CustomerServiceSkeleton />
           ) : (
             <>
               <table className="w-full">
@@ -362,21 +363,18 @@ export default function CustomerServicePage() {
         {/* 하단 정보 */}
         <div className="flex flex-col lg:flex-row justify-between items-start gap-4 pt-[2rem] md:pt-[3rem]">
           {/* 자주 묻는 질문 */}
-          <div className="flex flex-col gap-4 md:gap-8 lg:w-[25rem] md:w-[25rem] border rounded-lg flex-shrink-0 md:mr-4">
-            <div className="text-lg md:text-1.375 font-semibold px-4 md:px-[2rem] ">
-              자주 묻는 질문
+          <div className="flex flex-col gap-4 md:gap-8 lg:w-[25rem] md:w-[25rem] border rounded-lg flex-shrink-0 md:mr-4 p-6">
+            <div className="text-center">
+              <div className="text-1.125 mb-4">궁금하신 점이 있으신가요?</div>
+              <Button
+                variant="filledBlack"
+                size="md"
+                onClick={() => router.push('/customer')}
+                className="w-[18rem]"
+              >
+                자주묻는질문 보기
+              </Button>
             </div>
-            <ul className="space-y-2 md:text-0.875 text-gray-700 sm:pl-2">
-              {Array.from({ length: 7 }).map((_, idx) => (
-                <li
-                  key={idx}
-                  className="flex justify-between border-b border-gray-200 pb-3 md:pb-[1rem] last:border-none last:pb-0 text-sm md:text-0.875 font-500 px-4 md:px-[2rem] sm:min-w-[8rem]"
-                >
-                  <span>게시글</span>
-                  <span className="text-[#939393]">2024-01-01</span>
-                </li>
-              ))}
-            </ul>
           </div>
 
           <div className="flex flex-col gap-4 md:gap-8 w-full md:flex-1 md:pt-10">

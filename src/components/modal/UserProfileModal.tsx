@@ -11,7 +11,6 @@ interface UserProfile {
   id: string;
   profile_title: string;
   company_name?: string;
-  business_registration_number?: string;
   business_registration_file?: string;
   phone: string;
   email: string;
@@ -31,8 +30,7 @@ interface UserProfileModalProps {
   onConfirm?: (profileData: {
     profile_title: string;
     company_name: string;
-    business_registration_number: string;
-    business_registration_file?: string;
+    business_registration_file: string;
     phone: string;
     email: string;
     contact_person_name: string;
@@ -188,7 +186,6 @@ export default function UserProfileModal({
   const [formData, setFormData] = useState({
     profile_title: '',
     company_name: '',
-    business_registration_number: '',
     business_registration_file: '',
     phone: '',
     email: '',
@@ -243,8 +240,6 @@ export default function UserProfileModal({
       setFormData({
         profile_title: profileToEdit.profile_title || '',
         company_name: profileToEdit.company_name || '',
-        business_registration_number:
-          profileToEdit.business_registration_number || '',
         business_registration_file:
           profileToEdit.business_registration_file || '',
         phone: profileToEdit.phone || '',
@@ -265,7 +260,6 @@ export default function UserProfileModal({
       setFormData({
         profile_title: '',
         company_name: '',
-        business_registration_number: '',
         business_registration_file: '',
         phone: user?.phone || '',
         email: user?.email || '',
@@ -301,7 +295,9 @@ export default function UserProfileModal({
     }
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = event.target.files?.[0];
     if (file) {
       // 파일 타입 검증
@@ -322,24 +318,60 @@ export default function UserProfileModal({
         return;
       }
 
-      // 파일 크기 검증 (5MB 제한)
-      if (file.size > 5 * 1024 * 1024) {
+      // 파일 크기 검증 (10MB 제한)
+      if (file.size > 10 * 1024 * 1024) {
         setAlertModal({
           isOpen: true,
           title: '파일 크기 오류',
-          message: '파일 크기는 5MB 이하여야 합니다.',
+          message: '파일 크기는 10MB 이하여야 합니다.',
           type: 'error',
           onConfirm: () => {},
         });
         return;
       }
 
-      setSelectedFile(file);
-      setFileName(file.name);
-      setFormData((prev) => ({
-        ...prev,
-        business_registration_file: file.name,
-      }));
+      try {
+        // 파일 업로드
+        const formDataFile = new FormData();
+        formDataFile.append('file', file);
+        formDataFile.append('userId', user?.id || '');
+
+        const uploadResponse = await fetch(
+          '/api/upload-business-registration',
+          {
+            method: 'POST',
+            body: formDataFile,
+          }
+        );
+
+        const uploadResult = await uploadResponse.json();
+
+        if (uploadResult.success) {
+          setSelectedFile(file);
+          setFileName(file.name);
+          setFormData((prev) => ({
+            ...prev,
+            business_registration_file: uploadResult.filePath,
+          }));
+        } else {
+          setAlertModal({
+            isOpen: true,
+            title: '파일 업로드 오류',
+            message: uploadResult.error || '파일 업로드에 실패했습니다.',
+            type: 'error',
+            onConfirm: () => {},
+          });
+        }
+      } catch (error) {
+        console.error('파일 업로드 오류:', error);
+        setAlertModal({
+          isOpen: true,
+          title: '파일 업로드 오류',
+          message: '파일 업로드 중 오류가 발생했습니다.',
+          type: 'error',
+          onConfirm: () => {},
+        });
+      }
     }
   };
 
@@ -349,11 +381,38 @@ export default function UserProfileModal({
     setFormData((prev) => ({ ...prev, business_registration_file: '' }));
   };
 
+  const handleDownloadFile = async (filePath: string, userId: string) => {
+    try {
+      const response = await fetch(
+        `/api/download-business-registration?filePath=${encodeURIComponent(
+          filePath
+        )}&userId=${userId}`
+      );
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filePath.split('/').pop() || 'business-registration';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        console.error('파일 다운로드 실패');
+        alert('파일 다운로드에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('파일 다운로드 오류:', error);
+      alert('파일 다운로드 중 오류가 발생했습니다.');
+    }
+  };
+
   const handleProfileSelect = (profile: UserProfile) => {
     setFormData({
       profile_title: profile.profile_title || '',
       company_name: profile.company_name || '',
-      business_registration_number: profile.business_registration_number || '',
       business_registration_file: profile.business_registration_file || '',
       phone: profile.phone || '',
       email: profile.email || '',
@@ -393,38 +452,9 @@ export default function UserProfileModal({
         return;
       }
 
-      // 파일이 선택된 경우 먼저 파일 업로드
-      let fileUrl = formData.business_registration_file;
-      if (selectedFile) {
-        const formDataFile = new FormData();
-        formDataFile.append('file', selectedFile);
-        formDataFile.append('userId', user.id);
-        formDataFile.append('type', 'business_registration');
-
-        const uploadResponse = await fetch('/api/upload', {
-          method: 'POST',
-          body: formDataFile,
-        });
-
-        const uploadResult = await uploadResponse.json();
-        if (uploadResult.success) {
-          fileUrl = uploadResult.fileUrl;
-        } else {
-          setAlertModal({
-            isOpen: true,
-            title: '파일 업로드 오류',
-            message: uploadResult.error || '파일 업로드에 실패했습니다.',
-            type: 'error',
-            onConfirm: () => {},
-          });
-          return;
-        }
-      }
-
       const requestData = {
         user_auth_id: user.id,
         ...formData,
-        business_registration_file: fileUrl,
       };
 
       let response;
@@ -715,29 +745,47 @@ export default function UserProfileModal({
               </div>
               {fileName && (
                 <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                      <polyline points="14,2 14,8 20,8" />
-                      <line x1="16" y1="13" x2="8" y2="13" />
-                      <line x1="16" y1="17" x2="8" y2="17" />
-                      <polyline points="10,9 9,9 8,9" />
-                    </svg>
-                    <span className="text-sm text-blue-800">{fileName}</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14,2 14,8 20,8" />
+                        <line x1="16" y1="13" x2="8" y2="13" />
+                        <line x1="16" y1="17" x2="8" y2="17" />
+                        <polyline points="10,9 9,9 8,9" />
+                      </svg>
+                      <span className="text-sm text-blue-800">{fileName}</span>
+                    </div>
+                    {formData.business_registration_file &&
+                      formData.business_registration_file.startsWith(
+                        '/uploads/'
+                      ) && (
+                        <button
+                          onClick={() =>
+                            handleDownloadFile(
+                              formData.business_registration_file,
+                              user?.id || ''
+                            )
+                          }
+                          className="text-xs text-blue-600 hover:text-blue-800 underline"
+                        >
+                          다운로드
+                        </button>
+                      )}
                   </div>
                 </div>
               )}
               <p className="text-xs text-gray-500">
-                PDF, JPEG, JPG, PNG 파일만 가능 (최대 5MB)
+                PDF, JPEG, JPG, PNG 파일만 가능 (최대 10MB)
               </p>
             </div>
           </div>

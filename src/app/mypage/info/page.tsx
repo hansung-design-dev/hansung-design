@@ -10,12 +10,13 @@ import Image from 'next/image';
 import Link from 'next/link';
 import MypageContainer from '@/src/components/mypageContainer';
 import UserProfileModal from '@/src/components/modal/UserProfileModal';
+import UserInfoSkeleton from '@/src/components/skeleton/UserInfoSkeleton';
 
 interface UserProfile {
   id: string;
   profile_title: string;
   company_name?: string;
-  business_registration_number?: string;
+  business_registration_file?: string;
   phone: string;
   email: string;
   contact_person_name: string;
@@ -134,6 +135,7 @@ export default function UserInfoPage() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [profileToEdit, setProfileToEdit] = useState<UserProfile | null>(null);
+
   const [alertModal, setAlertModal] = useState({
     isOpen: false,
     title: '',
@@ -326,19 +328,6 @@ export default function UserInfoPage() {
                   {user?.email || '이메일 없음'}
                 </p>
               </div>
-              <div>
-                <p className="text-0.875 text-gray-500 mb-2 border border-b-solid border-gray-3 pb-2">
-                  사업자정보
-                </p>
-                <div className="flex items-center sm:justify-between">
-                  <div className="text-0.875 md:text-1 font-500 text-[#636363] underline underline-offset-4 cursor-pointer">
-                    <div className="w-full md:w-[16rem]">첨부파일이름</div>
-                  </div>
-                  <Button variant="ghost" size="sm" className="bg-gray-4">
-                    수정
-                  </Button>
-                </div>
-              </div>
             </div>
 
             <div className="bg-white p-4 md:p-6 rounded-lg">
@@ -351,7 +340,7 @@ export default function UserInfoPage() {
               </button>
 
               {loading ? (
-                <div className="text-center py-8">로딩 중...</div>
+                <UserInfoSkeleton />
               ) : currentItems.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   등록된 간편정보가 없습니다.

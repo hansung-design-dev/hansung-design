@@ -469,7 +469,7 @@ CREATE TABLE public.user_profiles (
   user_auth_id uuid,
   profile_title text NOT NULL,
   company_name text,
-  business_registration_number text,
+  business_registration_file text,
   phone text NOT NULL,
   email text NOT NULL,
   contact_person_name text NOT NULL,
