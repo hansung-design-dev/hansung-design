@@ -92,8 +92,8 @@ export default function PublicDesignPage() {
   const rows = [
     projects.slice(0, 2), // 2개: 큰+작은
     projects.slice(2, 5), // 3개: 작은2+큰
-    projects.slice(0, 2), // 반복
-    projects.slice(2, 5), // 반복
+    projects.slice(5, 7), // 2개: 큰+작은
+    projects.slice(7, 10), // 3개: 작은2+큰
   ];
 
   return (

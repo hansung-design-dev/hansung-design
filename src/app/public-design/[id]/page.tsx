@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import ProjectRow, { ProjectItem } from '@/src/components/projectRow';
+import ProjectCard from '@/src/components/projectCard';
 import { PublicDesignDetailResponse } from '@/src/types/public-design';
 import PublicDesignDesktopSkeleton from '@/src/components/skeleton/PublicDesignDesktopSkeleton';
 
@@ -112,28 +112,37 @@ export default function PublicDesignDetailPage() {
     );
   }
 
-  // ProjectRow용 데이터 변환
-  const rowProjects: ProjectItem[] = [
-    {
-      id: 1,
-      imageSrc:
-        projectData.project.image_url || '/images/public-design-image2.jpeg',
-      title: projectData.project.title || '',
-      subtitle: projectData.project.subtitle || '',
-      description: projectData.project.description || '',
-    },
-  ];
-
   return (
     <main className="min-h-screen bg-white py-[6rem] lg:px-[8rem] sm:px-2 md:px-2">
-      {/* 상단: ProjectRow 그대로 사용 */}
-      <section className=" mx-auto mb-12  ">
-        <ProjectRow
-          projects={rowProjects}
-          largeCardFirst={true}
-          splitSmallSection={false}
-          showTitleOnLargeOnly={true}
-        />
+      {/* 상단: ProjectCard 사용 */}
+      <section className="mx-auto mb-12">
+        <div className="grid grid-cols-3 gap-6 lg:h-[32rem] sm:h-[23rem]">
+          <div className="col-span-2 lg:h-[32rem] sm:h-[23rem]">
+            <ProjectCard
+              imageSrc={
+                projectData.project.image_url ||
+                '/images/public-design-image2.jpeg'
+              }
+              title={projectData.project.title || ''}
+              subtitle={projectData.project.subtitle || ''}
+              description={projectData.project.description || ''}
+              isLarge={true}
+              className="h-full"
+            />
+          </div>
+          <div className="col-span-1 lg:h-[32rem] sm:h-[23rem]">
+            <ProjectCard
+              imageSrc={
+                projectData.project.image_url ||
+                '/images/public-design-image2.jpeg'
+              }
+              title=""
+              subtitle=""
+              description=""
+              className="h-full"
+            />
+          </div>
+        </div>
       </section>
 
       {/* 디자인 구성 이미지 리스트 */}

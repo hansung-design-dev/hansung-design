@@ -28,19 +28,38 @@ export default function ProjectRow({
   className = '',
   showTitleOnLargeOnly = false,
 }: ProjectRowProps) {
-  // Make sure we have the right number of projects
-  if (splitSmallSection && projects.length < 3) {
-    console.error(
-      'When splitSmallSection is true, at least 3 projects are required'
-    );
+  // 프로젝트가 없으면 렌더링하지 않음
+  if (projects.length === 0) {
     return null;
   }
 
-  if (!splitSmallSection && projects.length < 2) {
-    console.error(
-      'When splitSmallSection is false, at least 2 projects are required'
+  // 프로젝트가 1개만 있으면 큰 카드로만 표시
+  if (projects.length === 1) {
+    return (
+      <div
+        className={`grid grid-cols-3 gap-6 ${className} lg:h-[32rem] sm:h-[23rem]`}
+      >
+        <div className="col-span-2 lg:h-[32rem] sm:h-[23rem]">
+          <ProjectCard
+            imageSrc={projects[0].imageSrc}
+            title={projects[0].title}
+            subtitle={projects[0].subtitle}
+            description={projects[0].description}
+            isLarge
+            className="h-full"
+          />
+        </div>
+        <div className="col-span-1 lg:h-[32rem] sm:h-[23rem]">
+          <ProjectCard
+            imageSrc={projects[0].imageSrc}
+            title=""
+            subtitle=""
+            description=""
+            className="h-full"
+          />
+        </div>
+      </div>
     );
-    return null;
   }
 
   // Render the row with large card first
