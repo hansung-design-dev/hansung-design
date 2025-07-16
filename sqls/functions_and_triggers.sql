@@ -740,15 +740,17 @@ BEGIN
 END;
 
 -- 6. generate_next_month_led_periods
-
-
-
+-- generate_next_month_led_periods 함수 수정
+CREATE OR REPLACE FUNCTION generate_next_month_led_periods()
+RETURNS void AS $$
 DECLARE
     next_month_date DATE;
     next_year INTEGER;
     next_month INTEGER;
     region_record RECORD;
     target_year_month TEXT;
+    led_display_type_id UUID;
+    period_record RECORD;
 BEGIN
     -- 다음달 날짜 계산
     next_month_date := (CURRENT_DATE + INTERVAL '1 month')::DATE;
@@ -756,58 +758,77 @@ BEGIN
     next_month := EXTRACT(MONTH FROM next_month_date);
     target_year_month := next_year || '년 ' || next_month || '월';
     
-    RAISE NOTICE '다음달 LED 기간 자동 생성 시작: %', target_year_month;
-    
     -- LED 디스플레이 타입 ID 가져오기
-    DECLARE
-        led_display_type_id UUID;
-    BEGIN
-        SELECT id INTO led_display_type_id FROM display_types WHERE name = 'led_display';
+    SELECT id INTO led_display_type_id FROM display_types WHERE name = 'led_display';
+    
+    RAISE NOTICE '다음달 LED 디스플레이 기간 자동 생성 시작: %', target_year_month;
+    
+    -- 각 활성화된 구에 대해
+    FOR region_record IN 
+        SELECT id, name FROM region_gu 
+        WHERE is_active = true
+    LOOP
+        -- 기간 생성
+        INSERT INTO region_gu_display_periods (
+            display_type_id, 
+            region_gu_id, 
+            period_from, 
+            period_to, 
+            year_month, 
+            period
+        )
+        SELECT 
+            led_display_type_id,
+            region_record.id,
+            next_month_date, -- 다음달 1일부터
+            (next_month_date + INTERVAL '1 month - 1 day')::DATE, -- 다음달 마지막 날까지
+            target_year_month,
+            'full_month'
+        WHERE NOT EXISTS (
+            SELECT 1 FROM region_gu_display_periods 
+            WHERE display_type_id = led_display_type_id
+              AND region_gu_id = region_record.id
+              AND year_month = target_year_month
+              AND period = 'full_month'
+        );
         
-        IF led_display_type_id IS NULL THEN
-            RAISE EXCEPTION 'LED 디스플레이 타입을 찾을 수 없습니다.';
-        END IF;
-        
-        -- LED 디스플레이를 가진 구만 대상으로
-        FOR region_record IN 
-            SELECT DISTINCT rg.id, rg.name 
-            FROM region_gu rg
-            INNER JOIN panel_info pi ON rg.id = pi.region_gu_id
-            WHERE rg.is_active = true 
-              AND pi.display_type_id = led_display_type_id
-              AND pi.panel_status = 'active'
+        -- 생성된 기간에 대해 재고 생성
+        FOR period_record IN
+            SELECT id FROM region_gu_display_periods
+            WHERE display_type_id = led_display_type_id
+              AND region_gu_id = region_record.id
+              AND year_month = target_year_month
+              AND period = 'full_month'
         LOOP
-            -- LED는 모든 구 동일하게 전체 월 기간
-            INSERT INTO region_gu_display_periods (
-                display_type_id, 
-                region_gu_id, 
-                period_from, 
-                period_to, 
-                year_month, 
-                half_period
+            -- LED 디스플레이 패널들에 대해 재고 생성
+            INSERT INTO led_display_inventory (
+                panel_info_id,
+                region_gu_display_period_id,
+                total_faces,
+                available_faces,
+                closed_faces
             )
             SELECT 
-                led_display_type_id,
-                region_record.id,
-                next_month_date,
-                (next_month_date + INTERVAL '1 month - 1 day')::DATE,
-                target_year_month,
-                'full_month'
-            WHERE NOT EXISTS (
-                SELECT 1 FROM region_gu_display_periods 
-                WHERE display_type_id = led_display_type_id
-                  AND region_gu_id = region_record.id
-                  AND year_month = target_year_month
-                  AND half_period = 'full_month'
-            );
-            
-            RAISE NOTICE '구 %에 LED 디스플레이 기간 데이터 생성 완료', region_record.name;
+                pi.id,
+                period_record.id,
+                20, -- 각 게시대별 20개 면
+                20, -- 초기 가용 면
+                0   -- 초기 폐쇄 면
+            FROM panel_info pi
+            WHERE pi.region_gu_id = region_record.id
+              AND pi.display_type_id = led_display_type_id
+              AND pi.panel_status = 'active'
+              AND NOT EXISTS (
+                  SELECT 1 FROM led_display_inventory ldi
+                  WHERE ldi.panel_info_id = pi.id
+                    AND ldi.region_gu_display_period_id = period_record.id
+              );
         END LOOP;
-    END;
+    END LOOP;
     
-    RAISE NOTICE '다음달 LED 기간 자동 생성 완료: %', target_year_month;
+    RAISE NOTICE '다음달 LED 디스플레이 기간 및 재고 생성 완료: %', target_year_month;
 END;
-
+$$ LANGUAGE plpgsql;
 
 -- 7. generate_next_second_half_periods
 
