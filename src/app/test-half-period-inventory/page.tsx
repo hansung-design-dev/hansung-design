@@ -35,7 +35,7 @@ export default function TestHalfPeriodInventory() {
   const [testResults, setTestResults] = useState<{
     success: boolean;
     message: string;
-    data?: unknown;
+    data?: Record<string, unknown>;
   } | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [inventoryStatus, setInventoryStatus] = useState<InventoryStatus[]>([]);
@@ -255,11 +255,7 @@ export default function TestHalfPeriodInventory() {
             <p className="font-medium mb-2">{testResults.message}</p>
             {testResults.data && (
               <pre className="text-sm overflow-auto max-h-96">
-                {JSON.stringify(
-                  testResults.data as Record<string, unknown>,
-                  null,
-                  2
-                )}
+                {JSON.stringify(testResults.data, null, 2)}
               </pre>
             )}
           </div>

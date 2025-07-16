@@ -591,13 +591,18 @@ function PaymentPageContent() {
         order_details: selectedItems.map((item) => ({
           panel_info_id: extractPanelInfoId(item),
           panel_slot_usage_id: item.panel_slot_usage_id,
-          slot_order_quantity: item.quantity || 1,
-          display_start_date: item.display_start_date,
-          display_end_date: item.display_end_date,
+          slot_order_quantity: 1, // 기본값 1로 설정
+          display_start_date:
+            item.selectedPeriodFrom || new Date().toISOString().split('T')[0],
+          display_end_date:
+            item.selectedPeriodTo ||
+            new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
+              .toISOString()
+              .split('T')[0],
           price: item.price,
           name: item.name,
           district: item.district,
-          panel_type: item.panel_type,
+          panel_type: item.panel_type || 'panel',
           period: item.halfPeriod,
           selected_year: item.selectedYear,
           selected_month: item.selectedMonth,
@@ -650,10 +655,11 @@ function PaymentPageContent() {
         setShowPaymentSuccessModal(true);
 
         // 장바구니에서 주문된 아이템들 제거
-        const orderedItemIds = selectedItems.map((item) => item.id);
-        dispatch({
-          type: 'REMOVE_ITEMS',
-          payload: orderedItemIds,
+        selectedItems.forEach((item) => {
+          dispatch({
+            type: 'REMOVE_ITEM',
+            id: item.id,
+          });
         });
 
         // 결제 페이지에서 나가기
