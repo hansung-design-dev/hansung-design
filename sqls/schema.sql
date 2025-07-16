@@ -28,8 +28,8 @@ CREATE TABLE public.admin_order_verifications (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT admin_order_verifications_pkey PRIMARY KEY (id),
-  CONSTRAINT admin_order_verifications_verified_by_fkey FOREIGN KEY (verified_by) REFERENCES public.admin_profiles(id),
-  CONSTRAINT admin_order_verifications_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id)
+  CONSTRAINT admin_order_verifications_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
+  CONSTRAINT admin_order_verifications_verified_by_fkey FOREIGN KEY (verified_by) REFERENCES public.admin_profiles(id)
 );
 CREATE TABLE public.admin_profiles (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -56,8 +56,8 @@ CREATE TABLE public.bank_info (
   created_at timestamp without time zone DEFAULT now(),
   updated_at timestamp without time zone DEFAULT now(),
   CONSTRAINT bank_info_pkey PRIMARY KEY (id),
-  CONSTRAINT bank_info_region_gu_id_fkey FOREIGN KEY (region_gu_id) REFERENCES public.region_gu(id),
-  CONSTRAINT bank_info_display_type_id_fkey FOREIGN KEY (display_type_id) REFERENCES public.display_types(id)
+  CONSTRAINT bank_info_display_type_id_fkey FOREIGN KEY (display_type_id) REFERENCES public.display_types(id),
+  CONSTRAINT bank_info_region_gu_id_fkey FOREIGN KEY (region_gu_id) REFERENCES public.region_gu(id)
 );
 CREATE TABLE public.banner_panel_details (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -94,8 +94,8 @@ CREATE TABLE public.banner_slot_inventory (
   created_at timestamp without time zone DEFAULT now(),
   updated_at timestamp without time zone DEFAULT now(),
   CONSTRAINT banner_slot_inventory_pkey PRIMARY KEY (id),
-  CONSTRAINT banner_slot_inventory_panel_info_id_fkey FOREIGN KEY (panel_info_id) REFERENCES public.panel_info(id),
-  CONSTRAINT banner_slot_inventory_region_gu_display_period_id_fkey FOREIGN KEY (region_gu_display_period_id) REFERENCES public.region_gu_display_periods(id)
+  CONSTRAINT banner_slot_inventory_region_gu_display_period_id_fkey FOREIGN KEY (region_gu_display_period_id) REFERENCES public.region_gu_display_periods(id),
+  CONSTRAINT banner_slot_inventory_panel_info_id_fkey FOREIGN KEY (panel_info_id) REFERENCES public.panel_info(id)
 );
 CREATE TABLE public.banner_slot_price_policy (
   id uuid NOT NULL,
@@ -127,7 +127,7 @@ CREATE TABLE public.customer_inquiries (
 );
 CREATE TABLE public.customer_service (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
+  user_id uuid,
   title character varying NOT NULL,
   content text NOT NULL,
   status character varying NOT NULL DEFAULT 'pending'::character varying,
@@ -135,15 +135,16 @@ CREATE TABLE public.customer_service (
   answered_at timestamp with time zone,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
+  homepage_menu_type uuid,
+  cs_categories USER-DEFINED,
   CONSTRAINT customer_service_pkey PRIMARY KEY (id),
-  CONSTRAINT customer_service_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.user_auth(id)
+  CONSTRAINT customer_service_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.user_auth(id),
+  CONSTRAINT customer_service_homepage_menu_type_fkey FOREIGN KEY (homepage_menu_type) REFERENCES public.homepage_menu_types(id)
 );
 CREATE TABLE public.design_drafts (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
-  order_id uuid NOT NULL,
   user_profile_id uuid,
   admin_profile_id uuid,
-  project_name text,
   file_name text,
   file_url text,
   file_extension text,
@@ -153,8 +154,8 @@ CREATE TABLE public.design_drafts (
   is_approved boolean DEFAULT false,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
+  project_name text,
   CONSTRAINT design_drafts_pkey PRIMARY KEY (id),
-  CONSTRAINT design_drafts_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
   CONSTRAINT design_drafts_user_profile_id_fkey FOREIGN KEY (user_profile_id) REFERENCES public.user_profiles(id),
   CONSTRAINT design_drafts_admin_profile_id_fkey FOREIGN KEY (admin_profile_id) REFERENCES public.admin_profiles(id)
 );
@@ -253,9 +254,9 @@ CREATE TABLE public.order_details (
   panel_info_id uuid,
   panel_slot_usage_id uuid,
   CONSTRAINT order_details_pkey PRIMARY KEY (id),
+  CONSTRAINT order_details_panel_slot_usage_id_fkey FOREIGN KEY (panel_slot_usage_id) REFERENCES public.panel_slot_usage(id),
   CONSTRAINT order_details_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
-  CONSTRAINT order_details_panel_info_id_fkey FOREIGN KEY (panel_info_id) REFERENCES public.panel_info(id),
-  CONSTRAINT order_details_panel_slot_usage_id_fkey FOREIGN KEY (panel_slot_usage_id) REFERENCES public.panel_slot_usage(id)
+  CONSTRAINT order_details_panel_info_id_fkey FOREIGN KEY (panel_info_id) REFERENCES public.panel_info(id)
 );
 CREATE TABLE public.orders (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -270,12 +271,13 @@ CREATE TABLE public.orders (
   payment_status text DEFAULT 'pending'::text CHECK (payment_status = ANY (ARRAY['pending'::text, 'waiting_admin_approval'::text, 'approved'::text, 'completed'::text, 'cancelled'::text])),
   design_drafts_id uuid,
   draft_delivery_method text CHECK (draft_delivery_method = ANY (ARRAY['email'::text, 'upload'::text])),
-  order_status text DEFAULT 'pending'::text CHECK (order_status = ANY (ARRAY['pending'::text, 'completed'::text])),
+  order_status USER-DEFINED DEFAULT 'pending'::order_status_enum,
   CONSTRAINT orders_pkey PRIMARY KEY (id),
+  CONSTRAINT orders_auth_user_id_fkey FOREIGN KEY (auth_user_id) REFERENCES public.user_auth(id),
   CONSTRAINT orders_payment_method_id_fkey FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id),
+  CONSTRAINT fk_orders_user_auth_id FOREIGN KEY (user_auth_id) REFERENCES public.user_auth(id),
   CONSTRAINT orders_user_profile_id_fkey FOREIGN KEY (user_profile_id) REFERENCES public.user_profiles(id),
-  CONSTRAINT orders_design_drafts_id_fkey FOREIGN KEY (design_drafts_id) REFERENCES public.design_drafts(id),
-  CONSTRAINT orders_auth_user_id_fkey FOREIGN KEY (auth_user_id) REFERENCES public.user_auth(id)
+  CONSTRAINT orders_design_drafts_id_fkey FOREIGN KEY (design_drafts_id) REFERENCES public.design_drafts(id)
 );
 CREATE TABLE public.panel_guideline (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -315,8 +317,6 @@ CREATE TABLE public.panel_info (
   panel_code smallint CHECK (panel_code >= 1 AND panel_code <= 100),
   panel_type USER-DEFINED,
   max_banner integer DEFAULT 1,
-  first_half_closure_quantity integer DEFAULT 0,
-  second_half_closure_quantity integer DEFAULT 0,
   notes text,
   CONSTRAINT panel_info_pkey PRIMARY KEY (id),
   CONSTRAINT panel_info_display_type_id_fkey FOREIGN KEY (display_type_id) REFERENCES public.display_types(id),
@@ -337,8 +337,8 @@ CREATE TABLE public.panel_popup_notices (
   region_gu_id uuid,
   notice_categories_id uuid,
   CONSTRAINT panel_popup_notices_pkey PRIMARY KEY (id),
-  CONSTRAINT panel_popup_notices_display_category_id_fkey FOREIGN KEY (display_category_id) REFERENCES public.display_types(id),
-  CONSTRAINT panel_popup_notices_region_gu_id_fkey FOREIGN KEY (region_gu_id) REFERENCES public.region_gu(id)
+  CONSTRAINT panel_popup_notices_region_gu_id_fkey FOREIGN KEY (region_gu_id) REFERENCES public.region_gu(id),
+  CONSTRAINT panel_popup_notices_display_category_id_fkey FOREIGN KEY (display_category_id) REFERENCES public.display_types(id)
 );
 CREATE TABLE public.panel_slot_usage (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -354,12 +354,10 @@ CREATE TABLE public.panel_slot_usage (
   created_at timestamp without time zone DEFAULT now(),
   updated_at timestamp without time zone DEFAULT now(),
   banner_slot_info_id uuid,
-  order_details_id uuid,
   CONSTRAINT panel_slot_usage_pkey PRIMARY KEY (id),
-  CONSTRAINT panel_slot_usage_banner_slot_info_id_fkey FOREIGN KEY (banner_slot_info_id) REFERENCES public.banner_slot_info(id),
-  CONSTRAINT panel_slot_usage_order_details_id_fkey FOREIGN KEY (order_details_id) REFERENCES public.order_details(id),
   CONSTRAINT panel_slot_usage_display_type_id_fkey FOREIGN KEY (display_type_id) REFERENCES public.display_types(id),
-  CONSTRAINT panel_slot_usage_panel_info_id_fkey FOREIGN KEY (panel_info_id) REFERENCES public.panel_info(id)
+  CONSTRAINT panel_slot_usage_panel_info_id_fkey FOREIGN KEY (panel_info_id) REFERENCES public.panel_info(id),
+  CONSTRAINT panel_slot_usage_banner_slot_info_id_fkey FOREIGN KEY (banner_slot_info_id) REFERENCES public.banner_slot_info(id)
 );
 CREATE TABLE public.payment_methods (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -395,6 +393,21 @@ CREATE TABLE public.payments (
   CONSTRAINT payments_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
   CONSTRAINT payments_payment_method_id_fkey FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id)
 );
+CREATE TABLE public.public_design_contents (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  project_id uuid,
+  design_contents_type USER-DEFINED NOT NULL,
+  title text,
+  subtitle text,
+  description text,
+  image_url text,
+  alt_text text,
+  display_order integer DEFAULT 0,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT public_design_contents_pkey PRIMARY KEY (id)
+);
 CREATE TABLE public.region_dong (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   district_code text NOT NULL,
@@ -427,8 +440,8 @@ CREATE TABLE public.region_gu_display_periods (
   year_month character varying NOT NULL,
   period USER-DEFINED,
   CONSTRAINT region_gu_display_periods_pkey PRIMARY KEY (id),
-  CONSTRAINT region_gu_display_periods_region_gu_id_fkey FOREIGN KEY (region_gu_id) REFERENCES public.region_gu(id),
-  CONSTRAINT region_gu_display_periods_display_type_id_fkey FOREIGN KEY (display_type_id) REFERENCES public.display_types(id)
+  CONSTRAINT region_gu_display_periods_display_type_id_fkey FOREIGN KEY (display_type_id) REFERENCES public.display_types(id),
+  CONSTRAINT region_gu_display_periods_region_gu_id_fkey FOREIGN KEY (region_gu_id) REFERENCES public.region_gu(id)
 );
 CREATE TABLE public.top_fixed_banner_inventory (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -483,742 +496,788 @@ CREATE TABLE public.user_profiles (
   CONSTRAINT user_profiles_user_auth_id_fkey FOREIGN KEY (user_auth_id) REFERENCES public.user_auth(id)
 );
 
----
----
---함수와 트리거 정리
-
-
--- updated_at 자동 갱신 함수
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = now();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- top_fixed_banner_inventory 업데이트 함수
-CREATE OR REPLACE FUNCTION update_top_fixed_banner_inventory()
-RETURNS TRIGGER AS $$
-BEGIN
-  IF EXISTS (
-    SELECT 1 FROM banner_slot_info 
-    WHERE id = NEW.banner_slot_info_id 
-      AND slot_number = 0
-      AND banner_type = 'top_fixed'
-  ) THEN
-    UPDATE top_fixed_banner_inventory 
-    SET available_slots = 0,
-        updated_at = NOW()
-    WHERE panel_info_id = NEW.panel_info_id;
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- order_details AFTER INSERT 시 snapshot 채우기
-CREATE OR REPLACE FUNCTION fill_panel_slot_snapshot_after_order_details()
-RETURNS TRIGGER AS $$
-DECLARE
-    v_panel_type TEXT;
-    v_slot_record RECORD;
-    v_snapshot JSONB;
-BEGIN
-    IF NEW.panel_info_id IS NULL THEN
-        RETURN NEW;
-    END IF;
-
-    SELECT dt.name INTO v_panel_type
-    FROM panel_info pi
-    JOIN display_types dt ON pi.display_type_id = dt.id
-    WHERE pi.id = NEW.panel_info_id;
-
-    IF v_panel_type = 'banner_display' THEN
-        IF NEW.panel_slot_usage_id IS NOT NULL THEN
-            SELECT 
-                bsi.*,
-                bsp.total_price AS policy_total_price,
-                bsp.tax_price AS policy_tax_price,
-                bsp.road_usage_fee AS policy_road_usage_fee,
-                bsp.advertising_fee AS policy_advertising_fee
-            INTO v_slot_record
-            FROM panel_slot_usage psu
-            JOIN banner_slot_info bsi ON psu.banner_slot_info_id = bsi.id
-            LEFT JOIN banner_slot_price_policy bsp 
-              ON bsi.id = bsp.banner_slot_info_id 
-             AND bsp.price_usage_type = 'default'
-            WHERE psu.id = NEW.panel_slot_usage_id;
-        ELSE
-            SELECT 
-                bsi.*,
-                bsp.total_price AS policy_total_price,
-                bsp.tax_price AS policy_tax_price,
-                bsp.road_usage_fee AS policy_road_usage_fee,
-                bsp.advertising_fee AS policy_advertising_fee
-            INTO v_slot_record
-            FROM banner_slot_info bsi
-            LEFT JOIN banner_slot_price_policy bsp 
-              ON bsi.id = bsp.banner_slot_info_id 
-             AND bsp.price_usage_type = 'default'
-            WHERE bsi.panel_info_id = NEW.panel_info_id
-              AND bsi.slot_number = 1;
-        END IF;
-    ELSIF v_panel_type = 'led_display' THEN
-        IF NEW.panel_slot_usage_id IS NOT NULL THEN
-            SELECT lsi.* INTO v_slot_record 
-            FROM panel_slot_usage psu
-            JOIN led_slot_info lsi ON psu.panel_info_id = lsi.panel_info_id 
-              AND psu.slot_number = lsi.slot_number
-            WHERE psu.id = NEW.panel_slot_usage_id;
-        ELSE
-            SELECT * INTO v_slot_record 
-            FROM led_slot_info
-            WHERE panel_info_id = NEW.panel_info_id
-              AND slot_number = 1;
-        END IF;
-    ELSE
-        RETURN NEW;
-    END IF;
-
-    IF v_slot_record.id IS NULL THEN
-        RETURN NEW;
-    END IF;
-
-    v_snapshot := to_jsonb(v_slot_record);
-
-    UPDATE orders 
-    SET panel_slot_snapshot = v_snapshot
-    WHERE id = NEW.order_id;
-
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
 
 
 
------
--- AFTER INSERT (order_details)
-CREATE TRIGGER trigger_fill_panel_slot_snapshot_after_order_details
-AFTER INSERT ON order_details
-FOR EACH ROW EXECUTE FUNCTION fill_panel_slot_snapshot_after_order_details();
+slot_type_enum	manual, semi_automatic, panel, citizen_board	
 
--- AFTER INSERT (panel_slot_usage)
-CREATE TRIGGER trigger_update_top_fixed_banner_inventory
-AFTER INSERT ON panel_slot_usage
-FOR EACH ROW EXECUTE FUNCTION update_top_fixed_banner_inventory();
+panel_type_enum	manual, semi_auto, panel, citizen_bulletin-board, bulletin_board, lower_panel, multi_panel, led, fabric, no_lighting, with_lighting	
 
--- BEFORE UPDATE updated_at 자동 갱신 트리거들
-CREATE TRIGGER update_banner_panel_details_updated_at
-BEFORE UPDATE ON banner_panel_details
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+display_type_enum	banner_display, led_display, public_design, digital_signage	
 
-CREATE TRIGGER update_banner_slot_info_updated_at
-BEFORE UPDATE ON banner_slot_info
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+homepage_menu_enum	landing, banner_display, led_display, public_design, digital_signage	
 
-CREATE TRIGGER update_customer_inquiries_updated_at
-BEFORE UPDATE ON customer_inquiries
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+banner_type_enum	manual, semi_auto, panel, citizen_bulletin_board, with_lighting, no_lighting, top_fixed	
 
-CREATE TRIGGER update_customer_service_updated_at
-BEFORE UPDATE ON customer_service
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+price_unit_enum	15 days, 1 year, 6 months, 3 years, 1 month	
 
-CREATE TRIGGER update_display_types_updated_at
-BEFORE UPDATE ON display_types
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+panel_status_enum	active, maintenance, inactive	
 
-CREATE TRIGGER update_homepage_contents_updated_at
-BEFORE UPDATE ON homepage_contents
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+payment_method_enum	bank_transfer, card, cash, etc	
 
-CREATE TRIGGER update_homepage_menu_types_updated_at
-BEFORE UPDATE ON homepage_menu_types
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+cs_category_enum	personal_cs, frequent_questions	
 
-CREATE TRIGGER update_homepage_notice_updated_at
-BEFORE UPDATE ON homepage_notice
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+panel_slot_status_enum	available, maintenance, unavailable	
 
-CREATE TRIGGER update_led_panel_details_updated_at
-BEFORE UPDATE ON led_panel_details
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+order_status_enum	draft_uploaded, submitted, awaiting_payment, paid, verified, completed, pending	
 
-CREATE TRIGGER update_led_slot_info_updated_at
-BEFORE UPDATE ON led_slot_info
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+notice_priority_enum	important, normal	
 
-CREATE TRIGGER update_notice_categories_updated_at
-BEFORE UPDATE ON notice_categories
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+banner_type_enum_v2	fabric, panel, bulletin-board, top_fixed, cultural-board, top-fixed, bulletin_board, cultural_board	
 
-CREATE TRIGGER update_order_details_updated_at
-BEFORE UPDATE ON order_details
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+guideline_category_enum	default, admin, top_fixed, led	
 
-CREATE TRIGGER update_orders_updated_at
-BEFORE UPDATE ON orders
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+inquiry_status_enum	pending, answered, closed	
 
-CREATE TRIGGER update_panel_guideline_updated_at
-BEFORE UPDATE ON panel_guideline
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+guideline_panel_type	lower_panel, multi_panel, bulliten_board, led, panel, top_fixed, admin, commercial, banner	
 
-CREATE TRIGGER update_panel_info_updated_at
-BEFORE UPDATE ON panel_info
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+price_usage_type	default, public_institution, re_order, self_install, reduction_by_admin, rent-place	
 
-CREATE TRIGGER update_panel_popup_notices_updated_at
-BEFORE UPDATE ON panel_popup_notices
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+panel_type_enums	manual, semi_auto, bulletin_board, cultural_board, lower_panel, multi_panel, led, no_lighting, with_lighting, panel, top_fixed, citizen_board	
 
-CREATE TRIGGER update_panel_slot_usage_updated_at
-BEFORE UPDATE ON panel_slot_usage
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+banner_type_enums	fabric, panel, bulletin_board, top_fixed, cultural_board, semi_auto	
 
-CREATE TRIGGER update_region_dong_updated_at
-BEFORE UPDATE ON region_dong
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+period_type	first_half, second_half, full_month	
 
-CREATE TRIGGER update_region_gu_display_periods_updated_at
-BEFORE UPDATE ON region_gu_display_periods
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_region_gu_guideline_updated_at
-BEFORE UPDATE ON region_gu_guideline
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_region_gu_updated_at
-BEFORE UPDATE ON region_gu
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_user_auth_updated_at
-BEFORE UPDATE ON user_auth
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+design_contents_type_enum	list, detail
 
 
+-- ---
+-- ---
+-- --함수와 트리거 정리
 
--- 재고관리 트리거 함수들 (기존 트리거와 충돌하지 않도록 새로 생성)
 
--- 1. 일반 현수막게시대 재고 자동 감소 트리거 (banner_slot_inventory용)
-CREATE OR REPLACE FUNCTION update_banner_slot_inventory_on_order()
-RETURNS TRIGGER AS $$
-DECLARE
-  period_id UUID;
-  panel_record RECORD;
-BEGIN
-  -- order_details의 display_start_date와 display_end_date를 기반으로 해당하는 기간 찾기
-  SELECT rgdp.id INTO period_id
-  FROM region_gu_display_periods rgdp
-  JOIN panel_info pi ON pi.region_gu_id = rgdp.region_gu_id
-  WHERE pi.id = NEW.panel_info_id
-    AND rgdp.display_type_id = pi.display_type_id
-    AND (
-      -- 기간이 완전히 겹치는 경우
-      (NEW.display_start_date >= rgdp.period_from AND NEW.display_end_date <= rgdp.period_to)
-      OR
-      -- 기간이 부분적으로 겹치는 경우
-      (NEW.display_start_date <= rgdp.period_to AND NEW.display_end_date >= rgdp.period_from)
-    );
+-- -- updated_at 자동 갱신 함수
+-- CREATE OR REPLACE FUNCTION update_updated_at_column()
+-- RETURNS TRIGGER AS $$
+-- BEGIN
+--     NEW.updated_at = now();
+--     RETURN NEW;
+-- END;
+-- $$ LANGUAGE plpgsql;
+
+-- -- top_fixed_banner_inventory 업데이트 함수
+-- CREATE OR REPLACE FUNCTION update_top_fixed_banner_inventory()
+-- RETURNS TRIGGER AS $$
+-- BEGIN
+--   IF EXISTS (
+--     SELECT 1 FROM banner_slot_info 
+--     WHERE id = NEW.banner_slot_info_id 
+--       AND slot_number = 0
+--       AND banner_type = 'top_fixed'
+--   ) THEN
+--     UPDATE top_fixed_banner_inventory 
+--     SET available_slots = 0,
+--         updated_at = NOW()
+--     WHERE panel_info_id = NEW.panel_info_id;
+--   END IF;
+--   RETURN NEW;
+-- END;
+-- $$ LANGUAGE plpgsql;
+
+-- -- order_details AFTER INSERT 시 snapshot 채우기
+-- CREATE OR REPLACE FUNCTION fill_panel_slot_snapshot_after_order_details()
+-- RETURNS TRIGGER AS $$
+-- DECLARE
+--     v_panel_type TEXT;
+--     v_slot_record RECORD;
+--     v_snapshot JSONB;
+-- BEGIN
+--     IF NEW.panel_info_id IS NULL THEN
+--         RETURN NEW;
+--     END IF;
+
+--     SELECT dt.name INTO v_panel_type
+--     FROM panel_info pi
+--     JOIN display_types dt ON pi.display_type_id = dt.id
+--     WHERE pi.id = NEW.panel_info_id;
+
+--     IF v_panel_type = 'banner_display' THEN
+--         IF NEW.panel_slot_usage_id IS NOT NULL THEN
+--             SELECT 
+--                 bsi.*,
+--                 bsp.total_price AS policy_total_price,
+--                 bsp.tax_price AS policy_tax_price,
+--                 bsp.road_usage_fee AS policy_road_usage_fee,
+--                 bsp.advertising_fee AS policy_advertising_fee
+--             INTO v_slot_record
+--             FROM panel_slot_usage psu
+--             JOIN banner_slot_info bsi ON psu.banner_slot_info_id = bsi.id
+--             LEFT JOIN banner_slot_price_policy bsp 
+--               ON bsi.id = bsp.banner_slot_info_id 
+--              AND bsp.price_usage_type = 'default'
+--             WHERE psu.id = NEW.panel_slot_usage_id;
+--         ELSE
+--             SELECT 
+--                 bsi.*,
+--                 bsp.total_price AS policy_total_price,
+--                 bsp.tax_price AS policy_tax_price,
+--                 bsp.road_usage_fee AS policy_road_usage_fee,
+--                 bsp.advertising_fee AS policy_advertising_fee
+--             INTO v_slot_record
+--             FROM banner_slot_info bsi
+--             LEFT JOIN banner_slot_price_policy bsp 
+--               ON bsi.id = bsp.banner_slot_info_id 
+--              AND bsp.price_usage_type = 'default'
+--             WHERE bsi.panel_info_id = NEW.panel_info_id
+--               AND bsi.slot_number = 1;
+--         END IF;
+--     ELSIF v_panel_type = 'led_display' THEN
+--         IF NEW.panel_slot_usage_id IS NOT NULL THEN
+--             SELECT lsi.* INTO v_slot_record 
+--             FROM panel_slot_usage psu
+--             JOIN led_slot_info lsi ON psu.panel_info_id = lsi.panel_info_id 
+--               AND psu.slot_number = lsi.slot_number
+--             WHERE psu.id = NEW.panel_slot_usage_id;
+--         ELSE
+--             SELECT * INTO v_slot_record 
+--             FROM led_slot_info
+--             WHERE panel_info_id = NEW.panel_info_id
+--               AND slot_number = 1;
+--         END IF;
+--     ELSE
+--         RETURN NEW;
+--     END IF;
+
+--     IF v_slot_record.id IS NULL THEN
+--         RETURN NEW;
+--     END IF;
+
+--     v_snapshot := to_jsonb(v_slot_record);
+
+--     UPDATE orders 
+--     SET panel_slot_snapshot = v_snapshot
+--     WHERE id = NEW.order_id;
+
+--     RETURN NEW;
+-- END;
+-- $$ LANGUAGE plpgsql;
+
+
+
+-- -----
+-- -- AFTER INSERT (order_details)
+-- CREATE TRIGGER trigger_fill_panel_slot_snapshot_after_order_details
+-- AFTER INSERT ON order_details
+-- FOR EACH ROW EXECUTE FUNCTION fill_panel_slot_snapshot_after_order_details();
+
+-- -- AFTER INSERT (panel_slot_usage)
+-- CREATE TRIGGER trigger_update_top_fixed_banner_inventory
+-- AFTER INSERT ON panel_slot_usage
+-- FOR EACH ROW EXECUTE FUNCTION update_top_fixed_banner_inventory();
+
+-- -- BEFORE UPDATE updated_at 자동 갱신 트리거들
+-- CREATE TRIGGER update_banner_panel_details_updated_at
+-- BEFORE UPDATE ON banner_panel_details
+-- FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- CREATE TRIGGER update_banner_slot_info_updated_at
+-- BEFORE UPDATE ON banner_slot_info
+-- FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- CREATE TRIGGER update_customer_inquiries_updated_at
+-- BEFORE UPDATE ON customer_inquiries
+-- FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- CREATE TRIGGER update_customer_service_updated_at
+-- BEFORE UPDATE ON customer_service
+-- FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- CREATE TRIGGER update_display_types_updated_at
+-- BEFORE UPDATE ON display_types
+-- FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- CREATE TRIGGER update_homepage_contents_updated_at
+-- BEFORE UPDATE ON homepage_contents
+-- FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- CREATE TRIGGER update_homepage_menu_types_updated_at
+-- BEFORE UPDATE ON homepage_menu_types
+-- FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- CREATE TRIGGER update_homepage_notice_updated_at
+-- BEFORE UPDATE ON homepage_notice
+-- FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- CREATE TRIGGER update_led_panel_details_updated_at
+-- BEFORE UPDATE ON led_panel_details
+-- FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- CREATE TRIGGER update_led_slot_info_updated_at
+-- BEFORE UPDATE ON led_slot_info
+-- FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- CREATE TRIGGER update_notice_categories_updated_at
+-- BEFORE UPDATE ON notice_categories
+-- FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- CREATE TRIGGER update_order_details_updated_at
+-- BEFORE UPDATE ON order_details
+-- FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- CREATE TRIGGER update_orders_updated_at
+-- BEFORE UPDATE ON orders
+-- FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- CREATE TRIGGER update_panel_guideline_updated_at
+-- BEFORE UPDATE ON panel_guideline
+-- FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- CREATE TRIGGER update_panel_info_updated_at
+-- BEFORE UPDATE ON panel_info
+-- FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- CREATE TRIGGER update_panel_popup_notices_updated_at
+-- BEFORE UPDATE ON panel_popup_notices
+-- FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- CREATE TRIGGER update_panel_slot_usage_updated_at
+-- BEFORE UPDATE ON panel_slot_usage
+-- FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- CREATE TRIGGER update_region_dong_updated_at
+-- BEFORE UPDATE ON region_dong
+-- FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- CREATE TRIGGER update_region_gu_display_periods_updated_at
+-- BEFORE UPDATE ON region_gu_display_periods
+-- FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- CREATE TRIGGER update_region_gu_guideline_updated_at
+-- BEFORE UPDATE ON region_gu_guideline
+-- FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- CREATE TRIGGER update_region_gu_updated_at
+-- BEFORE UPDATE ON region_gu
+-- FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- CREATE TRIGGER update_user_auth_updated_at
+-- BEFORE UPDATE ON user_auth
+-- FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+
+
+-- -- 재고관리 트리거 함수들 (기존 트리거와 충돌하지 않도록 새로 생성)
+
+-- -- 1. 일반 현수막게시대 재고 자동 감소 트리거 (banner_slot_inventory용)
+-- CREATE OR REPLACE FUNCTION update_banner_slot_inventory_on_order()
+-- RETURNS TRIGGER AS $$
+-- DECLARE
+--   period_id UUID;
+--   panel_record RECORD;
+-- BEGIN
+--   -- order_details의 display_start_date와 display_end_date를 기반으로 해당하는 기간 찾기
+--   SELECT rgdp.id INTO period_id
+--   FROM region_gu_display_periods rgdp
+--   JOIN panel_info pi ON pi.region_gu_id = rgdp.region_gu_id
+--   WHERE pi.id = NEW.panel_info_id
+--     AND rgdp.display_type_id = pi.display_type_id
+--     AND (
+--       -- 기간이 완전히 겹치는 경우
+--       (NEW.display_start_date >= rgdp.period_from AND NEW.display_end_date <= rgdp.period_to)
+--       OR
+--       -- 기간이 부분적으로 겹치는 경우
+--       (NEW.display_start_date <= rgdp.period_to AND NEW.display_end_date >= rgdp.period_from)
+--     );
   
-  -- 해당 기간의 재고 업데이트
-  IF period_id IS NOT NULL THEN
-    UPDATE banner_slot_inventory 
-    SET 
-      available_slots = GREATEST(0, available_slots - NEW.slot_order_quantity),
-      closed_slots = closed_slots + NEW.slot_order_quantity,
-      updated_at = NOW()
-    WHERE panel_info_id = NEW.panel_info_id
-      AND region_gu_display_period_id = period_id;
+--   -- 해당 기간의 재고 업데이트
+--   IF period_id IS NOT NULL THEN
+--     UPDATE banner_slot_inventory 
+--     SET 
+--       available_slots = GREATEST(0, available_slots - NEW.slot_order_quantity),
+--       closed_slots = closed_slots + NEW.slot_order_quantity,
+--       updated_at = NOW()
+--     WHERE panel_info_id = NEW.panel_info_id
+--       AND region_gu_display_period_id = period_id;
     
-    -- 재고 정보가 없으면 새로 생성
-    IF NOT FOUND THEN
-      SELECT * INTO panel_record FROM panel_info WHERE id = NEW.panel_info_id;
-      INSERT INTO banner_slot_inventory (
-        panel_info_id,
-        region_gu_display_period_id,
-        total_slots,
-        available_slots,
-        closed_slots
-      )
-      VALUES (
-        NEW.panel_info_id,
-        period_id,
-        panel_record.max_banner,
-        GREATEST(0, panel_record.max_banner - NEW.slot_order_quantity),
-        NEW.slot_order_quantity
-      );
-    END IF;
-  ELSE
-    -- 기간을 찾지 못한 경우 로그 출력 (디버깅용)
-    RAISE NOTICE '기간을 찾을 수 없음: panel_info_id=%, display_start_date=%, display_end_date=%', 
-      NEW.panel_info_id, NEW.display_start_date, NEW.display_end_date;
-  END IF;
+--     -- 재고 정보가 없으면 새로 생성
+--     IF NOT FOUND THEN
+--       SELECT * INTO panel_record FROM panel_info WHERE id = NEW.panel_info_id;
+--       INSERT INTO banner_slot_inventory (
+--         panel_info_id,
+--         region_gu_display_period_id,
+--         total_slots,
+--         available_slots,
+--         closed_slots
+--       )
+--       VALUES (
+--         NEW.panel_info_id,
+--         period_id,
+--         panel_record.max_banner,
+--         GREATEST(0, panel_record.max_banner - NEW.slot_order_quantity),
+--         NEW.slot_order_quantity
+--       );
+--     END IF;
+--   ELSE
+--     -- 기간을 찾지 못한 경우 로그 출력 (디버깅용)
+--     RAISE NOTICE '기간을 찾을 수 없음: panel_info_id=%, display_start_date=%, display_end_date=%', 
+--       NEW.panel_info_id, NEW.display_start_date, NEW.display_end_date;
+--   END IF;
   
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+--   RETURN NEW;
+-- END;
+-- $$ LANGUAGE plpgsql;
 
--- 2. 주문 취소 시 재고 자동 복구 트리거 (banner_slot_inventory용)
-CREATE OR REPLACE FUNCTION restore_banner_slot_inventory_on_order_delete()
-RETURNS TRIGGER AS $$
-DECLARE
-  period_id UUID;
-BEGIN
-  -- order_details의 display_start_date와 display_end_date를 기반으로 해당하는 기간 찾기
-  SELECT rgdp.id INTO period_id
-  FROM region_gu_display_periods rgdp
-  JOIN panel_info pi ON pi.region_gu_id = rgdp.region_gu_id
-  WHERE pi.id = OLD.panel_info_id
-    AND rgdp.display_type_id = pi.display_type_id
-    AND (
-      -- 기간이 완전히 겹치는 경우
-      (OLD.display_start_date >= rgdp.period_from AND OLD.display_end_date <= rgdp.period_to)
-      OR
-      -- 기간이 부분적으로 겹치는 경우
-      (OLD.display_start_date <= rgdp.period_to AND OLD.display_end_date >= rgdp.period_from)
-    );
+-- -- 2. 주문 취소 시 재고 자동 복구 트리거 (banner_slot_inventory용)
+-- CREATE OR REPLACE FUNCTION restore_banner_slot_inventory_on_order_delete()
+-- RETURNS TRIGGER AS $$
+-- DECLARE
+--   period_id UUID;
+-- BEGIN
+--   -- order_details의 display_start_date와 display_end_date를 기반으로 해당하는 기간 찾기
+--   SELECT rgdp.id INTO period_id
+--   FROM region_gu_display_periods rgdp
+--   JOIN panel_info pi ON pi.region_gu_id = rgdp.region_gu_id
+--   WHERE pi.id = OLD.panel_info_id
+--     AND rgdp.display_type_id = pi.display_type_id
+--     AND (
+--       -- 기간이 완전히 겹치는 경우
+--       (OLD.display_start_date >= rgdp.period_from AND OLD.display_end_date <= rgdp.period_to)
+--       OR
+--       -- 기간이 부분적으로 겹치는 경우
+--       (OLD.display_start_date <= rgdp.period_to AND OLD.display_end_date >= rgdp.period_from)
+--     );
   
-  -- 해당 기간의 재고 복구
-  IF period_id IS NOT NULL THEN
-    UPDATE banner_slot_inventory 
-    SET 
-      available_slots = LEAST(total_slots, available_slots + OLD.slot_order_quantity),
-      closed_slots = GREATEST(0, closed_slots - OLD.slot_order_quantity),
-      updated_at = NOW()
-    WHERE panel_info_id = OLD.panel_info_id
-      AND region_gu_display_period_id = period_id;
-  END IF;
+--   -- 해당 기간의 재고 복구
+--   IF period_id IS NOT NULL THEN
+--     UPDATE banner_slot_inventory 
+--     SET 
+--       available_slots = LEAST(total_slots, available_slots + OLD.slot_order_quantity),
+--       closed_slots = GREATEST(0, closed_slots - OLD.slot_order_quantity),
+--       updated_at = NOW()
+--     WHERE panel_info_id = OLD.panel_info_id
+--       AND region_gu_display_period_id = period_id;
+--   END IF;
   
-  RETURN OLD;
-END;
-$$ LANGUAGE plpgsql;
+--   RETURN OLD;
+-- END;
+-- $$ LANGUAGE plpgsql;
 
--- 3. 중복 예약 방지 트리거 (panel_slot_usage용)
-CREATE OR REPLACE FUNCTION prevent_duplicate_banner_booking()
-RETURNS TRIGGER AS $$
-DECLARE
-  conflicting_usage RECORD;
-BEGIN
-  -- banner_type이 'top_fixed'가 아닌 경우에만 중복 확인 (일반 현수막게시대)
-  IF NEW.banner_type != 'top_fixed' THEN
-    -- 같은 패널의 같은 슬롯이 같은 기간에 이미 예약되어 있는지 확인
-    SELECT ps.id INTO conflicting_usage
-    FROM panel_slot_usage ps
-    WHERE ps.panel_info_id = NEW.panel_info_id
-      AND ps.slot_number = NEW.slot_number
-      AND ps.is_active = true
-      AND ps.is_closed = false
-      AND ps.banner_type != 'top_fixed'
-      AND (
-        (ps.attach_date_from <= NEW.attach_date_from AND ps.attach_date_from + INTERVAL '15 days' >= NEW.attach_date_from)
-        OR (ps.attach_date_from >= NEW.attach_date_from AND ps.attach_date_from <= NEW.attach_date_from + INTERVAL '15 days')
-      );
+-- -- 3. 중복 예약 방지 트리거 (panel_slot_usage용)
+-- CREATE OR REPLACE FUNCTION prevent_duplicate_banner_booking()
+-- RETURNS TRIGGER AS $$
+-- DECLARE
+--   conflicting_usage RECORD;
+-- BEGIN
+--   -- banner_type이 'top_fixed'가 아닌 경우에만 중복 확인 (일반 현수막게시대)
+--   IF NEW.banner_type != 'top_fixed' THEN
+--     -- 같은 패널의 같은 슬롯이 같은 기간에 이미 예약되어 있는지 확인
+--     SELECT ps.id INTO conflicting_usage
+--     FROM panel_slot_usage ps
+--     WHERE ps.panel_info_id = NEW.panel_info_id
+--       AND ps.slot_number = NEW.slot_number
+--       AND ps.is_active = true
+--       AND ps.is_closed = false
+--       AND ps.banner_type != 'top_fixed'
+--       AND (
+--         (ps.attach_date_from <= NEW.attach_date_from AND ps.attach_date_from + INTERVAL '15 days' >= NEW.attach_date_from)
+--         OR (ps.attach_date_from >= NEW.attach_date_from AND ps.attach_date_from <= NEW.attach_date_from + INTERVAL '15 days')
+--       );
     
-    IF FOUND THEN
-      RAISE EXCEPTION '선택한 기간에 이미 예약된 슬롯입니다. (conflicting_usage_id: %)', conflicting_usage.id;
-    END IF;
-  END IF;
+--     IF FOUND THEN
+--       RAISE EXCEPTION '선택한 기간에 이미 예약된 슬롯입니다. (conflicting_usage_id: %)', conflicting_usage.id;
+--     END IF;
+--   END IF;
   
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+--   RETURN NEW;
+-- END;
+-- $$ LANGUAGE plpgsql;
 
--- 4. 재고 부족 시 주문 방지 트리거
-CREATE OR REPLACE FUNCTION check_inventory_before_order()
-RETURNS TRIGGER AS $$
-DECLARE
-  period_id UUID;
-  current_inventory RECORD;
-BEGIN
-  -- order_details의 display_start_date와 display_end_date를 기반으로 해당하는 기간 찾기
-  SELECT rgdp.id INTO period_id
-  FROM region_gu_display_periods rgdp
-  JOIN panel_info pi ON pi.region_gu_id = rgdp.region_gu_id
-  WHERE pi.id = NEW.panel_info_id
-    AND rgdp.display_type_id = pi.display_type_id
-    AND (
-      -- 기간이 완전히 겹치는 경우
-      (NEW.display_start_date >= rgdp.period_from AND NEW.display_end_date <= rgdp.period_to)
-      OR
-      -- 기간이 부분적으로 겹치는 경우
-      (NEW.display_start_date <= rgdp.period_to AND NEW.display_end_date >= rgdp.period_from)
-    );
+-- -- 4. 재고 부족 시 주문 방지 트리거
+-- CREATE OR REPLACE FUNCTION check_inventory_before_order()
+-- RETURNS TRIGGER AS $$
+-- DECLARE
+--   period_id UUID;
+--   current_inventory RECORD;
+-- BEGIN
+--   -- order_details의 display_start_date와 display_end_date를 기반으로 해당하는 기간 찾기
+--   SELECT rgdp.id INTO period_id
+--   FROM region_gu_display_periods rgdp
+--   JOIN panel_info pi ON pi.region_gu_id = rgdp.region_gu_id
+--   WHERE pi.id = NEW.panel_info_id
+--     AND rgdp.display_type_id = pi.display_type_id
+--     AND (
+--       -- 기간이 완전히 겹치는 경우
+--       (NEW.display_start_date >= rgdp.period_from AND NEW.display_end_date <= rgdp.period_to)
+--       OR
+--       -- 기간이 부분적으로 겹치는 경우
+--       (NEW.display_start_date <= rgdp.period_to AND NEW.display_end_date >= rgdp.period_from)
+--     );
   
-  -- 해당 기간의 재고 확인
-  IF period_id IS NOT NULL THEN
-    SELECT available_slots, total_slots INTO currfent_inventory
-    FROM banner_slot_inventory
-    WHERE panel_info_id = NEW.panel_info_id
-      AND region_gu_display_period_id = period_id;
+--   -- 해당 기간의 재고 확인
+--   IF period_id IS NOT NULL THEN
+--     SELECT available_slots, total_slots INTO currfent_inventory
+--     FROM banner_slot_inventory
+--     WHERE panel_info_id = NEW.panel_info_id
+--       AND region_gu_display_period_id = period_id;
     
-    -- 재고 정보가 있고, 주문 수량이 가용 재고를 초과하는 경우
-    IF FOUND AND current_inventory.available_slots < NEW.slot_order_quantity THEN
-      RAISE EXCEPTION '재고 부족: 요청 수량 %개, 가용 재고 %개 (기간: %)', 
-        NEW.slot_order_quantity, current_inventory.available_slots, period_id;
-    END IF;
-  ELSE
-    -- 기간을 찾지 못한 경우 경고
-    RAISE WARNING '기간을 찾을 수 없음: panel_info_id=%, display_start_date=%, display_end_date=%', 
-      NEW.panel_info_id, NEW.display_start_date, NEW.display_end_date;
-  END IF;
+--     -- 재고 정보가 있고, 주문 수량이 가용 재고를 초과하는 경우
+--     IF FOUND AND current_inventory.available_slots < NEW.slot_order_quantity THEN
+--       RAISE EXCEPTION '재고 부족: 요청 수량 %개, 가용 재고 %개 (기간: %)', 
+--         NEW.slot_order_quantity, current_inventory.available_slots, period_id;
+--     END IF;
+--   ELSE
+--     -- 기간을 찾지 못한 경우 경고
+--     RAISE WARNING '기간을 찾을 수 없음: panel_info_id=%, display_start_date=%, display_end_date=%', 
+--       NEW.panel_info_id, NEW.display_start_date, NEW.display_end_date;
+--   END IF;
   
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+--   RETURN NEW;
+-- END;
+-- $$ LANGUAGE plpgsql;
 
--- 트리거 등록 (기존 트리거와 충돌하지 않도록 새 이름 사용)
--- 1. order_details 삽입 시 재고 감소 (banner_slot_inventory)
-DROP TRIGGER IF EXISTS banner_inventory_insert_trigger ON order_details;
-CREATE TRIGGER banner_inventory_insert_trigger
-  AFTER INSERT ON order_details
-  FOR EACH ROW
-  EXECUTE FUNCTION update_banner_slot_inventory_on_order();
+-- -- 트리거 등록 (기존 트리거와 충돌하지 않도록 새 이름 사용)
+-- -- 1. order_details 삽입 시 재고 감소 (banner_slot_inventory)
+-- DROP TRIGGER IF EXISTS banner_inventory_insert_trigger ON order_details;
+-- CREATE TRIGGER banner_inventory_insert_trigger
+--   AFTER INSERT ON order_details
+--   FOR EACH ROW
+--   EXECUTE FUNCTION update_banner_slot_inventory_on_order();
 
--- 2. order_details 삭제 시 재고 복구 (banner_slot_inventory)
-DROP TRIGGER IF EXISTS banner_inventory_delete_trigger ON order_details;
-CREATE TRIGGER banner_inventory_delete_trigger
-  AFTER DELETE ON order_details
-  FOR EACH ROW
-  EXECUTE FUNCTION restore_banner_slot_inventory_on_order_delete();
+-- -- 2. order_details 삭제 시 재고 복구 (banner_slot_inventory)
+-- DROP TRIGGER IF EXISTS banner_inventory_delete_trigger ON order_details;
+-- CREATE TRIGGER banner_inventory_delete_trigger
+--   AFTER DELETE ON order_details
+--   FOR EACH ROW
+--   EXECUTE FUNCTION restore_banner_slot_inventory_on_order_delete();
 
--- 3. panel_slot_usage 삽입 시 중복 예약 방지
-DROP TRIGGER IF EXISTS duplicate_banner_booking_trigger ON panel_slot_usage;
-CREATE TRIGGER duplicate_banner_booking_trigger
-  BEFORE INSERT ON panel_slot_usage
-  FOR EACH ROW
-  EXECUTE FUNCTION prevent_duplicate_banner_booking();
+-- -- 3. panel_slot_usage 삽입 시 중복 예약 방지
+-- DROP TRIGGER IF EXISTS duplicate_banner_booking_trigger ON panel_slot_usage;
+-- CREATE TRIGGER duplicate_banner_booking_trigger
+--   BEFORE INSERT ON panel_slot_usage
+--   FOR EACH ROW
+--   EXECUTE FUNCTION prevent_duplicate_banner_booking();
 
--- 4. order_details 삽입 전 재고 부족 확인
-DROP TRIGGER IF EXISTS inventory_check_trigger ON order_details;
-CREATE TRIGGER inventory_check_trigger
-  BEFORE INSERT ON order_details
-  FOR EACH ROW
-  EXECUTE FUNCTION check_inventory_before_order();
+-- -- 4. order_details 삽입 전 재고 부족 확인
+-- DROP TRIGGER IF EXISTS inventory_check_trigger ON order_details;
+-- CREATE TRIGGER inventory_check_trigger
+--   BEFORE INSERT ON order_details
+--   FOR EACH ROW
+--   EXECUTE FUNCTION check_inventory_before_order();
 
--- 5. 기간 생성 시 자동으로 재고 생성하는 트리거
-CREATE OR REPLACE FUNCTION create_inventory_on_period_insert()
-RETURNS TRIGGER AS $$
-DECLARE
-    panel_record RECORD;
-    top_fixed_record RECORD;
-BEGIN
-    -- 배너 디스플레이 타입인 경우에만 재고 생성
-    IF EXISTS (
-        SELECT 1 FROM display_types dt 
-        WHERE dt.id = NEW.display_type_id AND dt.name = 'banner_display'
-    ) THEN
-        -- 해당 구의 모든 패널에 대해 재고 생성
-        FOR panel_record IN 
-            SELECT 
-                pi.id as panel_info_id,
-                pi.max_banner as total_slots,
-                pi.first_half_closure_quantity,
-                pi.second_half_closure_quantity
-            FROM panel_info pi
-            WHERE pi.region_gu_id = NEW.region_gu_id
-              AND pi.display_type_id = NEW.display_type_id
-              AND pi.panel_status = 'active'
-        LOOP
-            -- banner_slot_inventory 생성
-            INSERT INTO banner_slot_inventory (
-                panel_info_id,
-                region_gu_display_period_id,
-                total_slots,
-                available_slots,
-                closed_slots
-            )
-            VALUES (
-                panel_record.panel_info_id,
-                NEW.id,
-                panel_record.total_slots,
-                CASE 
-                    WHEN NEW.half_period = 'first_half' THEN 
-                        panel_record.total_slots - COALESCE(panel_record.first_half_closure_quantity, 0)
-                    ELSE 
-                        panel_record.total_slots - COALESCE(panel_record.second_half_closure_quantity, 0)
-                END,
-                CASE 
-                    WHEN NEW.half_period = 'first_half' THEN 
-                        COALESCE(panel_record.first_half_closure_quantity, 0)
-                    ELSE 
-                        COALESCE(panel_record.second_half_closure_quantity, 0)
-                END
-            );
+-- -- 5. 기간 생성 시 자동으로 재고 생성하는 트리거
+-- CREATE OR REPLACE FUNCTION create_inventory_on_period_insert()
+-- RETURNS TRIGGER AS $$
+-- DECLARE
+--     panel_record RECORD;
+--     top_fixed_record RECORD;
+-- BEGIN
+--     -- 배너 디스플레이 타입인 경우에만 재고 생성
+--     IF EXISTS (
+--         SELECT 1 FROM display_types dt 
+--         WHERE dt.id = NEW.display_type_id AND dt.name = 'banner_display'
+--     ) THEN
+--         -- 해당 구의 모든 패널에 대해 재고 생성
+--         FOR panel_record IN 
+--             SELECT 
+--                 pi.id as panel_info_id,
+--                 pi.max_banner as total_slots,
+--                 pi.first_half_closure_quantity,
+--                 pi.second_half_closure_quantity
+--             FROM panel_info pi
+--             WHERE pi.region_gu_id = NEW.region_gu_id
+--               AND pi.display_type_id = NEW.display_type_id
+--               AND pi.panel_status = 'active'
+--         LOOP
+--             -- banner_slot_inventory 생성
+--             INSERT INTO banner_slot_inventory (
+--                 panel_info_id,
+--                 region_gu_display_period_id,
+--                 total_slots,
+--                 available_slots,
+--                 closed_slots
+--             )
+--             VALUES (
+--                 panel_record.panel_info_id,
+--                 NEW.id,
+--                 panel_record.total_slots,
+--                 CASE 
+--                     WHEN NEW.half_period = 'first_half' THEN 
+--                         panel_record.total_slots - COALESCE(panel_record.first_half_closure_quantity, 0)
+--                     ELSE 
+--                         panel_record.total_slots - COALESCE(panel_record.second_half_closure_quantity, 0)
+--                 END,
+--                 CASE 
+--                     WHEN NEW.half_period = 'first_half' THEN 
+--                         COALESCE(panel_record.first_half_closure_quantity, 0)
+--                     ELSE 
+--                         COALESCE(panel_record.second_half_closure_quantity, 0)
+--                 END
+--             );
             
-            -- top_fixed_banner_inventory 생성 (해당 패널에 top_fixed 슬롯이 있는 경우)
-            FOR top_fixed_record IN 
-                SELECT 
-                    bsi.id as banner_slot_info_id,
-                    bsi.slot_number
-                FROM banner_slot_info bsi
-                WHERE bsi.panel_info_id = panel_record.panel_info_id
-                  AND bsi.banner_type = 'top_fixed'
-                  AND bsi.panel_slot_status = 'available'
-            LOOP
-                INSERT INTO top_fixed_banner_inventory (
-                    panel_info_id,
-                    region_gu_display_period_id,
-                    banner_slot_info_id,
-                    total_slots,
-                    available_slots,
-                    closed_faces
-                )
-                VALUES (
-                    panel_record.panel_info_id,
-                    NEW.id,
-                    top_fixed_record.banner_slot_info_id,
-                    1, -- top_fixed는 보통 1개 슬롯
-                    1, -- 초기에는 모두 사용 가능
-                    0
-                );
-            END LOOP;
-        END LOOP;
-    END IF;
+--             -- top_fixed_banner_inventory 생성 (해당 패널에 top_fixed 슬롯이 있는 경우)
+--             FOR top_fixed_record IN 
+--                 SELECT 
+--                     bsi.id as banner_slot_info_id,
+--                     bsi.slot_number
+--                 FROM banner_slot_info bsi
+--                 WHERE bsi.panel_info_id = panel_record.panel_info_id
+--                   AND bsi.banner_type = 'top_fixed'
+--                   AND bsi.panel_slot_status = 'available'
+--             LOOP
+--                 INSERT INTO top_fixed_banner_inventory (
+--                     panel_info_id,
+--                     region_gu_display_period_id,
+--                     banner_slot_info_id,
+--                     total_slots,
+--                     available_slots,
+--                     closed_faces
+--                 )
+--                 VALUES (
+--                     panel_record.panel_info_id,
+--                     NEW.id,
+--                     top_fixed_record.banner_slot_info_id,
+--                     1, -- top_fixed는 보통 1개 슬롯
+--                     1, -- 초기에는 모두 사용 가능
+--                     0
+--                 );
+--             END LOOP;
+--         END LOOP;
+--     END IF;
     
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+--     RETURN NEW;
+-- END;
+-- $$ LANGUAGE plpgsql;
 
--- 기간 생성 시 자동으로 재고 생성하는 트리거 등록
-DROP TRIGGER IF EXISTS create_inventory_on_period_insert_trigger ON region_gu_display_periods;
-CREATE TRIGGER create_inventory_on_period_insert_trigger
-  AFTER INSERT ON region_gu_display_periods
-  FOR EACH ROW
-  EXECUTE FUNCTION create_inventory_on_period_insert();
+-- -- 기간 생성 시 자동으로 재고 생성하는 트리거 등록
+-- DROP TRIGGER IF EXISTS create_inventory_on_period_insert_trigger ON region_gu_display_periods;
+-- CREATE TRIGGER create_inventory_on_period_insert_trigger
+--   AFTER INSERT ON region_gu_display_periods
+--   FOR EACH ROW
+--   EXECUTE FUNCTION create_inventory_on_period_insert();
 
--- 성능 최적화를 위한 인덱스 추가 (중복 방지)
-CREATE INDEX IF NOT EXISTS idx_banner_slot_inventory_panel_info_id 
-ON banner_slot_inventory(panel_info_id);
+-- -- 성능 최적화를 위한 인덱스 추가 (중복 방지)
+-- CREATE INDEX IF NOT EXISTS idx_banner_slot_inventory_panel_info_id 
+-- ON banner_slot_inventory(panel_info_id);
 
-CREATE INDEX IF NOT EXISTS idx_panel_slot_usage_panel_info_active 
-ON panel_slot_usage(panel_info_id, is_active, is_closed, banner_type);
+-- CREATE INDEX IF NOT EXISTS idx_panel_slot_usage_panel_info_active 
+-- ON panel_slot_usage(panel_info_id, is_active, is_closed, banner_type);
 
-CREATE INDEX IF NOT EXISTS idx_order_details_panel_info_id 
-ON order_details(panel_info_id);
+-- CREATE INDEX IF NOT EXISTS idx_order_details_panel_info_id 
+-- ON order_details(panel_info_id);
 
--- 재고 현황 모니터링 뷰 생성
-CREATE OR REPLACE VIEW inventory_status_view AS
-SELECT 
-  pi.id as panel_info_id,
-  pi.nickname as panel_name,
-  pi.address,
-  rgu.name as district,
-  bsi.total_slots,
-  bsi.available_slots,
-  bsi.closed_slots,
-  CASE 
-    WHEN bsi.available_slots = 0 THEN '매진'
-    WHEN bsi.available_slots <= bsi.total_slots * 0.2 THEN '재고부족'
-    ELSE '재고있음'
-  END as inventory_status,
-  bsi.updated_at as last_updated
-FROM panel_info pi
-LEFT JOIN region_gu rgu ON pi.region_gu_id = rgu.id
-LEFT JOIN banner_slot_inventory bsi ON pi.id = bsi.panel_info_id
-WHERE pi.display_type_id = (SELECT id FROM display_types WHERE name = 'banner_display')
-ORDER BY bsi.updated_at DESC; 
+-- -- 재고 현황 모니터링 뷰 생성
+-- CREATE OR REPLACE VIEW inventory_status_view AS
+-- SELECT 
+--   pi.id as panel_info_id,
+--   pi.nickname as panel_name,
+--   pi.address,
+--   rgu.name as district,
+--   bsi.total_slots,
+--   bsi.available_slots,
+--   bsi.closed_slots,
+--   CASE 
+--     WHEN bsi.available_slots = 0 THEN '매진'
+--     WHEN bsi.available_slots <= bsi.total_slots * 0.2 THEN '재고부족'
+--     ELSE '재고있음'
+--   END as inventory_status,
+--   bsi.updated_at as last_updated
+-- FROM panel_info pi
+-- LEFT JOIN region_gu rgu ON pi.region_gu_id = rgu.id
+-- LEFT JOIN banner_slot_inventory bsi ON pi.id = bsi.panel_info_id
+-- WHERE pi.display_type_id = (SELECT id FROM display_types WHERE name = 'banner_display')
+-- ORDER BY bsi.updated_at DESC; 
 
---
--- 특정 연/월의 기간 데이터를 1회성으로 생성하는 함수
--- 사용 예시: SELECT generate_specific_month_periods(2025, 8);
-CREATE OR REPLACE FUNCTION generate_specific_month_periods(target_year INTEGER, target_month INTEGER)
-RETURNS void AS $$
-DECLARE
-    target_date DATE;
-    target_year_month TEXT;
-    display_type_record RECORD;
-    region_record RECORD;
-    period_record RECORD;
-    panel_record RECORD;
-BEGIN
-    -- 대상 월 날짜 계산
-    target_date := (target_year || '-' || target_month || '-01')::DATE;
-    target_year_month := target_year || '년 ' || target_month || '월';
+-- --
+-- -- 특정 연/월의 기간 데이터를 1회성으로 생성하는 함수
+-- -- 사용 예시: SELECT generate_specific_month_periods(2025, 8);
+-- CREATE OR REPLACE FUNCTION generate_specific_month_periods(target_year INTEGER, target_month INTEGER)
+-- RETURNS void AS $$
+-- DECLARE
+--     target_date DATE;
+--     target_year_month TEXT;
+--     display_type_record RECORD;
+--     region_record RECORD;
+--     period_record RECORD;
+--     panel_record RECORD;
+-- BEGIN
+--     -- 대상 월 날짜 계산
+--     target_date := (target_year || '-' || target_month || '-01')::DATE;
+--     target_year_month := target_year || '년 ' || target_month || '월';
     
-    RAISE NOTICE '대상 월 기간 생성 시작: %', target_year_month;
+--     RAISE NOTICE '대상 월 기간 생성 시작: %', target_year_month;
     
-    -- 각 display_type에 대해
-    FOR display_type_record IN 
-        SELECT id, name FROM display_types 
-        WHERE name IN ('banner_display', 'led_display')
-    LOOP
-        -- 각 활성화된 구에 대해
-        FOR region_record IN 
-            SELECT id, name FROM region_gu 
-            WHERE is_active = true
-        LOOP
-            -- 상반기 기간 데이터 생성 (중복 방지)
-            INSERT INTO region_gu_display_periods (
-                display_type_id, 
-                region_gu_id, 
-                period_from, 
-                period_to, 
-                year_month, 
-                half_period
-            )
-            SELECT 
-                display_type_record.id,
-                region_record.id,
-                target_date,
-                (target_date + INTERVAL '1 month - 1 day')::DATE,
-                target_year_month,
-                'first_half'
-            WHERE NOT EXISTS (
-                SELECT 1 FROM region_gu_display_periods 
-                WHERE display_type_id = display_type_record.id
-                  AND region_gu_id = region_record.id
-                  AND year_month = target_year_month
-                  AND half_period = 'first_half'
-            )
-            RETURNING id INTO period_record;
+--     -- 각 display_type에 대해
+--     FOR display_type_record IN 
+--         SELECT id, name FROM display_types 
+--         WHERE name IN ('banner_display', 'led_display')
+--     LOOP
+--         -- 각 활성화된 구에 대해
+--         FOR region_record IN 
+--             SELECT id, name FROM region_gu 
+--             WHERE is_active = true
+--         LOOP
+--             -- 상반기 기간 데이터 생성 (중복 방지)
+--             INSERT INTO region_gu_display_periods (
+--                 display_type_id, 
+--                 region_gu_id, 
+--                 period_from, 
+--                 period_to, 
+--                 year_month, 
+--                 half_period
+--             )
+--             SELECT 
+--                 display_type_record.id,
+--                 region_record.id,
+--                 target_date,
+--                 (target_date + INTERVAL '1 month - 1 day')::DATE,
+--                 target_year_month,
+--                 'first_half'
+--             WHERE NOT EXISTS (
+--                 SELECT 1 FROM region_gu_display_periods 
+--                 WHERE display_type_id = display_type_record.id
+--                   AND region_gu_id = region_record.id
+--                   AND year_month = target_year_month
+--                   AND half_period = 'first_half'
+--             )
+--             RETURNING id INTO period_record;
             
-            -- 하반기 기간 데이터 생성 (중복 방지)
-            INSERT INTO region_gu_display_periods (
-                display_type_id, 
-                region_gu_id, 
-                period_from, 
-                period_to, 
-                year_month, 
-                half_period
-            )
-            SELECT 
-                display_type_record.id,
-                region_record.id,
-                target_date,
-                (target_date + INTERVAL '1 month - 1 day')::DATE,
-                target_year_month,
-                'second_half'
-            WHERE NOT EXISTS (
-                SELECT 1 FROM region_gu_display_periods 
-                WHERE display_type_id = display_type_record.id
-                  AND region_gu_id = region_record.id
-                  AND year_month = target_year_month
-                  AND half_period = 'second_half'
-            );
+--             -- 하반기 기간 데이터 생성 (중복 방지)
+--             INSERT INTO region_gu_display_periods (
+--                 display_type_id, 
+--                 region_gu_id, 
+--                 period_from, 
+--                 period_to, 
+--                 year_month, 
+--                 half_period
+--             )
+--             SELECT 
+--                 display_type_record.id,
+--                 region_record.id,
+--                 target_date,
+--                 (target_date + INTERVAL '1 month - 1 day')::DATE,
+--                 target_year_month,
+--                 'second_half'
+--             WHERE NOT EXISTS (
+--                 SELECT 1 FROM region_gu_display_periods 
+--                 WHERE display_type_id = display_type_record.id
+--                   AND region_gu_id = region_record.id
+--                   AND year_month = target_year_month
+--                   AND half_period = 'second_half'
+--             );
             
-            RAISE NOTICE '구 %에 % 타입 기간 데이터 생성 완료', 
-                region_record.name, display_type_record.name;
-        END LOOP;
-    END LOOP;
+--             RAISE NOTICE '구 %에 % 타입 기간 데이터 생성 완료', 
+--                 region_record.name, display_type_record.name;
+--         END LOOP;
+--     END LOOP;
     
-    RAISE NOTICE '대상 월 기간 생성 완료: %', target_year_month;
-END;
-$$ LANGUAGE plpgsql;
+--     RAISE NOTICE '대상 월 기간 생성 완료: %', target_year_month;
+-- END;
+-- $$ LANGUAGE plpgsql;
 
--- 기간 생성 시 자동으로 재고도 자동으로 생성하는 함수
-CREATE OR REPLACE FUNCTION generate_inventory_for_periods()
-RETURNS void AS $$
-DECLARE
-    period_record RECORD;
-    panel_record RECORD;
-    banner_slot_record RECORD;
-    top_fixed_record RECORD;
-BEGIN
-    -- 기간이 있지만 재고가 없는 경우들을 찾아서 재고 생성
-    FOR period_record IN 
-        SELECT 
-            rgdp.id as period_id,
-            rgdp.display_type_id,
-            rgdp.region_gu_id,
-            rgdp.year_month,
-            rgdp.half_period,
-            dt.name as display_type_name
-        FROM region_gu_display_periods rgdp
-        JOIN display_types dt ON rgdp.display_type_id = dt.id
-        WHERE dt.name = 'banner_display'
-    LOOP
-        -- 해당 구의 모든 패널에 대해 재고 생성
-        FOR panel_record IN 
-            SELECT 
-                pi.id as panel_info_id,
-                pi.max_banner as total_slots,
-                pi.first_half_closure_quantity,
-                pi.second_half_closure_quantity
-            FROM panel_info pi
-            WHERE pi.region_gu_id = period_record.region_gu_id
-              AND pi.display_type_id = period_record.display_type_id
-              AND pi.panel_status = 'active'
-        LOOP
-            -- banner_slot_inventory 생성 (중복 방지)
-            INSERT INTO banner_slot_inventory (
-                panel_info_id,
-                region_gu_display_period_id,
-                total_slots,
-                available_slots,
-                closed_slots
-            )
-            SELECT 
-                panel_record.panel_info_id,
-                period_record.period_id,
-                panel_record.total_slots,
-                CASE 
-                    WHEN period_record.half_period = 'first_half' THEN 
-                        panel_record.total_slots - COALESCE(panel_record.first_half_closure_quantity, 0)
-                    ELSE 
-                        panel_record.total_slots - COALESCE(panel_record.second_half_closure_quantity, 0)
-                END,
-                CASE 
-                    WHEN period_record.half_period = 'first_half' THEN 
-                        COALESCE(panel_record.first_half_closure_quantity, 0)
-                    ELSE 
-                        COALESCE(panel_record.second_half_closure_quantity, 0)
-                END
-            WHERE NOT EXISTS (
-                SELECT 1 FROM banner_slot_inventory 
-                WHERE panel_info_id = panel_record.panel_info_id
-                  AND region_gu_display_period_id = period_record.period_id
-            );
+-- -- 기간 생성 시 자동으로 재고도 자동으로 생성하는 함수
+-- CREATE OR REPLACE FUNCTION generate_inventory_for_periods()
+-- RETURNS void AS $$
+-- DECLARE
+--     period_record RECORD;
+--     panel_record RECORD;
+--     banner_slot_record RECORD;
+--     top_fixed_record RECORD;
+-- BEGIN
+--     -- 기간이 있지만 재고가 없는 경우들을 찾아서 재고 생성
+--     FOR period_record IN 
+--         SELECT 
+--             rgdp.id as period_id,
+--             rgdp.display_type_id,
+--             rgdp.region_gu_id,
+--             rgdp.year_month,
+--             rgdp.half_period,
+--             dt.name as display_type_name
+--         FROM region_gu_display_periods rgdp
+--         JOIN display_types dt ON rgdp.display_type_id = dt.id
+--         WHERE dt.name = 'banner_display'
+--     LOOP
+--         -- 해당 구의 모든 패널에 대해 재고 생성
+--         FOR panel_record IN 
+--             SELECT 
+--                 pi.id as panel_info_id,
+--                 pi.max_banner as total_slots,
+--                 pi.first_half_closure_quantity,
+--                 pi.second_half_closure_quantity
+--             FROM panel_info pi
+--             WHERE pi.region_gu_id = period_record.region_gu_id
+--               AND pi.display_type_id = period_record.display_type_id
+--               AND pi.panel_status = 'active'
+--         LOOP
+--             -- banner_slot_inventory 생성 (중복 방지)
+--             INSERT INTO banner_slot_inventory (
+--                 panel_info_id,
+--                 region_gu_display_period_id,
+--                 total_slots,
+--                 available_slots,
+--                 closed_slots
+--             )
+--             SELECT 
+--                 panel_record.panel_info_id,
+--                 period_record.period_id,
+--                 panel_record.total_slots,
+--                 CASE 
+--                     WHEN period_record.half_period = 'first_half' THEN 
+--                         panel_record.total_slots - COALESCE(panel_record.first_half_closure_quantity, 0)
+--                     ELSE 
+--                         panel_record.total_slots - COALESCE(panel_record.second_half_closure_quantity, 0)
+--                 END,
+--                 CASE 
+--                     WHEN period_record.half_period = 'first_half' THEN 
+--                         COALESCE(panel_record.first_half_closure_quantity, 0)
+--                     ELSE 
+--                         COALESCE(panel_record.second_half_closure_quantity, 0)
+--                 END
+--             WHERE NOT EXISTS (
+--                 SELECT 1 FROM banner_slot_inventory 
+--                 WHERE panel_info_id = panel_record.panel_info_id
+--                   AND region_gu_display_period_id = period_record.period_id
+--             );
             
-            -- top_fixed_banner_inventory 생성 (해당 패널에 top_fixed 슬롯이 있는 경우)
-            FOR top_fixed_record IN 
-                SELECT 
-                    bsi.id as banner_slot_info_id,
-                    bsi.slot_number
-                FROM banner_slot_info bsi
-                WHERE bsi.panel_info_id = panel_record.panel_info_id
-                  AND bsi.banner_type = 'top_fixed'
-                  AND bsi.panel_slot_status = 'available'
-            LOOP
-                INSERT INTO top_fixed_banner_inventory (
-                    panel_info_id,
-                    region_gu_display_period_id,
-                    banner_slot_info_id,
-                    total_slots,
-                    available_slots,
-                    closed_faces
-                )
-                SELECT 
-                    panel_record.panel_info_id,
-                    period_record.period_id,
-                    top_fixed_record.banner_slot_info_id,
-                    1, -- top_fixed는 보통 1개 슬롯
-                    1, -- 초기에는 모두 사용 가능
-                    0
-                WHERE NOT EXISTS (
-                    SELECT 1 FROM top_fixed_banner_inventory 
-                    WHERE panel_info_id = panel_record.panel_info_id
-                      AND region_gu_display_period_id = period_record.period_id
-                      AND banner_slot_info_id = top_fixed_record.banner_slot_info_id
-                );
-            END LOOP;
-        END LOOP;
-    END LOOP;
+--             -- top_fixed_banner_inventory 생성 (해당 패널에 top_fixed 슬롯이 있는 경우)
+--             FOR top_fixed_record IN 
+--                 SELECT 
+--                     bsi.id as banner_slot_info_id,
+--                     bsi.slot_number
+--                 FROM banner_slot_info bsi
+--                 WHERE bsi.panel_info_id = panel_record.panel_info_id
+--                   AND bsi.banner_type = 'top_fixed'
+--                   AND bsi.panel_slot_status = 'available'
+--             LOOP
+--                 INSERT INTO top_fixed_banner_inventory (
+--                     panel_info_id,
+--                     region_gu_display_period_id,
+--                     banner_slot_info_id,
+--                     total_slots,
+--                     available_slots,
+--                     closed_faces
+--                 )
+--                 SELECT 
+--                     panel_record.panel_info_id,
+--                     period_record.period_id,
+--                     top_fixed_record.banner_slot_info_id,
+--                     1, -- top_fixed는 보통 1개 슬롯
+--                     1, -- 초기에는 모두 사용 가능
+--                     0
+--                 WHERE NOT EXISTS (
+--                     SELECT 1 FROM top_fixed_banner_inventory 
+--                     WHERE panel_info_id = panel_record.panel_info_id
+--                       AND region_gu_display_period_id = period_record.period_id
+--                       AND banner_slot_info_id = top_fixed_record.banner_slot_info_id
+--                 );
+--             END LOOP;
+--         END LOOP;
+--     END LOOP;
     
-    RAISE NOTICE '재고 생성 완료';
-END;
-$$ LANGUAGE plpgsql;
+--     RAISE NOTICE '재고 생성 완료';
+-- END;
+-- $$ LANGUAGE plpgsql;
 
--- 기간 생성 후 자동으로 재고도 생성하는 통합 함수
-CREATE OR REPLACE FUNCTION generate_periods_with_inventory(target_year INTEGER, target_month INTEGER)
-RETURNS void AS $$
-BEGIN
-    -- 1. 기간 생성
-    PERFORM generate_specific_month_periods(target_year, target_month);
+-- -- 기간 생성 후 자동으로 재고도 생성하는 통합 함수
+-- CREATE OR REPLACE FUNCTION generate_periods_with_inventory(target_year INTEGER, target_month INTEGER)
+-- RETURNS void AS $$
+-- BEGIN
+--     -- 1. 기간 생성
+--     PERFORM generate_specific_month_periods(target_year, target_month);
     
-    -- 2. 재고 생성
-    PERFORM generate_inventory_for_periods();
+--     -- 2. 재고 생성
+--     PERFORM generate_inventory_for_periods();
     
-    RAISE NOTICE '%년 %월 기간 및 재고 생성 완료', target_year, target_month;
-END;
-$$ LANGUAGE plpgsql; 
+--     RAISE NOTICE '%년 %월 기간 및 재고 생성 완료', target_year, target_month;
+-- END;
+-- $$ LANGUAGE plpgsql; 
