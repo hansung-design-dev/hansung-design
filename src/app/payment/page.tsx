@@ -159,7 +159,7 @@ function PaymentPageContent() {
       return {
         id: `group_${firstItem.district}_${firstItem.type}_${firstItem.panel_type}`,
         name: `${firstItem.district} ${getPanelTypeDisplay(
-          firstItem.panel_type
+          firstItem.panel_type || 'panel'
         )}`,
         items: group,
         totalPrice,
