@@ -63,7 +63,7 @@ export default function GuidelineSection({
   }
 
   return (
-    <div className="mt-12">
+    <div id="guideline-section" className="mt-12">
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-xl font-bold text-gray-800">
           {districtName} 현수막게시대 가이드라인

@@ -59,15 +59,15 @@ export default function DistrictCard({
   const [imageError, setImageError] = useState(false);
 
   // 디버깅용 로그
-  console.log(`🔍 DistrictCard ${district.name}:`, {
-    period: district.period,
-    bankInfo: district.bankInfo,
-    code: district.code,
-    isGangbuk,
-    isLEDDisplay,
-    panel_status: district.panel_status,
-    isMaintenance,
-  });
+  // console.log(`🔍 DistrictCard ${district.name}:`, {
+  //   period: district.period,
+  //   bankInfo: district.bankInfo,
+  //   code: district.code,
+  //   isGangbuk,
+  //   isLEDDisplay,
+  //   panel_status: district.panel_status,
+  //   isMaintenance,
+  // });
 
   // 기본 로고 이미지 (fallback용)
   const defaultLogo = `/images/district-icon/${
@@ -145,27 +145,17 @@ export default function DistrictCard({
               </div>
             </div>
             <div className="flex flex-col sm:gap-4 lg:gap-6 md:gap-4 sm:gap-2">
-              <div className="lg:text-1 text-red md:text-0.75">
-                마감안내 및 안내내용 <br /> 최종 2줄
-              </div>
               <div className="text-gray-14 text-0.875 font-500">
                 <DistrictInfo
                   period={district.period}
                   bankInfo={district.bankInfo}
+                  districtName={district.name}
                   flexRow={false}
                   isLEDDisplay={isLEDDisplay}
                 />
               </div>
             </div>
           </div>
-        </div>
-        <div className="relative w-full h-[12rem]">
-          <Image
-            src={district.src}
-            alt={district.name}
-            fill
-            className="object-cover"
-          />
         </div>
       </Link>
     </div>

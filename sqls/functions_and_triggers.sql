@@ -649,7 +649,8 @@ END;
 
 
 -- 5. generate_next_first_half_periods
-
+CREATE OR REPLACE FUNCTION generate_next_first_half_periods()
+RETURNS void AS $$
 DECLARE
     next_month_date DATE;
     next_year INTEGER;
@@ -680,8 +681,8 @@ BEGIN
             SELECT id, name FROM region_gu 
             WHERE is_active = true
         LOOP
-            -- 마포구 특별 처리: 5일-15일 상반기
-            IF region_record.name = '마포구' THEN
+            -- 마포구, 강북구 특별 처리: 5일-19일 상반기
+            IF region_record.name IN ('마포구', '강북구') THEN
                 INSERT INTO region_gu_display_periods (
                     display_type_id, 
                     region_gu_id, 
@@ -694,7 +695,7 @@ BEGIN
                     display_type_record.id,
                     region_record.id,
                     mapo_next_month_5th, -- 다음달 5일부터
-                    (mapo_next_month_5th + INTERVAL '10 days')::DATE, -- 다음달 15일까지
+                    (mapo_next_month_5th + INTERVAL '14 days')::DATE, -- 다음달 19일까지
                     target_year_month,
                     'first_half'
                 WHERE NOT EXISTS (
@@ -738,6 +739,7 @@ BEGIN
     
     RAISE NOTICE '다음달 상반기 기간 자동 생성 완료: %', target_year_month;
 END;
+$$ LANGUAGE plpgsql;
 
 -- 6. generate_next_month_led_periods
 -- generate_next_month_led_periods 함수 수정
@@ -831,7 +833,8 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- 7. generate_next_second_half_periods
-
+CREATE OR REPLACE FUNCTION generate_next_second_half_periods()
+RETURNS void AS $$
 DECLARE
     next_month_date DATE;
     next_year INTEGER;
@@ -862,8 +865,8 @@ BEGIN
             SELECT id, name FROM region_gu 
             WHERE is_active = true
         LOOP
-            -- 마포구 특별 처리: 16일-20일 하반기
-            IF region_record.name = '마포구' THEN
+            -- 마포구, 강북구 특별 처리: 20일-다음달4일 하반기
+            IF region_record.name IN ('마포구', '강북구') THEN
                 INSERT INTO region_gu_display_periods (
                     display_type_id, 
                     region_gu_id, 
@@ -875,8 +878,8 @@ BEGIN
                 SELECT 
                     display_type_record.id,
                     region_record.id,
-                    (next_month_date + INTERVAL '15 days')::DATE, -- 다음달 16일부터
-                    (next_month_date + INTERVAL '19 days')::DATE, -- 다음달 20일까지
+                    (next_month_date + INTERVAL '19 days')::DATE, -- 다음달 20일부터
+                    (next_month_date + INTERVAL '1 month + 3 days')::DATE, -- 다음달 4일까지
                     target_year_month,
                     'second_half'
                 WHERE NOT EXISTS (
@@ -920,6 +923,7 @@ BEGIN
     
     RAISE NOTICE '다음달 하반기 기간 자동 생성 완료: %', target_year_month;
 END;
+$$ LANGUAGE plpgsql;
 
 -- 8. generate_specific_month_periods
 

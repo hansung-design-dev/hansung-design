@@ -37,8 +37,8 @@ BEGIN
               AND pi.display_type_id = display_type_record.id
               AND pi.panel_status = 'active'
         LOOP
-            -- 마포구 특별 처리: 5일-15일 상반기
-            IF region_record.name = '마포구' THEN
+            -- 마포구, 강북구 특별 처리: 5일-19일 상반기
+            IF region_record.name IN ('마포구', '강북구') THEN
                 INSERT INTO region_gu_display_periods (
                     display_type_id, 
                     region_gu_id, 
@@ -51,7 +51,7 @@ BEGIN
                     display_type_record.id,
                     region_record.id,
                     mapo_next_month_5th, -- 다음달 5일부터
-                    (mapo_next_month_5th + INTERVAL '10 days')::DATE, -- 다음달 15일까지
+                    (mapo_next_month_5th + INTERVAL '14 days')::DATE, -- 다음달 19일까지
                     target_year_month,
                     'first_half'
                 WHERE NOT EXISTS (
@@ -134,8 +134,8 @@ BEGIN
               AND pi.display_type_id = display_type_record.id
               AND pi.panel_status = 'active'
         LOOP
-            -- 마포구 특별 처리: 16일-20일 하반기
-            IF region_record.name = '마포구' THEN
+            -- 마포구, 강북구 특별 처리: 20일-다음달4일 하반기
+            IF region_record.name IN ('마포구', '강북구') THEN
                 INSERT INTO region_gu_display_periods (
                     display_type_id, 
                     region_gu_id, 
@@ -147,8 +147,8 @@ BEGIN
                 SELECT 
                     display_type_record.id,
                     region_record.id,
-                    (next_month_date + INTERVAL '15 days')::DATE, -- 다음달 16일부터
-                    (next_month_date + INTERVAL '19 days')::DATE, -- 다음달 20일까지
+                    (next_month_date + INTERVAL '19 days')::DATE, -- 다음달 20일부터
+                    (next_month_date + INTERVAL '1 month + 3 days')::DATE, -- 다음달 4일까지
                     target_year_month,
                     'second_half'
                 WHERE NOT EXISTS (

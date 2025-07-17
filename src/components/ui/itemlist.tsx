@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import ArrowLeft from '@/src/icons/arrow-left.svg';
 import ArrowRight from '@/src/icons/arrow-right.svg';
-import Image from 'next/image';
 import { DisplayBillboard } from '@/src/types/displaydetail';
 // PhotoModal is temporarily disabled
 // import PhotoModal from '@/src/components/modal/PhotoModal';
@@ -180,7 +179,7 @@ const ItemList: React.FC<ItemTableProps> = ({
                 {showCheckbox && <th className="w-10"></th>}
                 <th className="text-center pl-4">No</th>
                 <th className="text-left pl-4">게시대 명</th>
-                <th className="text-center pl-4"></th>
+
                 <th className="text-center pl-4">규격(cm)</th>
                 {!hideQuantityColumns && (
                   <th className="text-center pl-4">면수</th>
@@ -230,6 +229,7 @@ const ItemList: React.FC<ItemTableProps> = ({
                           onChange={(e) =>
                             onItemSelect?.(item.id, e.target.checked)
                           }
+                          className="hover:cursor-pointer"
                         />
                       )}
                     </td>
@@ -254,61 +254,7 @@ const ItemList: React.FC<ItemTableProps> = ({
                       )}
                     </div>
                   </td>
-                  <td className="">
-                    <div className="flex gap-1">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // PhotoModal is temporarily disabled
-                          console.log(
-                            '사진 보기 기능이 임시로 비활성화되었습니다.'
-                          );
-                        }}
-                        className={`${
-                          item.photo_url
-                            ? 'cursor-pointer'
-                            : 'cursor-not-allowed opacity-50'
-                        }`}
-                        title={item.photo_url ? '사진 보기' : '사진 없음'}
-                      >
-                        <Image
-                          src={'/svg/list/camera.svg'}
-                          alt="camera"
-                          width={300}
-                          height={300}
-                          className="w-[0.7rem] h-[0.7rem] rounded-md bg-black p-1"
-                        />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          console.log('map');
-                        }}
-                      >
-                        <Image
-                          src={'/svg/list/map.svg'}
-                          alt="map"
-                          width={300}
-                          height={300}
-                          className="w-[0.7rem] h-[0.7rem] rounded-md bg-black p-1"
-                        />{' '}
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          console.log('navigation');
-                        }}
-                      >
-                        <Image
-                          src={'/svg/list/navigation.svg'}
-                          alt="navi"
-                          width={300}
-                          height={300}
-                          className="w-[0.7rem] h-[0.7rem] rounded-md bg-black p-1"
-                        />
-                      </button>
-                    </div>
-                  </td>
+
                   <td className="text-center pl-4">
                     {item.panel_width && item.panel_height
                       ? `${item.panel_width} x ${item.panel_height}`
@@ -349,7 +295,7 @@ const ItemList: React.FC<ItemTableProps> = ({
             {Array.from({ length: ITEMS_PER_PAGE - paginatedItems.length }).map(
               (_, i) => {
                 const baseCols = showCheckbox ? 1 : 0; // checkbox
-                const dataCols = 7; // No, 게시대명, 아이콘, 규격, 가격, 구분, 상태
+                const dataCols = 8; // No, 게시대명, 아이콘, 규격, 가격, 구분, 상태
                 const quantityCols = hideQuantityColumns ? 0 : 2; // 면수, 수량
                 const actionCols = renderAction ? 1 : 0; // 작업
                 const totalCols =
@@ -409,11 +355,27 @@ const ItemList: React.FC<ItemTableProps> = ({
                   className="flex items-center gap-2"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <div className="font-medium text-black">{item.name}</div>
+                  <div className="font-medium text-black">
+                    {item.nickname && <span>{item.nickname} - </span>}
+                    {item.address ? <span>{item.address}</span> : <></>}
+                    {item.neighborhood && (
+                      <span className="ml-1 text-gray-500">
+                        {item.neighborhood}
+                      </span>
+                    )}
+                  </div>
                 </div>
               )}
               {!showCheckbox && (
-                <div className="font-medium text-black">{item.name}</div>
+                <div className="font-medium text-black">
+                  {item.nickname && <span>{item.nickname} - </span>}
+                  {item.address ? <span>{item.address}</span> : <></>}
+                  {item.neighborhood && (
+                    <span className="ml-1 text-gray-500">
+                      {item.neighborhood}
+                    </span>
+                  )}
+                </div>
               )}
 
               {item.neighborhood && (

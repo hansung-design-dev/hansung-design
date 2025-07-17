@@ -8,6 +8,7 @@ import ViewTypeButton from '@/src/components/viewTypeButton';
 import MapPinIcon from '@/src/icons/map-pin.svg';
 import GalleryIcon from '@/src/icons/gallery.svg';
 import ListIcon from '@/src/icons/list.svg';
+import DocumentIcon from '@/public/svg/document.svg';
 import { useState, useEffect } from 'react';
 import { useCart } from '../contexts/cartContext';
 import { useProfile } from '../contexts/profileContext';
@@ -898,7 +899,15 @@ export default function DisplayDetailPage({
                   {item.district}
                 </span>
               </div>
-              <h3 className="text-1 font-medium">{item.name}</h3>
+              <h3 className="text-1 font-medium">
+                {item.nickname && <span>{item.nickname} - </span>}
+                {item.address ? <span>{item.address}</span> : <></>}
+                {item.neighborhood && (
+                  <span className="ml-1 text-gray-500">
+                    {item.neighborhood}
+                  </span>
+                )}
+              </h3>
               <p className="text-0.875 text-gray-600">{item.neighborhood}</p>
             </div>
           </div>
@@ -1014,7 +1023,15 @@ export default function DisplayDetailPage({
                         {item.district}
                       </span>
                     </div>
-                    <h3 className="text-1 font-medium">{item.name}</h3>
+                    <h3 className="text-1 font-medium">
+                      {item.nickname && <span>{item.nickname} - </span>}
+                      {item.address ? <span>{item.address}</span> : <></>}
+                      {item.neighborhood && (
+                        <span className="ml-1 text-gray-500">
+                          {item.neighborhood}
+                        </span>
+                      )}
+                    </h3>
                     <p className="text-0.875 text-gray-600">
                       {item.neighborhood}
                     </p>
@@ -1091,6 +1108,7 @@ export default function DisplayDetailPage({
           <DistrictInfo
             period={selectedDistrictPeriod || period}
             bankInfo={bankInfo}
+            districtName={districtObj?.name}
             flexRow={true}
           />
         </div>
@@ -1209,6 +1227,19 @@ export default function DisplayDetailPage({
             isActive={viewType === 'list'}
             onClick={() => setViewType('list')}
           />
+          <button
+            onClick={() => {
+              const guidelineSection =
+                document.getElementById('guideline-section');
+              if (guidelineSection) {
+                guidelineSection.scrollIntoView({ behavior: 'smooth' });
+              }
+            }}
+            className="flex items-center gap-2 px-4 py-2 hover:cursor-pointer text-gray-600 hover:text-black border-b-2 border-transparent hover:border-black"
+          >
+            <DocumentIcon className="w-7 h-6 text-gray-400" />
+            <span className="hidden md:inline">가이드라인 보기</span>
+          </button>
           <div className="ml-auto">
             <DropdownMenu
               data={dropdownOptions}

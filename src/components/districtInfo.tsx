@@ -1,5 +1,5 @@
-import BannerPeriod from './bannerPeriod';
 import BankInfo from './bankInfo';
+import PhoneNumber from './phoneNumber';
 
 interface DistrictInfoProps {
   period?: {
@@ -22,6 +22,7 @@ interface DistrictInfoProps {
       name: string;
     };
   } | null;
+  districtName?: string;
   flexRow?: boolean;
   isLEDDisplay?: boolean;
 }
@@ -29,6 +30,7 @@ interface DistrictInfoProps {
 export default function DistrictInfo({
   period,
   bankInfo,
+  districtName,
   flexRow = false,
   isLEDDisplay = false,
 }: DistrictInfoProps) {
@@ -43,13 +45,49 @@ export default function DistrictInfo({
     isLEDDisplay,
   });
 
+  // 구별 신청 시간 표시
+  const getApplicationTime = () => {
+    if (!districtName) return null;
+
+    if (districtName === '강북구' || districtName === '마포구') {
+      return (
+        <div className="text-gray-600">
+          <div className="text-sm">
+            <span className="font-medium">1차:</span> 매월 5일 9시
+          </div>
+          <div className="text-sm">
+            <span className="font-medium">2차:</span> 매월 20일 9시
+          </div>
+        </div>
+      );
+    } else {
+      return (
+        <div className="text-gray-600">
+          <div className="text-sm">
+            <span className="font-medium">1차:</span> 매월 1일 9시
+          </div>
+          <div className="text-sm">
+            <span className="font-medium">2차:</span> 매월 16일 9시
+          </div>
+        </div>
+      );
+    }
+  };
+
   return (
     <div className="text-gray-600">
-      {period && <BannerPeriod {...period} />}
+      {getApplicationTime()}
 
       {isLEDDisplay && (
         <div className="mt-2 text-green-600 font-medium">상시접수</div>
       )}
+
+      {districtName && (
+        <div className="mt-2">
+          <PhoneNumber districtName={districtName} flexRow={flexRow} />
+        </div>
+      )}
+
       <BankInfo flexRow={flexRow} bankInfo={bankInfo} />
     </div>
   );
