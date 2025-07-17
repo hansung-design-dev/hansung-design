@@ -152,6 +152,9 @@ const LEDItemList: React.FC<LEDItemTableProps> = ({
                           e.stopPropagation();
                           console.log('camera');
                         }}
+                        title={`${item.nickname && item.nickname + ' - '}${
+                          item.address || ''
+                        }${item.neighborhood ? ' ' + item.neighborhood : ''}`}
                       >
                         <Image
                           src={'/svg/list/camera.svg'}
@@ -166,6 +169,9 @@ const LEDItemList: React.FC<LEDItemTableProps> = ({
                           e.stopPropagation();
                           console.log('map');
                         }}
+                        title={`${item.nickname && item.nickname + ' - '}${
+                          item.address || ''
+                        }${item.neighborhood ? ' ' + item.neighborhood : ''}`}
                       >
                         <Image
                           src={'/svg/list/map.svg'}

@@ -16,7 +16,7 @@ export default function ViewTypeButton({
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 px-4 py-2   ${
+      className={`flex items-center gap-2 px-4 py-2 hover:cursor-pointer  ${
         isActive ? 'border-b-solid border-black text-black' : 'text-gray-600'
       }`}
     >

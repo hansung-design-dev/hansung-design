@@ -927,7 +927,62 @@ function PaymentPageContent() {
                         <label className="w-full md:w-[9rem] text-gray-600 font-medium pt-2">
                           유의사항
                         </label>
-                        <div className="flex flex-col gap-2">
+                        <div className="flex flex-col gap-4">
+                          {/* 유의사항 내용 */}
+                          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                            <h4 className="font-semibold text-gray-800 mb-3">
+                              현수막 표시내용의 금지, 제한 사항
+                            </h4>
+                            <ul className="text-sm text-gray-700 space-y-2 mb-4">
+                              <li>
+                                • 성적인 표현 암시, 인권침해(국제결혼, 신부 등)
+                              </li>
+                              <li>
+                                • 음란, 퇴폐성 및 청소년 보호, 선도에 저해
+                                우려가 있는 내용
+                              </li>
+                              <li>
+                                • 사채, 대부업, 채권추심등에 관련된 내용,
+                                시민정서에 적합하지 않은 내용
+                              </li>
+                              <li>
+                                • 특정 개인, 단체 등의 가치관을 비방 또는
+                                홍보하려는 내용
+                              </li>
+                              <li>
+                                • 기타 반사회적 내용 또는 시민정서에 적합하지
+                                않다고 판단되는 내용
+                              </li>
+                            </ul>
+
+                            <h4 className="font-semibold text-gray-800 mb-3">
+                              현수막 게시의 지연 또는 일시 중지
+                            </h4>
+                            <ul className="text-sm text-gray-700 space-y-2 mb-4">
+                              <li>
+                                • 법정공휴일 또는 강풍, 우천, 폭설 시에는 현수막
+                                게시 일정이 전후날로 변경 될 수 있습니다.
+                              </li>
+                              <li>
+                                • 현수막 게시 기간 중, 태풍, 재난, 긴급 공사
+                                등의 사유가 발생할 때에는 광고주에게 사전 통보
+                                없이 게시를 일시 중지 할 수 있습니다.
+                              </li>
+                            </ul>
+
+                            <div className="bg-red-50 border border-red-200 p-3 rounded">
+                              <h4 className="font-semibold text-red-700 mb-2">
+                                [유의사항]
+                              </h4>
+                              <p className="text-sm text-red-700">
+                                현수막게시대 게시 신청 시 아래 규약사항을 반드시
+                                숙지하시기 바라며, 숙지하지 못한 책임은
+                                신청인에게 있습니다. 또한 관련 규정을 위반한
+                                경우에도 신청 및 게시가 불가합니다.
+                              </p>
+                            </div>
+                          </div>
+
                           <div className="flex items-start gap-2">
                             <input
                               type="checkbox"
@@ -1005,6 +1060,38 @@ function PaymentPageContent() {
                 />
                 <label htmlFor="bank_transfer" className="text-gray-700">
                   계좌이체
+                </label>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="radio"
+                  id="card"
+                  name="paymentMethod"
+                  value="card"
+                  checked={paymentMethod === 'card'}
+                  onChange={(e) =>
+                    setPaymentMethod(e.target.value as 'card' | 'bank_transfer')
+                  }
+                  className="w-4 h-4"
+                />
+                <label htmlFor="card" className="text-gray-700">
+                  네이버페이
+                </label>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="radio"
+                  id="card"
+                  name="paymentMethod"
+                  value="card"
+                  checked={paymentMethod === 'card'}
+                  onChange={(e) =>
+                    setPaymentMethod(e.target.value as 'card' | 'bank_transfer')
+                  }
+                  className="w-4 h-4"
+                />
+                <label htmlFor="card" className="text-gray-700">
+                  카카오페이
                 </label>
               </div>
             </div>

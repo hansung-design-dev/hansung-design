@@ -145,9 +145,6 @@ export default function DistrictCard({
               </div>
             </div>
             <div className="flex flex-col sm:gap-4 lg:gap-6 md:gap-4 sm:gap-2">
-              <div className="lg:text-1 text-red md:text-0.75">
-                마감안내 및 안내내용 <br /> 최종 2줄
-              </div>
               <div className="text-gray-14 text-0.875 font-500">
                 <DistrictInfo
                   period={district.period}
