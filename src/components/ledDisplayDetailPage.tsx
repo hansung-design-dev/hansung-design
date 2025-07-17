@@ -563,7 +563,11 @@ export default function LEDDisplayDetailPage({
           {/* LED 전자게시대는 상시접수 */}
           <div className="mt-2 text-green-600 font-medium">상시접수</div>
 
-          <DistrictInfo bankInfo={bankInfo} flexRow={true} />
+          <DistrictInfo
+            bankInfo={bankInfo}
+            districtName={districtObj?.name}
+            flexRow={true}
+          />
         </div>
         {/* 상하반기 탭 - 개별 구 페이지에서만 표시
         {period && !isAllDistrictsView && (

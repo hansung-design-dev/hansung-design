@@ -64,10 +64,10 @@ export async function GET(request: NextRequest) {
     }
 
     if (action === 'getByDistrict' && districtName) {
-      // 특정 구의 전체 정보 가져오기 (로고 + 계좌번호)
+      // 특정 구의 전체 정보 가져오기 (로고 + 계좌번호 + 전화번호)
       const { data: regionData, error: regionError } = await supabase
         .from('region_gu')
-        .select('id, name, code, logo_image_url')
+        .select('id, name, code, logo_image_url, phone_number')
         .eq('name', districtName)
         .single();
 
@@ -168,6 +168,55 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         success: true,
         data: responseData,
+      });
+    }
+
+    if (action === 'getPhoneNumber' && districtName) {
+      // 특정 구의 전화번호 정보만 가져오기
+      const { data: regionData, error: regionError } = await supabase
+        .from('region_gu')
+        .select('id, name, phone_number')
+        .eq('name', districtName)
+        .single();
+
+      if (regionError) {
+        console.error('Error fetching region_gu:', regionError);
+        return NextResponse.json(
+          { success: false, error: 'Region not found' },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          id: regionData.id,
+          name: regionData.name,
+          phone_number: regionData.phone_number,
+        },
+      });
+    }
+
+    if (action === 'getAllPhoneNumbers') {
+      // 모든 활성화된 구의 전화번호 정보 가져오기
+      const { data, error } = await supabase
+        .from('region_gu')
+        .select('id, name, phone_number')
+        .eq('is_active', true)
+        .not('phone_number', 'is', null)
+        .order('name', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching phone numbers:', error);
+        return NextResponse.json(
+          { success: false, error: 'Failed to fetch phone numbers' },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: data || [],
       });
     }
 

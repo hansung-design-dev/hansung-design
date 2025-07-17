@@ -1091,6 +1091,7 @@ export default function DisplayDetailPage({
           <DistrictInfo
             period={selectedDistrictPeriod || period}
             bankInfo={bankInfo}
+            districtName={districtObj?.name}
             flexRow={true}
           />
         </div>

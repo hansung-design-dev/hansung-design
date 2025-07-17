@@ -477,15 +477,24 @@ async function getAllDistrictsData() {
       }
     });
 
-    // 3. 강북구 추가 (데이터가 없어도 카드로 표시)
+    // 3. 강북구 추가 (실제 데이터로 처리)
     if (!districtsMap['강북구']) {
-      districtsMap['강북구'] = {
-        id: 'gangbuk-placeholder',
-        name: '강북구',
-        code: 'gangbuk',
-        logo_image_url: null,
-        panel_status: 'active',
-      };
+      // 강북구의 실제 region_gu 데이터를 가져오기
+      const { data: gangbukData } = await supabase
+        .from('region_gu')
+        .select('id, name, code, logo_image_url')
+        .eq('name', '강북구')
+        .single();
+
+      if (gangbukData) {
+        districtsMap['강북구'] = {
+          id: gangbukData.id,
+          name: gangbukData.name,
+          code: gangbukData.code,
+          logo_image_url: gangbukData.logo_image_url,
+          panel_status: 'active',
+        };
+      }
     }
 
     // 4. 기본 구 목록 생성

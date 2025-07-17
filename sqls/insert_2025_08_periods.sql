@@ -69,7 +69,7 @@ SELECT
 FROM display_types dt
 CROSS JOIN region_gu rg
 WHERE dt.name = 'banner_display'
-  AND rg.name NOT IN ('송파구', '용산구', '서대문구', '강북구','관악구')
+  AND rg.name NOT IN ('송파구', '용산구', '서대문구','관악구')
   AND rg.is_active = true
   AND NOT EXISTS (
     SELECT 1 FROM region_gu_display_periods 
@@ -98,7 +98,7 @@ SELECT
 FROM display_types dt
 CROSS JOIN region_gu rg
 WHERE dt.name = 'banner_display'
-  AND rg.name NOT IN ('송파구', '용산구', '서대문구','강북구','관악구')
+  AND rg.name NOT IN ('송파구', '용산구', '서대문구','관악구')
   AND rg.is_active = true
   AND NOT EXISTS (
     SELECT 1 FROM region_gu_display_periods 
