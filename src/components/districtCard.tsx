@@ -52,9 +52,11 @@ export default function DistrictCard({
     ? `?period=${encodeURIComponent(JSON.stringify(district.period))}`
     : '';
 
-  const href = isGangbuk
-    ? 'https://gangbuk.uriad.com/sub03-01.jsp'
-    : `/${basePath}/${encodeURIComponent(district.code)}${periodParams}`;
+  // LED 전자게시대의 경우 강북구도 내부 페이지로 이동, 현수막게시대의 경우에만 외부 링크
+  const href =
+    isGangbuk && !isLEDDisplay
+      ? 'https://gangbuk.uriad.com/sub03-01.jsp'
+      : `/${basePath}/${encodeURIComponent(district.code)}${periodParams}`;
 
   const [imageError, setImageError] = useState(false);
 
@@ -127,7 +129,8 @@ export default function DistrictCard({
       <Link
         href={href}
         className="w-full lg:h-[32rem] md:h-[22rem] bg-gray-4 rounded-[1.25rem] flex flex-col overflow-hidden"
-        {...(isGangbuk && { target: '_blank', rel: 'noopener noreferrer' })}
+        {...(isGangbuk &&
+          !isLEDDisplay && { target: '_blank', rel: 'noopener noreferrer' })}
       >
         <div className="flex-1 flex flex-col lg:gap-[0.75rem] md:gap-[1.5rem] p-6 lg:py-8">
           <div className="flex flex-col lg:gap-[1.5rem] md:gap-[1.5rem] sm:gap-4">

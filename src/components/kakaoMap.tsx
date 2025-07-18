@@ -27,111 +27,70 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
-  const maxRetries = 100; // 최대 재시도 횟수를 100회로 늘림 (20초)
+  const maxRetries = 100;
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 로드뷰 오버레이 상태
+  const [roadviewVisible, setRoadviewVisible] = useState(false);
+  const [roadviewPosition, setRoadviewPosition] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
 
   useKakaoLoader();
 
   useEffect(() => {
-    // SSR 환경에서는 클라이언트 사이드에서만 실행
-    if (typeof window === 'undefined') {
-      console.log('🔍 SSR 환경에서 카카오맵 컴포넌트 스킵');
-      return;
-    }
-
-    console.log('🔍 카카오맵 컴포넌트 마운트됨');
-    console.log('🔍 현재 retryCount:', retryCount);
-
-    // 카카오맵 SDK 로딩 확인
+    if (typeof window === 'undefined') return;
     const checkKakaoMapLoaded = () => {
-      console.log('🔍 SDK 로딩 체크 시도:', retryCount + 1);
-      console.log('🔍 window.kakao 존재:', !!window.kakao);
-      console.log(
-        '🔍 window.kakao.maps 존재:',
-        !!(window.kakao && window.kakao.maps)
-      );
-
       if (window.kakao && window.kakao.maps) {
         setIsLoaded(true);
         setError(null);
-        console.log('✅ KakaoMap SDK 로딩 성공');
         return;
       }
-
-      // 재시도 횟수 제한
       if (retryCount < maxRetries) {
-        console.log(
-          `⏳ SDK 로딩 재시도 중... (${retryCount + 1}/${maxRetries})`
-        );
         retryTimeoutRef.current = setTimeout(() => {
           setRetryCount((prev) => prev + 1);
-        }, 200); // 재시도 간격을 200ms로 유지
+        }, 200);
       } else {
-        // 최대 재시도 횟수 초과 시에도 에러를 바로 표시하지 않고 더 기다림
-        console.log('⚠️ 최대 재시도 횟수 도달, 추가 대기 중...');
-        // 30초 더 기다린 후 에러 표시
         setTimeout(() => {
           if (!window.kakao || !window.kakao.maps) {
-            const errorMsg =
-              '카카오맵을 로딩할 수 없습니다. API 키와 도메인 설정을 확인해주세요.';
-            setError(errorMsg);
-            console.error('❌ KakaoMap SDK 로딩 실패 - 최종 타임아웃');
-            console.error('❌ 최종 상태 - window.kakao:', !!window.kakao);
-            console.error(
-              '❌ 최종 상태 - window.kakao.maps:',
-              !!(window.kakao && window.kakao.maps)
+            setError(
+              '카카오맵을 로딩할 수 없습니다. API 키와 도메인 설정을 확인해주세요.'
             );
           }
         }, 30000);
       }
     };
-
-    // 초기 체크 시작
     checkKakaoMapLoaded();
-
-    // 30초 후에도 로딩되지 않으면 에러 처리 (기존 10초에서 30초로 늘림)
     const timeout = setTimeout(() => {
       if (!window.kakao || !window.kakao.maps) {
-        console.log('⚠️ 30초 타임아웃 도달, 추가 대기 중...');
-        // 30초 더 기다린 후 에러 표시
         setTimeout(() => {
           if (!window.kakao || !window.kakao.maps) {
-            const errorMsg =
-              '카카오맵을 로딩할 수 없습니다. API 키와 도메인 설정을 확인해주세요.';
-            setError(errorMsg);
-            console.error('❌ KakaoMap SDK 로딩 실패 - 최종 타임아웃');
-            console.error('❌ 타임아웃 시점 - window.kakao:', !!window.kakao);
-            console.error(
-              '❌ 타임아웃 시점 - window.kakao.maps:',
-              !!(window.kakao && window.kakao.maps)
+            setError(
+              '카카오맵을 로딩할 수 없습니다. API 키와 도메인 설정을 확인해주세요.'
             );
           }
         }, 30000);
       }
     }, 30000);
-
     return () => {
-      console.log('🔍 카카오맵 컴포넌트 언마운트됨');
       clearTimeout(timeout);
-      if (retryTimeoutRef.current) {
-        clearTimeout(retryTimeoutRef.current);
-      }
+      if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
     };
   }, [retryCount, maxRetries]);
 
-  // 외부 카카오맵 로드뷰 열기 함수
+  // 로드뷰 오버레이 열기
   const openRoadview = (lat: number, lng: number) => {
-    const roadviewUrl = `https://map.kakao.com/link/roadview/${lat},${lng}`;
-    window.open(roadviewUrl, '_blank');
+    setRoadviewPosition({ lat, lng });
+    setRoadviewVisible(true);
+  };
+  // 로드뷰 오버레이 닫기
+  const closeRoadview = () => {
+    setRoadviewVisible(false);
+    setRoadviewPosition(null);
   };
 
-  // 디버깅용 로그
-  console.log('🔍 KakaoMap markers:', markers);
-  console.log('🔍 KakaoMap selectedIds:', selectedIds);
-  console.log('🔍 KakaoMap isLoaded:', isLoaded);
-  console.log('🔍 KakaoMap error:', error);
-
-  // 중심점 계산: props로 받은 center가 있으면 사용, 없으면 마커들의 중심점 계산
+  // 중심점 계산
   const mapCenter =
     center ||
     (markers.length
@@ -144,8 +103,6 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
             markers.length,
         }
       : { lat: 37.5665, lng: 126.978 });
-
-  console.log('🔍 KakaoMap mapCenter:', mapCenter);
 
   if (error) {
     return (
@@ -168,7 +125,6 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
             </button>
             <button
               onClick={() => {
-                // 대안 지도 표시 (Google Maps 링크)
                 const mapCenter = center || { lat: 37.5665, lng: 126.978 };
                 const googleMapsUrl = `https://www.google.com/maps?q=${mapCenter.lat},${mapCenter.lng}`;
                 window.open(googleMapsUrl, '_blank');
@@ -236,8 +192,6 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
                 {marker.title.length > 10
                   ? marker.title.substring(0, 10) + '...'
                   : marker.title}
-
-                {/* 선택된 마커에만 로드뷰 버튼 표시 */}
                 {isSelected && (
                   <button
                     onClick={(e) => {
@@ -273,6 +227,81 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
           );
         })}
       </Map>
+      {/* 로드뷰 오버레이 */}
+      {roadviewVisible && roadviewPosition && (
+        <RoadviewOverlay position={roadviewPosition} onClose={closeRoadview} />
+      )}
+    </div>
+  );
+};
+
+// 로드뷰 오버레이 컴포넌트
+interface RoadviewOverlayProps {
+  position: { lat: number; lng: number };
+  onClose: () => void;
+}
+
+const RoadviewOverlay: React.FC<RoadviewOverlayProps> = ({
+  position,
+  onClose,
+}) => {
+  const roadviewRef = useRef<HTMLDivElement>(null);
+  const roadviewInstanceRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (!roadviewRef.current || !window.kakao || !window.kakao.maps) return;
+    // 기존 인스턴스 제거
+    if (
+      roadviewInstanceRef.current &&
+      typeof roadviewInstanceRef.current.destroy === 'function'
+    ) {
+      roadviewInstanceRef.current.destroy();
+    }
+    // 새 인스턴스 생성
+    const roadview = new (window.kakao.maps.Roadview as any)(
+      roadviewRef.current,
+      {
+        position: new window.kakao.maps.LatLng(position.lat, position.lng),
+        pov: { pan: 0, tilt: 0, zoom: 1 },
+      } as any
+    );
+    roadviewInstanceRef.current = roadview;
+    return () => {
+      if (
+        roadviewInstanceRef.current &&
+        typeof roadviewInstanceRef.current.destroy === 'function'
+      ) {
+        roadviewInstanceRef.current.destroy();
+        roadviewInstanceRef.current = null;
+      }
+    };
+  }, [position]);
+
+  return (
+    <div
+      className="absolute inset-0 z-20 bg-white shadow-xl flex flex-col"
+      style={{ minWidth: 0, minHeight: 0 }}
+    >
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 z-30 bg-white rounded-full p-2 shadow-lg hover:bg-gray-100 transition-colors"
+        style={{ width: '40px', height: '40px' }}
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+      <div ref={roadviewRef} style={{ width: '100%', height: '100%' }} />
     </div>
   );
 };
