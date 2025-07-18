@@ -119,6 +119,12 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
     };
   }, [retryCount, maxRetries]);
 
+  // 외부 카카오맵 로드뷰 열기 함수
+  const openRoadview = (lat: number, lng: number) => {
+    const roadviewUrl = `https://map.kakao.com/link/roadview/${lat},${lng}`;
+    window.open(roadviewUrl, '_blank');
+  };
+
   // 디버깅용 로그
   console.log('🔍 KakaoMap markers:', markers);
   console.log('🔍 KakaoMap selectedIds:', selectedIds);
@@ -200,37 +206,74 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
   }
 
   return (
-    <Map center={mapCenter} style={{ width: '100%', height: '100%' }} level={3}>
-      {markers.map((marker) => {
-        return (
-          <MapMarker
-            key={marker.id}
-            position={{ lat: marker.lat, lng: marker.lng }}
-          >
-            <div
-              style={{
-                padding: '8px 12px',
-                backgroundColor: selectedIds.includes(marker.id)
-                  ? '#238CFA'
-                  : '#666',
-                color: 'white',
-                borderRadius: '4px',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                whiteSpace: 'nowrap',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                minWidth: '60px',
-                textAlign: 'center',
-              }}
+    <div className="relative w-full h-full">
+      <Map
+        center={mapCenter}
+        style={{ width: '100%', height: '100%' }}
+        level={3}
+      >
+        {markers.map((marker) => {
+          const isSelected = selectedIds.includes(marker.id);
+          return (
+            <MapMarker
+              key={marker.id}
+              position={{ lat: marker.lat, lng: marker.lng }}
             >
-              {marker.title.length > 10
-                ? marker.title.substring(0, 10) + '...'
-                : marker.title}
-            </div>
-          </MapMarker>
-        );
-      })}
-    </Map>
+              <div
+                style={{
+                  padding: '8px 12px',
+                  backgroundColor: isSelected ? '#238CFA' : '#666',
+                  color: 'white',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  whiteSpace: 'nowrap',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                  minWidth: '60px',
+                  textAlign: 'center',
+                }}
+              >
+                {marker.title.length > 10
+                  ? marker.title.substring(0, 10) + '...'
+                  : marker.title}
+
+                {/* 선택된 마커에만 로드뷰 버튼 표시 */}
+                {isSelected && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openRoadview(marker.lat, marker.lng);
+                    }}
+                    style={{
+                      display: 'block',
+                      marginTop: '4px',
+                      padding: '2px 6px',
+                      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                      border: '1px solid rgba(255, 255, 255, 0.3)',
+                      borderRadius: '3px',
+                      color: 'white',
+                      fontSize: '10px',
+                      cursor: 'pointer',
+                      width: '100%',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor =
+                        'rgba(255, 255, 255, 0.3)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor =
+                        'rgba(255, 255, 255, 0.2)';
+                    }}
+                  >
+                    로드뷰 보기
+                  </button>
+                )}
+              </div>
+            </MapMarker>
+          );
+        })}
+      </Map>
+    </div>
   );
 };
 

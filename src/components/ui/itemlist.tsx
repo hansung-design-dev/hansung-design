@@ -122,26 +122,27 @@ const ItemList: React.FC<ItemTableProps> = ({
   */
 
   // 구분 컬럼에 표시할 값 계산 함수
-  const getPanelTypeLabel = (panelType?: string) => {
+  const getPanelTypeLabel = (panelType?: string, district?: string) => {
     if (!panelType) return '현수막게시대';
 
     switch (panelType) {
       case 'multi_panel':
-        return '연립형';
+        return '패널형게시대';
       case 'lower_panel':
-        return '저단형';
+        return '현수막게시대';
       case 'bulletin_board':
         return '시민게시대';
       case 'citizen_board':
         return '시민/문화게시대';
       case 'with_lighting':
-        return '조명형';
+        return '패널형게시대';
       case 'no_lighting':
-        return '비조명형';
+        return '현수막게시대';
       case 'semi_auto':
-        return '반자동';
+        return '현수막게시대';
       case 'panel':
-        return '패널형';
+        // 관악구의 패널형은 현수막게시대로, 나머지는 패널형게시대로
+        return district === '관악구' ? '현수막게시대' : '패널형게시대';
       case 'top_fixed':
         return '상단광고';
       default:
@@ -152,7 +153,7 @@ const ItemList: React.FC<ItemTableProps> = ({
   const getCategoryDisplay = (item: DisplayBillboard) => {
     // 마포구의 경우 panel_type을 우선 사용
     if (item.panel_type) {
-      return getPanelTypeLabel(item.panel_type);
+      return getPanelTypeLabel(item.panel_type, item.district);
     }
 
     // BannerBillboard인지 확인 후 banner_type 접근
