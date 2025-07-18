@@ -52,10 +52,10 @@ export default function DistrictInfo({
     if (districtName === '강북구' || districtName === '마포구') {
       return (
         <div className="text-gray-600">
-          <div className="text-sm">
+          <div className="text-1">
             <span className="font-medium">1차:</span> 매월 5일 9시
           </div>
-          <div className="text-sm">
+          <div className="text-1">
             <span className="font-medium">2차:</span> 매월 20일 9시
           </div>
         </div>
@@ -63,10 +63,10 @@ export default function DistrictInfo({
     } else {
       return (
         <div className="text-gray-600">
-          <div className="text-sm">
+          <div className="text-1">
             <span className="font-medium">1차:</span> 매월 1일 9시
           </div>
-          <div className="text-sm">
+          <div className="text-1">
             <span className="font-medium">2차:</span> 매월 16일 9시
           </div>
         </div>

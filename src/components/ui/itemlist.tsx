@@ -36,6 +36,7 @@ interface ItemTableProps {
   selectedIds?: string[];
   enableRowClick?: boolean;
   hideQuantityColumns?: boolean; // 상단광고 탭에서 면수/수량 컬럼 숨김
+  district?: string; // 구 이름 추가
 }
 
 const ITEMS_PER_PAGE = 20;
@@ -49,6 +50,7 @@ const ItemList: React.FC<ItemTableProps> = ({
   selectedIds = [],
   enableRowClick = true,
   hideQuantityColumns = false,
+  district,
 }) => {
   const [page, setPage] = useState(1);
   // PhotoModal related states are temporarily disabled
@@ -56,10 +58,13 @@ const ItemList: React.FC<ItemTableProps> = ({
   // const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   // const [currentItemIndex, setCurrentItemIndex] = useState(0);
 
-  const totalPages = Math.ceil(items.length / ITEMS_PER_PAGE);
+  // 서대문구일 때는 24개, 그 외에는 20개
+  const itemsPerPage = district === '서대문구' ? 24 : ITEMS_PER_PAGE;
+
+  const totalPages = Math.ceil(items.length / itemsPerPage);
   const paginatedItems = items.slice(
-    (page - 1) * ITEMS_PER_PAGE,
-    page * ITEMS_PER_PAGE
+    (page - 1) * itemsPerPage,
+    page * itemsPerPage
   );
 
   const handleItemClick = (itemId: string) => {
@@ -292,7 +297,7 @@ const ItemList: React.FC<ItemTableProps> = ({
               );
             })}
             {/* 빈 row로 높이 맞추기 */}
-            {Array.from({ length: ITEMS_PER_PAGE - paginatedItems.length }).map(
+            {Array.from({ length: itemsPerPage - paginatedItems.length }).map(
               (_, i) => {
                 const baseCols = showCheckbox ? 1 : 0; // checkbox
                 const dataCols = 8; // No, 게시대명, 아이콘, 규격, 가격, 구분, 상태

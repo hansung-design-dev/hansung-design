@@ -899,6 +899,9 @@ export default function DisplayDetailPage({
                   {item.district}
                 </span>
               </div>
+              <div className="text-sm text-gray-500 mb-1">
+                No. {item.panel_code || item.id}
+              </div>
               <h3 className="text-1 font-medium">
                 {item.nickname && <span>{item.nickname} - </span>}
                 {item.address ? <span>{item.address}</span> : <></>}
@@ -1022,6 +1025,9 @@ export default function DisplayDetailPage({
                       <span className="px-2 py-1 bg-gray-100 text-gray-600 text-0.875 rounded">
                         {item.district}
                       </span>
+                    </div>
+                    <div className="text-sm text-gray-500 mb-1">
+                      No. {item.panel_code || item.id}
                     </div>
                     <h3 className="text-1 font-medium">
                       {item.nickname && <span>{item.nickname} - </span>}
@@ -1279,6 +1285,7 @@ export default function DisplayDetailPage({
                 hideQuantityColumns={
                   isSongpaOrYongsan && currentPanelTypeFilter === 'top_fixed'
                 }
+                district={districtObj?.name}
               />
 
               {/* 가이드라인 섹션 */}
