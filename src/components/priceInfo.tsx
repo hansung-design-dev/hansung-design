@@ -189,5 +189,5 @@ export default function PriceInfo({
     }
   };
 
-  return <div className="mt-2">{getDistrictSpecificDisplay()}</div>;
+  return <div>{getDistrictSpecificDisplay()}</div>;
 }

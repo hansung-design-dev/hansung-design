@@ -2,7 +2,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useState } from 'react';
 import DistrictInfo from './districtInfo';
-import PriceInfo from './priceInfo';
 
 interface District {
   id: number;
@@ -96,7 +95,7 @@ export default function DistrictCard({
   if (isMaintenance) {
     return (
       <div className="flex items-center justify-center lg:pb-4">
-        <div className="w-full lg:h-[32rem] md:h-[22rem] bg-gray-4 rounded-[1.25rem] flex flex-col overflow-hidden opacity-60 cursor-not-allowed">
+        <div className="w-full lg:h-[36rem] md:h-[26rem] bg-gray-4 rounded-[1.25rem] flex flex-col overflow-hidden opacity-60 cursor-not-allowed">
           <div className="flex-1 flex flex-col lg:gap-[0.75rem] md:gap-[1.5rem] p-6 lg:py-8">
             <div className="flex flex-col lg:gap-[1.5rem] md:gap-[1.5rem] sm:gap-4">
               <div className="flex gap-[1rem]">
@@ -143,7 +142,7 @@ export default function DistrictCard({
     <div className="flex items-center justify-center lg:pb-4">
       <Link
         href={href}
-        className="w-full lg:h-[32rem] md:h-[22rem] bg-gray-4 rounded-[1.25rem] flex flex-col overflow-hidden"
+        className="w-full lg:h-[30rem] md:h-[24rem] bg-gray-4 rounded-[1.25rem] flex flex-col overflow-hidden"
         {...(isGangbuk &&
           !isLEDDisplay && { target: '_blank', rel: 'noopener noreferrer' })}
       >
@@ -162,22 +161,16 @@ export default function DistrictCard({
                 {district.name}
               </div>
             </div>
-            <div className="flex flex-col sm:gap-4 lg:gap-6 md:gap-4 sm:gap-2">
-              <div className="text-gray-14 text-0.875 font-500">
+            <div className="flex flex-col sm:gap-4 lg:gap-6 md:gap-4 sm:gap-2 pt-4">
+              <div className="text-gray-14">
                 <DistrictInfo
                   period={district.period}
                   bankInfo={district.bankInfo}
                   districtName={district.name}
                   flexRow={false}
                   isLEDDisplay={isLEDDisplay}
+                  pricePolicies={district.pricePolicies}
                 />
-                {/* 현수막게시대의 경우에만 가격 정보 표시 */}
-                {!isLEDDisplay && district.pricePolicies && (
-                  <PriceInfo
-                    pricePolicies={district.pricePolicies}
-                    districtName={district.name}
-                  />
-                )}
               </div>
             </div>
           </div>

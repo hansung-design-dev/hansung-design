@@ -1,5 +1,6 @@
 import BankInfo from './bankInfo';
 import PhoneNumber from './phoneNumber';
+import PriceInfo from './priceInfo';
 
 interface DistrictInfoProps {
   period?: {
@@ -25,6 +26,20 @@ interface DistrictInfoProps {
   districtName?: string;
   flexRow?: boolean;
   isLEDDisplay?: boolean;
+  pricePolicies?: {
+    id: string;
+    price_usage_type:
+      | 'default'
+      | 'public_institution'
+      | 're_order'
+      | 'self_install'
+      | 'reduction_by_admin'
+      | 'rent-place';
+    tax_price: number;
+    road_usage_fee: number;
+    advertising_fee: number;
+    total_price: number;
+  }[];
 }
 
 export default function DistrictInfo({
@@ -33,6 +48,7 @@ export default function DistrictInfo({
   districtName,
   flexRow = false,
   isLEDDisplay = false,
+  pricePolicies,
 }: DistrictInfoProps) {
   // 디버깅용 로그
   console.log('🔍 DistrictInfo 상세 디버깅:', {
@@ -75,20 +91,55 @@ export default function DistrictInfo({
   };
 
   return (
-    <div className="text-gray-600">
-      {getApplicationTime()}
+    <div className="text-gray-600 space-y-2">
+      {/* 신청기간 */}
+      <div className="border-b border-gray-200 pb-2">
+        <div className="text-0.875 font-medium text-gray-500 mb-2">
+          신청기간
+        </div>
+        {getApplicationTime()}
+      </div>
 
+      {/* LED 전자게시대 상시접수 표시 */}
       {isLEDDisplay && (
-        <div className="mt-2 text-green-600 font-medium">상시접수</div>
+        <div className="border-b border-gray-200 pb-2">
+          <div className="text-0.875 font-medium text-gray-500 mb-1">
+            접수방식
+          </div>
+          <div className="text-green-600 font-medium text-0.875">상시접수</div>
+        </div>
       )}
 
+      {/* 전화번호 */}
       {districtName && (
-        <div className="mt-2">
+        <div className="border-b border-gray-200 pb-2">
+          <div className="text-0.875 font-medium text-gray-500 mb-1">
+            문의전화
+          </div>
           <PhoneNumber districtName={districtName} flexRow={flexRow} />
         </div>
       )}
 
-      <BankInfo flexRow={flexRow} bankInfo={bankInfo} />
+      {/* 입금계좌 */}
+      <div>
+        <div className="text-0.875 font-medium text-gray-500 mb-1">
+          입금계좌
+        </div>
+        <BankInfo flexRow={flexRow} bankInfo={bankInfo} />
+      </div>
+
+      {/* 가격정보 (현수막게시대의 경우에만) */}
+      {!isLEDDisplay && pricePolicies && pricePolicies.length > 0 && (
+        <div className="border-t border-gray-200 pt-2">
+          <div className="text-0.875 font-medium text-gray-500 mb-1">
+            가격정보
+          </div>
+          <PriceInfo
+            pricePolicies={pricePolicies}
+            districtName={districtName || ''}
+          />
+        </div>
+      )}
     </div>
   );
 }

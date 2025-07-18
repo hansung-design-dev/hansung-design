@@ -74,12 +74,9 @@ export default function PhoneNumber({
   }
 
   return (
-    <div
-      className={`text-gray-700 ${flexRow ? 'flex items-center gap-2' : ''}`}
-    >
-      <div className="flex items-center gap-2 text-1">
-        <span className="font-medium">전화번호:</span>
-        <span className="font-semibold ">{phoneNumber}</span>
+    <div className="text-gray-700">
+      <div className="flex items-center gap-2 text-sm">
+        <span className="font-semibold">{phoneNumber}</span>
         {showCopyButton && (
           <button
             onClick={handleCopy}
