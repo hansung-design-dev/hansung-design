@@ -459,7 +459,14 @@ async function getAllDistrictsData() {
         code: string;
         logo_image_url: string | null;
         panel_status: string;
-        pricePolicies: any[];
+        pricePolicies: {
+          id: string;
+          price_usage_type: string;
+          tax_price: number;
+          road_usage_fee: number;
+          advertising_fee: number;
+          total_price: number;
+        }[];
       }
     > = {};
 
@@ -481,15 +488,17 @@ async function getAllDistrictsData() {
 
       // 가격 정책 정보 수집
       if (item.banner_slot_info && item.banner_slot_info.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         item.banner_slot_info.forEach((slot: any) => {
           if (
             slot.banner_slot_price_policy &&
             slot.banner_slot_price_policy.length > 0
           ) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             slot.banner_slot_price_policy.forEach((policy: any) => {
               // 중복 제거를 위해 이미 있는지 확인
               const exists = districtsMap[districtName].pricePolicies.some(
-                (existing: any) =>
+                (existing) =>
                   existing.price_usage_type === policy.price_usage_type &&
                   existing.total_price === policy.total_price
               );

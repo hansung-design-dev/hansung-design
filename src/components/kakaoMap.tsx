@@ -246,7 +246,7 @@ const RoadviewOverlay: React.FC<RoadviewOverlayProps> = ({
   onClose,
 }) => {
   const roadviewRef = useRef<HTMLDivElement>(null);
-  const roadviewInstanceRef = useRef<any>(null);
+  const roadviewInstanceRef = useRef<{ destroy: () => void } | null>(null);
 
   useEffect(() => {
     if (!roadviewRef.current || !window.kakao || !window.kakao.maps) return;
@@ -258,14 +258,15 @@ const RoadviewOverlay: React.FC<RoadviewOverlayProps> = ({
       roadviewInstanceRef.current.destroy();
     }
     // 새 인스턴스 생성
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const roadview = new (window.kakao.maps.Roadview as any)(
       roadviewRef.current,
       {
         position: new window.kakao.maps.LatLng(position.lat, position.lng),
         pov: { pan: 0, tilt: 0, zoom: 1 },
-      } as any
+      } as kakao.maps.RoadviewOptions
     );
-    roadviewInstanceRef.current = roadview;
+    roadviewInstanceRef.current = roadview as { destroy: () => void };
     return () => {
       if (
         roadviewInstanceRef.current &&
