@@ -37,6 +37,20 @@ interface District {
     };
   } | null;
   panel_status?: string;
+  pricePolicies?: {
+    id: string;
+    price_usage_type:
+      | 'default'
+      | 'public_institution'
+      | 're_order'
+      | 'self_install'
+      | 'reduction_by_admin'
+      | 'rent-place';
+    tax_price: number;
+    road_usage_fee: number;
+    advertising_fee: number;
+    total_price: number;
+  }[];
 }
 
 export default function BannerDisplayPage() {
@@ -94,6 +108,20 @@ export default function BannerDisplayPage() {
                 name: string;
               };
             } | null;
+            pricePolicies?: {
+              id: string;
+              price_usage_type:
+                | 'default'
+                | 'public_institution'
+                | 're_order'
+                | 'self_install'
+                | 'reduction_by_admin'
+                | 'rent-place';
+              tax_price: number;
+              road_usage_fee: number;
+              advertising_fee: number;
+              total_price: number;
+            }[];
           }) => {
             // panel_status가 maintenance인지 확인
             const isMaintenance = district.panel_status === 'maintenance';
@@ -114,6 +142,7 @@ export default function BannerDisplayPage() {
               panel_status: district.panel_status,
               period: district.period || null,
               bankInfo: district.bank_info || null,
+              pricePolicies: district.pricePolicies || [],
             };
           }
         );

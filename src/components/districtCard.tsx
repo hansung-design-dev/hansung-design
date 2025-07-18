@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useState } from 'react';
 import DistrictInfo from './districtInfo';
+import PriceInfo from './priceInfo';
 
 interface District {
   id: number;
@@ -32,6 +33,20 @@ interface District {
       name: string;
     };
   } | null;
+  pricePolicies?: {
+    id: string;
+    price_usage_type:
+      | 'default'
+      | 'public_institution'
+      | 're_order'
+      | 'self_install'
+      | 'reduction_by_admin'
+      | 'rent-place';
+    tax_price: number;
+    road_usage_fee: number;
+    advertising_fee: number;
+    total_price: number;
+  }[];
 }
 
 interface DistrictCardProps {
@@ -156,6 +171,13 @@ export default function DistrictCard({
                   flexRow={false}
                   isLEDDisplay={isLEDDisplay}
                 />
+                {/* 현수막게시대의 경우에만 가격 정보 표시 */}
+                {!isLEDDisplay && district.pricePolicies && (
+                  <PriceInfo
+                    pricePolicies={district.pricePolicies}
+                    districtName={district.name}
+                  />
+                )}
               </div>
             </div>
           </div>

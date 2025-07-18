@@ -429,6 +429,7 @@ async function getAllDistrictsData() {
         panel_status,
         banner_slot_info (
           id,
+          slot_name,
           banner_slot_price_policy (
             id,
             price_usage_type,
@@ -448,7 +449,7 @@ async function getAllDistrictsData() {
       throw panelError;
     }
 
-    // 2. 카운트 집계
+    // 2. 카운트 집계 및 가격 정보 수집
     const countMap: Record<string, number> = {};
     const districtsMap: Record<
       string,
@@ -458,6 +459,7 @@ async function getAllDistrictsData() {
         code: string;
         logo_image_url: string | null;
         panel_status: string;
+        pricePolicies: any[];
       }
     > = {};
 
@@ -473,7 +475,30 @@ async function getAllDistrictsData() {
           code: item.region_gu.code,
           logo_image_url: item.region_gu.logo_image_url,
           panel_status: item.panel_status,
+          pricePolicies: [],
         };
+      }
+
+      // 가격 정책 정보 수집
+      if (item.banner_slot_info && item.banner_slot_info.length > 0) {
+        item.banner_slot_info.forEach((slot: any) => {
+          if (
+            slot.banner_slot_price_policy &&
+            slot.banner_slot_price_policy.length > 0
+          ) {
+            slot.banner_slot_price_policy.forEach((policy: any) => {
+              // 중복 제거를 위해 이미 있는지 확인
+              const exists = districtsMap[districtName].pricePolicies.some(
+                (existing: any) =>
+                  existing.price_usage_type === policy.price_usage_type &&
+                  existing.total_price === policy.total_price
+              );
+              if (!exists) {
+                districtsMap[districtName].pricePolicies.push(policy);
+              }
+            });
+          }
+        });
       }
     });
 
@@ -493,6 +518,7 @@ async function getAllDistrictsData() {
           code: gangbukData.code,
           logo_image_url: gangbukData.logo_image_url,
           panel_status: 'active',
+          pricePolicies: [],
         };
       }
     }
@@ -605,6 +631,7 @@ async function getAllDistrictsData() {
           panel_status: district.panel_status,
           period: currentPeriodData || null,
           bank_info: bankData || null,
+          pricePolicies: district.pricePolicies || [],
         };
       })
     );
