@@ -52,6 +52,7 @@ const IconButton = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { signOut, user } = useAuth();
   const router = useRouter();
+  const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -92,7 +93,9 @@ const IconButton = ({
       return (
         <Link href="/signin" className="relative z-50">
           <button
-            className="border-none p-2 rounded-full transition-colors hover:cursor-pointer"
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            className="border-none p-2 rounded-full transition-colors hover:cursor-pointer relative"
             aria-label={label}
           >
             <Image
@@ -102,6 +105,11 @@ const IconButton = ({
               height={30}
               className={`w-7 h-7 ${TextInvert ? 'invert' : ''} ${className}`}
             />
+            {isHovered && (
+              <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-black text-white text-xs rounded whitespace-nowrap z-50">
+                {label}
+              </div>
+            )}
           </button>
         </Link>
       );
@@ -111,8 +119,9 @@ const IconButton = ({
       <div className="relative">
         <button
           ref={buttonRef}
-          onClick={onToggleDropdown}
-          className="border-none p-2 rounded-full transition-colors hover:cursor-pointer"
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          className="border-none p-2 rounded-full transition-colors hover:cursor-pointer relative"
           aria-label={label}
         >
           <Image
@@ -124,20 +133,28 @@ const IconButton = ({
           />
         </button>
 
-        {showDropdown && (
+        {(showDropdown || isHovered) && (
           <div
             ref={dropdownRef}
             className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200"
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
           >
             <Link
               href="/mypage/orders"
               className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-              onClick={onToggleDropdown}
+              onClick={() => {
+                onToggleDropdown?.();
+                setIsHovered(false);
+              }}
             >
               마이페이지
             </Link>
             <button
-              onClick={handleLogout}
+              onClick={() => {
+                handleLogout();
+                setIsHovered(false);
+              }}
               className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
             >
               로그아웃
@@ -152,7 +169,9 @@ const IconButton = ({
     <Link href={href || '#'} className="relative z-50">
       <button
         onClick={onClick}
-        className="border-none p-2 rounded-full transition-colors hover:cursor-pointer"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        className="border-none p-2 rounded-full transition-colors hover:cursor-pointer relative"
         aria-label={label}
       >
         <Image
@@ -162,6 +181,11 @@ const IconButton = ({
           height={30}
           className={`w-7 h-7 ${TextInvert ? 'invert' : ''} ${className}`}
         />
+        {isHovered && (
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-black text-white text-xs rounded whitespace-nowrap z-50">
+            {label}
+          </div>
+        )}
       </button>
     </Link>
   );

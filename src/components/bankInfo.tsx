@@ -21,20 +21,19 @@ export default function BankInfo({ bankInfo, flexRow = false }: BankInfoProps) {
   console.log('🔍 BankInfo props:', { bankInfo, flexRow });
 
   return (
-    <div className={`text-1 font-500 text-gray-600 flex gap-2 pt-2`}>
-      <span> {bankInfo ? `입금계좌` : ''}</span>
-
-      <div
-        className={`flex text-gray-600  ${
-          flexRow ? 'flex-row' : 'flex-col'
-        } gap-1`}
-      >
-        <span>
-          {bankInfo ? `${bankInfo.bank_name} ${bankInfo.account_number} ` : ''}
-        </span>
-
-        <span>{bankInfo?.depositor}</span>
-      </div>
+    <div className="text-gray-600">
+      {bankInfo ? (
+        <div className="space-y-1">
+          <div className="text-sm font-medium">
+            {bankInfo.bank_name} {bankInfo.account_number}
+          </div>
+          <div className="text-0.875 text-gray-500">
+            예금주: {bankInfo.depositor}
+          </div>
+        </div>
+      ) : (
+        <div className="text-sm text-gray-400">계좌정보 없음</div>
+      )}
     </div>
   );
 }

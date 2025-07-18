@@ -32,6 +32,20 @@ interface District {
       name: string;
     };
   } | null;
+  pricePolicies?: {
+    id: string;
+    price_usage_type:
+      | 'default'
+      | 'public_institution'
+      | 're_order'
+      | 'self_install'
+      | 'reduction_by_admin'
+      | 'rent-place';
+    tax_price: number;
+    road_usage_fee: number;
+    advertising_fee: number;
+    total_price: number;
+  }[];
 }
 
 interface DistrictCardProps {
@@ -52,9 +66,11 @@ export default function DistrictCard({
     ? `?period=${encodeURIComponent(JSON.stringify(district.period))}`
     : '';
 
-  const href = isGangbuk
-    ? 'https://gangbuk.uriad.com/sub03-01.jsp'
-    : `/${basePath}/${encodeURIComponent(district.code)}${periodParams}`;
+  // LED 전자게시대의 경우 강북구도 내부 페이지로 이동, 현수막게시대의 경우에만 외부 링크
+  const href =
+    isGangbuk && !isLEDDisplay
+      ? 'https://gangbuk.uriad.com/sub03-01.jsp'
+      : `/${basePath}/${encodeURIComponent(district.code)}${periodParams}`;
 
   const [imageError, setImageError] = useState(false);
 
@@ -79,7 +95,7 @@ export default function DistrictCard({
   if (isMaintenance) {
     return (
       <div className="flex items-center justify-center lg:pb-4">
-        <div className="w-full lg:h-[32rem] md:h-[22rem] bg-gray-4 rounded-[1.25rem] flex flex-col overflow-hidden opacity-60 cursor-not-allowed">
+        <div className="w-full lg:h-[36rem] md:h-[26rem] bg-gray-4 rounded-[1.25rem] flex flex-col overflow-hidden opacity-60 cursor-not-allowed">
           <div className="flex-1 flex flex-col lg:gap-[0.75rem] md:gap-[1.5rem] p-6 lg:py-8">
             <div className="flex flex-col lg:gap-[1.5rem] md:gap-[1.5rem] sm:gap-4">
               <div className="flex gap-[1rem]">
@@ -126,8 +142,9 @@ export default function DistrictCard({
     <div className="flex items-center justify-center lg:pb-4">
       <Link
         href={href}
-        className="w-full lg:h-[32rem] md:h-[22rem] bg-gray-4 rounded-[1.25rem] flex flex-col overflow-hidden"
-        {...(isGangbuk && { target: '_blank', rel: 'noopener noreferrer' })}
+        className="w-full lg:h-[30rem] md:h-[24rem] bg-gray-4 rounded-[1.25rem] flex flex-col overflow-hidden"
+        {...(isGangbuk &&
+          !isLEDDisplay && { target: '_blank', rel: 'noopener noreferrer' })}
       >
         <div className="flex-1 flex flex-col lg:gap-[0.75rem] md:gap-[1.5rem] p-6 lg:py-8">
           <div className="flex flex-col lg:gap-[1.5rem] md:gap-[1.5rem] sm:gap-4">
@@ -144,14 +161,15 @@ export default function DistrictCard({
                 {district.name}
               </div>
             </div>
-            <div className="flex flex-col sm:gap-4 lg:gap-6 md:gap-4 sm:gap-2">
-              <div className="text-gray-14 text-0.875 font-500">
+            <div className="flex flex-col sm:gap-4 lg:gap-6 md:gap-4 sm:gap-2 pt-4">
+              <div className="text-gray-14">
                 <DistrictInfo
                   period={district.period}
                   bankInfo={district.bankInfo}
                   districtName={district.name}
                   flexRow={false}
                   isLEDDisplay={isLEDDisplay}
+                  pricePolicies={district.pricePolicies}
                 />
               </div>
             </div>
