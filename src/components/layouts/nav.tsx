@@ -119,8 +119,7 @@ const IconButton = ({
       <div className="relative">
         <button
           ref={buttonRef}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
+          onClick={() => onToggleDropdown?.()}
           className="border-none p-2 rounded-full transition-colors hover:cursor-pointer relative"
           aria-label={label}
         >
@@ -133,19 +132,16 @@ const IconButton = ({
           />
         </button>
 
-        {(showDropdown || isHovered) && (
+        {showDropdown && (
           <div
             ref={dropdownRef}
             className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200"
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
           >
             <Link
               href="/mypage/orders"
               className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
               onClick={() => {
                 onToggleDropdown?.();
-                setIsHovered(false);
               }}
             >
               마이페이지
@@ -153,7 +149,7 @@ const IconButton = ({
             <button
               onClick={() => {
                 handleLogout();
-                setIsHovered(false);
+                onToggleDropdown?.();
               }}
               className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
             >

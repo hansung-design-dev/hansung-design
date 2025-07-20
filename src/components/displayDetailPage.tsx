@@ -9,6 +9,7 @@ import MapPinIcon from '@/src/icons/map-pin.svg';
 import GalleryIcon from '@/src/icons/gallery.svg';
 import ListIcon from '@/src/icons/list.svg';
 import DocumentIcon from '@/public/svg/document.svg';
+
 import { useState, useEffect } from 'react';
 import { useCart } from '../contexts/cartContext';
 import { useProfile } from '../contexts/profileContext';
@@ -478,6 +479,21 @@ export default function DisplayDetailPage({
       const districtCode = getDistrictCode(item.option);
       router.push(`/banner-display/${districtCode}`);
     }
+  };
+
+  // AI 파일 다운로드 함수
+  const handleAIFileDownload = () => {
+    // 현재 구역에 따른 AI 파일 URL 설정
+    const districtCode = getDistrictCode(districtObj?.name || '');
+    const downloadUrl = `/uploads/ai-files/${districtCode}_ai_guideline.pdf`;
+
+    // 파일 다운로드
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = `${districtObj?.name || '가이드라인'}_AI_파일.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleItemSelect = (id: string, checked?: boolean) => {
@@ -1078,7 +1094,7 @@ export default function DisplayDetailPage({
     <main className="min-h-screen flex flex-col bg-white pb-10">
       <div className="lg:min-w-[70rem] lg:max-w-[1500px]  mx-auto px-4 pt-[7rem]">
         <button
-          onClick={() => router.back()}
+          onClick={() => router.push('/banner-display')}
           className="flex items-center gap-2 lg:text-1.125 md:text-1 font-semibold mb-4 text-gray-600"
         >
           <Image
@@ -1247,6 +1263,26 @@ export default function DisplayDetailPage({
           >
             <DocumentIcon className="w-7 h-6 text-gray-400" />
             <span className="hidden md:inline">가이드라인 보기</span>
+          </button>
+          <button
+            onClick={handleAIFileDownload}
+            className="flex items-center gap-2 px-4 py-2 hover:cursor-pointer text-gray-600 hover:text-black border-b-2 border-transparent hover:border-black"
+          >
+            <svg
+              className="w-7 h-6 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+            <span className="hidden md:inline">ai파일 다운로드</span>
           </button>
           <div className="ml-auto">
             <DropdownMenu

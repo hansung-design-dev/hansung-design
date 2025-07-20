@@ -526,7 +526,7 @@ export default function LEDDisplayDetailPage({
     <main className="min-h-screen flex flex-col bg-white pb-10">
       <div className="lg:min-w-[70rem] lg:max-w-[1500px]  mx-auto px-4 pt-[7rem]">
         <button
-          onClick={() => router.back()}
+          onClick={() => router.push('/led-display')}
           className="flex items-center gap-2 lg:text-1.125 md:text-1 font-semibold mb-4 text-gray-600"
         >
           <Image
@@ -560,13 +560,11 @@ export default function LEDDisplayDetailPage({
             </h2>
           </div>
 
-          {/* LED 전자게시대는 상시접수 */}
-          <div className="mt-2 text-green-600 font-medium">상시접수</div>
-
           <DistrictInfo
             bankInfo={bankInfo}
             districtName={districtObj?.name}
             flexRow={true}
+            isLEDDisplay={true}
           />
         </div>
         {/* 상하반기 탭 - 개별 구 페이지에서만 표시

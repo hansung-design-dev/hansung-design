@@ -243,6 +243,8 @@ export async function GET(request: NextRequest) {
     switch (action) {
       case 'getAllDistrictsData':
         return await getAllDistrictsData();
+      case 'getAvailableDistricts':
+        return await getAvailableDistricts();
       case 'getCounts':
         return await getLEDDisplayCountsByDistrict();
       case 'getByDistrict':
@@ -259,6 +261,64 @@ export async function GET(request: NextRequest) {
     console.error('❌ LED Display API error:', error);
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+// LED 전자게시대에서 사용 가능한 구 목록 조회
+async function getAvailableDistricts() {
+  try {
+    console.log('🔍 Fetching available districts for LED display...');
+
+    const { data, error } = await supabase
+      .from('panel_info')
+      .select(
+        `
+        region_gu!inner(
+          id,
+          name,
+          code
+        ),
+        panel_status
+      `
+      )
+      .eq('display_type_id', (await getLEDDisplayTypeId()).id)
+      .in('panel_status', ['active', 'maintenance']);
+
+    if (error) {
+      console.error('❌ Error fetching available districts:', error);
+      throw error;
+    }
+
+    // 구별로 중복 제거하고 가나다순 정렬
+    const districtsMap = new Map();
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    data?.forEach((item: any) => {
+      const districtName = item.region_gu.name;
+      if (!districtsMap.has(districtName)) {
+        districtsMap.set(districtName, {
+          id: item.region_gu.id,
+          name: item.region_gu.name,
+          code: item.region_gu.code,
+          panel_status: item.panel_status,
+        });
+      }
+    });
+
+    const districts = Array.from(districtsMap.values()).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
+
+    return NextResponse.json({
+      success: true,
+      data: districts,
+    });
+  } catch (error) {
+    console.error('❌ Error in getAvailableDistricts:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch available districts' },
       { status: 500 }
     );
   }

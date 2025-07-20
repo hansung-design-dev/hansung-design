@@ -6,6 +6,7 @@ import { useEffect, useState, useMemo } from 'react';
 import bannerDistricts from '@/src/mock/banner-district';
 import { LEDBillboard } from '@/src/types/leddetail';
 import { ledItems } from '@/src/mock/billboards';
+import { DropdownOption } from '@/src/types/displaydetail';
 
 // LEDDisplayData 타입 정의
 export interface LEDDisplayData {
@@ -145,6 +146,12 @@ export default function LEDDisplayPage() {
     panel_status?: string;
   } | null>(null);
 
+  const [dropdownOptions, setDropdownOptions] = useState<DropdownOption[]>([
+    { id: 0, option: '전체보기' },
+    { id: 1, option: '관악구' },
+    { id: 2, option: '마포구' },
+  ]);
+
   // LEDDisplayData를 LEDBillboard로 변환하는 함수
   function transformLEDData(ledData: LEDDisplayData[]): LEDBillboard[] {
     // 구별 가나다순 정렬
@@ -213,36 +220,32 @@ export default function LEDDisplayPage() {
     });
   }
 
-  // 드롭다운 옵션 생성 함수
-  const generateDropdownOptions = (ledBillboards: LEDBillboard[]) => {
-    if (isAllDistricts) {
-      // 전체보기인 경우 실제 LED 데이터에서 구별 옵션 생성
-      const districts = Array.from(
-        new Set(ledBillboards.map((b) => b.district))
-      ).sort();
-      return [
-        { id: 0, option: '전체보기' },
-        ...districts.map((districtName, index) => ({
-          id: index + 1,
-          option: districtName,
-        })),
-      ];
-    } else {
-      // 개별 구인 경우에도 모든 구 목록 제공
-      const districts = Array.from(
-        new Set(ledBillboards.map((b) => b.district))
-      ).sort();
-      return [
-        { id: 0, option: '전체보기' },
-        ...districts.map((districtName, index) => ({
-          id: index + 1,
-          option: districtName,
-        })),
-      ];
-    }
-  };
+  // 드롭다운 옵션을 실제 데이터베이스에서 가져오기
+  useEffect(() => {
+    async function fetchDropdownOptions() {
+      try {
+        const response = await fetch(
+          '/api/led-display?action=getAvailableDistricts'
+        );
+        const result = await response.json();
 
-  const pageDropdownOptions = generateDropdownOptions(billboards);
+        if (result.success && result.data) {
+          const options = [
+            { id: 0, option: '전체보기' },
+            ...result.data.map((district: { name: string }, index: number) => ({
+              id: index + 1,
+              option: district.name,
+            })),
+          ];
+          setDropdownOptions(options);
+        }
+      } catch (error) {
+        console.error('Failed to fetch available districts:', error);
+      }
+    }
+
+    fetchDropdownOptions();
+  }, []);
 
   console.log('🔍 District code from URL:', district);
   console.log('🔍 District object found:', districtObj);
@@ -341,6 +344,15 @@ export default function LEDDisplayPage() {
               panel_status: districtDataResult.panel_status,
             });
             setBankInfo(districtDataResult.bank_info);
+          } else {
+            // API에서 데이터를 가져오지 못한 경우에도 기본 districtObj 정보 사용
+            setDistrictData({
+              id: districtObj.id?.toString() || '0',
+              name: districtObj.name,
+              code: districtObj.code,
+              logo_image_url: districtObj.logo,
+              panel_status: 'maintenance', // 기본값으로 maintenance 설정
+            });
           }
         }
       } catch (err) {
@@ -422,7 +434,7 @@ export default function LEDDisplayPage() {
           : districtObj
       }
       billboards={billboards}
-      dropdownOptions={pageDropdownOptions}
+      dropdownOptions={dropdownOptions}
       defaultView="gallery"
       bankInfo={bankInfo}
     />

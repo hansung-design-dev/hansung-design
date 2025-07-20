@@ -92,20 +92,19 @@ export default function DistrictInfo({
 
   return (
     <div className="text-gray-600 space-y-2">
-      {/* 신청기간 */}
-      <div className="border-b border-gray-200 pb-2">
-        <div className="text-0.875 font-medium text-gray-500 mb-2">
-          신청기간
+      {/* 신청기간 - LED 전자게시대가 아닌 경우에만 표시 */}
+      {!isLEDDisplay && (
+        <div className="border-b border-gray-200 pb-2">
+          <div className="text-0.875 font-medium text-gray-500 mb-2">
+            신청기간
+          </div>
+          {getApplicationTime()}
         </div>
-        {getApplicationTime()}
-      </div>
+      )}
 
       {/* LED 전자게시대 상시접수 표시 */}
       {isLEDDisplay && (
         <div className="border-b border-gray-200 pb-2">
-          <div className="text-0.875 font-medium text-gray-500 mb-1">
-            접수방식
-          </div>
           <div className="text-green-600 font-medium text-0.875">상시접수</div>
         </div>
       )}
