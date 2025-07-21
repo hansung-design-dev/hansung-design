@@ -11,6 +11,7 @@ export interface LEDDisplayData {
   panel_type: string;
   latitude: number;
   longitude: number;
+  photo_url?: string | null;
   region_gu: {
     id: string;
     name: string;
@@ -99,6 +100,7 @@ async function getLEDDisplaysByDistrict(districtName: string) {
         panel_type,
         latitude,
         longitude,
+        photo_url,
         region_gu!inner (
           id,
           name,
@@ -157,6 +159,7 @@ async function getLEDDisplaysByDistrict(districtName: string) {
         panel_type: item.panel_type,
         latitude: item.latitude,
         longitude: item.longitude,
+        photo_url: item.photo_url,
         region_gu: item.region_gu,
         region_dong: item.region_dong,
         led_panel_details: item.led_panel_details?.[0] || {
@@ -198,6 +201,7 @@ async function getAllLEDDisplays() {
         panel_type,
         latitude,
         longitude,
+        photo_url,
         led_panel_details (
           id,
           exposure_count,
@@ -250,6 +254,7 @@ async function getAllLEDDisplays() {
         panel_type: item.panel_type,
         latitude: item.latitude,
         longitude: item.longitude,
+        photo_url: item.photo_url,
         region_gu: item.region_gu,
         region_dong: {
           id: '',
