@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 import bannerDistricts from '@/src/mock/banner-district';
 import { LEDBillboard } from '@/src/types/leddetail';
-import { ledItems } from '@/src/mock/billboards';
+
 import { DropdownOption } from '@/src/types/displaydetail';
 
 // LEDDisplayData 타입 정의
@@ -283,53 +283,8 @@ export default function LEDDisplayPage() {
         } else if (isAllDistricts) {
           setBillboards([]);
         } else {
-          // panel_status가 maintenance인 구들만 준비 중으로 처리
-          const isMaintenanceDistrict =
-            (districtObj as { panel_status?: string })?.panel_status ===
-            'maintenance';
-
-          if (isMaintenanceDistrict) {
-            // 준비 중인 구는 빈 배열로 설정 (상세페이지에서 "준비 중" 메시지 표시)
-            setBillboards([]);
-          } else {
-            // DB에 데이터가 없으면 목업 데이터를 사용
-            const mockBillboards = ledItems
-              .filter((b) => b.location.split(' ')[0] === district)
-              .map(
-                (item): LEDBillboard => ({
-                  id: `${district}-${item.id.toString().padStart(2, '0')}`,
-                  type: 'led',
-                  district: item.location.split(' ')[0],
-                  name: item.title,
-                  address: item.title,
-                  nickname: item.location.split(' ')[1],
-                  neighborhood: item.location.split(' ')[1],
-                  period: '상시',
-                  price: item.price.toString(),
-                  size: `${item.width}x${item.height}`,
-                  faces: item.slots,
-                  latitude: 37.5665, // Default coordinates
-                  longitude: 126.978,
-                  status: '진행중',
-                  panel_width: item.width,
-                  panel_height: item.height,
-                  panel_code: Number(item.id),
-                  panel_type: 'led',
-                  exposure_count: 50000,
-                  max_banners: item.slots,
-                  slot_width_px: item.width,
-                  slot_height_px: item.height,
-                  total_price: item.price,
-                  tax_price: Math.floor(item.price * 0.1),
-                  advertising_fee: Math.floor(item.price * 0.8),
-                  road_usage_fee: Math.floor(item.price * 0.05),
-                  administrative_fee: Math.floor(item.price * 0.05),
-                  price_unit: '1 month',
-                  panel_slot_status: 'available',
-                })
-              );
-            setBillboards(mockBillboards);
-          }
+          // 실제 데이터가 없으면 준비 중으로 처리
+          setBillboards([]);
         }
 
         // 3. 구 정보와 계좌번호 정보 가져오기 (전체보기가 아닌 경우에만)

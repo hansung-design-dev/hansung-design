@@ -71,6 +71,22 @@ async function getLEDDisplayTypeId() {
 // 특정 구의 LED 전자게시대 데이터 조회
 async function getLEDDisplaysByDistrict(districtName: string) {
   try {
+    console.log('🔍 조회 중인 구:', districtName);
+
+    // 먼저 구 이름이나 코드로 region_gu 찾기
+    const { data: regionData, error: regionError } = await supabase
+      .from('region_gu')
+      .select('id, name, code')
+      .or(`name.eq.${districtName},code.eq.${districtName}`)
+      .single();
+
+    if (regionError || !regionData) {
+      console.error('❌ Error finding region:', regionError);
+      throw new Error('Region not found');
+    }
+
+    console.log('🔍 Found region:', regionData);
+
     const { data, error } = await supabase
       .from('panel_info')
       .select(
@@ -83,7 +99,23 @@ async function getLEDDisplaysByDistrict(districtName: string) {
         panel_type,
         latitude,
         longitude,
-        led_panel_details (*),
+        region_gu!inner (
+          id,
+          name,
+          code
+        ),
+        region_dong!inner (
+          id,
+          name,
+          district_code
+        ),
+        led_panel_details (
+          id,
+          exposure_count,
+          max_banners,
+          panel_width,
+          panel_height
+        ),
         led_slot_info (
           id,
           slot_number,
@@ -98,35 +130,51 @@ async function getLEDDisplaysByDistrict(districtName: string) {
           administrative_fee,
           price_unit,
           panel_slot_status
-        ),
-        region_gu!inner (
-          id,
-          name,
-          code
-        ),
-        region_dong!inner (
-          id,
-          name,
-          district_code
         )
       `
       )
-      .eq('region_gu.name', districtName)
+      .eq('region_gu.id', regionData.id)
       .eq('display_type_id', (await getLEDDisplayTypeId()).id)
-      .eq('panel_status', 'active')
+      .in('panel_status', ['active', 'maintenance'])
       .order('panel_code', { ascending: true });
 
     if (error) {
+      console.error('❌ Error fetching LED displays by district:', error);
       throw error;
     }
 
     console.log('🔍 API 응답 데이터 (첫 번째 아이템):', data?.[0]);
+    console.log('🔍 총 데이터 개수:', data?.length);
+
+    // 기본 데이터 구조로 변환
+    const transformedData =
+      data?.map((item) => ({
+        id: item.id,
+        panel_code: item.panel_code,
+        nickname: item.nickname,
+        address: item.address,
+        panel_status: item.panel_status,
+        panel_type: item.panel_type,
+        latitude: item.latitude,
+        longitude: item.longitude,
+        region_gu: item.region_gu,
+        region_dong: item.region_dong,
+        led_panel_details: item.led_panel_details?.[0] || {
+          id: '',
+          exposure_count: 0,
+          max_banners: 0,
+          panel_width: 0,
+          panel_height: 0,
+        },
+        led_slot_info: item.led_slot_info || [],
+      })) || [];
 
     return NextResponse.json({
       success: true,
-      data: data as unknown as LEDDisplayData[],
+      data: transformedData as LEDDisplayData[],
     });
   } catch (error) {
+    console.error('❌ Error in getLEDDisplaysByDistrict:', error);
     throw error;
   }
 }
@@ -149,7 +197,13 @@ async function getAllLEDDisplays() {
         panel_type,
         latitude,
         longitude,
-        led_panel_details (*),
+        led_panel_details (
+          id,
+          exposure_count,
+          max_banners,
+          panel_width,
+          panel_height
+        ),
         led_slot_info (
           id,
           slot_number,
@@ -169,29 +223,54 @@ async function getAllLEDDisplays() {
           id,
           name,
           code
-        ),
-        region_dong!inner (
-          id,
-          name,
-          district_code
         )
       `
       )
       .eq('display_type_id', displayType.id)
-      .eq('panel_status', 'active')
+      .in('panel_status', ['active', 'maintenance'])
       .order('panel_code', { ascending: true });
 
     if (error) {
+      console.error('❌ Error fetching all LED displays:', error);
       throw error;
     }
 
     console.log('🔍 API 응답 데이터 (첫 번째 아이템):', data?.[0]);
+    console.log('🔍 총 데이터 개수:', data?.length);
+
+    // 기본 데이터 구조로 변환
+    const transformedData =
+      data?.map((item) => ({
+        id: item.id,
+        panel_code: item.panel_code,
+        nickname: item.nickname,
+        address: item.address,
+        panel_status: item.panel_status,
+        panel_type: item.panel_type,
+        latitude: item.latitude,
+        longitude: item.longitude,
+        region_gu: item.region_gu,
+        region_dong: {
+          id: '',
+          name: '',
+          district_code: '',
+        },
+        led_panel_details: item.led_panel_details?.[0] || {
+          id: '',
+          exposure_count: 0,
+          max_banners: 0,
+          panel_width: 0,
+          panel_height: 0,
+        },
+        led_slot_info: item.led_slot_info || [],
+      })) || [];
 
     return NextResponse.json({
       success: true,
-      data: data as unknown as LEDDisplayData[],
+      data: transformedData as unknown as LEDDisplayData[],
     });
   } catch (error) {
+    console.error('❌ Error in getAllLEDDisplays:', error);
     throw error;
   }
 }
@@ -271,45 +350,67 @@ async function getAvailableDistricts() {
   try {
     console.log('🔍 Fetching available districts for LED display...');
 
+    // LED 전자게시대 구 목록 (정상 운영 + 준비중)
+    const ledDistrictNames = [
+      '광진구',
+      '강동구',
+      '동대문구',
+      '강북구',
+      '관악구',
+      '동작구',
+      '마포구',
+      '영등포구',
+      '용산구',
+      '도봉구',
+    ];
+
     const { data, error } = await supabase
-      .from('panel_info')
-      .select(
-        `
-        region_gu!inner(
-          id,
-          name,
-          code
-        ),
-        panel_status
-      `
-      )
-      .eq('display_type_id', (await getLEDDisplayTypeId()).id)
-      .in('panel_status', ['active', 'maintenance']);
+      .from('region_gu')
+      .select('id, name, code')
+      .in('name', ledDistrictNames)
+      .order('name');
 
     if (error) {
       console.error('❌ Error fetching available districts:', error);
       throw error;
     }
 
-    // 구별로 중복 제거하고 가나다순 정렬
-    const districtsMap = new Map();
+    // 각 구의 패널 상태 확인
+    const { data: panelStatusData, error: panelStatusError } = await supabase
+      .from('panel_info')
+      .select(
+        `
+        region_gu!inner(
+          id,
+          name
+        ),
+        panel_status
+      `
+      )
+      .eq('display_type_id', (await getLEDDisplayTypeId()).id)
+      .in('region_gu.name', ledDistrictNames)
+      .in('panel_status', ['active', 'maintenance']);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    data?.forEach((item: any) => {
-      const districtName = item.region_gu.name;
-      if (!districtsMap.has(districtName)) {
-        districtsMap.set(districtName, {
-          id: item.region_gu.id,
-          name: item.region_gu.name,
-          code: item.region_gu.code,
-          panel_status: item.panel_status,
-        });
+    if (panelStatusError) {
+      console.error('❌ Error fetching panel status data:', panelStatusError);
+      throw panelStatusError;
+    }
+
+    // 구별 maintenance 상태 확인
+    const maintenanceMap: Record<string, boolean> = {};
+    panelStatusData?.forEach((item: any) => {
+      if (item.panel_status === 'maintenance') {
+        maintenanceMap[item.region_gu.name] = true;
       }
     });
 
-    const districts = Array.from(districtsMap.values()).sort((a, b) =>
-      a.name.localeCompare(b.name)
-    );
+    const districts =
+      data?.map((district) => ({
+        id: district.id,
+        name: district.name,
+        code: district.code,
+        panel_status: maintenanceMap[district.name] ? 'maintenance' : 'active',
+      })) || [];
 
     return NextResponse.json({
       success: true,
@@ -329,7 +430,33 @@ async function getAllDistrictsData() {
   try {
     console.log('🔍 Fetching all districts data for LED display...');
 
-    // 1. 기본 구 정보와 카운트를 한번에 가져오기
+    // 1. LED 전자게시대 구 목록 (정상 운영 + 준비중)
+    const ledDistrictNames = [
+      '광진구',
+      '강동구',
+      '동대문구',
+      '강북구',
+      '관악구',
+      '동작구',
+      '마포구',
+      '영등포구',
+      '용산구',
+      '도봉구',
+    ];
+
+    // LED 전자게시대 구 정보만 가져오기
+    const { data: allDistricts, error: districtsError } = await supabase
+      .from('region_gu')
+      .select('id, name, code, logo_image_url')
+      .in('name', ledDistrictNames)
+      .order('name');
+
+    if (districtsError) {
+      console.error('❌ Error fetching districts data:', districtsError);
+      throw districtsError;
+    }
+
+    // 2. LED 전자게시대 데이터 가져오기
     const { data: panelData, error: panelError } = await supabase
       .from('panel_info')
       .select(
@@ -344,15 +471,16 @@ async function getAllDistrictsData() {
       `
       )
       .eq('display_type_id', (await getLEDDisplayTypeId()).id)
-      .in('panel_status', ['active', 'maintenance']); // active와 maintenance 상태 모두 포함
+      .in('panel_status', ['active', 'maintenance']);
 
     if (panelError) {
       console.error('❌ Error fetching panel data:', panelError);
       throw panelError;
     }
 
-    // 2. 카운트 집계
+    // 3. 카운트 집계 및 패널 상태 확인
     const countMap: Record<string, number> = {};
+    const maintenanceMap: Record<string, boolean> = {};
     const districtsMap: Record<
       string,
       {
@@ -369,22 +497,43 @@ async function getAllDistrictsData() {
       const districtName = item.region_gu.name;
       countMap[districtName] = (countMap[districtName] || 0) + 1;
 
-      if (!districtsMap[districtName]) {
-        districtsMap[districtName] = {
-          id: item.region_gu.id,
-          name: item.region_gu.name,
-          code: item.region_gu.code,
-          logo_image_url: item.region_gu.logo_image_url,
-          panel_status: item.panel_status,
-        };
+      // maintenance 상태인 패널이 하나라도 있으면 해당 구는 maintenance
+      if (item.panel_status === 'maintenance') {
+        maintenanceMap[districtName] = true;
       }
     });
 
-    // 3. LED 전자게시대 하드코딩된 계좌번호 정보
+    // 4. 모든 구에 대해 데이터 설정 (LED 데이터가 없어도 구는 표시)
+    allDistricts?.forEach((district) => {
+      const hasActivePanels = countMap[district.name] > 0;
+      const hasMaintenancePanels = maintenanceMap[district.name] === true;
+
+      let panel_status = 'maintenance'; // 기본값
+      if (hasActivePanels && !hasMaintenancePanels) {
+        panel_status = 'active';
+      } else if (hasActivePanels && hasMaintenancePanels) {
+        panel_status = 'maintenance'; // maintenance 패널이 있으면 maintenance
+      }
+
+      districtsMap[district.name] = {
+        id: district.id,
+        name: district.name,
+        code: district.code,
+        logo_image_url: district.logo_image_url,
+        panel_status: panel_status,
+      };
+    });
+
+    // 5. LED 전자게시대 하드코딩된 계좌번호 정보
     const ledBankInfo = {
       강동구: {
         bank_name: '우리',
         account_number: '1005-602-397672',
+        depositor: '(주)한성디자인기획',
+      },
+      강북구: {
+        bank_name: '기업',
+        account_number: '049-039964-04-104',
         depositor: '(주)한성디자인기획',
       },
       광진구: {
@@ -405,6 +554,26 @@ async function getAllDistrictsData() {
       동대문구: {
         bank_name: '기업',
         account_number: '049-039964-04-167',
+        depositor: '(주)한성디자인기획',
+      },
+      마포구: {
+        bank_name: '기업',
+        account_number: '049-039964-04-105',
+        depositor: '(주)한성디자인기획',
+      },
+      서대문구: {
+        bank_name: '기업',
+        account_number: '049-039964-04-106',
+        depositor: '(주)한성디자인기획',
+      },
+      송파구: {
+        bank_name: '기업',
+        account_number: '049-039964-04-107',
+        depositor: '(주)한성디자인기획',
+      },
+      용산구: {
+        bank_name: '기업',
+        account_number: '049-039964-04-108',
         depositor: '(주)한성디자인기획',
       },
     };

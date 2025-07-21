@@ -143,23 +143,6 @@ async function getBannerDisplaysByDistrict(
   }
 }
 
-async function getAllBannerDisplays(): Promise<BannerDisplayData[]> {
-  try {
-    console.log('🔍 Fetching all banner displays...');
-    const response = await fetch('/api/banner-display?action=getAll');
-    const result = await response.json();
-
-    if (result.success) {
-      return result.data;
-    } else {
-      throw new Error(result.error);
-    }
-  } catch (error) {
-    console.error('Error fetching all banner displays:', error);
-    throw error;
-  }
-}
-
 export default function BannerDisplayPage({
   params,
   searchParams,
@@ -187,7 +170,6 @@ export default function BannerDisplayPage({
   // const router = useRouter();
 
   const [district, setDistrict] = useState<string>('');
-  const [isAllDistrictsView, setIsAllDistrictsView] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [districtObj, setDistrictObj] = useState<any>(null);
 
@@ -197,10 +179,8 @@ export default function BannerDisplayPage({
       const { district: encodedDistrict } = await params;
       const { period: periodParam } = await searchParams;
       const decodedDistrict = decodeURIComponent(encodedDistrict);
-      const isAll = decodedDistrict === 'all';
 
       setDistrict(decodedDistrict);
-      setIsAllDistrictsView(isAll);
 
       // URL 파라미터에서 기간 데이터 파싱
       if (periodParam) {
@@ -213,23 +193,7 @@ export default function BannerDisplayPage({
         }
       }
 
-      const obj = isAll
-        ? {
-            id: 0,
-            name: '전체',
-            code: 'all',
-            icon: '/images/district-icon/all.svg',
-            description: '모든 구 현수막 게시대',
-            count: 0,
-            size: '전체',
-            led_count: 0,
-            banner_count: 0,
-            sizeOfPeople: '전체',
-            logo: '/images/district-icon/all.svg',
-            src: '/images/led/landing.png',
-          }
-        : districts.find((d) => d.code === decodedDistrict);
-
+      const obj = districts.find((d) => d.code === decodedDistrict);
       setDistrictObj(obj);
     };
 
@@ -243,7 +207,6 @@ export default function BannerDisplayPage({
   //   districtObj?.code === 'songpa' || districtObj?.code === 'yongsan';
 
   const pageDropdownOptions = [
-    { id: 0, option: '전체' },
     { id: 1, option: '관악구' },
     { id: 2, option: '마포구' },
     { id: 3, option: '서대문구' },
@@ -276,14 +239,13 @@ export default function BannerDisplayPage({
       try {
         setLoading(true);
         console.log('🔍 Starting to fetch banner data...');
-        console.log('🔍 isAllDistricts:', isAllDistrictsView);
         console.log('🔍 districtObj?.name:', districtObj?.name);
         console.log('🔍 district:', district);
 
         // 1. 현수막 데이터 가져오기
-        const data = isAllDistrictsView
-          ? await getAllBannerDisplays()
-          : await getBannerDisplaysByDistrict(districtObj?.name || district);
+        const data = await getBannerDisplaysByDistrict(
+          districtObj?.name || district
+        );
 
         console.log('🔍 Fetched data:', data);
         console.log(
@@ -501,8 +463,6 @@ export default function BannerDisplayPage({
             }
           );
           setBillboards(transformed as BannerBillboard[]);
-        } else if (isAllDistrictsView) {
-          setBillboards([]);
         } else {
           // panel_status가 maintenance인 구들만 준비 중으로 처리
           const isMaintenanceDistrict =
@@ -513,42 +473,17 @@ export default function BannerDisplayPage({
             // 준비 중인 구는 빈 배열로 설정 (상세페이지에서 "준비 중" 메시지 표시)
             setBillboards([]);
           } else {
-            // DB에 데이터가 없으면 목업 데이터를 사용
-            console.log(
-              '🔍 No data found, using mock data for district:',
-              district
-            );
-            // const mockBillboards = ledItems
-            //   .filter((b) => b.location.split(' ')[0] === district)
-            //   .map(
-            //     (item): BannerBillboard => ({
-            //       id: `${district}-${item.id.toString().padStart(2, '0')}`, // string으로 변경
-            //       type: 'banner', // 타입을 'banner'로 설정
-            //       district: item.location.split(' ')[0],
-            //       name: item.title,
-            //       address: item.title,
-            //       nickname: item.location.split(' ')[1],
-            //       neighborhood: item.location.split(' ')[1],
-            //       period: '상시',
-            //       price: item.price.toString(),
-            //       size: `${item.width}x${item.height}`,
-            //       faces: item.slots,
-            //       lat: 37.5665, // Default coordinates
-            //       lng: 126.978,
-            //       status: '진행중',
-            //       panel_width: item.width,
-            //       panel_height: item.height,
-            //     })
-            //   );
-            // setBillboards(mockBillboards);
+            // DB에 데이터가 없으면 빈 배열로 설정
+            console.log('🔍 No data found for district:', district);
+            setBillboards([]);
           }
         }
 
         // 2. 신청기간은 URL 파라미터나 상태로 전달받도록 수정 (DB 재조회 제거)
         // 기간 데이터는 구별 카드에서 이미 가져온 것을 사용
 
-        // 3. 구 정보와 계좌번호 정보 가져오기 (전체보기가 아닌 경우에만)
-        if (!isAllDistrictsView && districtObj?.name) {
+        // 3. 구 정보와 계좌번호 정보 가져오기
+        if (districtObj?.name) {
           const districtDataResult = await getDistrictData(districtObj.name);
           if (districtDataResult) {
             setBankInfo(districtDataResult.bank_info);
@@ -565,7 +500,7 @@ export default function BannerDisplayPage({
     if (district) {
       fetchBannerData();
     }
-  }, [district, districtObj, isAllDistrictsView, panelTypeFilter]);
+  }, [district, districtObj, panelTypeFilter]);
 
   if (loading) {
     return (

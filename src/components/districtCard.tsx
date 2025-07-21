@@ -121,6 +121,17 @@ export default function DistrictCard({
                     조금만 기다려 주세요.
                   </div>
                 </div>
+                {/* 준비중인 구에서도 문의전화와 입금계좌 정보 표시 */}
+                <div className="text-gray-14 pt-4">
+                  <DistrictInfo
+                    period={district.period}
+                    bankInfo={district.bankInfo}
+                    districtName={district.name}
+                    flexRow={false}
+                    isLEDDisplay={isLEDDisplay}
+                    pricePolicies={district.pricePolicies}
+                  />
+                </div>
               </div>
             </div>
           </div>

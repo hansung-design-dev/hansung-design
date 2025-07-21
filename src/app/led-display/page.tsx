@@ -91,8 +91,10 @@ export default function LEDDisplayPage() {
               };
             } | null;
           }) => {
-            // panel_status가 maintenance인지 확인
-            const isMaintenance = district.panel_status === 'maintenance';
+            // 실제 LED 데이터가 있는지 확인 (count > 0이면 데이터가 있음)
+            const hasData =
+              (data.counts as Record<string, number>)[district.name] > 0;
+            const isMaintenance = !hasData; // 데이터가 없으면 준비중으로 처리
 
             return {
               id: parseInt(district.id.replace(/-/g, '').substring(0, 8), 16),
@@ -107,7 +109,7 @@ export default function LEDDisplayPage() {
                 district.logo_image_url ||
                 `/images/district-icon/${district.code}-gu.png`,
               src: '/images/led/landing.png',
-              panel_status: district.panel_status,
+              panel_status: isMaintenance ? 'maintenance' : 'active',
               period: district.period || null,
               bankInfo: district.bank_info || null,
             };

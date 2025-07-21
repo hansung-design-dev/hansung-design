@@ -1288,7 +1288,7 @@ export default function DisplayDetailPage({
             <DropdownMenu
               data={dropdownOptions}
               onChange={handleDropdownChange}
-              title={selectedOption?.option || '전체보기'}
+              title={selectedOption?.option || districtObj?.name || ''}
             />
           </div>
         </div>
