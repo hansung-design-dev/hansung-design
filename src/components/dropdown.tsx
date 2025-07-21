@@ -12,15 +12,19 @@ interface DropdownMenuProps {
   data: DropdownOption[];
   onChange: (item: DropdownOption) => void;
   title?: string;
+  selectedOption?: DropdownOption | null;
 }
 
 export default function DropdownMenu({
   data,
   onChange,
   title = '선택해주세요',
+  selectedOption,
 }: DropdownMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [selected, setSelected] = useState<DropdownOption | null>(null);
+  const [selected, setSelected] = useState<DropdownOption | null>(
+    selectedOption || null
+  );
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -42,6 +46,13 @@ export default function DropdownMenu({
     onChange(item);
     setIsOpen(false);
   };
+
+  // selectedOption prop이 변경되면 selected 상태 업데이트
+  useEffect(() => {
+    if (selectedOption) {
+      setSelected(selectedOption);
+    }
+  }, [selectedOption]);
 
   return (
     <div

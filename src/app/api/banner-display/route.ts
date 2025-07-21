@@ -415,28 +415,7 @@ async function getAllDistrictsData() {
   try {
     console.log('🔍 Fetching all districts data for banner display...');
 
-    // 1. 현수막 게시대 구 목록 (하드코딩된 구만)
-    const bannerDistrictNames = [
-      '관악구',
-      '마포구',
-      '서대문구',
-      '송파구',
-      '용산구',
-    ];
-
-    // 현수막 게시대 구 정보만 가져오기
-    const { data: allDistricts, error: districtsError } = await supabase
-      .from('region_gu')
-      .select('id, name, code, logo_image_url')
-      .in('name', bannerDistrictNames)
-      .order('name');
-
-    if (districtsError) {
-      console.error('❌ Error fetching districts data:', districtsError);
-      throw districtsError;
-    }
-
-    // 2. 현수막 게시대 데이터 가져오기
+    // 1. panel_info에서 현수막 게시대 구 목록과 데이터 추출 (두 단계 조건)
     const { data: panelData, error: panelError } = await supabase
       .from('panel_info')
       .select(
@@ -445,25 +424,16 @@ async function getAllDistrictsData() {
           id,
           name,
           code,
-          logo_image_url
+          logo_image_url,
+          is_active
         ),
-        panel_status,
-        banner_slot_info (
-          id,
-          slot_name,
-          banner_slot_price_policy (
-            id,
-            price_usage_type,
-            tax_price,
-            road_usage_fee,
-            advertising_fee,
-            total_price
-          )
-        )
+        panel_status
       `
       )
       .eq('display_type_id', (await getBannerDisplayTypeId()).id)
-      .in('panel_status', ['active', 'maintenance']);
+      .eq('panel_status', 'active') // 패널이 active인 것만
+      .eq('region_gu.is_active', 'true') // 구가 활성화된 것만
+      .order('region_gu(name)');
 
     if (panelError) {
       console.error('❌ Error fetching panel data:', panelError);
@@ -491,23 +461,30 @@ async function getAllDistrictsData() {
       }
     > = {};
 
-    // 3. 카운트 집계
+    // 3. 카운트 집계 및 데이터 처리 (두 단계 조건 적용)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     panelData?.forEach((item: any) => {
       const districtName = item.region_gu.name;
-      countMap[districtName] = (countMap[districtName] || 0) + 1;
-    });
 
-    // 4. 모든 구에 대해 데이터 설정 (현수막 데이터가 없어도 구는 표시)
-    allDistricts?.forEach((district) => {
-      districtsMap[district.name] = {
-        id: district.id,
-        name: district.name,
-        code: district.code,
-        logo_image_url: district.logo_image_url,
-        panel_status: countMap[district.name] > 0 ? 'active' : 'maintenance',
-        pricePolicies: [],
-      };
+      // 두 단계 조건 확인: is_active = 'true' && panel_status = 'active'
+      if (
+        item.region_gu.is_active === 'true' &&
+        item.panel_status === 'active'
+      ) {
+        countMap[districtName] = (countMap[districtName] || 0) + 1;
+
+        // 구별 첫 번째 패널 정보 저장
+        if (!districtsMap[districtName]) {
+          districtsMap[districtName] = {
+            id: item.region_gu.id,
+            name: item.region_gu.name,
+            code: item.region_gu.code,
+            logo_image_url: item.region_gu.logo_image_url,
+            panel_status: 'active', // 조건을 통과했으므로 active
+            pricePolicies: [],
+          };
+        }
+      }
     });
 
     // 4. 기본 구 목록 생성

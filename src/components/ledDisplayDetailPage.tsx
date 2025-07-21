@@ -9,7 +9,7 @@ import ViewTypeButton from '@/src/components/viewTypeButton';
 import MapPinIcon from '@/src/icons/map-pin.svg';
 import GalleryIcon from '@/src/icons/gallery.svg';
 import ListIcon from '@/src/icons/list.svg';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCart } from '../contexts/cartContext';
 import { useProfile } from '../contexts/profileContext';
 import { useAuth } from '../contexts/authContext';
@@ -60,7 +60,16 @@ export default function LEDDisplayDetailPage({
   const [selectedOption, setSelectedOption] = useState<{
     id: number;
     option: string;
-  } | null>(null);
+  } | null>(() => {
+    // 현재 구에 해당하는 옵션 찾기
+    if (districtObj?.name) {
+      const matchingOption = dropdownOptions.find(
+        (option) => option.option === districtObj.name
+      );
+      return matchingOption || null;
+    }
+    return null;
+  });
   const [viewType, setViewType] = useState<'location' | 'gallery' | 'list'>(
     defaultView
   );
@@ -73,6 +82,21 @@ export default function LEDDisplayDetailPage({
   const { profiles } = useProfile();
   const { user } = useAuth();
   const router = useRouter();
+
+  // dropdownOptions가 변경될 때 selectedOption 업데이트
+  useEffect(() => {
+    if (districtObj?.name && dropdownOptions.length > 0) {
+      const matchingOption = dropdownOptions.find(
+        (option) => option.option === districtObj.name
+      );
+      if (
+        matchingOption &&
+        (!selectedOption || selectedOption.option !== matchingOption.option)
+      ) {
+        setSelectedOption(matchingOption);
+      }
+    }
+  }, [dropdownOptions, districtObj?.name, selectedOption]);
 
   // selectedIds 상태 변화 추적 (디버깅용 - 주석 처리)
   // useEffect(() => {
@@ -604,6 +628,7 @@ export default function LEDDisplayDetailPage({
               data={dropdownOptions}
               onChange={handleDropdownChange}
               title={selectedOption?.option || '전체보기'}
+              selectedOption={selectedOption}
             />
           </div>
         </div>
