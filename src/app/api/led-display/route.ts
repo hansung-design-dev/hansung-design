@@ -171,7 +171,8 @@ async function getLEDDisplaysByDistrict(districtName: string) {
 
     return NextResponse.json({
       success: true,
-      data: transformedData as LEDDisplayData[],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data: transformedData as any,
     });
   } catch (error) {
     console.error('❌ Error in getLEDDisplaysByDistrict:', error);
@@ -374,8 +375,17 @@ async function getAvailableDistricts() {
     }
 
     // 구별 데이터 그룹화
-    const districtsMap: Record<string, any> = {};
+    const districtsMap: Record<
+      string,
+      {
+        id: string;
+        name: string;
+        code: string;
+        panel_status: string;
+      }
+    > = {};
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     panelData?.forEach((item: any) => {
       const districtName = item.region_gu.name;
 
@@ -453,7 +463,21 @@ async function getAllDistrictsData() {
         panel_status: string;
         address: string;
         nickname: string;
-        led_slot_info: any[];
+        led_slot_info: {
+          id: string;
+          slot_number: number;
+          slot_width_px: number;
+          slot_height_px: number;
+          position_x: number;
+          position_y: number;
+          total_price: number;
+          tax_price: number;
+          advertising_fee: number;
+          road_usage_fee: number;
+          administrative_fee: number;
+          price_unit: string;
+          panel_slot_status: string;
+        }[];
       }
     > = {};
 
@@ -493,7 +517,23 @@ async function getAllDistrictsData() {
     }));
 
     // 4. 구별 은행 정보 가져오기
-    const bankInfoMap: Record<string, any> = {};
+    const bankInfoMap: Record<
+      string,
+      {
+        id: string;
+        bank_name: string;
+        account_number: string;
+        depositor: string;
+        region_gu: {
+          id: string;
+          name: string;
+        };
+        display_types: {
+          id: string;
+          name: string;
+        };
+      }
+    > = {};
     for (const district of districts) {
       try {
         const { data: bankData, error: bankError } = await supabase
@@ -519,7 +559,8 @@ async function getAllDistrictsData() {
           .single();
 
         if (!bankError && bankData) {
-          bankInfoMap[district.name] = bankData;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          bankInfoMap[district.name] = bankData as any;
         }
       } catch (err) {
         console.warn(`Failed to fetch bank info for ${district.name}:`, err);
@@ -543,7 +584,8 @@ async function getAllDistrictsData() {
     return NextResponse.json({
       success: true,
       data: {
-        districts: finalDistricts,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        districts: finalDistricts as any,
         counts: countMap,
       },
     });
