@@ -91,7 +91,7 @@ export default function LEDDisplayPage() {
               };
             } | null;
           }) => {
-            // panel_status가 maintenance인지 확인
+            // 백엔드에서 받은 panel_status를 그대로 사용
             const isMaintenance = district.panel_status === 'maintenance';
 
             return {
@@ -107,7 +107,7 @@ export default function LEDDisplayPage() {
                 district.logo_image_url ||
                 `/images/district-icon/${district.code}-gu.png`,
               src: '/images/led/landing.png',
-              panel_status: district.panel_status,
+              panel_status: district.panel_status || 'active',
               period: district.period || null,
               bankInfo: district.bank_info || null,
             };
@@ -118,6 +118,20 @@ export default function LEDDisplayPage() {
         processedDistricts.sort((a, b) => a.name.localeCompare(b.name));
 
         console.log('🔍 Final processed LED districts:', processedDistricts);
+
+        // maintenance 상태인 구들 출력
+        const maintenanceDistricts = processedDistricts.filter(
+          (district) => district.panel_status === 'maintenance'
+        );
+        console.log(
+          '🔍 Maintenance districts:',
+          maintenanceDistricts.map((d) => ({
+            name: d.name,
+            panel_status: d.panel_status,
+            count: d.count,
+          }))
+        );
+
         setUpdatedDistricts(processedDistricts);
       } catch (err) {
         console.error('Error fetching optimized LED data:', err);

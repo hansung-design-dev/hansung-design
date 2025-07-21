@@ -97,20 +97,6 @@ CREATE TABLE public.banner_slot_inventory (
   CONSTRAINT banner_slot_inventory_region_gu_display_period_id_fkey FOREIGN KEY (region_gu_display_period_id) REFERENCES public.region_gu_display_periods(id),
   CONSTRAINT banner_slot_inventory_panel_info_id_fkey FOREIGN KEY (panel_info_id) REFERENCES public.panel_info(id)
 );
-CREATE TABLE public.led_display_inventory (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  panel_info_id uuid NOT NULL,
-  region_gu_display_period_id uuid NOT NULL,
-  total_faces integer NOT NULL DEFAULT 20,
-  available_faces integer NOT NULL DEFAULT 20,
-  closed_faces integer DEFAULT 0,
-  created_at timestamp without time zone DEFAULT now(),
-  updated_at timestamp without time zone DEFAULT now(),
-  CONSTRAINT led_display_inventory_pkey PRIMARY KEY (id),
-  CONSTRAINT led_display_inventory_region_gu_display_period_id_fkey FOREIGN KEY (region_gu_display_period_id) REFERENCES public.region_gu_display_periods(id),
-  CONSTRAINT led_display_inventory_panel_info_id_fkey FOREIGN KEY (panel_info_id) REFERENCES public.panel_info(id)
-);
-
 CREATE TABLE public.banner_slot_price_policy (
   id uuid NOT NULL,
   banner_slot_info_id uuid NOT NULL,
@@ -211,10 +197,22 @@ CREATE TABLE public.homepage_notice (
   updated_at timestamp without time zone DEFAULT now(),
   CONSTRAINT homepage_notice_pkey PRIMARY KEY (id)
 );
-
-CREATE TABLE public.led_display_price_policy (
+CREATE TABLE public.led_display_inventory (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   panel_info_id uuid NOT NULL,
+  region_gu_display_period_id uuid NOT NULL,
+  total_faces integer NOT NULL DEFAULT 20,
+  available_faces integer NOT NULL DEFAULT 20,
+  closed_faces integer DEFAULT 0,
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT led_display_inventory_pkey PRIMARY KEY (id),
+  CONSTRAINT led_display_inventory_region_gu_display_period_id_fkey FOREIGN KEY (region_gu_display_period_id) REFERENCES public.region_gu_display_periods(id),
+  CONSTRAINT led_display_inventory_panel_info_id_fkey FOREIGN KEY (panel_info_id) REFERENCES public.panel_info(id)
+);
+CREATE TABLE public.led_display_price_policy (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  panel_info_id uuid NOT NULL UNIQUE,
   price_usage_type USER-DEFINED DEFAULT 'default'::price_usage_type,
   tax_price integer NOT NULL DEFAULT 0,
   road_usage_fee integer NOT NULL DEFAULT 0,

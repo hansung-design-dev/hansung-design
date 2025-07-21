@@ -415,7 +415,7 @@ async function getAllDistrictsData() {
   try {
     console.log('🔍 Fetching all districts data for banner display...');
 
-    // 1. 기본 구 정보와 카운트를 한번에 가져오기
+    // 1. panel_info에서 현수막 게시대 구 목록과 데이터 추출 (두 단계 조건)
     const { data: panelData, error: panelError } = await supabase
       .from('panel_info')
       .select(
@@ -424,25 +424,16 @@ async function getAllDistrictsData() {
           id,
           name,
           code,
-          logo_image_url
+          logo_image_url,
+          is_active
         ),
-        panel_status,
-        banner_slot_info (
-          id,
-          slot_name,
-          banner_slot_price_policy (
-            id,
-            price_usage_type,
-            tax_price,
-            road_usage_fee,
-            advertising_fee,
-            total_price
-          )
-        )
+        panel_status
       `
       )
       .eq('display_type_id', (await getBannerDisplayTypeId()).id)
-      .in('panel_status', ['active', 'maintenance']); // active와 maintenance 상태 모두 포함
+      .eq('panel_status', 'active') // 패널이 active인 것만
+      .eq('region_gu.is_active', 'true') // 구가 활성화된 것만
+      .order('region_gu(name)');
 
     if (panelError) {
       console.error('❌ Error fetching panel data:', panelError);
@@ -470,67 +461,31 @@ async function getAllDistrictsData() {
       }
     > = {};
 
+    // 3. 카운트 집계 및 데이터 처리 (두 단계 조건 적용)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     panelData?.forEach((item: any) => {
       const districtName = item.region_gu.name;
-      countMap[districtName] = (countMap[districtName] || 0) + 1;
 
-      if (!districtsMap[districtName]) {
-        districtsMap[districtName] = {
-          id: item.region_gu.id,
-          name: item.region_gu.name,
-          code: item.region_gu.code,
-          logo_image_url: item.region_gu.logo_image_url,
-          panel_status: item.panel_status,
-          pricePolicies: [],
-        };
-      }
+      // 두 단계 조건 확인: is_active = 'true' && panel_status = 'active'
+      if (
+        item.region_gu.is_active === 'true' &&
+        item.panel_status === 'active'
+      ) {
+        countMap[districtName] = (countMap[districtName] || 0) + 1;
 
-      // 가격 정책 정보 수집
-      if (item.banner_slot_info && item.banner_slot_info.length > 0) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        item.banner_slot_info.forEach((slot: any) => {
-          if (
-            slot.banner_slot_price_policy &&
-            slot.banner_slot_price_policy.length > 0
-          ) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            slot.banner_slot_price_policy.forEach((policy: any) => {
-              // 중복 제거를 위해 이미 있는지 확인
-              const exists = districtsMap[districtName].pricePolicies.some(
-                (existing) =>
-                  existing.price_usage_type === policy.price_usage_type &&
-                  existing.total_price === policy.total_price
-              );
-              if (!exists) {
-                districtsMap[districtName].pricePolicies.push(policy);
-              }
-            });
-          }
-        });
+        // 구별 첫 번째 패널 정보 저장
+        if (!districtsMap[districtName]) {
+          districtsMap[districtName] = {
+            id: item.region_gu.id,
+            name: item.region_gu.name,
+            code: item.region_gu.code,
+            logo_image_url: item.region_gu.logo_image_url,
+            panel_status: 'active', // 조건을 통과했으므로 active
+            pricePolicies: [],
+          };
+        }
       }
     });
-
-    // 3. 강북구 추가 (실제 데이터로 처리)
-    if (!districtsMap['강북구']) {
-      // 강북구의 실제 region_gu 데이터를 가져오기
-      const { data: gangbukData } = await supabase
-        .from('region_gu')
-        .select('id, name, code, logo_image_url')
-        .eq('name', '강북구')
-        .single();
-
-      if (gangbukData) {
-        districtsMap['강북구'] = {
-          id: gangbukData.id,
-          name: gangbukData.name,
-          code: gangbukData.code,
-          logo_image_url: gangbukData.logo_image_url,
-          panel_status: 'active',
-          pricePolicies: [],
-        };
-      }
-    }
 
     // 4. 기본 구 목록 생성
     const basicDistricts = Object.values(districtsMap);
