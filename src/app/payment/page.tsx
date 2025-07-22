@@ -11,6 +11,7 @@ import { PaymentSuccessModal } from '@/src/components/modal/UserProfileModal';
 import CustomFileUpload from '@/src/components/ui/CustomFileUpload';
 import UserProfileModal from '@/src/components/modal/UserProfileModal';
 import type { UserProfile } from '@/src/components/modal/UserProfileModal';
+import Image from 'next/image';
 
 interface BankInfo {
   id: string;
@@ -114,6 +115,33 @@ function PaymentPageContent() {
     [district: string]: boolean;
   }>({});
   const [profileModalOpen, setProfileModalOpen] = useState<string | null>(null);
+
+  // 일괄적용 상태 관리
+  const [bulkApply, setBulkApply] = useState({
+    projectName: false,
+    fileUpload: false,
+    emailMethod: false,
+  });
+
+  // 구별 개별 상태 관리
+  const [groupStates, setGroupStates] = useState<{
+    [district: string]: {
+      projectName: string;
+      selectedFile: File | null;
+      sendByEmail: boolean;
+      fileName: string | null;
+      fileSize: number | null;
+      fileType: string | null;
+      emailAddress: string | null;
+    };
+  }>({});
+
+  // 결제 모달 상태
+  const [paymentModalOpen, setPaymentModalOpen] = useState<string | null>(null);
+  const [modalPaymentMethod, setModalPaymentMethod] = useState<
+    'card' | 'bank_transfer'
+  >('card');
+  const [modalTaxInvoice, setModalTaxInvoice] = useState(false);
   // 프로필 선택 핸들러
   const handleProfileSelect = (district: string, profile: UserProfile) => {
     setGroupProfiles((prev) => ({ ...prev, [district]: profile }));
@@ -123,6 +151,103 @@ function PaymentPageContent() {
   const handleBulkProfileToggle = (district: string) => {
     setGroupBulkProfile((prev) => ({ ...prev, [district]: !prev[district] }));
   };
+
+  // 일괄적용 핸들러들
+  const handleBulkProjectNameToggle = () => {
+    setBulkApply((prev) => ({ ...prev, projectName: !prev.projectName }));
+  };
+
+  const handleBulkFileUploadToggle = () => {
+    setBulkApply((prev) => {
+      const newFileUpload = !prev.fileUpload;
+      return {
+        ...prev,
+        fileUpload: newFileUpload,
+        // 파일 일괄적용을 켤 때 이메일 일괄적용은 끄기
+        emailMethod: newFileUpload ? false : prev.emailMethod,
+      };
+    });
+  };
+
+  const handleBulkEmailMethodToggle = () => {
+    setBulkApply((prev) => {
+      const newEmailMethod = !prev.emailMethod;
+      return {
+        ...prev,
+        emailMethod: newEmailMethod,
+        // 이메일 일괄적용을 켤 때 파일 일괄적용은 끄기
+        fileUpload: newEmailMethod ? false : prev.fileUpload,
+      };
+    });
+  };
+
+  // 구별 상태 업데이트 핸들러들
+  const handleGroupProjectNameChange = (district: string, value: string) => {
+    setGroupStates((prev) => ({
+      ...prev,
+      [district]: {
+        ...prev[district],
+        projectName: value,
+      },
+    }));
+  };
+
+  const handleGroupFileSelect = (district: string, file: File) => {
+    setGroupStates((prev) => ({
+      ...prev,
+      [district]: {
+        ...prev[district],
+        selectedFile: file,
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        sendByEmail: false,
+      },
+    }));
+  };
+
+  const handleGroupEmailSelect = (district: string, isEmail: boolean) => {
+    setGroupStates((prev) => ({
+      ...prev,
+      [district]: {
+        ...prev[district],
+        sendByEmail: isEmail,
+        emailAddress: isEmail ? 'banner114@hanmail.net' : null,
+        selectedFile: null,
+        fileName: null,
+        fileSize: null,
+        fileType: null,
+      },
+    }));
+  };
+
+  // 일괄적용 실행 함수
+  const applyBulkSettings = () => {
+    if (bulkApply.projectName && projectName) {
+      groupedItems.forEach((group) => {
+        handleGroupProjectNameChange(group.district, projectName);
+      });
+    }
+
+    if (bulkApply.fileUpload && selectedFile) {
+      // 파일 일괄적용이 켜져있고 파일이 선택되어 있으면 모든 구에 적용
+      groupedItems.forEach((group) => {
+        handleGroupFileSelect(group.district, selectedFile);
+      });
+    }
+
+    if (bulkApply.emailMethod) {
+      // 이메일 일괄적용이 켜져있으면 모든 구에 이메일 방식 적용
+      groupedItems.forEach((group) => {
+        handleGroupEmailSelect(group.district, true);
+      });
+    }
+  };
+
+  // 일괄적용 상태 변경 시 자동 적용
+  useEffect(() => {
+    applyBulkSettings();
+  }, [bulkApply, projectName, selectedFile]);
 
   // 사용자 프로필 데이터 가져오기
   useEffect(() => {
@@ -850,13 +975,98 @@ function PaymentPageContent() {
       <Nav variant="default" className="bg-white" />
 
       <div className="container mx-auto px-4 sm:px-1 py-8 grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-8">
-        {/* 좌측 - 시안 업로드 및 구별 카드 */}
+        {/* 좌측 - 작업이름, 시안 업로드 및 구별 카드 */}
         <div className="space-y-8 border border-solid border-gray-3 rounded-[0.375rem] p-[2.5rem] sm:p-[1.5rem]">
+          {/* 작업이름 입력 */}
+          <section className="p-6 border rounded-lg shadow-sm flex flex-col gap-4 sm:p-2">
+            <div className="flex items-center justify-between mb-4 border-b-solid border-black border-b-[0.1rem] pb-4">
+              <h2 className="text-1.25 text-gray-2 font-bold">작업이름</h2>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="bulkProjectName"
+                  checked={bulkApply.projectName}
+                  onChange={handleBulkProjectNameToggle}
+                  className="w-4 h-4"
+                />
+                <label
+                  htmlFor="bulkProjectName"
+                  className="text-sm text-gray-600"
+                >
+                  일괄적용
+                </label>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4 sm:gap-2">
+              <label className="w-full md:w-[9rem] text-gray-600 font-medium">
+                작업이름
+              </label>
+              <div className="flex flex-col gap-1">
+                <input
+                  type="text"
+                  value={projectName}
+                  onChange={(e) => {
+                    setProjectName(e.target.value);
+                    if (validationErrors.projectName) {
+                      setValidationErrors((prev) => ({
+                        ...prev,
+                        projectName: '',
+                      }));
+                    }
+                  }}
+                  className={`w-full md:w-[21.25rem] sm:w-[13rem] border border-solid shadow-none rounded px-4 h-[3rem] ${
+                    validationErrors.projectName
+                      ? 'border-red-500'
+                      : 'border-gray-300'
+                  }`}
+                  placeholder="작업 이름을 입력하세요"
+                />
+                {validationErrors.projectName && (
+                  <span className="text-red-500 text-sm">
+                    {validationErrors.projectName}
+                  </span>
+                )}
+              </div>
+            </div>
+          </section>
+
           {/* 시안 업로드 UI (한 번만) */}
           <section className="p-6 border rounded-lg shadow-sm flex flex-col gap-4 sm:p-2">
-            <h2 className="text-1.25 text-gray-2 font-bold mb-4 border-b-solid border-black border-b-[0.1rem] pb-4">
-              시안 업로드
-            </h2>
+            <div className="flex items-center justify-between mb-4 border-b-solid border-black border-b-[0.1rem] pb-4">
+              <h2 className="text-1.25 text-gray-2 font-bold">시안 업로드</h2>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="bulkFileUpload"
+                    checked={bulkApply.fileUpload}
+                    onChange={handleBulkFileUploadToggle}
+                    className="w-4 h-4"
+                  />
+                  <label
+                    htmlFor="bulkFileUpload"
+                    className="text-sm text-gray-600"
+                  >
+                    파일 일괄적용
+                  </label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="bulkEmailMethod"
+                    checked={bulkApply.emailMethod}
+                    onChange={handleBulkEmailMethodToggle}
+                    className="w-4 h-4"
+                  />
+                  <label
+                    htmlFor="bulkEmailMethod"
+                    className="text-sm text-gray-600"
+                  >
+                    이메일 일괄적용
+                  </label>
+                </div>
+              </div>
+            </div>
             <div className="flex flex-col gap-4">
               <div className="flex flex-col sm:flex-col md:flex-row items-start justify-between gap-2 md:gap-4 sm:gap-2">
                 <label className="w-full md:w-[9rem] text-gray-600 font-medium pt-2">
@@ -914,6 +1124,74 @@ function PaymentPageContent() {
                   ({group.items.length}개 패널)
                 </span>
               </div>
+              {/* 구별 개별 입력 필드들 */}
+              <div className="space-y-4 mb-4">
+                {/* 구별 작업이름 */}
+                <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
+                  <label className="w-full sm:w-[8rem] text-gray-600 font-medium text-sm">
+                    작업이름
+                  </label>
+                  <div className="flex-1">
+                    <input
+                      type="text"
+                      value={groupStates[group.district]?.projectName || ''}
+                      onChange={(e) =>
+                        handleGroupProjectNameChange(
+                          group.district,
+                          e.target.value
+                        )
+                      }
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                      placeholder="작업 이름을 입력하세요"
+                    />
+                  </div>
+                </div>
+
+                {/* 구별 시안 업로드 */}
+                <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
+                  <label className="w-full sm:w-[8rem] text-gray-600 font-medium text-sm">
+                    시안 업로드
+                  </label>
+                  <div className="flex-1 space-y-2">
+                    <CustomFileUpload
+                      onFileSelect={(file) =>
+                        handleGroupFileSelect(group.district, file)
+                      }
+                      disabled={groupStates[group.district]?.sendByEmail}
+                      placeholder="시안 파일을 선택해주세요"
+                      className="w-full"
+                    />
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id={`email-${group.district}`}
+                        checked={
+                          groupStates[group.district]?.sendByEmail || false
+                        }
+                        onChange={(e) =>
+                          handleGroupEmailSelect(
+                            group.district,
+                            e.target.checked
+                          )
+                        }
+                        className="w-4 h-4"
+                      />
+                      <label
+                        htmlFor={`email-${group.district}`}
+                        className="text-sm text-gray-500"
+                      >
+                        이메일로 파일 보낼게요
+                      </label>
+                    </div>
+                    {groupStates[group.district]?.sendByEmail && (
+                      <p className="text-xs text-gray-500 ml-6">
+                        banner114@hanmail.net로 시안을 보내드리겠습니다.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               {/* 구별 아이템 목록 */}
               <div className="mb-4 p-4 bg-gray-50 rounded-lg">
                 <h3 className="text-sm font-semibold mb-2 text-gray-700">
@@ -930,287 +1208,210 @@ function PaymentPageContent() {
                         {item.panel_code || item.panel_info_id || '-'} / 이름:{' '}
                         {item.name || '-'} / 구: {item.district}
                       </span>
-                      {/* 아이템별 프로필 선택 UI: 일괄적용 해제 시에만 활성화 */}
-                      {!groupBulkProfile[group.district] && (
-                        <Button
-                          type="button"
-                          className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded ml-2 text-xs"
-                          onClick={() =>
-                            setProfileModalOpen(
-                              `${group.district}-item-${item.id}`
-                            )
-                          }
-                        >
-                          프로필 선택
-                        </Button>
-                      )}
-                      {/* 아이템별 프로필 모달 */}
-                      {profileModalOpen ===
-                        `${group.district}-item-${item.id}` && (
-                        <UserProfileModal
-                          isOpen={true}
-                          onClose={() => setProfileModalOpen(null)}
-                          mode="edit"
-                          onConfirm={(profile) => {
-                            // 아이템별 프로필 적용 (추후 확장)
-                            // setItemProfiles((prev) => ({ ...prev, [item.id]: profile }));
-                            setProfileModalOpen(null);
-                          }}
-                        />
-                      )}
                     </div>
                   ))}
                 </div>
               </div>
-              {/* 결제 금액/계좌/결제 버튼 */}
-              <div className="flex flex-col gap-2 mt-2">
-                <div className="flex justify-between items-center">
-                  <span className="font-semibold text-gray-700">
-                    총 결제 금액:
-                  </span>
-                  <span className="font-bold text-lg text-blue-700">
-                    {group.totalPrice.toLocaleString()}원
-                  </span>
+              {/* 구별 상세 가격표 */}
+              <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-semibold text-gray-800 mb-3 text-sm">
+                  {group.district} 가격 상세
+                </h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">도로점용료:</span>
+                    <span className="font-medium">
+                      {group.items
+                        .reduce(
+                          (sum, item) =>
+                            sum +
+                            (item.panel_slot_snapshot?.road_usage_fee || 0),
+                          0
+                        )
+                        .toLocaleString()}
+                      원
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">광고료:</span>
+                    <span className="font-medium">
+                      {group.items
+                        .reduce(
+                          (sum, item) =>
+                            sum +
+                            (item.panel_slot_snapshot?.advertising_fee || 0),
+                          0
+                        )
+                        .toLocaleString()}
+                      원
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">부가세:</span>
+                    <span className="font-medium">
+                      {group.items
+                        .reduce(
+                          (sum, item) =>
+                            sum + (item.panel_slot_snapshot?.tax_price || 0),
+                          0
+                        )
+                        .toLocaleString()}
+                      원
+                    </span>
+                  </div>
+                  <div className="border-t pt-2 mt-2">
+                    <div className="flex justify-between font-semibold">
+                      <span>총 결제 금액:</span>
+                      <span className="text-blue-700">
+                        {group.totalPrice.toLocaleString()}원
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                {/* 계좌 정보 등 추가 가능 */}
-                <Button
-                  onClick={async () => {
-                    // 구별 결제 로직: 해당 group만 주문 생성/시안 업로드
-                    await handleSingleGroupPayment(group);
-                  }}
-                  className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 mt-2"
-                >
-                  {group.district} 결제하기
-                </Button>
+              </div>
+
+              {/* 결제 버튼 */}
+              <div className="mt-2">
+                {/* 결제 조건 확인 */}
+                {(() => {
+                  const groupState = groupStates[group.district];
+                  const hasProjectName =
+                    groupState?.projectName &&
+                    groupState.projectName.trim() !== '';
+                  const hasFileUploadMethod =
+                    groupState?.selectedFile || groupState?.sendByEmail;
+                  const hasAgreedToTerms = isAgreedCaution;
+
+                  const isButtonEnabled =
+                    hasProjectName && hasFileUploadMethod && hasAgreedToTerms;
+
+                  return (
+                    <>
+                      <Button
+                        onClick={() => setPaymentModalOpen(group.district)}
+                        disabled={!isButtonEnabled}
+                        className={`w-full py-2 rounded-lg ${
+                          isButtonEnabled
+                            ? 'bg-blue-600 text-white hover:bg-blue-700'
+                            : 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                        }`}
+                      >
+                        {group.district} 결제하기
+                      </Button>
+
+                      {/* 조건 미충족 시 안내 메시지 */}
+                      {!isButtonEnabled && (
+                        <div className="mt-2 text-xs text-red">
+                          {!hasProjectName && (
+                            <div>• 작업이름을 입력해주세요</div>
+                          )}
+                          {!hasFileUploadMethod && (
+                            <div>• 파일 업로드 방법을 선택해주세요</div>
+                          )}
+                          {!hasAgreedToTerms && (
+                            <div>• 유의사항에 동의해주세요</div>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </section>
           ))}
-          {/* 유의사항 동의 및 작업이름 입력 */}
-          <section className="p-6 border rounded-lg shadow-sm flex flex-col gap-4 sm:p-2">
-            <div className="flex flex-col sm:flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4 sm:gap-2">
-              <label className="w-full md:w-[9rem] text-gray-600 font-medium">
-                작업이름
-              </label>
-              <div className="flex flex-col gap-1">
+        </div>
+        {/* 우측 - 유의사항 및 전체 가격 정보 */}
+        <div className="space-y-8 border border-solid border-gray-3 rounded-[0.375rem] p-[2.5rem] sm:p-[1.5rem]">
+          {/* 유의사항 */}
+          <section className="p-6 border rounded-lg shadow-sm">
+            <h2 className="text-1.25 text-gray-2 font-bold mb-4 border-b-solid border-black border-b-[0.1rem] pb-4">
+              유의사항
+            </h2>
+            <div className="space-y-4">
+              {/* 유의사항 내용 */}
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <h4 className="font-semibold text-gray-800 mb-3">
+                  현수막 표시내용의 금지, 제한 사항
+                </h4>
+                <ul className="text-sm text-gray-700 space-y-2 mb-4">
+                  <li>성적인 표현 암시, 인권침해(국제결혼, 신부 등)</li>
+                  <li>
+                    음란, 퇴폐성 및 청소년 보호, 선도에 저해 우려가 있는 내용
+                  </li>
+                  <li>
+                    사채, 대부업, 채권추심등에 관련된 내용, 시민정서에 적합하지
+                    않은 내용
+                  </li>
+                  <li>
+                    특정 개인, 단체 등의 가치관을 비방 또는 홍보하려는 내용
+                  </li>
+                  <li>
+                    기타 반사회적 내용 또는 시민정서에 적합하지 않다고 판단되는
+                    내용
+                  </li>
+                </ul>
+
+                <h4 className="font-semibold text-gray-800 mb-3">
+                  현수막 게시의 지연 또는 일시 중지
+                </h4>
+                <ul className="text-sm text-gray-700 space-y-2 mb-4">
+                  <li>
+                    • 법정공휴일 또는 강풍, 우천, 폭설 시에는 현수막 게시 일정이
+                    전후날로 변경 될 수 있습니다.
+                  </li>
+                  <li>
+                    • 현수막 게시 기간 중, 태풍, 재난, 긴급 공사 등의 사유가
+                    발생할 때에는 광고주에게 사전 통보 없이 게시를 일시 중지 할
+                    수 있습니다.
+                  </li>
+                </ul>
+
+                <div className=" border border-red-200 p-3 rounded">
+                  <h4 className="font-semibold text-red mb-2">[유의사항]</h4>
+                  <p className="text-sm text-red">
+                    현수막게시대 게시 신청 시 아래 규약사항을 반드시 숙지하시기
+                    바라며, 숙지하지 못한 책임은 신청인에게 있습니다. 또한 관련
+                    규정을 위반한 경우에도 신청 및 게시가 불가합니다.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2">
                 <input
-                  type="text"
-                  value={projectName}
+                  type="checkbox"
+                  id="agreement"
+                  checked={isAgreedCaution}
                   onChange={(e) => {
-                    setProjectName(e.target.value);
-                    if (validationErrors.projectName) {
+                    setIsAgreedCaution(e.target.checked);
+                    if (validationErrors.agreement) {
                       setValidationErrors((prev) => ({
                         ...prev,
-                        projectName: '',
+                        agreement: '',
                       }));
                     }
                   }}
-                  className={`w-full md:w-[21.25rem] sm:w-[13rem] border border-solid shadow-none rounded px-4 h-[3rem] ${
-                    validationErrors.projectName
-                      ? 'border-red-500'
-                      : 'border-gray-300'
-                  }`}
-                  placeholder="작업 이름을 입력하세요"
+                  className="w-4 h-4 mt-1"
                 />
-                {validationErrors.projectName && (
-                  <span className="text-red-500 text-sm">
-                    {validationErrors.projectName}
-                  </span>
-                )}
-              </div>
-            </div>
-            {/* 유의사항 동의 기존 UI 유지 */}
-            {/* 유의사항 동의 */}
-            <div className="flex flex-col sm:flex-col md:flex-row items-start justify-between gap-2 md:gap-4 sm:gap-2">
-              <label className="w-full md:w-[9rem] text-gray-600 font-medium pt-2">
-                유의사항
-              </label>
-              <div className="flex flex-col gap-4">
-                {/* 유의사항 내용 */}
-                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                  <h4 className="font-semibold text-gray-800 mb-3">
-                    현수막 표시내용의 금지, 제한 사항
-                  </h4>
-                  <ul className="text-sm text-gray-700 space-y-2 mb-4">
-                    <li>성적인 표현 암시, 인권침해(국제결혼, 신부 등)</li>
-                    <li>
-                      음란, 퇴폐성 및 청소년 보호, 선도에 저해 우려가 있는 내용
-                    </li>
-                    <li>
-                      사채, 대부업, 채권추심등에 관련된 내용, 시민정서에
-                      적합하지 않은 내용
-                    </li>
-                    <li>
-                      특정 개인, 단체 등의 가치관을 비방 또는 홍보하려는 내용
-                    </li>
-                    <li>
-                      기타 반사회적 내용 또는 시민정서에 적합하지 않다고
-                      판단되는 내용
-                    </li>
-                  </ul>
-
-                  <h4 className="font-semibold text-gray-800 mb-3">
-                    현수막 게시의 지연 또는 일시 중지
-                  </h4>
-                  <ul className="text-sm text-gray-700 space-y-2 mb-4">
-                    <li>
-                      • 법정공휴일 또는 강풍, 우천, 폭설 시에는 현수막 게시
-                      일정이 전후날로 변경 될 수 있습니다.
-                    </li>
-                    <li>
-                      • 현수막 게시 기간 중, 태풍, 재난, 긴급 공사 등의 사유가
-                      발생할 때에는 광고주에게 사전 통보 없이 게시를 일시 중지
-                      할 수 있습니다.
-                    </li>
-                  </ul>
-
-                  <div className="bg-red-50 border border-red-200 p-3 rounded">
-                    <h4 className="font-semibold text-red-700 mb-2">
-                      [유의사항]
-                    </h4>
-                    <p className="text-sm text-red-700">
-                      현수막게시대 게시 신청 시 아래 규약사항을 반드시
-                      숙지하시기 바라며, 숙지하지 못한 책임은 신청인에게
-                      있습니다. 또한 관련 규정을 위반한 경우에도 신청 및 게시가
-                      불가합니다.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-2">
-                  <input
-                    type="checkbox"
-                    id="agreement"
-                    checked={isAgreedCaution}
-                    onChange={(e) => {
-                      setIsAgreedCaution(e.target.checked);
-                      if (validationErrors.agreement) {
-                        setValidationErrors((prev) => ({
-                          ...prev,
-                          agreement: '',
-                        }));
-                      }
-                    }}
-                    className="w-4 h-4 mt-1"
-                  />
-                  <label
-                    htmlFor="agreement"
-                    className="text-sm text-gray-700 leading-relaxed"
-                  >
-                    <span className="text-red-500">*</span> 유의사항을 확인하고
-                    동의합니다.
-                  </label>
-                </div>
-                {validationErrors.agreement && (
-                  <span className="text-red-500 text-sm">
-                    {validationErrors.agreement}
-                  </span>
-                )}
-              </div>
-            </div>
-          </section>
-        </div>
-        {/* 우측 - 결제 정보 및 결제 버튼 */}
-        <div className="space-y-8 border border-solid border-gray-3 rounded-[0.375rem] p-[2.5rem] sm:p-[1.5rem]">
-          {/* 결제 방법 선택 */}
-          <section className="p-6 border rounded-lg shadow-sm">
-            <h2 className="text-1.25 text-gray-2 font-bold mb-4 border-b-solid border-black border-b-[0.1rem] pb-4">
-              결제 방법
-            </h2>
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <input
-                  type="radio"
-                  id="card"
-                  name="paymentMethod"
-                  value="card"
-                  checked={paymentMethod === 'card'}
-                  onChange={(e) =>
-                    setPaymentMethod(e.target.value as 'card' | 'bank_transfer')
-                  }
-                  className="w-4 h-4"
-                />
-                <label htmlFor="card" className="text-gray-700">
-                  카드 결제
+                <label
+                  htmlFor="agreement"
+                  className="text-sm text-gray-700 leading-relaxed"
+                >
+                  <span className="text-red-500">*</span> 유의사항을 확인하고
+                  동의합니다.
                 </label>
               </div>
-              <div className="flex items-center gap-3">
-                <input
-                  type="radio"
-                  id="bank_transfer"
-                  name="paymentMethod"
-                  value="bank_transfer"
-                  checked={paymentMethod === 'bank_transfer'}
-                  onChange={(e) =>
-                    setPaymentMethod(e.target.value as 'card' | 'bank_transfer')
-                  }
-                  className="w-4 h-4"
-                />
-                <label htmlFor="bank_transfer" className="text-gray-700">
-                  계좌이체
-                </label>
-              </div>
-              <div className="flex items-center gap-3">
-                <input
-                  type="radio"
-                  id="card"
-                  name="paymentMethod"
-                  value="card"
-                  checked={paymentMethod === 'card'}
-                  onChange={(e) =>
-                    setPaymentMethod(e.target.value as 'card' | 'bank_transfer')
-                  }
-                  className="w-4 h-4"
-                />
-                <label htmlFor="card" className="text-gray-700">
-                  네이버페이
-                </label>
-              </div>
-              <div className="flex items-center gap-3">
-                <input
-                  type="radio"
-                  id="card"
-                  name="paymentMethod"
-                  value="card"
-                  checked={paymentMethod === 'card'}
-                  onChange={(e) =>
-                    setPaymentMethod(e.target.value as 'card' | 'bank_transfer')
-                  }
-                  className="w-4 h-4"
-                />
-                <label htmlFor="card" className="text-gray-700">
-                  카카오페이
-                </label>
-              </div>
+              {validationErrors.agreement && (
+                <span className="text-red-500 text-sm">
+                  {validationErrors.agreement}
+                </span>
+              )}
             </div>
           </section>
 
-          {/* 계좌이체 정보 */}
-          {paymentMethod === 'bank_transfer' && bankInfo && (
-            <section className="p-6 border rounded-lg shadow-sm">
-              <h2 className="text-1.25 text-gray-2 font-bold mb-4 border-b-solid border-black border-b-[0.1rem] pb-4">
-                계좌 정보
-              </h2>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">은행:</span>
-                  <span className="font-medium">{bankInfo.bank_name}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">계좌번호:</span>
-                  <span className="font-medium">{bankInfo.account_number}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">예금주:</span>
-                  <span className="font-medium">{bankInfo.depositor}</span>
-                </div>
-              </div>
-            </section>
-          )}
-
-          {/* 가격 정보 */}
+          {/* 전체 가격 정보 */}
           <section className="p-6 border rounded-lg shadow-sm">
             <h2 className="text-1.25 text-gray-2 font-bold mb-4 border-b-solid border-black border-b-[0.1rem] pb-4">
-              가격 정보
+              전체 가격 정보
             </h2>
             <div className="space-y-3">
               <div className="flex justify-between">
@@ -1239,36 +1440,6 @@ function PaymentPageContent() {
               </div>
             </div>
           </section>
-
-          {/* 세금계산서 */}
-          <section className="p-6 border rounded-lg shadow-sm">
-            <h2 className="text-1.25 text-gray-2 font-bold mb-4 border-b-solid border-black border-b-[0.1rem] pb-4">
-              세금계산서
-            </h2>
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="taxInvoice"
-                checked={taxInvoice}
-                onChange={(e) => setTaxInvoice(e.target.checked)}
-                className="w-4 h-4"
-              />
-              <label htmlFor="taxInvoice" className="text-gray-700">
-                세금계산서 발급을 원합니다
-              </label>
-            </div>
-          </section>
-
-          {/* 결제 버튼 */}
-          <Button
-            onClick={
-              isApprovedOrder ? handleApprovedOrderPayment : handlePayment
-            }
-            disabled={isProcessing}
-            className="w-full bg-blue-600 text-white py-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
-          >
-            {isProcessing ? '처리 중...' : '결제하기'}
-          </Button>
         </div>
       </div>
 
@@ -1280,6 +1451,149 @@ function PaymentPageContent() {
           orderNumber={paymentSuccessData.orderNumber}
           totalAmount={paymentSuccessData.totalAmount}
         />
+      )}
+
+      {/* 구별 결제 모달 */}
+      {paymentModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-bold mb-4">{paymentModalOpen} 결제</h3>
+
+            {/* 결제 방법 선택 */}
+            <div className="mb-4 flex flex-col gap-2">
+              <h4 className="font-semibold mb-2">결제 방법</h4>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 h-8">
+                  <input
+                    type="radio"
+                    id="modal-card"
+                    name="modalPaymentMethod"
+                    value="card"
+                    checked={modalPaymentMethod === 'card'}
+                    onChange={(e) =>
+                      setModalPaymentMethod(
+                        e.target.value as 'card' | 'bank_transfer'
+                      )
+                    }
+                    className="w-4 h-4"
+                  />
+                  <label htmlFor="modal-card">카드 결제</label>
+                </div>
+                <div className="flex items-center gap-2 h-8">
+                  <input
+                    type="radio"
+                    id="modal-bank"
+                    name="modalPaymentMethod"
+                    value="bank_transfer"
+                    checked={modalPaymentMethod === 'bank_transfer'}
+                    onChange={(e) =>
+                      setModalPaymentMethod(
+                        e.target.value as 'card' | 'bank_transfer'
+                      )
+                    }
+                    className="w-4 h-4"
+                  />
+                  <label htmlFor="modal-bank">계좌이체</label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    id="modal-card"
+                    name="modalPaymentMethod"
+                    value="card"
+                    checked={modalPaymentMethod === 'card'}
+                    onChange={(e) =>
+                      setModalPaymentMethod(
+                        e.target.value as 'card' | 'bank_transfer'
+                      )
+                    }
+                    className="w-4 h-4"
+                  />
+                  <Image
+                    src="/svg/kakao-pay.svg"
+                    alt="kakao-pay"
+                    width={50}
+                    height={30}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    id="modal-card"
+                    name="modalPaymentMethod"
+                    value="card"
+                    checked={modalPaymentMethod === 'card'}
+                    onChange={(e) =>
+                      setModalPaymentMethod(
+                        e.target.value as 'card' | 'bank_transfer'
+                      )
+                    }
+                    className="w-4 h-4"
+                  />
+
+                  <Image
+                    src="/svg/naver-pay.svg"
+                    alt="bnaver-pay"
+                    width={50}
+                    height={30}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 세금계산서 */}
+            <div className="mb-4">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="modal-tax"
+                  checked={modalTaxInvoice}
+                  onChange={(e) => setModalTaxInvoice(e.target.checked)}
+                  className="w-4 h-4"
+                />
+                <label htmlFor="modal-tax">세금계산서 발급을 원합니다</label>
+              </div>
+            </div>
+
+            {/* 결제 금액 */}
+            <div className="mb-4 p-3 bg-gray-50 rounded">
+              <div className="flex justify-between font-semibold">
+                <span>결제 금액:</span>
+                <span>
+                  {groupedItems
+                    .find((g) => g.district === paymentModalOpen)
+                    ?.totalPrice.toLocaleString()}
+                  원
+                </span>
+              </div>
+            </div>
+
+            {/* 버튼 */}
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setPaymentModalOpen(null)}
+                className="flex-1 bg-gray-500 text-white py-2 rounded"
+              >
+                취소
+              </Button>
+              <Button
+                onClick={async () => {
+                  const group = groupedItems.find(
+                    (g) => g.district === paymentModalOpen
+                  );
+                  if (group) {
+                    await handleSingleGroupPayment(group);
+                    setPaymentModalOpen(null);
+                  }
+                }}
+                disabled={isProcessing}
+                className="flex-1 bg-blue-600 text-white py-2 rounded"
+              >
+                {isProcessing ? '처리 중...' : '결제하기'}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </main>
   );
