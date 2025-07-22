@@ -10,7 +10,7 @@ import GalleryIcon from '@/src/icons/gallery.svg';
 import ListIcon from '@/src/icons/list.svg';
 import DocumentIcon from '@/public/svg/document.svg';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCart } from '../contexts/cartContext';
 import { useProfile } from '../contexts/profileContext';
 import { useAuth } from '../contexts/authContext';
@@ -248,6 +248,13 @@ export default function DisplayDetailPage({
   //   setSelectedIdsSecondHalf([]);
   // }, [selectedHalfPeriod]);
 
+  // district가 변경될 때 panelTypeFilter를 'panel'로 리셋
+  useEffect(() => {
+    if (currentSetPanelTypeFilter) {
+      currentSetPanelTypeFilter('panel');
+    }
+  }, [district, currentSetPanelTypeFilter]);
+
   // 게시일 7일 전까지 신청 가능 여부 확인 (한국시간 기준)
   const isPeriodAvailable = (periodStartDate: string) => {
     const now = new Date();
@@ -478,6 +485,10 @@ export default function DisplayDetailPage({
     } else if (!isAllDistrictsView && item.option !== '전체') {
       // 개별 구 페이지에서 다른 구를 선택했을 때 해당 구의 페이지로 이동
       const districtCode = getDistrictCode(item.option);
+      // panelTypeFilter를 'panel'로 리셋
+      if (currentSetPanelTypeFilter) {
+        currentSetPanelTypeFilter('panel');
+      }
       router.push(`/banner-display/${districtCode}`);
     }
   };
@@ -1096,22 +1107,31 @@ export default function DisplayDetailPage({
 
   // 상하반기 탭 노출 조건 함수
   const showHalfPeriodTabs =
-    // 송파구, 용산구: 현수막게시대 탭과 반자동 탭에서만 (상단광고 탭에서는 숨김)
-    ((isSongpaOrYongsan &&
-      (currentPanelTypeFilter === 'panel' ||
-        currentPanelTypeFilter === 'semi_auto')) ||
+    // 송파구, 용산구: 상단광고 탭에서는 숨김, 나머지 탭에서는 표시
+    ((isSongpaOrYongsan && currentPanelTypeFilter !== 'top_fixed') ||
       // 관악구, 서대문구: 항상
-
       districtObj?.code === 'gwanak' ||
       districtObj?.code === 'seodaemun' ||
-      // 마포구: 연립형, 저단형만
-      (isMapoDistrict &&
-        (mapoFilter === 'yeollip' || mapoFilter === 'jeodan'))) &&
+      // 마포구: 모든 탭에서 상하반기 탭 표시
+      isMapoDistrict) &&
     ((period && !isAllDistrictsView) ||
       (isAllDistrictsView &&
         selectedOption &&
         selectedOption.option !== '전체' &&
         selectedDistrictPeriod));
+
+  // // 디버그 로그 추가
+  // console.log('🔍 showHalfPeriodTabs Debug:', {
+  //   district: districtObj?.code,
+  //   isSongpaOrYongsan,
+  //   currentPanelTypeFilter,
+  //   isMapoDistrict,
+  //   period,
+  //   isAllDistrictsView,
+  //   selectedOption,
+  //   selectedDistrictPeriod,
+  //   showHalfPeriodTabs,
+  // });
 
   return (
     <main className="min-h-screen flex flex-col bg-white pb-10">

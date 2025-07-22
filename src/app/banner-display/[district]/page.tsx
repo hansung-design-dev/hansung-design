@@ -247,6 +247,27 @@ export default function BannerDisplayPage({
           districtObj?.name || district
         );
 
+        // 2. 기간 데이터 가져오기 (URL 파라미터에 없으면 API에서 가져오기)
+        if (!period && districtObj?.name) {
+          try {
+            const response = await fetch(
+              `/api/display-period?district=${encodeURIComponent(
+                districtObj.name
+              )}&display_type=banner_display`
+            );
+            const result = await response.json();
+            if (result.success) {
+              setPeriod(result.data);
+              console.log('🔍 Period data from API:', result.data);
+            }
+          } catch (err) {
+            console.warn(
+              `Failed to fetch period for ${districtObj.name}:`,
+              err
+            );
+          }
+        }
+
         console.log('🔍 Fetched data:', data);
         console.log(
           '🔍 Panel types in data:',
