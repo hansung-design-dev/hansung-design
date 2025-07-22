@@ -33,7 +33,7 @@ export default function LEDDisplayDetailPage({
   billboards,
   dropdownOptions,
   defaultView = 'gallery',
-
+  districtData,
   bankInfo,
 }: {
   district: string;
@@ -41,7 +41,13 @@ export default function LEDDisplayDetailPage({
   billboards: LEDBillboard[];
   dropdownOptions: DropdownOption[];
   defaultView?: 'location' | 'gallery' | 'list';
-
+  districtData?: {
+    id: string;
+    name: string;
+    code: string;
+    logo_image_url?: string;
+    panel_status?: string;
+  } | null;
   bankInfo?: {
     id: string;
     bank_name: string;
@@ -60,6 +66,7 @@ export default function LEDDisplayDetailPage({
   const [selectedOption, setSelectedOption] = useState<{
     id: number;
     option: string;
+    panel_status?: string;
   } | null>(() => {
     // 현재 구에 해당하는 옵션 찾기
     if (districtObj?.name) {
@@ -85,14 +92,24 @@ export default function LEDDisplayDetailPage({
 
   // dropdownOptions가 변경될 때 selectedOption 업데이트
   useEffect(() => {
+    console.log('🔍 LED Detail - districtObj:', districtObj);
+    console.log('🔍 LED Detail - dropdownOptions:', dropdownOptions);
+    console.log('🔍 LED Detail - selectedOption:', selectedOption);
+
     if (districtObj?.name && dropdownOptions.length > 0) {
       const matchingOption = dropdownOptions.find(
         (option) => option.option === districtObj.name
       );
+      console.log('🔍 LED Detail - matchingOption:', matchingOption);
+
       if (
         matchingOption &&
         (!selectedOption || selectedOption.option !== matchingOption.option)
       ) {
+        console.log(
+          '🔍 LED Detail - setting selectedOption to:',
+          matchingOption
+        );
         setSelectedOption(matchingOption);
       }
     }
@@ -128,18 +145,35 @@ export default function LEDDisplayDetailPage({
   // 구 이름을 코드로 변환하는 함수
   const getDistrictCode = (districtName: string): string => {
     const districtMap: Record<string, string> = {
+      강남구: 'gangnam',
       강동구: 'gangdong',
+      강북구: 'gangbuk',
+      강서구: 'gangseo',
       관악구: 'gwanak',
+      광진구: 'gwangjin',
+      구로구: 'guro',
+      금천구: 'geumcheon',
+      노원구: 'nowon',
+      도봉구: 'dobong',
+      동대문구: 'dongdaemun',
+      동작구: 'dongjak',
       마포구: 'mapo',
       서대문구: 'seodaemun',
+      서초구: 'seocho',
+      성동구: 'seongdong',
+      성북구: 'seongbuk',
       송파구: 'songpa',
+      양천구: 'yangcheon',
+      영등포구: 'yeongdeungpo',
       용산구: 'yongsan',
-      강북구: 'gangbuk',
-      광진구: 'gwangjin',
-      동작구: 'dongjak',
-      동대문구: 'dongdaemun',
+      은평구: 'eunpyeong',
+      종로구: 'jongno',
+      중구: 'jung',
+      중랑구: 'jungnang',
     };
-    return districtMap[districtName] || districtName.replace('구', '');
+    const result = districtMap[districtName] || districtName.replace('구', '');
+    console.log('🔍 getDistrictCode - input:', districtName, 'output:', result);
+    return result;
   };
 
   const filteredByDistrict =
@@ -181,16 +215,29 @@ export default function LEDDisplayDetailPage({
   };
 
   const handleDropdownChange = async (item: { id: number; option: string }) => {
+    console.log('🔍 handleDropdownChange called with:', item);
     setSelectedOption(item);
 
     if (item.option === '전체보기') {
+      console.log('🔍 Navigating to all districts');
       router.push('/led-display/all');
       return;
     }
 
+    // 구 이름 그대로 사용 (이미 (준비 중) 텍스트가 제거됨)
+    const districtName = item.option;
+    console.log('🔍 Selected district name:', districtName);
+
     // 개별 구 페이지에서 다른 구를 선택했을 때 해당 구의 페이지로 이동
     if (!isAllDistrictsView && item.option !== '전체보기') {
-      const districtCode = getDistrictCode(item.option);
+      const districtCode = getDistrictCode(districtName);
+      console.log(
+        '🔍 Converting district name to code:',
+        districtName,
+        '->',
+        districtCode
+      );
+      console.log('🔍 Navigating to:', `/led-display/${districtCode}`);
       router.push(`/led-display/${districtCode}`);
     }
   };
@@ -257,6 +304,7 @@ export default function LEDDisplayDetailPage({
           panel_type: item.panel_type,
           panel_info_id: item.panel_info_id, // 원본 UUID
           panel_code: item.panel_code?.toString(),
+          photo_url: item.photo_url || undefined, // 게시대 사진 URL 추가
           // 사용자 프로필 정보 추가
           contact_person_name: defaultProfile?.contact_person_name,
           phone: defaultProfile?.phone,
@@ -272,6 +320,8 @@ export default function LEDDisplayDetailPage({
           district: cartItem.district,
           price: cartItem.price,
           type: cartItem.type,
+          photo_url: cartItem.photo_url,
+          hasPhotoUrl: !!cartItem.photo_url,
         });
         dispatch({
           type: 'ADD_ITEM',
@@ -310,6 +360,7 @@ export default function LEDDisplayDetailPage({
         panel_type: item.panel_type,
         panel_info_id: item.panel_info_id, // 원본 UUID
         panel_code: item.panel_code?.toString(),
+        photo_url: item.photo_url || undefined, // 게시대 사진 URL 추가
         // 사용자 프로필 정보 추가
         contact_person_name: defaultProfile?.contact_person_name,
         phone: defaultProfile?.phone,
@@ -325,6 +376,8 @@ export default function LEDDisplayDetailPage({
         district: cartItem.district,
         price: cartItem.price,
         type: cartItem.type,
+        photo_url: cartItem.photo_url,
+        hasPhotoUrl: !!cartItem.photo_url,
       });
       dispatch({
         type: 'ADD_ITEM',
@@ -377,7 +430,7 @@ export default function LEDDisplayDetailPage({
                 />
               )}
               <Image
-                src="/images/led-display.jpeg"
+                src={item.photo_url || '/images/led-display.jpeg'}
                 alt={item.name}
                 fill
                 className={`md:object-cover sm:object-cover `}
@@ -496,7 +549,7 @@ export default function LEDDisplayDetailPage({
                 >
                   <div className="relative aspect-[1/1] w-full overflow-hidden rounded-lg">
                     <Image
-                      src="/images/led-display.jpeg"
+                      src={item.photo_url || '/images/led-display.jpeg'}
                       alt={item.name}
                       fill
                       className="object-cover"
@@ -564,23 +617,28 @@ export default function LEDDisplayDetailPage({
         </button>
         <div className="mb-8">
           <div className="flex gap-2 items-center">
-            {districtObj && (
+            {(districtObj || selectedOption || districtData) && (
               <Image
                 src={
-                  selectedOption?.option && selectedOption.option !== '전체보기'
-                    ? `/images/district-icon/${getDistrictCode(
-                        selectedOption.option
-                      )}-gu.png`
-                    : districtObj.logo
+                  districtData?.logo_image_url ||
+                  `/images/district-icon/${district}-gu.png`
                 }
-                alt={selectedOption?.option || districtObj.name}
+                alt={
+                  districtData?.name ||
+                  selectedOption?.option ||
+                  districtObj?.name ||
+                  '구 로고'
+                }
                 width={50}
                 height={50}
                 className="inline-block align-middle mr-2"
               />
             )}
             <h2 className="text-2.25 font-900 font-gmarket inline-block align-middle">
-              {selectedOption?.option || districtObj?.name}
+              {districtData?.name ||
+                selectedOption?.option ||
+                districtObj?.name ||
+                '도봉구'}
             </h2>
           </div>
 
@@ -635,7 +693,7 @@ export default function LEDDisplayDetailPage({
         {/* Content Section */}
         <motion.div initial="initial" animate="animate" variants={fadeInUp}>
           {billboards.length === 0 ? (
-            // 준비 중인 경우 메시지 표시
+            // 데이터가 없는 경우 메시지 표시
             <div className="flex flex-col items-center justify-center py-20">
               <div className="text-2xl font-bold text-gray-600 mb-4">
                 현재 준비 중입니다

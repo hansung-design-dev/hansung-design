@@ -26,7 +26,14 @@ export default defineConfig({
       pretendard: ['Pretendard', 'sans-serif'],
       gmarket: ['Gmarket Sans', 'sans-serif'],
     },
-    safelist: ['font-gmarket'],
+    safelist: [
+      'hidden',
+      'sm:inline',
+      'md:hidden',
+      'lg:hidden',
+      'font-gmarket',
+      // 필요한 모든 조합을 여기에 추가
+    ],
     fontSize: {
       '4.375': '4.375rem',
       '3.75': '3.75rem',

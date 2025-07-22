@@ -46,13 +46,14 @@ export interface BannerDisplayData {
       total_price: number;
     }[];
   }[];
+  banner_slot_inventory?: BannerSlotInventory[];
   inventory_info?: {
     current_period: {
       total_slots: number;
       available_slots: number;
       closed_slots: number;
-      period: string;
-      year_month: string;
+      period: string | undefined;
+      year_month: string | undefined;
     } | null;
     first_half: {
       total_slots: number;
@@ -65,6 +66,104 @@ export interface BannerDisplayData {
       closed_slots: number;
     } | null;
   };
+}
+
+// 추가 타입 정의들
+interface RegionGuDisplayPeriod {
+  id: string;
+  year_month: string;
+  period: string;
+  period_from: string;
+  period_to: string;
+}
+
+interface BannerSlotInventory {
+  id: string;
+  total_slots: number;
+  available_slots: number;
+  closed_slots: number;
+  region_gu_display_periods?: RegionGuDisplayPeriod;
+}
+
+// interface PanelDataItem {
+//   region_gu: {
+//     id: string;
+//     name: string;
+//     code: string;
+//     logo_image_url: string | null;
+//     is_active: string;
+//   };
+//   panel_status: string;
+// }
+
+interface DistrictMapItem {
+  id: string;
+  name: string;
+  code: string;
+  logo_image_url: string | null;
+  panel_status: string;
+  pricePolicies: {
+    id: string;
+    price_usage_type: string;
+    tax_price: number;
+    road_usage_fee: number;
+    advertising_fee: number;
+    total_price: number;
+  }[];
+}
+
+interface PanelInfoWithSlots {
+  id: string;
+  panel_type: string;
+  banner_slot_info: {
+    slot_number: number;
+    banner_slot_price_policy: {
+      id: string;
+      price_usage_type: string;
+      tax_price: number;
+      road_usage_fee: number;
+      advertising_fee: number;
+      total_price: number;
+    }[];
+  }[];
+}
+
+interface BankInfoData {
+  id: string;
+  bank_name: string;
+  account_number: string;
+  depositor: string;
+  region_gu: {
+    id: string;
+    name: string;
+  };
+  display_types: {
+    id: string;
+    name: string;
+  };
+}
+
+interface ProcessedDistrictData {
+  id: string;
+  name: string;
+  code: string;
+  logo_image_url: string | null;
+  panel_status: string;
+  period: {
+    first_half_from: string;
+    first_half_to: string;
+    second_half_from: string | null;
+    second_half_to: string | null;
+  } | null;
+  bank_info: BankInfoData | null;
+  pricePolicies: {
+    id: string;
+    price_usage_type: string;
+    tax_price: number;
+    road_usage_fee: number;
+    advertising_fee: number;
+    total_price: number;
+  }[];
 }
 
 // 현수막 게시대 타입 ID 조회
@@ -120,7 +219,7 @@ async function getBannerDisplaysByDistrict(districtName: string) {
     )}`;
     console.log('🔍 Target year month for inventory:', targetYearMonth);
 
-    let query = supabase
+    const query = supabase
       .from('panel_info')
       .select(
         `
@@ -176,19 +275,8 @@ async function getBannerDisplaysByDistrict(districtName: string) {
       .eq('display_type_id', (await getBannerDisplayTypeId()).id)
       .eq('panel_status', 'active');
 
-    // 송파구: panel_type = 'panel'인 것만 조회
-    if (districtName === '송파구') {
-      query = query.eq('panel_type', 'panel');
-    }
-    // 용산구: panel_type = 'with_lighting', 'no_lighting', 'semi_auto', 'panel'인 것만 조회
-    else if (districtName === '용산구') {
-      query = query.in('panel_type', [
-        'with_lighting',
-        'no_lighting',
-        'semi_auto',
-        'panel',
-      ]);
-    }
+    // 송파구, 용산구: 모든 panel_type 조회 (프론트엔드에서 banner_type으로 필터링)
+    // API에서는 모든 데이터를 가져오고, 프론트엔드에서 탭별로 필터링
 
     const { data, error } = await query.order('panel_code', {
       ascending: true,
@@ -199,26 +287,22 @@ async function getBannerDisplaysByDistrict(districtName: string) {
     }
 
     // 재고 정보를 기간별로 매핑하여 데이터에 추가
-    const dataWithInventory = data?.map((item) => {
+    const dataWithInventory = data?.map((item: BannerDisplayData) => {
       // 현재 기간의 재고 정보 찾기
       const currentPeriodInventory = item.banner_slot_inventory?.find(
-        (inv: { region_gu_display_periods?: { year_month?: string } }) =>
+        (inv: BannerSlotInventory) =>
           inv.region_gu_display_periods?.year_month === targetYearMonth
       );
 
       // 상하반기별 재고 정보 매핑
       const firstHalfInventory = item.banner_slot_inventory?.find(
-        (inv: {
-          region_gu_display_periods?: { year_month?: string; period?: string };
-        }) =>
+        (inv: BannerSlotInventory) =>
           inv.region_gu_display_periods?.year_month === targetYearMonth &&
           inv.region_gu_display_periods?.period === 'first_half'
       );
 
       const secondHalfInventory = item.banner_slot_inventory?.find(
-        (inv: {
-          region_gu_display_periods?: { year_month?: string; period?: string };
-        }) =>
+        (inv: BannerSlotInventory) =>
           inv.region_gu_display_periods?.year_month === targetYearMonth &&
           inv.region_gu_display_periods?.period === 'second_half'
       );
@@ -260,7 +344,7 @@ async function getBannerDisplaysByDistrict(districtName: string) {
       totalCount: dataWithInventory?.length || 0,
       targetYearMonth,
       panelTypes:
-        dataWithInventory?.map((item) => ({
+        dataWithInventory?.map((item: BannerDisplayData) => ({
           panel_code: item.panel_code,
           panel_type: item.panel_type,
           nickname: item.nickname,
@@ -366,7 +450,8 @@ async function getBannerDisplayCountsByDistrict() {
     // 구별 개수 집계
     const counts: Record<string, number> = {};
 
-    (data as unknown as { region_gu: { name: string } }[])?.forEach((item) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (data as any[])?.forEach((item) => {
       const districtName = item.region_gu.name;
       counts[districtName] = (counts[districtName] || 0) + 1;
     });
@@ -442,24 +527,7 @@ async function getAllDistrictsData() {
 
     // 2. 카운트 집계 및 가격 정보 수집
     const countMap: Record<string, number> = {};
-    const districtsMap: Record<
-      string,
-      {
-        id: string;
-        name: string;
-        code: string;
-        logo_image_url: string | null;
-        panel_status: string;
-        pricePolicies: {
-          id: string;
-          price_usage_type: string;
-          tax_price: number;
-          road_usage_fee: number;
-          advertising_fee: number;
-          total_price: number;
-        }[];
-      }
-    > = {};
+    const districtsMap: Record<string, DistrictMapItem> = {};
 
     // 3. 카운트 집계 및 데이터 처리 (두 단계 조건 적용)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -492,7 +560,68 @@ async function getAllDistrictsData() {
 
     // 5. 각 구별로 신청기간과 계좌번호 정보를 가져와서 조합
     const processedDistricts = await Promise.all(
-      basicDistricts.map(async (district) => {
+      basicDistricts.map(async (district): Promise<ProcessedDistrictData> => {
+        // 대표 패널의 가격 정책 정보 조회 (panel, with_lighting, no_lighting, multi_panel, lower_panel, semi_auto, slot_number=1)
+        let pricePolicies: {
+          id: string;
+          price_usage_type: string;
+          tax_price: number;
+          road_usage_fee: number;
+          advertising_fee: number;
+          total_price: number;
+        }[] = [];
+
+        const { data: panelInfoList } = await supabase
+          .from('panel_info')
+          .select(
+            `id, panel_type, banner_slot_info (slot_number, banner_slot_price_policy (*))`
+          )
+          .eq('region_gu_id', district.id)
+          .eq('display_type_id', (await getBannerDisplayTypeId()).id)
+          .eq('panel_status', 'active')
+          .in('panel_type', [
+            'panel',
+            'with_lighting',
+            'no_lighting',
+            'multi_panel',
+            'lower_panel',
+            'semi_auto',
+          ])
+          .order('id', { ascending: true })
+          .limit(20); // 여러 패널이 있을 수 있으니 20개까지 조회
+
+        if (panelInfoList && panelInfoList.length > 0) {
+          // slot_number=1인 banner_slot_info만 추출
+          const slotInfos = panelInfoList.flatMap((panel: PanelInfoWithSlots) =>
+            (panel.banner_slot_info || []).filter(
+              (slot) => slot.slot_number === 1
+            )
+          );
+          // 모든 슬롯의 price_policy를 합쳐서 unique하게
+          const allPolicies = slotInfos.flatMap(
+            (slot) => slot.banner_slot_price_policy || []
+          );
+          // price_usage_type별로 첫 번째만 남기기
+          const uniquePolicies: Record<
+            string,
+            {
+              id: string;
+              price_usage_type: string;
+              tax_price: number;
+              road_usage_fee: number;
+              advertising_fee: number;
+              total_price: number;
+            }
+          > = {};
+
+          for (const policy of allPolicies) {
+            if (!uniquePolicies[policy.price_usage_type]) {
+              uniquePolicies[policy.price_usage_type] = policy;
+            }
+          }
+          pricePolicies = Object.values(uniquePolicies);
+        }
+
         // 한국 시간대로 현재 날짜 계산
         const now = new Date();
         const koreaTime = new Date(now.getTime() + 9 * 60 * 60 * 1000); // UTC+9 (한국시간)
@@ -544,11 +673,16 @@ async function getAllDistrictsData() {
           periodError,
         });
 
-        let currentPeriodData = null;
+        let currentPeriodData: {
+          first_half_from: string;
+          first_half_to: string;
+          second_half_from: string | null;
+          second_half_to: string | null;
+        } | null = null;
 
         if (periodDataList && periodDataList.length > 0 && !periodError) {
           // DB에서 가져온 기간 데이터 사용
-          const periods = periodDataList.map((p) => ({
+          const periods = periodDataList.map((p: RegionGuDisplayPeriod) => ({
             period_from: p.period_from,
             period_to: p.period_to,
             period: p.period,
@@ -593,9 +727,9 @@ async function getAllDistrictsData() {
           code: district.code,
           logo_image_url: district.logo_image_url,
           panel_status: district.panel_status,
-          period: currentPeriodData || null,
-          bank_info: bankData || null,
-          pricePolicies: district.pricePolicies || [],
+          period: currentPeriodData,
+          bank_info: bankData as BankInfoData | null,
+          pricePolicies: pricePolicies,
         };
       })
     );

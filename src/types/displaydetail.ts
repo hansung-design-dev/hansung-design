@@ -135,6 +135,7 @@ export interface ListItem {
 export interface DropdownOption {
   id: number;
   option: string;
+  panel_status?: string;
 }
 
 export interface PanelGuideline {

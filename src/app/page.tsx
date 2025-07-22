@@ -5,6 +5,7 @@ import Nav from '../components/layouts/nav';
 import Section from '../components/section';
 import FAQ from '../components/layouts/faq';
 import Image from 'next/image';
+import React from 'react';
 
 interface HomepageContent {
   id: string;
@@ -79,8 +80,8 @@ export default function Home() {
           <Image
             src={mainSection?.main_image_url || '/images/landing/main-part.png'}
             alt="Screen section image"
-            width={1000}
-            height={1000}
+            width={10000}
+            height={10000}
             className="w-full h-full object-cover  sm:min-h-[48rem] sm:object-left-bottom"
           />
           <div className="absolute lg:bottom-[6rem]  md:bottom-[2rem] lg:left-[6rem] sm:left-[2rem] text-white sm:bottom-[6rem]">
@@ -103,23 +104,36 @@ export default function Home() {
             </h2>
             <p className="lg:text-1 md:text-0.875 lg:font-400 md:font-200 lg:line-height-6 md:line-height-5 sm:text-0.75 sm:font-300 sm:line-height-5 sm:hidden lg:block md:block">
               {mainSection?.description ? (
-                <span
-                  dangerouslySetInnerHTML={{ __html: mainSection.description }}
-                />
+                // DB에서 불러온 description을 <br> 기준으로 split하여 줄바꿈 처리
+                (() => {
+                  const lines = mainSection.description.split('<br>');
+                  return (
+                    <>
+                      {lines.map((line, idx) => (
+                        <React.Fragment key={idx}>
+                          {line}
+                          {idx !== lines.length - 1 && (
+                            <br className="hidden sm:inline" />
+                          )}
+                        </React.Fragment>
+                      ))}
+                    </>
+                  );
+                })()
               ) : (
                 <>
                   디지털 광고와 공공디자인이 결합된 혁신적인 솔루션을 통해{' '}
                   <br className="lg:hidden md:hidden sm:inline" />
                   공간을 효율적으로 활용하고,
-                  <br className="sm:hidden lg:inline md:inline" /> 브랜드 가치를
-                  높이며, <br className="lg:hidden md:hidden" />
+                  <br className="lg:inline md:inline sm:inline" /> 브랜드 가치를
+                  높이며, <br className="lg:hidden md:hidden sm:inline" />
                   도시를 더욱 스마트하게 변화시킵니다.
                   <br />
                   사람과 공간, 도시와 환경이 조화를 이루는 미래형 디자인,{' '}
-                  <br className="lg:hidden md:hidden" />
+                  <br className="lg:hidden md:hidden sm:inline" />
                   한성디자인이 만들어갑니다.
                   <br /> 공간을 효울적으로, 도시를 스마트하게, 브랜드의 가치를
-                  높이다
+                  높입니다
                 </>
               )}
             </p>

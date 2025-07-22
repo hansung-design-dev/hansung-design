@@ -7,7 +7,7 @@ import { useAuth } from '@/src/contexts/authContext';
 import { useProfile } from '@/src/contexts/profileContext';
 import Image from 'next/image';
 
-interface UserProfile {
+export interface UserProfile {
   id: string;
   profile_title: string;
   company_name?: string;
@@ -27,6 +27,7 @@ interface UserProfileModalProps {
   onClose: () => void;
   profileToEdit?: UserProfile | null; // 수정할 프로필 정보
   mode?: 'edit' | 'create'; // 'edit': 간편정보 수정 모드, 'create': 간편정보 추가 모드
+  className?: string; // 커스텀 클래스
   onConfirm?: (profileData: {
     profile_title: string;
     company_name: string;
@@ -178,6 +179,7 @@ export default function UserProfileModal({
   onClose,
   profileToEdit,
   mode = 'create',
+  className = '',
   onConfirm,
 }: UserProfileModalProps) {
   const router = useRouter();
@@ -564,7 +566,9 @@ export default function UserProfileModal({
               // 장바구니 모드: 드롭다운
               <div className="relative w-[80%]">
                 <div
-                  className={`px-3 py-4 border-solid border-1 border-gray-300 rounded-lg cursor-pointer flex items-center justify-between ${
+                  className={`px-3 ${
+                    className.includes('compact') ? 'py-2' : 'py-4'
+                  } border-solid border-1 border-gray-300 rounded-lg cursor-pointer flex items-center justify-between ${
                     userProfiles.length > 0
                       ? 'hover:border-gray-400'
                       : 'bg-gray-100 cursor-not-allowed'
@@ -645,7 +649,9 @@ export default function UserProfileModal({
               onChange={(e) =>
                 handleInputChange('contact_person_name', e.target.value)
               }
-              className="w-[80%] px-3 py-4 border-solid border-1 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-1"
+              className={`w-[80%] px-3 ${
+                className.includes('compact') ? 'py-2' : 'py-4'
+              } border-solid border-1 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-1`}
               placeholder="담당자명을 입력하세요"
             />
           </div>
@@ -659,7 +665,9 @@ export default function UserProfileModal({
               type="text"
               value={formData.phone}
               onChange={(e) => handleInputChange('phone', e.target.value)}
-              className="w-[80%] px-3 py-4 border-solid border-1 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-1"
+              className={`w-[80%] px-3 ${
+                className.includes('compact') ? 'py-2' : 'py-4'
+              } border-solid border-1 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-1`}
               placeholder="010-1234-5678"
             />
           </div>
@@ -673,7 +681,9 @@ export default function UserProfileModal({
               type="email"
               value={formData.email}
               onChange={(e) => handleInputChange('email', e.target.value)}
-              className="w-[80%] px-3 py-4 border-solid border-1 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-1"
+              className={`w-[80%] px-3 ${
+                className.includes('compact') ? 'py-2' : 'py-4'
+              } border-solid border-1 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-1`}
               placeholder="이메일을 입력하세요"
             />
           </div>
@@ -689,7 +699,9 @@ export default function UserProfileModal({
               onChange={(e) =>
                 handleInputChange('company_name', e.target.value)
               }
-              className="w-[80%] px-3 py-4 border-solid border-1 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-1"
+              className={`w-[80%] px-3 ${
+                className.includes('compact') ? 'py-2' : 'py-4'
+              } border-solid border-1 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-1`}
               placeholder="회사명을 입력하세요 (개인인 경우 비워두세요)"
             />
           </div>
@@ -710,7 +722,9 @@ export default function UserProfileModal({
                 />
                 <label
                   htmlFor="business-registration-file"
-                  className="px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors flex items-center gap-2"
+                  className={`px-4 ${
+                    className.includes('compact') ? 'py-2' : 'py-3'
+                  } bg-gray-100 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors flex items-center gap-2`}
                 >
                   <svg
                     width="16"
@@ -733,7 +747,9 @@ export default function UserProfileModal({
                     onClick={handleFileRemove}
                     size="sm"
                     variant="outlinedGray"
-                    className="px-3 py-3"
+                    className={`px-3 ${
+                      className.includes('compact') ? 'py-2' : 'py-3'
+                    }`}
                   >
                     삭제
                   </Button>
@@ -795,7 +811,9 @@ export default function UserProfileModal({
               type="text"
               value={formData.fax_number}
               onChange={(e) => handleInputChange('fax_number', e.target.value)}
-              className="w-[80%] px-3 py-4 border-solid border-1 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-1"
+              className={`w-[80%] px-3 ${
+                className.includes('compact') ? 'py-2' : 'py-4'
+              } border-solid border-1 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-1`}
               placeholder="02-1234-5678 (선택사항)"
             />
           </div>
