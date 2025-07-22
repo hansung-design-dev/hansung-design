@@ -24,7 +24,7 @@ import { CartItem } from '@/src/contexts/cartContext';
 // }
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import UserProfileModal from '@/src/components/modal/UserProfileModal';
-import type { UserProfile } from '@/src/components/modal/UserProfileModal';
+
 import ConsultationModal from '@/src/components/modal/ConsultationModal';
 import PeriodSelector from '@/src/components/PeriodSelector';
 // import CartItemAccordion from '@/src/components/cartItemAccordion';
@@ -69,7 +69,7 @@ function CartGroupCard({
   onDelete,
   isConsulting = false,
 }: {
-  title: string;
+  title: string | React.ReactNode;
   children: React.ReactNode;
   phoneList?: string[];
   isSelected?: boolean;
@@ -1303,10 +1303,29 @@ export default function Cart() {
     string | null
   >(null);
   const [bulkProfiles, setBulkProfiles] = useState<{
-    [district: string]: UserProfile | undefined;
+    [district: string]:
+      | {
+          contact_person_name: string;
+          phone: string;
+          company_name?: string;
+          email: string;
+          is_public_institution?: boolean;
+          is_company?: boolean;
+        }
+      | undefined;
   }>({});
   // 대표 프로필 선택 핸들러
-  const handleBulkProfileSelect = (district: string, profile: UserProfile) => {
+  const handleBulkProfileSelect = (
+    district: string,
+    profile: {
+      contact_person_name: string;
+      phone: string;
+      company_name?: string;
+      email: string;
+      is_public_institution?: boolean;
+      is_company?: boolean;
+    }
+  ) => {
     setBulkProfiles((prev) => ({ ...prev, [district]: profile }));
     setBulkProfileModalOpen(null);
     // 해당 구별 카드의 모든 아이템에 프로필 일괄 적용
@@ -1416,8 +1435,9 @@ export default function Cart() {
                                       대표 프로필 선택
                                     </Button>
                                     <span className="ml-2 text-xs text-blue-700 font-semibold">
-                                      {bulkProfiles[district]?.profile_title
-                                        ? `적용: ${bulkProfiles[district].profile_title}`
+                                      {bulkProfiles[district]
+                                        ?.contact_person_name
+                                        ? `적용: ${bulkProfiles[district].contact_person_name}`
                                         : '프로필 미선택'}
                                     </span>
                                     {bulkProfileModalOpen === district && (

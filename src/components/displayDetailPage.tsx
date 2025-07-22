@@ -1096,9 +1096,12 @@ export default function DisplayDetailPage({
 
   // 상하반기 탭 노출 조건 함수
   const showHalfPeriodTabs =
-    // 용산구, 송파구: 현수막게시대 탭만
-    ((isSongpaOrYongsan && currentPanelTypeFilter === 'panel') ||
+    // 송파구, 용산구: 현수막게시대 탭과 반자동 탭에서만 (상단광고 탭에서는 숨김)
+    ((isSongpaOrYongsan &&
+      (currentPanelTypeFilter === 'panel' ||
+        currentPanelTypeFilter === 'semi_auto')) ||
       // 관악구, 서대문구: 항상
+
       districtObj?.code === 'gwanak' ||
       districtObj?.code === 'seodaemun' ||
       // 마포구: 연립형, 저단형만

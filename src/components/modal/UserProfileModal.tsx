@@ -7,7 +7,7 @@ import { useAuth } from '@/src/contexts/authContext';
 import { useProfile } from '@/src/contexts/profileContext';
 import Image from 'next/image';
 
-interface UserProfile {
+export interface UserProfile {
   id: string;
   profile_title: string;
   company_name?: string;

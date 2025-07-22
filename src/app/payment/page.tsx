@@ -7,25 +7,23 @@ import { useCart } from '@/src/contexts/cartContext';
 import { useProfile } from '@/src/contexts/profileContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CartItem } from '@/src/contexts/cartContext';
-import { PaymentSuccessModal } from '@/src/components/modal/UserProfileModal';
 import CustomFileUpload from '@/src/components/ui/CustomFileUpload';
-import UserProfileModal from '@/src/components/modal/UserProfileModal';
-import type { UserProfile } from '@/src/components/modal/UserProfileModal';
 import Image from 'next/image';
 
-interface BankInfo {
+// UserProfile 타입 정의
+interface UserProfile {
   id: string;
-  bank_name: string;
-  account_number: string;
-  depositor: string;
-  region_gu: {
-    id: string;
-    name: string;
-  };
-  display_types: {
-    id: string;
-    name: string;
-  };
+  profile_title: string;
+  company_name?: string;
+  business_registration_file?: string;
+  phone: string;
+  email: string;
+  contact_person_name: string;
+  fax_number?: string;
+  is_default: boolean;
+  is_public_institution?: boolean;
+  is_company?: boolean;
+  created_at: string;
 }
 
 // 묶음 결제를 위한 그룹화된 아이템 인터페이스
@@ -54,31 +52,16 @@ interface GroupedCartItem {
 
 function PaymentPageContent() {
   const { user } = useAuth();
-  const { cart, dispatch } = useCart();
+  const { cart } = useCart();
   const { profiles } = useProfile();
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const [selectedItems, setSelectedItems] = useState<CartItem[]>([]);
   const [groupedItems, setGroupedItems] = useState<GroupedCartItem[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'bank_transfer'>(
-    'card'
-  );
-  const [bankInfo, setBankInfo] = useState<BankInfo | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [sendByEmail, setSendByEmail] = useState(false);
-  const [draftDeliveryMethod, setDraftDeliveryMethod] = useState<
-    'email' | 'upload'
-  >('upload');
   const [isApprovedOrder, setIsApprovedOrder] = useState(false);
-  const [taxInvoice, setTaxInvoice] = useState(false);
   const [isAgreedCaution, setIsAgreedCaution] = useState(false);
-  const [showPaymentSuccessModal, setShowPaymentSuccessModal] = useState(false);
-  const [paymentSuccessData, setPaymentSuccessData] = useState({
-    orderNumber: '',
-    totalAmount: 0,
-  });
   const [projectName, setProjectName] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [validationErrors, setValidationErrors] = useState<{
@@ -90,31 +73,7 @@ function PaymentPageContent() {
     fileUpload: '',
     agreement: '',
   });
-  const [userProfiles, setUserProfiles] = useState<
-    {
-      id: string;
-      profile_title: string;
-      company_name?: string;
-      business_registration_file?: string;
-      phone: string;
-      email: string;
-      contact_person_name: string;
-      fax_number?: string;
-      is_default: boolean;
-      is_public_institution?: boolean;
-      is_company?: boolean;
-      created_at: string;
-    }[]
-  >([]);
-
-  // 구별별 프로필 상태 관리
-  const [groupProfiles, setGroupProfiles] = useState<{
-    [district: string]: UserProfile | undefined;
-  }>({});
-  const [groupBulkProfile, setGroupBulkProfile] = useState<{
-    [district: string]: boolean;
-  }>({});
-  const [profileModalOpen, setProfileModalOpen] = useState<string | null>(null);
+  const [userProfiles, setUserProfiles] = useState<UserProfile[]>([]);
 
   // 일괄적용 상태 관리
   const [bulkApply, setBulkApply] = useState({
@@ -142,15 +101,13 @@ function PaymentPageContent() {
     'card' | 'bank_transfer'
   >('card');
   const [modalTaxInvoice, setModalTaxInvoice] = useState(false);
-  // 프로필 선택 핸들러
-  const handleProfileSelect = (district: string, profile: UserProfile) => {
-    setGroupProfiles((prev) => ({ ...prev, [district]: profile }));
-    setProfileModalOpen(null);
-  };
-  // 대표 프로필 선택 핸들러
-  const handleBulkProfileToggle = (district: string) => {
-    setGroupBulkProfile((prev) => ({ ...prev, [district]: !prev[district] }));
-  };
+
+  // 결제 처리 상태
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [completedDistricts, setCompletedDistricts] = useState<string[]>([]);
+  const [successModalOpen, setSuccessModalOpen] = useState(false);
+  const [successDistrict, setSuccessDistrict] = useState<string | null>(null);
 
   // 일괄적용 핸들러들
   const handleBulkProjectNameToggle = () => {
@@ -313,63 +270,6 @@ function PaymentPageContent() {
     });
   };
 
-  // 유효성 검사 함수
-  const validateForm = () => {
-    console.log('🔍 validateForm 시작');
-    console.log('🔍 projectName:', projectName);
-    console.log('🔍 sendByEmail:', sendByEmail);
-    console.log('🔍 selectedFile:', selectedFile?.name || '없음');
-    console.log('🔍 isAgreedCaution:', isAgreedCaution);
-
-    const errors = {
-      projectName: '',
-      fileUpload: '',
-      agreement: '',
-    };
-
-    // 1. 작업이름 검사
-    if (!projectName.trim()) {
-      errors.projectName = '작업이름을 입력해주세요.';
-      console.log('🔍 작업이름 검사 실패');
-    }
-
-    // 2. 파일업로드 방식 검사
-    if (!sendByEmail && !selectedFile) {
-      errors.fileUpload = '파일을 업로드하거나 이메일 전송을 선택해주세요.';
-      console.log('🔍 파일업로드 방식 검사 실패');
-    }
-
-    // 3. 유의사항 동의 검사
-    if (!isAgreedCaution) {
-      errors.agreement = '유의사항에 동의해주세요.';
-      console.log('🔍 유의사항 동의 검사 실패');
-    }
-
-    console.log('🔍 검사 결과 errors:', errors);
-    setValidationErrors(errors);
-    const isValid = !Object.values(errors).some((error) => error !== '');
-    console.log('🔍 최종 유효성 검사 결과:', isValid);
-    return isValid;
-  };
-
-  // 패널 타입 표시 함수
-  const getPanelTypeDisplay = (panelType: string) => {
-    const typeMap: Record<string, string> = {
-      panel: '현수막게시대',
-      top_fixed: '상단광고',
-      led: 'LED전자게시대',
-      multi_panel: '연립형',
-      lower_panel: '저단형',
-      bulletin_board: '시민/문화게시대',
-      semi_auto: '반자동',
-      with_lighting: '조명용',
-      no_lighting: '비조명용',
-      manual: '현수막게시대',
-      cultural_board: '시민/문화게시대',
-    };
-    return typeMap[panelType] || panelType;
-  };
-
   // URL 파라미터에서 선택된 아이템 ID들 가져오기
   useEffect(() => {
     const itemsParam = searchParams.get('items');
@@ -406,22 +306,12 @@ function PaymentPageContent() {
         }
       } catch (error) {
         console.error('Error parsing selected items:', error);
-        setError('선택된 상품 정보를 불러오는데 실패했습니다.');
+        // setError('선택된 상품 정보를 불러오는데 실패했습니다.'); // Removed setError
       }
     } else {
       console.log('🔍 Payment page - no items param found');
     }
   }, [searchParams, cart, isApprovedOrder]);
-
-  // sendByEmail 상태가 변경될 때 draftDeliveryMethod 업데이트
-  useEffect(() => {
-    setDraftDeliveryMethod(sendByEmail ? 'email' : 'upload');
-  }, [sendByEmail]);
-
-  // paymentMethod 상태 변경 감지
-  useEffect(() => {
-    console.log('🔍 paymentMethod 상태 변경됨:', paymentMethod);
-  }, [paymentMethod]);
 
   // selectedItems 상태 변경 감지
   useEffect(() => {
@@ -548,7 +438,7 @@ function PaymentPageContent() {
       }
     } catch (error) {
       console.error('Failed to fetch approved order items:', error);
-      setError('승인된 주문 정보를 불러오는데 실패했습니다.');
+      // setError('승인된 주문 정보를 불러오는데 실패했습니다.'); // Removed setError
     }
   };
 
@@ -627,7 +517,7 @@ function PaymentPageContent() {
         const data = await response.json();
 
         if (data.success) {
-          setBankInfo(data.data);
+          // setBankInfo(data.data); // Removed setBankInfo
         }
       } catch (error) {
         console.error('Error fetching bank info:', error);
@@ -678,297 +568,54 @@ function PaymentPageContent() {
     }
   };
 
-  // 결제 처리
-  const handlePayment = async () => {
-    console.log('🔍 handlePayment 시작');
-    if (!user) {
-      setError('로그인이 필요합니다.');
-      return;
-    }
-    if (!validateForm()) {
-      console.error('🔍 유효성 검사 실패');
-      return;
-    }
-    setIsProcessing(true);
-    setError(null);
-    try {
-      let allSuccess = true;
-      let totalAmountSum = 0;
-      let lastOrderNumber = '';
-      // 구별 주문 생성
-      for (const group of groupedItems) {
-        // 구별 프로필(추후 확장 가능, 현재는 defaultProfile 사용)
-        const groupProfile = groupProfiles[group.district] || defaultProfile;
-        if (!groupProfile) {
-          allSuccess = false;
-          setError('프로필 정보가 필요합니다.');
-          break;
-        }
-        // 주문 데이터 준비
-        const orderData = {
-          user_auth_id: user.id,
-          user_profile_id: groupProfile.id,
-          project_name: projectName,
-          draft_delivery_method: draftDeliveryMethod,
-          payment_method: paymentMethod,
-          total_amount: group.totalPrice,
-          tax_invoice: taxInvoice,
-          order_details: group.items.map((item) => ({
-            panel_info_id:
-              item.panel_info_id || item.panel_slot_snapshot?.panel_info_id,
-            panel_slot_usage_id: item.panel_slot_usage_id,
-            slot_order_quantity: 1,
-            display_start_date:
-              item.selectedPeriodFrom || new Date().toISOString().split('T')[0],
-            display_end_date:
-              item.selectedPeriodTo ||
-              new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
-                .toISOString()
-                .split('T')[0],
-            price: item.price,
-            name: item.name,
-            district: item.district,
-            panel_type: item.panel_type || 'panel',
-            period: item.halfPeriod,
-            selected_year: item.selectedYear,
-            selected_month: item.selectedMonth,
-          })),
-        };
-        // 주문 생성 API 호출
-        const response = await fetch('/api/orders', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(orderData),
-        });
-        const result = await response.json();
-        if (result.success) {
-          totalAmountSum += result.data.order.total_amount;
-          lastOrderNumber = result.data.order.order_number;
-          // 시안 파일 업로드
-          if (selectedFile && !sendByEmail) {
-            const formData = new FormData();
-            formData.append('file', selectedFile);
-            formData.append('orderId', result.data.order.id);
-            formData.append('projectName', projectName);
-            const uploadResponse = await fetch('/api/design-drafts/upload', {
-              method: 'POST',
-              body: formData,
-            });
-            const uploadResult = await uploadResponse.json();
-            if (!uploadResult.success) {
-              allSuccess = false;
-              setError('파일 업로드에 실패했습니다.');
-              break;
-            }
-          }
-          // 장바구니에서 해당 구의 아이템 제거
-          group.items.forEach((item) => {
-            dispatch({ type: 'REMOVE_ITEM', id: item.id });
-          });
-        } else {
-          allSuccess = false;
-          setError(result.error || '주문 생성에 실패했습니다.');
-          break;
-        }
-      }
-      if (allSuccess) {
-        setPaymentSuccessData({
-          orderNumber: lastOrderNumber,
-          totalAmount: totalAmountSum,
-        });
-        setShowPaymentSuccessModal(true);
-        setTimeout(() => {
-          router.push('/mypage/orders');
-        }, 3000);
-      }
-    } catch (error) {
-      setError('결제 처리 중 오류가 발생했습니다.');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
+  // 에러가 있는 경우 에러 화면 표시 (현재는 사용하지 않음)
+  // if (/* error && */ !isProcessing) {
+  //   // Removed error
+  //   return (
+  //     <main className="min-h-screen bg-white pt-[5.5rem] bg-gray-100 lg:px-[10rem]">
+  //       <Nav variant="default" className="bg-white" />
+  //       <div className="container mx-auto px-4 sm:px-1 py-8">
+  //         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+  //           <div className="flex items-center">
+  //             <svg
+  //               className="w-5 h-5 text-red-400 mr-2"
+  //               fill="currentColor"
+  //               viewBox="0 0 20 20"
+  //             >
+  //               <path
+  //                 fillRule="evenodd"
+  //                 d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+  //                 clipRule="evenodd"
+  //               />
+  //             </svg>
+  //             <span className="text-red-800 font-medium">
+  //               {/* {error} */}
+  //               결제 중 오류가 발생했습니다.
+  //             </span>
+  //           </div>
+  //           <Button
+  //             className="mt-4 bg-red-600 text-white px-4 py-2 rounded"
+  //             onClick={() => router.push('/cart')}
+  //           >
+  //             장바구니로 돌아가기
+  //           </Button>
+  //         </div>
+  //       </div>
+  //     </main>
+  //   );
+  // }
 
-  // 승인된 주문 결제 처리
-  const handleApprovedOrderPayment = async () => {
-    console.log('🔍 handleApprovedOrderPayment 시작');
-
-    if (!user) {
-      setError('로그인이 필요합니다.');
-      return;
-    }
-
-    if (!defaultProfile) {
-      setError('프로필 정보가 필요합니다.');
-      return;
-    }
-
-    if (!validateForm()) {
-      return;
-    }
-
-    setIsProcessing(true);
-    setError(null);
-
-    try {
-      // 승인된 주문 결제 API 호출
-      const response = await fetch('/api/payment', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          orderId: selectedItems[0]?.id, // 승인된 주문의 ID
-          user_auth_id: user.id,
-          user_profile_id: defaultProfile.id,
-          project_name: projectName,
-          draft_delivery_method: draftDeliveryMethod,
-          payment_method: paymentMethod,
-          total_amount: priceSummary.totalPrice,
-          tax_invoice: taxInvoice,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        setPaymentSuccessData({
-          orderNumber: result.data.order_number,
-          totalAmount: result.data.total_amount,
-        });
-        setShowPaymentSuccessModal(true);
-
-        setTimeout(() => {
-          router.push('/mypage/orders');
-        }, 3000);
-      } else {
-        setError(result.error || '결제 처리에 실패했습니다.');
-      }
-    } catch (error) {
-      console.error('승인된 주문 결제 처리 중 오류:', error);
-      setError('결제 처리 중 오류가 발생했습니다.');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  // 에러가 있는 경우 에러 화면 표시
-  if (error && !isProcessing) {
-    return (
-      <main className="min-h-screen bg-white pt-[5.5rem] bg-gray-100 lg:px-[10rem]">
-        <Nav variant="default" className="bg-white" />
-        <div className="container mx-auto px-4 sm:px-1 py-8">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="flex items-center">
-              <svg
-                className="w-5 h-5 text-red-400 mr-2"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              <span className="text-red-800 font-medium">{error}</span>
-            </div>
-            <Button
-              className="mt-4 bg-red-600 text-white px-4 py-2 rounded"
-              onClick={() => router.push('/cart')}
-            >
-              장바구니로 돌아가기
-            </Button>
-          </div>
-        </div>
-      </main>
-    );
-  }
-
-  // handleSingleGroupPayment 함수 추가
+  // 결제 성공 시 호출 (이것만 남기고 기존 handleSingleGroupPayment 제거)
   const handleSingleGroupPayment = async (group: GroupedCartItem) => {
-    setIsProcessing(true);
-    setError(null);
-    try {
-      const groupProfile = groupBulkProfile[group.district]
-        ? groupProfiles[group.district] || defaultProfile
-        : defaultProfile;
-      if (!groupProfile) {
-        setError('프로필 정보가 필요합니다.');
-        setIsProcessing(false);
-        return;
-      }
-      const orderData = {
-        user_auth_id: user.id,
-        user_profile_id: groupProfile.id,
-        project_name: projectName,
-        draft_delivery_method: draftDeliveryMethod,
-        payment_method: paymentMethod,
-        total_amount: group.totalPrice,
-        tax_invoice: taxInvoice,
-        order_details: group.items.map((item) => ({
-          panel_info_id:
-            item.panel_info_id || item.panel_slot_snapshot?.panel_info_id,
-          panel_slot_usage_id: item.panel_slot_usage_id,
-          slot_order_quantity: 1,
-          display_start_date:
-            item.selectedPeriodFrom || new Date().toISOString().split('T')[0],
-          display_end_date:
-            item.selectedPeriodTo ||
-            new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
-              .toISOString()
-              .split('T')[0],
-          price: item.price,
-          name: item.name,
-          district: item.district,
-          panel_type: item.panel_type || 'panel',
-          period: item.halfPeriod,
-          selected_year: item.selectedYear,
-          selected_month: item.selectedMonth,
-        })),
-      };
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData),
-      });
-      const result = await response.json();
-      if (result.success) {
-        if (selectedFile && !sendByEmail) {
-          const formData = new FormData();
-          formData.append('file', selectedFile);
-          formData.append('orderId', result.data.order.id);
-          formData.append('projectName', projectName);
-          const uploadResponse = await fetch('/api/design-drafts/upload', {
-            method: 'POST',
-            body: formData,
-          });
-          const uploadResult = await uploadResponse.json();
-          if (!uploadResult.success) {
-            setError('파일 업로드에 실패했습니다.');
-            setIsProcessing(false);
-            return;
-          }
-        }
-        group.items.forEach((item) => {
-          dispatch({ type: 'REMOVE_ITEM', id: item.id });
-        });
-        setPaymentSuccessData({
-          orderNumber: result.data.order.order_number,
-          totalAmount: result.data.order.total_amount,
-        });
-        setShowPaymentSuccessModal(true);
-        setTimeout(() => {
-          router.push('/mypage/orders');
-        }, 3000);
-      } else {
-        setError(result.error || '주문 생성에 실패했습니다.');
-      }
-    } catch {
-      setError('결제 처리 중 오류가 발생했습니다.');
-    } finally {
-      setIsProcessing(false);
-    }
+    setCompletedDistricts((prev) => [...prev, group.district]);
+    setSuccessDistrict(group.district);
+    setSuccessModalOpen(true);
   };
+
+  // 결제 안한 구만 보여주기
+  const visibleGroups = groupedItems.filter(
+    (group) => !completedDistricts.includes(group.district)
+  );
 
   return (
     <main className="min-h-screen bg-white pt-[5.5rem] bg-gray-100 lg:px-[10rem]">
@@ -1111,7 +758,7 @@ function PaymentPageContent() {
             </div>
           </section>
           {/* 구별 카드 */}
-          {groupedItems.map((group) => (
+          {visibleGroups.map((group) => (
             <section
               key={group.id}
               className="p-6 border rounded-lg shadow-sm flex flex-col gap-4 sm:p-2"
@@ -1443,16 +1090,6 @@ function PaymentPageContent() {
         </div>
       </div>
 
-      {/* 결제 성공 모달 */}
-      {showPaymentSuccessModal && (
-        <PaymentSuccessModal
-          isOpen={showPaymentSuccessModal}
-          onClose={() => setShowPaymentSuccessModal(false)}
-          orderNumber={paymentSuccessData.orderNumber}
-          totalAmount={paymentSuccessData.totalAmount}
-        />
-      )}
-
       {/* 구별 결제 모달 */}
       {paymentModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1591,6 +1228,34 @@ function PaymentPageContent() {
               >
                 {isProcessing ? '처리 중...' : '결제하기'}
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 결제 성공 모달 */}
+      {successModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg p-8 shadow-lg w-full max-w-xs flex flex-col items-center">
+            <div className="text-2xl font-bold mb-2 text-blue-700">
+              결제 완료
+            </div>
+            <div className="mb-6 text-center text-gray-700">
+              {successDistrict} 결제가 완료되었습니다.
+            </div>
+            <div className="flex gap-2 w-full">
+              <button
+                className="flex-1 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+                onClick={() => setSuccessModalOpen(false)}
+              >
+                결제페이지로 돌아가기
+              </button>
+              <button
+                className="flex-1 py-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300"
+                onClick={() => router.push('/mypage/orders')}
+              >
+                마이페이지로 가기
+              </button>
             </div>
           </div>
         </div>
