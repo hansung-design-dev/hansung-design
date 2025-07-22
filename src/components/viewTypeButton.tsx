@@ -17,11 +17,11 @@ export default function ViewTypeButton({
     <button
       onClick={onClick}
       className={`flex items-center gap-2 px-4 py-2 hover:cursor-pointer  ${
-        isActive ? 'border-b-solid border-black text-black' : 'text-gray-600'
+        isActive ? 'border-b-solid border-black text-black' : 'text-gray-700'
       }`}
     >
       <Icon
-        className={`w-7 h-6 ${isActive ? 'text-black' : 'text-gray-400'}`}
+        className={`w-7 h-6 ${isActive ? 'text-black' : 'text-gray-500'}`}
         width={20}
         height={20}
       />

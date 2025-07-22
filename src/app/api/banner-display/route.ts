@@ -493,6 +493,47 @@ async function getAllDistrictsData() {
     // 5. 각 구별로 신청기간과 계좌번호 정보를 가져와서 조합
     const processedDistricts = await Promise.all(
       basicDistricts.map(async (district) => {
+        // 대표 패널의 가격 정책 정보 조회 (panel, with_lighting, no_lighting, multi_panel, lower_panel, semi_auto, slot_number=1)
+        let pricePolicies = [];
+        const { data: panelInfoList } = await supabase
+          .from('panel_info')
+          .select(
+            `id, panel_type, banner_slot_info (slot_number, banner_slot_price_policy (*))`
+          )
+          .eq('region_gu_id', district.id)
+          .eq('display_type_id', (await getBannerDisplayTypeId()).id)
+          .eq('panel_status', 'active')
+          .in('panel_type', [
+            'panel',
+            'with_lighting',
+            'no_lighting',
+            'multi_panel',
+            'lower_panel',
+            'semi_auto',
+          ])
+          .order('id', { ascending: true })
+          .limit(20); // 여러 패널이 있을 수 있으니 20개까지 조회
+        if (panelInfoList && panelInfoList.length > 0) {
+          // slot_number=1인 banner_slot_info만 추출
+          const slotInfos = panelInfoList.flatMap((panel: any) =>
+            (panel.banner_slot_info || []).filter(
+              (slot: any) => slot.slot_number === 1
+            )
+          );
+          // 모든 슬롯의 price_policy를 합쳐서 unique하게
+          const allPolicies = slotInfos.flatMap(
+            (slot: any) => slot.banner_slot_price_policy || []
+          );
+          // price_usage_type별로 첫 번째만 남기기
+          const uniquePolicies: Record<string, any> = {};
+          for (const policy of allPolicies) {
+            if (!uniquePolicies[policy.price_usage_type]) {
+              uniquePolicies[policy.price_usage_type] = policy;
+            }
+          }
+          pricePolicies = Object.values(uniquePolicies);
+        }
+
         // 한국 시간대로 현재 날짜 계산
         const now = new Date();
         const koreaTime = new Date(now.getTime() + 9 * 60 * 60 * 1000); // UTC+9 (한국시간)
@@ -595,7 +636,7 @@ async function getAllDistrictsData() {
           panel_status: district.panel_status,
           period: currentPeriodData || null,
           bank_info: bankData || null,
-          pricePolicies: district.pricePolicies || [],
+          pricePolicies: pricePolicies,
         };
       })
     );

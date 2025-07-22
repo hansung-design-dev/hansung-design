@@ -24,6 +24,7 @@ import { CartItem } from '@/src/contexts/cartContext';
 // }
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import UserProfileModal from '@/src/components/modal/UserProfileModal';
+import type { UserProfile } from '@/src/components/modal/UserProfileModal';
 import ConsultationModal from '@/src/components/modal/ConsultationModal';
 import PeriodSelector from '@/src/components/PeriodSelector';
 // import CartItemAccordion from '@/src/components/cartItemAccordion';
@@ -136,6 +137,7 @@ function CartItemRow({
   onPeriodChange,
   inquiryStatus,
   getPanelTypeDisplay,
+  disabled = false,
 }: {
   item: CartItem;
   user: { name: string; phone: string; company_name?: string };
@@ -157,22 +159,23 @@ function CartItemRow({
     answered_at?: string;
   };
   getPanelTypeDisplay: (panelType: string) => string;
+  disabled?: boolean;
 }) {
-  // 패널 번호 추출 함수
-  // const getPanelNumber = () => {
-  //   // panel_slot_snapshot에서 slot_number가 있으면 사용
-  //   if (item.panel_slot_snapshot?.slot_number) {
-  //     return item.panel_slot_snapshot.slot_number;
-  //   }
-  //   // panel_info_id에서 패널 번호 추출 시도
-  //   if (item.panel_info_id) {
-  //     const match = item.panel_info_id.match(/(\d+)$/);
-  //     if (match) {
-  //       return match[1];
-  //     }
-  //   }
-  //   return null;
-  // };
+  // 실제 게시대 사진 URL 가져오기 (현수막게시대와 동일한 로직)
+  const getThumbnailImage = () => {
+    // 현수막게시대와 동일한 로직 사용
+    switch (item.type) {
+      case 'banner-display':
+        return item.photo_url || '/images/banner-display/landing.png';
+      case 'led-display':
+        return item.photo_url || '/images/led-display.jpeg';
+      case 'digital-signage':
+        return item.photo_url || '/images/digital-signage/landing.png';
+      default:
+        return item.photo_url || '/images/banner-display/landing.png';
+    }
+  };
+
   if (isConsulting) {
     const hasInquiry = inquiryStatus && inquiryStatus.status;
     const isPending = hasInquiry && inquiryStatus.status === 'pending';
@@ -182,11 +185,11 @@ function CartItemRow({
       <div className="relative flex items-center pl-[3rem] py-6 border-b border-gray-200">
         <div className="flex items-center w-2/3 min-w-0">
           <Image
-            src="/images/digital-signage-grid-example.jpeg"
+            src={getThumbnailImage()}
             alt="썸네일"
-            width={80}
-            height={80}
-            className="w-24 h-24 object-cover mr-4 flex-shrink-0"
+            width={40}
+            height={40}
+            className="w-10 h-10 object-cover mr-4 flex-shrink-0 rounded"
           />
 
           <div className="flex flex-col gap-3 min-w-0 flex-1">
@@ -213,10 +216,19 @@ function CartItemRow({
           <Button
             size="xs"
             variant="outlinedBlack"
-            className="w-[5rem] h-[2rem] text-1"
+            className={`w-[5rem] h-[2rem] text-1 ${
+              disabled
+                ? 'bg-gray-600 text-black cursor-not-allowed relative group'
+                : ''
+            }`}
             onClick={onOrderModify}
+            disabled={disabled}
           >
-            주문수정
+            {disabled && (
+              <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="text-lg font-bol">×</span>
+              </span>
+            )}
           </Button>
         </div>
         <div className="flex flex-col items-center justify-center gap-4 p-4 border-solid border-1 border-gray-1 w-[20rem] mt-4">
@@ -263,14 +275,15 @@ function CartItemRow({
         className="w-5 h-5 mr-6 flex-shrink-0"
         checked={isSelected}
         onChange={(e) => onSelect?.(e.target.checked)}
+        disabled={disabled}
       />
       <div className="flex items-center w-2/3 min-w-0">
         <Image
-          src="/images/digital-signage-grid-example.jpeg"
+          src={getThumbnailImage()}
           alt="썸네일"
-          width={80}
-          height={80}
-          className="w-24 h-24 object-cover mr-4 flex-shrink-0"
+          width={500}
+          height={500}
+          className="w-24 h-24  mr-4 flex-shrink-0"
         />
         <div className="flex flex-col gap-3 min-w-0 flex-1">
           <div className="text-1 truncate">
@@ -321,15 +334,19 @@ function CartItemRow({
         <Button
           size="xs"
           variant="outlinedBlack"
-          className="w-[5rem] h-[2rem] text-1"
+          className={`w-[7rem] h-[2rem] text-black text-1 ${
+            disabled ? '!bg-gray-600 !text-white !cursor-not-allowed' : ''
+          }`}
           onClick={onOrderModify}
+          disabled={disabled}
         >
-          주문수정
+          주문자정보 수정
         </Button>
       </div>
       <button
         className="absolute top-5 right-10 text-1.5 font-100 text-gray-2 hover:cursor-pointer"
         onClick={onDelete}
+        disabled={disabled}
       >
         x
       </button>
@@ -1278,6 +1295,37 @@ export default function Cart() {
     return typeMap[panelType] || panelType;
   };
 
+  // Cart 컴포넌트 내 state 추가
+  const [bulkProfile, setBulkProfile] = useState<{
+    [district: string]: boolean;
+  }>({});
+  const [bulkProfileModalOpen, setBulkProfileModalOpen] = useState<
+    string | null
+  >(null);
+  const [bulkProfiles, setBulkProfiles] = useState<{
+    [district: string]: UserProfile | undefined;
+  }>({});
+  // 대표 프로필 선택 핸들러
+  const handleBulkProfileSelect = (district: string, profile: UserProfile) => {
+    setBulkProfiles((prev) => ({ ...prev, [district]: profile }));
+    setBulkProfileModalOpen(null);
+    // 해당 구별 카드의 모든 아이템에 프로필 일괄 적용
+    const updatedCart = cart.map((item) =>
+      item.district === district
+        ? {
+            ...item,
+            contact_person_name: profile.contact_person_name,
+            phone: profile.phone,
+            company_name: profile.company_name,
+            email: profile.email,
+            is_public_institution: profile.is_public_institution,
+            is_company: profile.is_company,
+          }
+        : item
+    );
+    dispatch({ type: 'UPDATE_CART', items: updatedCart });
+  };
+
   return (
     <main
       className={`pt-[3rem] bg-gray-100 min-h-screen lg:px-[1rem] ${
@@ -1335,7 +1383,62 @@ export default function Cart() {
                         {/* 기본 구별 카드 (개인용 아이템들) */}
                         {regularItems.length > 0 && (
                           <CartGroupCard
-                            title={`현수막게시대 (${district})`}
+                            title={
+                              <div className="flex items-center gap-2">
+                                <span>{`현수막게시대 (${district})`}</span>
+                                <input
+                                  type="checkbox"
+                                  id={`bulk-profile-${district}`}
+                                  checked={!!bulkProfile[district]}
+                                  onChange={() =>
+                                    setBulkProfile((prev) => ({
+                                      ...prev,
+                                      [district]: !prev[district],
+                                    }))
+                                  }
+                                  className="w-4 h-4 accent-blue-600 ml-2"
+                                />
+                                <label
+                                  htmlFor={`bulk-profile-${district}`}
+                                  className="text-xs text-gray-700 select-none cursor-pointer"
+                                >
+                                  유저정보 일괄적용
+                                </label>
+                                {bulkProfile[district] && (
+                                  <>
+                                    <Button
+                                      type="button"
+                                      className="bg-black text-gray-800 px-2 py-0.5 rounded ml-2 text-xs"
+                                      onClick={() =>
+                                        setBulkProfileModalOpen(district)
+                                      }
+                                    >
+                                      대표 프로필 선택
+                                    </Button>
+                                    <span className="ml-2 text-xs text-blue-700 font-semibold">
+                                      {bulkProfiles[district]?.profile_title
+                                        ? `적용: ${bulkProfiles[district].profile_title}`
+                                        : '프로필 미선택'}
+                                    </span>
+                                    {bulkProfileModalOpen === district && (
+                                      <UserProfileModal
+                                        isOpen={true}
+                                        onClose={() =>
+                                          setBulkProfileModalOpen(null)
+                                        }
+                                        mode="edit"
+                                        onConfirm={(profileData) =>
+                                          handleBulkProfileSelect(
+                                            district,
+                                            profileData
+                                          )
+                                        }
+                                      />
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            }
                             phoneList={[
                               '1533-0570',
                               '1899-0596',
@@ -1378,6 +1481,7 @@ export default function Cart() {
                                   onDelete={() => handleDelete(item)}
                                   onPeriodChange={handlePeriodChange}
                                   getPanelTypeDisplay={getPanelTypeDisplay}
+                                  disabled={!!bulkProfile[district]}
                                 />
                               );
                             })}

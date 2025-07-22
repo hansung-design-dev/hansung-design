@@ -256,7 +256,9 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 mb-6 p-4 bg-white rounded-lg border">
-        <div className="text-sm font-medium text-gray-700 mr-4">신청기간:</div>
+        <div className="text-1 font-medium text-gray-800 mr-4">
+          신청 기간을 선택해주세요 :
+        </div>
 
         {/* 신청 가능한 기간만 표시 */}
         {availablePeriods.map((periodInfo) => (

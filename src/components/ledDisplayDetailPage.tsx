@@ -304,6 +304,7 @@ export default function LEDDisplayDetailPage({
           panel_type: item.panel_type,
           panel_info_id: item.panel_info_id, // 원본 UUID
           panel_code: item.panel_code?.toString(),
+          photo_url: item.photo_url || undefined, // 게시대 사진 URL 추가
           // 사용자 프로필 정보 추가
           contact_person_name: defaultProfile?.contact_person_name,
           phone: defaultProfile?.phone,
@@ -319,6 +320,8 @@ export default function LEDDisplayDetailPage({
           district: cartItem.district,
           price: cartItem.price,
           type: cartItem.type,
+          photo_url: cartItem.photo_url,
+          hasPhotoUrl: !!cartItem.photo_url,
         });
         dispatch({
           type: 'ADD_ITEM',
@@ -357,6 +360,7 @@ export default function LEDDisplayDetailPage({
         panel_type: item.panel_type,
         panel_info_id: item.panel_info_id, // 원본 UUID
         panel_code: item.panel_code?.toString(),
+        photo_url: item.photo_url || undefined, // 게시대 사진 URL 추가
         // 사용자 프로필 정보 추가
         contact_person_name: defaultProfile?.contact_person_name,
         phone: defaultProfile?.phone,
@@ -372,6 +376,8 @@ export default function LEDDisplayDetailPage({
         district: cartItem.district,
         price: cartItem.price,
         type: cartItem.type,
+        photo_url: cartItem.photo_url,
+        hasPhotoUrl: !!cartItem.photo_url,
       });
       dispatch({
         type: 'ADD_ITEM',

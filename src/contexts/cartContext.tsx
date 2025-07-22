@@ -17,6 +17,7 @@ export interface CartItem {
   is_company?: boolean; // 기업용 여부
   is_for_admin?: boolean; // 행정용 패널 여부
   panel_code?: string; // 패널 코드(번호)
+  photo_url?: string; // 게시대 사진 URL
   // 기간 데이터 추가 (구별 카드에서 전달받은 데이터)
   periodData?: {
     first_half_from: string;

@@ -9,6 +9,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { CartItem } from '@/src/contexts/cartContext';
 import { PaymentSuccessModal } from '@/src/components/modal/UserProfileModal';
 import CustomFileUpload from '@/src/components/ui/CustomFileUpload';
+import UserProfileModal from '@/src/components/modal/UserProfileModal';
+import type { UserProfile } from '@/src/components/modal/UserProfileModal';
 
 interface BankInfo {
   id: string;
@@ -104,6 +106,24 @@ function PaymentPageContent() {
     }[]
   >([]);
 
+  // 구별별 프로필 상태 관리
+  const [groupProfiles, setGroupProfiles] = useState<{
+    [district: string]: UserProfile | undefined;
+  }>({});
+  const [groupBulkProfile, setGroupBulkProfile] = useState<{
+    [district: string]: boolean;
+  }>({});
+  const [profileModalOpen, setProfileModalOpen] = useState<string | null>(null);
+  // 프로필 선택 핸들러
+  const handleProfileSelect = (district: string, profile: UserProfile) => {
+    setGroupProfiles((prev) => ({ ...prev, [district]: profile }));
+    setProfileModalOpen(null);
+  };
+  // 대표 프로필 선택 핸들러
+  const handleBulkProfileToggle = (district: string) => {
+    setGroupBulkProfile((prev) => ({ ...prev, [district]: !prev[district] }));
+  };
+
   // 사용자 프로필 데이터 가져오기
   useEffect(() => {
     const fetchUserProfiles = async () => {
@@ -137,34 +157,25 @@ function PaymentPageContent() {
   }, [user?.id]);
 
   // 묶음 결제를 위한 아이템 그룹화 함수
-  const groupItemsForBulkPayment = (items: CartItem[]): GroupedCartItem[] => {
-    const grouped: { [key: string]: CartItem[] } = {};
-
+  const groupItemsByDistrict = (items: CartItem[]): GroupedCartItem[] => {
+    const grouped: { [district: string]: CartItem[] } = {};
     items.forEach((item) => {
-      // 같은 구, 같은 타입의 아이템들을 그룹화
-      const groupKey = `${item.district}_${item.type}_${item.panel_type}`;
-      if (!grouped[groupKey]) {
-        grouped[groupKey] = [];
-      }
-      grouped[groupKey].push(item);
+      if (!grouped[item.district]) grouped[item.district] = [];
+      grouped[item.district].push(item);
     });
-
-    return Object.values(grouped).map((group) => {
+    return Object.entries(grouped).map(([district, group]) => {
       const firstItem = group[0];
       const totalPrice = group.reduce(
         (sum, item) => sum + (item.price || 0),
         0
       );
-
       return {
-        id: `group_${firstItem.district}_${firstItem.type}_${firstItem.panel_type}`,
-        name: `${firstItem.district} ${getPanelTypeDisplay(
-          firstItem.panel_type || 'panel'
-        )}`,
+        id: `group_${district}`,
+        name: `${district} 현수막게시대`,
         items: group,
         totalPrice,
-        district: firstItem.district,
-        type: firstItem.type,
+        district,
+        type: 'banner-display',
         panel_type: firstItem.panel_type || 'panel',
         is_public_institution: firstItem.is_public_institution,
         is_company: firstItem.is_company,
@@ -265,7 +276,7 @@ function PaymentPageContent() {
           setSelectedItems(items);
 
           // 묶음 결제를 위한 그룹화
-          const grouped = groupItemsForBulkPayment(items);
+          const grouped = groupItemsByDistrict(items);
           setGroupedItems(grouped);
         }
       } catch (error) {
@@ -407,7 +418,7 @@ function PaymentPageContent() {
         setSelectedItems(orderItems);
 
         // 묶음 결제를 위한 그룹화
-        const grouped = groupItemsForBulkPayment(orderItems);
+        const grouped = groupItemsByDistrict(orderItems);
         setGroupedItems(grouped);
       }
     } catch (error) {
@@ -545,133 +556,107 @@ function PaymentPageContent() {
   // 결제 처리
   const handlePayment = async () => {
     console.log('🔍 handlePayment 시작');
-    console.log('🔍 user:', user);
-    console.log('🔍 selectedItems.length:', selectedItems.length);
-    console.log('🔍 selectedFile:', selectedFile?.name || '없음');
-    console.log('🔍 sendByEmail:', sendByEmail);
-    console.log('🔍 defaultProfile:', defaultProfile);
-    console.log('🔍 userProfiles:', userProfiles);
-    console.log('🔍 profiles:', profiles);
-    console.log('🔍 projectName:', projectName);
-
     if (!user) {
       setError('로그인이 필요합니다.');
       return;
     }
-
-    if (!defaultProfile) {
-      console.error('🔍 defaultProfile이 undefined입니다.');
-      setError('프로필 정보가 필요합니다.');
-      return;
-    }
-
     if (!validateForm()) {
       console.error('🔍 유효성 검사 실패');
       return;
     }
-
     setIsProcessing(true);
     setError(null);
-
     try {
-      // 패널 정보 ID 추출 함수
-      const extractPanelInfoId = (item: CartItem) => {
-        return item.panel_info_id || item.panel_slot_snapshot?.panel_info_id;
-      };
-
-      // 주문 데이터 준비
-      const orderData = {
-        user_auth_id: user.id,
-        user_profile_id: defaultProfile.id,
-        project_name: projectName,
-        draft_delivery_method: draftDeliveryMethod,
-        payment_method: paymentMethod,
-        total_amount: priceSummary.totalPrice,
-        tax_invoice: taxInvoice,
-        order_details: selectedItems.map((item) => ({
-          panel_info_id: extractPanelInfoId(item),
-          panel_slot_usage_id: item.panel_slot_usage_id,
-          slot_order_quantity: 1, // 기본값 1로 설정
-          display_start_date:
-            item.selectedPeriodFrom || new Date().toISOString().split('T')[0],
-          display_end_date:
-            item.selectedPeriodTo ||
-            new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
-              .toISOString()
-              .split('T')[0],
-          price: item.price,
-          name: item.name,
-          district: item.district,
-          panel_type: item.panel_type || 'panel',
-          period: item.halfPeriod,
-          selected_year: item.selectedYear,
-          selected_month: item.selectedMonth,
-        })),
-      };
-
-      console.log('🔍 주문 데이터:', orderData);
-
-      // 주문 생성 API 호출
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(orderData),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        console.log('🔍 주문 생성 성공:', result.data);
-
-        // 파일 업로드 처리
-        if (selectedFile && !sendByEmail) {
-          const formData = new FormData();
-          formData.append('file', selectedFile);
-          formData.append('orderId', result.data.order.id);
-          formData.append('projectName', projectName);
-
-          const uploadResponse = await fetch('/api/design-drafts/upload', {
-            method: 'POST',
-            body: formData,
-          });
-
-          const uploadResult = await uploadResponse.json();
-
-          if (!uploadResult.success) {
-            console.error('🔍 파일 업로드 실패:', uploadResult.error);
-            setError('파일 업로드에 실패했습니다.');
-            setIsProcessing(false);
-            return;
-          }
+      let allSuccess = true;
+      let totalAmountSum = 0;
+      let lastOrderNumber = '';
+      // 구별 주문 생성
+      for (const group of groupedItems) {
+        // 구별 프로필(추후 확장 가능, 현재는 defaultProfile 사용)
+        const groupProfile = groupProfiles[group.district] || defaultProfile;
+        if (!groupProfile) {
+          allSuccess = false;
+          setError('프로필 정보가 필요합니다.');
+          break;
         }
-
-        // 성공 처리
+        // 주문 데이터 준비
+        const orderData = {
+          user_auth_id: user.id,
+          user_profile_id: groupProfile.id,
+          project_name: projectName,
+          draft_delivery_method: draftDeliveryMethod,
+          payment_method: paymentMethod,
+          total_amount: group.totalPrice,
+          tax_invoice: taxInvoice,
+          order_details: group.items.map((item) => ({
+            panel_info_id:
+              item.panel_info_id || item.panel_slot_snapshot?.panel_info_id,
+            panel_slot_usage_id: item.panel_slot_usage_id,
+            slot_order_quantity: 1,
+            display_start_date:
+              item.selectedPeriodFrom || new Date().toISOString().split('T')[0],
+            display_end_date:
+              item.selectedPeriodTo ||
+              new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
+                .toISOString()
+                .split('T')[0],
+            price: item.price,
+            name: item.name,
+            district: item.district,
+            panel_type: item.panel_type || 'panel',
+            period: item.halfPeriod,
+            selected_year: item.selectedYear,
+            selected_month: item.selectedMonth,
+          })),
+        };
+        // 주문 생성 API 호출
+        const response = await fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderData),
+        });
+        const result = await response.json();
+        if (result.success) {
+          totalAmountSum += result.data.order.total_amount;
+          lastOrderNumber = result.data.order.order_number;
+          // 시안 파일 업로드
+          if (selectedFile && !sendByEmail) {
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            formData.append('orderId', result.data.order.id);
+            formData.append('projectName', projectName);
+            const uploadResponse = await fetch('/api/design-drafts/upload', {
+              method: 'POST',
+              body: formData,
+            });
+            const uploadResult = await uploadResponse.json();
+            if (!uploadResult.success) {
+              allSuccess = false;
+              setError('파일 업로드에 실패했습니다.');
+              break;
+            }
+          }
+          // 장바구니에서 해당 구의 아이템 제거
+          group.items.forEach((item) => {
+            dispatch({ type: 'REMOVE_ITEM', id: item.id });
+          });
+        } else {
+          allSuccess = false;
+          setError(result.error || '주문 생성에 실패했습니다.');
+          break;
+        }
+      }
+      if (allSuccess) {
         setPaymentSuccessData({
-          orderNumber: result.data.order.order_number,
-          totalAmount: result.data.order.total_amount,
+          orderNumber: lastOrderNumber,
+          totalAmount: totalAmountSum,
         });
         setShowPaymentSuccessModal(true);
-
-        // 장바구니에서 주문된 아이템들 제거
-        selectedItems.forEach((item) => {
-          dispatch({
-            type: 'REMOVE_ITEM',
-            id: item.id,
-          });
-        });
-
-        // 결제 페이지에서 나가기
         setTimeout(() => {
           router.push('/mypage/orders');
         }, 3000);
-      } else {
-        console.error('🔍 주문 생성 실패:', result.error);
-        setError(result.error || '주문 생성에 실패했습니다.');
       }
     } catch (error) {
-      console.error('🔍 결제 처리 중 오류:', error);
       setError('결제 처리 중 오류가 발생했습니다.');
     } finally {
       setIsProcessing(false);
@@ -774,255 +759,357 @@ function PaymentPageContent() {
     );
   }
 
+  // handleSingleGroupPayment 함수 추가
+  const handleSingleGroupPayment = async (group: GroupedCartItem) => {
+    setIsProcessing(true);
+    setError(null);
+    try {
+      const groupProfile = groupBulkProfile[group.district]
+        ? groupProfiles[group.district] || defaultProfile
+        : defaultProfile;
+      if (!groupProfile) {
+        setError('프로필 정보가 필요합니다.');
+        setIsProcessing(false);
+        return;
+      }
+      const orderData = {
+        user_auth_id: user.id,
+        user_profile_id: groupProfile.id,
+        project_name: projectName,
+        draft_delivery_method: draftDeliveryMethod,
+        payment_method: paymentMethod,
+        total_amount: group.totalPrice,
+        tax_invoice: taxInvoice,
+        order_details: group.items.map((item) => ({
+          panel_info_id:
+            item.panel_info_id || item.panel_slot_snapshot?.panel_info_id,
+          panel_slot_usage_id: item.panel_slot_usage_id,
+          slot_order_quantity: 1,
+          display_start_date:
+            item.selectedPeriodFrom || new Date().toISOString().split('T')[0],
+          display_end_date:
+            item.selectedPeriodTo ||
+            new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
+              .toISOString()
+              .split('T')[0],
+          price: item.price,
+          name: item.name,
+          district: item.district,
+          panel_type: item.panel_type || 'panel',
+          period: item.halfPeriod,
+          selected_year: item.selectedYear,
+          selected_month: item.selectedMonth,
+        })),
+      };
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData),
+      });
+      const result = await response.json();
+      if (result.success) {
+        if (selectedFile && !sendByEmail) {
+          const formData = new FormData();
+          formData.append('file', selectedFile);
+          formData.append('orderId', result.data.order.id);
+          formData.append('projectName', projectName);
+          const uploadResponse = await fetch('/api/design-drafts/upload', {
+            method: 'POST',
+            body: formData,
+          });
+          const uploadResult = await uploadResponse.json();
+          if (!uploadResult.success) {
+            setError('파일 업로드에 실패했습니다.');
+            setIsProcessing(false);
+            return;
+          }
+        }
+        group.items.forEach((item) => {
+          dispatch({ type: 'REMOVE_ITEM', id: item.id });
+        });
+        setPaymentSuccessData({
+          orderNumber: result.data.order.order_number,
+          totalAmount: result.data.order.total_amount,
+        });
+        setShowPaymentSuccessModal(true);
+        setTimeout(() => {
+          router.push('/mypage/orders');
+        }, 3000);
+      } else {
+        setError(result.error || '주문 생성에 실패했습니다.');
+      }
+    } catch {
+      setError('결제 처리 중 오류가 발생했습니다.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   return (
     <main className="min-h-screen bg-white pt-[5.5rem] bg-gray-100 lg:px-[10rem]">
       <Nav variant="default" className="bg-white" />
 
       <div className="container mx-auto px-4 sm:px-1 py-8 grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-8">
-        {/* 좌측 - 주문 상품 정보 */}
+        {/* 좌측 - 시안 업로드 및 구별 카드 */}
         <div className="space-y-8 border border-solid border-gray-3 rounded-[0.375rem] p-[2.5rem] sm:p-[1.5rem]">
-          {/* 묶음 결제를 위한 그룹화된 주문 상품 목록 */}
-          {groupedItems.map((group) => (
-            <div key={group.id}>
-              <section className="p-6 border rounded-lg shadow-sm flex flex-col gap-4 sm:p-2">
-                <div>
-                  <h2 className="text-1.25 text-gray-2 font-bold mb-4 border-b-solid border-black border-b-[0.1rem] pb-4">
-                    {group.type === 'banner-display'
-                      ? '현수막 게시대'
-                      : 'LED 전자게시대'}
-                  </h2>
-                  <div className="mb-4 text-1.25 font-700 text-[#222] sm:text-0.875">
-                    {group.name}
-                    <span className="text-gray-500 text-0.875 ml-2">
-                      ({group.items.length}개 패널 묶음 결제)
+          {/* 시안 업로드 UI (한 번만) */}
+          <section className="p-6 border rounded-lg shadow-sm flex flex-col gap-4 sm:p-2">
+            <h2 className="text-1.25 text-gray-2 font-bold mb-4 border-b-solid border-black border-b-[0.1rem] pb-4">
+              시안 업로드
+            </h2>
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-col md:flex-row items-start justify-between gap-2 md:gap-4 sm:gap-2">
+                <label className="w-full md:w-[9rem] text-gray-600 font-medium pt-2">
+                  파일업로드
+                </label>
+                <div className="flex-1 space-y-2">
+                  <CustomFileUpload
+                    onFileSelect={handleFileSelect}
+                    disabled={sendByEmail}
+                    placeholder="시안 파일을 선택해주세요"
+                    className="w-full md:w-[21.25rem] sm:w-[13rem]"
+                  />
+                  <div className="flex flex-col gap-2 items-start">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="sendByEmail"
+                        checked={sendByEmail}
+                        onChange={(e) => handleEmailSelect(e.target.checked)}
+                        className="w-4 h-4"
+                      />
+                      <label
+                        htmlFor="sendByEmail"
+                        className="text-sm text-gray-500"
+                      >
+                        이메일로 파일 보낼게요
+                      </label>
+                    </div>
+                    {sendByEmail && (
+                      <p className="text-xs text-gray-500 ml-6">
+                        banner114@hanmail.net로 시안을 보내드리겠습니다.
+                      </p>
+                    )}
+                  </div>
+                  {validationErrors.fileUpload && (
+                    <span className="text-red-500 text-sm">
+                      {validationErrors.fileUpload}
                     </span>
-                  </div>
-
-                  {/* 묶음 패널 목록 */}
-                  <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-                    <h3 className="text-sm font-semibold mb-2 text-gray-700">
-                      결제할 게시대 목록:
-                    </h3>
-                    <div className="space-y-1">
-                      {group.items.map((item, index) => (
-                        <div
-                          key={item.id}
-                          className="text-sm text-gray-600 flex justify-between"
-                        >
-                          <span>
-                            {index + 1}. {item.name}
-                          </span>
-                          <span className="font-medium">
-                            {item.price?.toLocaleString()}원
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 border border-solid border-gray-12 rounded-[0.375rem] p-4 bg-gray-11 sm:p-2">
-                    <div className="text-1.25 font-700 sm:text-0.875">
-                      {group.is_public_institution
-                        ? '공공기관용'
-                        : group.is_company
-                        ? '기업용'
-                        : '개인용'}{' '}
-                      -{' '}
-                      {defaultProfile?.contact_person_name ||
-                        user?.name ||
-                        '사용자'}
-                    </div>
-                  </div>
+                  )}
                 </div>
-
-                <div className="text-1 text-gray-10">
-                  <h3 className="text-1.25 font-600 mb-2 text-[#222] sm:pb-5">
-                    고객 정보
-                  </h3>
-                  <form className="flex flex-col gap-5">
-                    <div className="flex flex-col gap-4 sm:gap-8">
-                      {/* 작업이름 */}
-                      <div className="flex flex-col sm:flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4 sm:gap-2">
-                        <label className="w-full md:w-[9rem] text-gray-600 font-medium">
-                          작업이름
-                        </label>
-                        <div className="flex flex-col gap-1">
-                          <input
-                            type="text"
-                            value={projectName}
-                            onChange={(e) => {
-                              setProjectName(e.target.value);
-                              // 입력 시 유효성 검사 에러 초기화
-                              if (validationErrors.projectName) {
-                                setValidationErrors((prev) => ({
-                                  ...prev,
-                                  projectName: '',
-                                }));
-                              }
-                            }}
-                            className={`w-full md:w-[21.25rem] sm:w-[13rem] border border-solid shadow-none rounded px-4 h-[3rem] ${
-                              validationErrors.projectName
-                                ? 'border-red-500'
-                                : 'border-gray-300'
-                            }`}
-                            placeholder="작업 이름을 입력하세요"
-                          />
-                          {validationErrors.projectName && (
-                            <span className="text-red-500 text-sm">
-                              {validationErrors.projectName}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* 파일업로드 */}
-                      <div className="flex flex-col sm:flex-col md:flex-row items-start justify-between gap-2 md:gap-4 sm:gap-2">
-                        <label className="w-full md:w-[9rem] text-gray-600 font-medium pt-2">
-                          파일업로드
-                        </label>
-                        <div className="flex-1 space-y-2">
-                          {/* 커스텀 파일 업로드 */}
-                          <CustomFileUpload
-                            onFileSelect={handleFileSelect}
-                            disabled={sendByEmail}
-                            placeholder="시안 파일을 선택해주세요"
-                            className="w-full md:w-[21.25rem] sm:w-[13rem]"
-                          />
-
-                          <div className="flex flex-col gap-2 items-start">
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                id="sendByEmail"
-                                checked={sendByEmail}
-                                onChange={(e) =>
-                                  handleEmailSelect(e.target.checked)
-                                }
-                                className="w-4 h-4"
-                              />
-                              <label
-                                htmlFor="sendByEmail"
-                                className="text-sm text-gray-500"
-                              >
-                                이메일로 파일 보낼게요
-                              </label>
-                            </div>
-                            {sendByEmail && (
-                              <p className="text-xs text-gray-500 ml-6">
-                                banner114@hanmail.net로 시안을 보내드리겠습니다.
-                              </p>
-                            )}
-                          </div>
-
-                          {validationErrors.fileUpload && (
-                            <span className="text-red-500 text-sm">
-                              {validationErrors.fileUpload}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* 유의사항 동의 */}
-                      <div className="flex flex-col sm:flex-col md:flex-row items-start justify-between gap-2 md:gap-4 sm:gap-2">
-                        <label className="w-full md:w-[9rem] text-gray-600 font-medium pt-2">
-                          유의사항
-                        </label>
-                        <div className="flex flex-col gap-4">
-                          {/* 유의사항 내용 */}
-                          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                            <h4 className="font-semibold text-gray-800 mb-3">
-                              현수막 표시내용의 금지, 제한 사항
-                            </h4>
-                            <ul className="text-sm text-gray-700 space-y-2 mb-4">
-                              <li>
-                                성적인 표현 암시, 인권침해(국제결혼, 신부 등)
-                              </li>
-                              <li>
-                                음란, 퇴폐성 및 청소년 보호, 선도에 저해 우려가
-                                있는 내용
-                              </li>
-                              <li>
-                                사채, 대부업, 채권추심등에 관련된 내용,
-                                시민정서에 적합하지 않은 내용
-                              </li>
-                              <li>
-                                특정 개인, 단체 등의 가치관을 비방 또는
-                                홍보하려는 내용
-                              </li>
-                              <li>
-                                기타 반사회적 내용 또는 시민정서에 적합하지
-                                않다고 판단되는 내용
-                              </li>
-                            </ul>
-
-                            <h4 className="font-semibold text-gray-800 mb-3">
-                              현수막 게시의 지연 또는 일시 중지
-                            </h4>
-                            <ul className="text-sm text-gray-700 space-y-2 mb-4">
-                              <li>
-                                • 법정공휴일 또는 강풍, 우천, 폭설 시에는 현수막
-                                게시 일정이 전후날로 변경 될 수 있습니다.
-                              </li>
-                              <li>
-                                • 현수막 게시 기간 중, 태풍, 재난, 긴급 공사
-                                등의 사유가 발생할 때에는 광고주에게 사전 통보
-                                없이 게시를 일시 중지 할 수 있습니다.
-                              </li>
-                            </ul>
-
-                            <div className="bg-red-50 border border-red-200 p-3 rounded">
-                              <h4 className="font-semibold text-red-700 mb-2">
-                                [유의사항]
-                              </h4>
-                              <p className="text-sm text-red-700">
-                                현수막게시대 게시 신청 시 아래 규약사항을 반드시
-                                숙지하시기 바라며, 숙지하지 못한 책임은
-                                신청인에게 있습니다. 또한 관련 규정을 위반한
-                                경우에도 신청 및 게시가 불가합니다.
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-start gap-2">
-                            <input
-                              type="checkbox"
-                              id="agreement"
-                              checked={isAgreedCaution}
-                              onChange={(e) => {
-                                setIsAgreedCaution(e.target.checked);
-                                if (validationErrors.agreement) {
-                                  setValidationErrors((prev) => ({
-                                    ...prev,
-                                    agreement: '',
-                                  }));
-                                }
-                              }}
-                              className="w-4 h-4 mt-1"
-                            />
-                            <label
-                              htmlFor="agreement"
-                              className="text-sm text-gray-700 leading-relaxed"
-                            >
-                              <span className="text-red-500">*</span> 유의사항을
-                              확인하고 동의합니다.
-                            </label>
-                          </div>
-                          {validationErrors.agreement && (
-                            <span className="text-red-500 text-sm">
-                              {validationErrors.agreement}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </form>
-                </div>
-              </section>
+              </div>
             </div>
+          </section>
+          {/* 구별 카드 */}
+          {groupedItems.map((group) => (
+            <section
+              key={group.id}
+              className="p-6 border rounded-lg shadow-sm flex flex-col gap-4 sm:p-2"
+            >
+              <div className="flex items-center mb-2">
+                <span className="text-1.25 font-700 text-[#222] sm:text-0.875">
+                  {group.district} 현수막게시대
+                </span>
+                <span className="text-gray-500 text-0.875 ml-2">
+                  ({group.items.length}개 패널)
+                </span>
+              </div>
+              {/* 구별 아이템 목록 */}
+              <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                <h3 className="text-sm font-semibold mb-2 text-gray-700">
+                  결제할 게시대 목록:
+                </h3>
+                <div className="space-y-1">
+                  {group.items.map((item, index) => (
+                    <div
+                      key={item.id}
+                      className="text-sm text-gray-600 flex flex-col sm:flex-row sm:justify-between items-center"
+                    >
+                      <span>
+                        {index + 1}. 패널번호:{' '}
+                        {item.panel_code || item.panel_info_id || '-'} / 이름:{' '}
+                        {item.name || '-'} / 구: {item.district}
+                      </span>
+                      {/* 아이템별 프로필 선택 UI: 일괄적용 해제 시에만 활성화 */}
+                      {!groupBulkProfile[group.district] && (
+                        <Button
+                          type="button"
+                          className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded ml-2 text-xs"
+                          onClick={() =>
+                            setProfileModalOpen(
+                              `${group.district}-item-${item.id}`
+                            )
+                          }
+                        >
+                          프로필 선택
+                        </Button>
+                      )}
+                      {/* 아이템별 프로필 모달 */}
+                      {profileModalOpen ===
+                        `${group.district}-item-${item.id}` && (
+                        <UserProfileModal
+                          isOpen={true}
+                          onClose={() => setProfileModalOpen(null)}
+                          mode="edit"
+                          onConfirm={(profile) => {
+                            // 아이템별 프로필 적용 (추후 확장)
+                            // setItemProfiles((prev) => ({ ...prev, [item.id]: profile }));
+                            setProfileModalOpen(null);
+                          }}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* 결제 금액/계좌/결제 버튼 */}
+              <div className="flex flex-col gap-2 mt-2">
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold text-gray-700">
+                    총 결제 금액:
+                  </span>
+                  <span className="font-bold text-lg text-blue-700">
+                    {group.totalPrice.toLocaleString()}원
+                  </span>
+                </div>
+                {/* 계좌 정보 등 추가 가능 */}
+                <Button
+                  onClick={async () => {
+                    // 구별 결제 로직: 해당 group만 주문 생성/시안 업로드
+                    await handleSingleGroupPayment(group);
+                  }}
+                  className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 mt-2"
+                >
+                  {group.district} 결제하기
+                </Button>
+              </div>
+            </section>
           ))}
-        </div>
+          {/* 유의사항 동의 및 작업이름 입력 */}
+          <section className="p-6 border rounded-lg shadow-sm flex flex-col gap-4 sm:p-2">
+            <div className="flex flex-col sm:flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4 sm:gap-2">
+              <label className="w-full md:w-[9rem] text-gray-600 font-medium">
+                작업이름
+              </label>
+              <div className="flex flex-col gap-1">
+                <input
+                  type="text"
+                  value={projectName}
+                  onChange={(e) => {
+                    setProjectName(e.target.value);
+                    if (validationErrors.projectName) {
+                      setValidationErrors((prev) => ({
+                        ...prev,
+                        projectName: '',
+                      }));
+                    }
+                  }}
+                  className={`w-full md:w-[21.25rem] sm:w-[13rem] border border-solid shadow-none rounded px-4 h-[3rem] ${
+                    validationErrors.projectName
+                      ? 'border-red-500'
+                      : 'border-gray-300'
+                  }`}
+                  placeholder="작업 이름을 입력하세요"
+                />
+                {validationErrors.projectName && (
+                  <span className="text-red-500 text-sm">
+                    {validationErrors.projectName}
+                  </span>
+                )}
+              </div>
+            </div>
+            {/* 유의사항 동의 기존 UI 유지 */}
+            {/* 유의사항 동의 */}
+            <div className="flex flex-col sm:flex-col md:flex-row items-start justify-between gap-2 md:gap-4 sm:gap-2">
+              <label className="w-full md:w-[9rem] text-gray-600 font-medium pt-2">
+                유의사항
+              </label>
+              <div className="flex flex-col gap-4">
+                {/* 유의사항 내용 */}
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                  <h4 className="font-semibold text-gray-800 mb-3">
+                    현수막 표시내용의 금지, 제한 사항
+                  </h4>
+                  <ul className="text-sm text-gray-700 space-y-2 mb-4">
+                    <li>성적인 표현 암시, 인권침해(국제결혼, 신부 등)</li>
+                    <li>
+                      음란, 퇴폐성 및 청소년 보호, 선도에 저해 우려가 있는 내용
+                    </li>
+                    <li>
+                      사채, 대부업, 채권추심등에 관련된 내용, 시민정서에
+                      적합하지 않은 내용
+                    </li>
+                    <li>
+                      특정 개인, 단체 등의 가치관을 비방 또는 홍보하려는 내용
+                    </li>
+                    <li>
+                      기타 반사회적 내용 또는 시민정서에 적합하지 않다고
+                      판단되는 내용
+                    </li>
+                  </ul>
 
-        {/* 우측 - 결제 정보 */}
+                  <h4 className="font-semibold text-gray-800 mb-3">
+                    현수막 게시의 지연 또는 일시 중지
+                  </h4>
+                  <ul className="text-sm text-gray-700 space-y-2 mb-4">
+                    <li>
+                      • 법정공휴일 또는 강풍, 우천, 폭설 시에는 현수막 게시
+                      일정이 전후날로 변경 될 수 있습니다.
+                    </li>
+                    <li>
+                      • 현수막 게시 기간 중, 태풍, 재난, 긴급 공사 등의 사유가
+                      발생할 때에는 광고주에게 사전 통보 없이 게시를 일시 중지
+                      할 수 있습니다.
+                    </li>
+                  </ul>
+
+                  <div className="bg-red-50 border border-red-200 p-3 rounded">
+                    <h4 className="font-semibold text-red-700 mb-2">
+                      [유의사항]
+                    </h4>
+                    <p className="text-sm text-red-700">
+                      현수막게시대 게시 신청 시 아래 규약사항을 반드시
+                      숙지하시기 바라며, 숙지하지 못한 책임은 신청인에게
+                      있습니다. 또한 관련 규정을 위반한 경우에도 신청 및 게시가
+                      불가합니다.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    id="agreement"
+                    checked={isAgreedCaution}
+                    onChange={(e) => {
+                      setIsAgreedCaution(e.target.checked);
+                      if (validationErrors.agreement) {
+                        setValidationErrors((prev) => ({
+                          ...prev,
+                          agreement: '',
+                        }));
+                      }
+                    }}
+                    className="w-4 h-4 mt-1"
+                  />
+                  <label
+                    htmlFor="agreement"
+                    className="text-sm text-gray-700 leading-relaxed"
+                  >
+                    <span className="text-red-500">*</span> 유의사항을 확인하고
+                    동의합니다.
+                  </label>
+                </div>
+                {validationErrors.agreement && (
+                  <span className="text-red-500 text-sm">
+                    {validationErrors.agreement}
+                  </span>
+                )}
+              </div>
+            </div>
+          </section>
+        </div>
+        {/* 우측 - 결제 정보 및 결제 버튼 */}
         <div className="space-y-8 border border-solid border-gray-3 rounded-[0.375rem] p-[2.5rem] sm:p-[1.5rem]">
           {/* 결제 방법 선택 */}
           <section className="p-6 border rounded-lg shadow-sm">

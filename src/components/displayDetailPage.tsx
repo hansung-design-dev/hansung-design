@@ -10,7 +10,7 @@ import GalleryIcon from '@/src/icons/gallery.svg';
 import ListIcon from '@/src/icons/list.svg';
 import DocumentIcon from '@/public/svg/document.svg';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useCart } from '../contexts/cartContext';
 import { useProfile } from '../contexts/profileContext';
 import { useAuth } from '../contexts/authContext';
@@ -18,11 +18,9 @@ import {
   District,
   DropdownOption,
   DisplayBillboard,
-  PanelGuideline,
 } from '@/src/types/displaydetail';
 import DistrictInfo from './districtInfo';
 import HalfPeriodTabs from './ui/HalfPeriodTabs';
-import GuidelineSection from './guidelineSection';
 
 const fadeInUp = {
   initial: { y: 60, opacity: 0 },
@@ -153,7 +151,7 @@ export default function DisplayDetailPage({
   >('panel');
 
   // 가이드라인 상태 추가
-  const [guidelines, setGuidelines] = useState<PanelGuideline[]>([]);
+  //const [guidelines, setGuidelines] = useState<PanelGuideline[]>([]);
 
   // props로 받은 panelTypeFilter가 있으면 사용, 없으면 내부 상태 사용
   const currentPanelTypeFilter = panelTypeFilter || internalPanelTypeFilter;
@@ -166,56 +164,56 @@ export default function DisplayDetailPage({
   const router = useRouter();
 
   // 가이드라인 가져오기 함수
-  const fetchGuidelines = async (districtName: string) => {
-    try {
-      // 구별로 가이드라인 타입 결정
-      let guidelineTypes: string[] = [];
+  // const fetchGuidelines = async (districtName: string) => {
+  //   try {
+  //     // 구별로 가이드라인 타입 결정
+  //     let guidelineTypes: string[] = [];
 
-      switch (districtName) {
-        case '서대문구':
-          guidelineTypes = ['admin', 'commercial'];
-          break;
-        case '마포구':
-          guidelineTypes = ['banner', 'bulletin_board'];
-          break;
-        case '용산구':
-          guidelineTypes = ['banner'];
-          break;
-        case '송파구':
-          guidelineTypes = ['banner', 'top_fixed'];
-          break;
-        default:
-          guidelineTypes = ['banner'];
-          break;
-      }
+  //     switch (districtName) {
+  //       case '서대문구':
+  //         guidelineTypes = ['admin', 'commercial'];
+  //         break;
+  //       case '마포구':
+  //         guidelineTypes = ['banner', 'bulletin_board'];
+  //         break;
+  //       case '용산구':
+  //         guidelineTypes = ['banner'];
+  //         break;
+  //       case '송파구':
+  //         guidelineTypes = ['banner', 'top_fixed'];
+  //         break;
+  //       default:
+  //         guidelineTypes = ['banner'];
+  //         break;
+  //     }
 
-      // 모든 가이드라인 타입을 병렬로 가져오기
-      const guidelinePromises = guidelineTypes.map(async (type) => {
-        try {
-          const response = await fetch(
-            `/api/panel-guideline?district=${encodeURIComponent(
-              districtName
-            )}&guideline_type=${type}`
-          );
-          const result = await response.json();
-          return result.success ? result.data : null;
-        } catch (error) {
-          console.warn(`${type} 가이드라인 가져오기 실패:`, error);
-          return null;
-        }
-      });
+  //     // 모든 가이드라인 타입을 병렬로 가져오기
+  //     // const guidelinePromises = guidelineTypes.map(async (type) => {
+  //     //   try {
+  //     //     const response = await fetch(
+  //     //       `/api/panel-guideline?district=${encodeURIComponent(
+  //     //         districtName
+  //     //       )}&guideline_type=${type}`
+  //     //     );
+  //     //     const result = await response.json();
+  //     //     return result.success ? result.data : null;
+  //     //   } catch (error) {
+  //     //     console.warn(`${type} 가이드라인 가져오기 실패:`, error);
+  //     //     return null;
+  //     //   }
+  //     // });
 
-      const guidelineResults = await Promise.all(guidelinePromises);
-      const validGuidelines = guidelineResults.filter(
-        Boolean
-      ) as PanelGuideline[];
+  //     // const guidelineResults = await Promise.all(guidelinePromises);
+  //     // const validGuidelines = guidelineResults.filter(
+  //     //   Boolean
+  //     // ) as PanelGuideline[];
 
-      setGuidelines(validGuidelines);
-    } catch (error) {
-      console.error('가이드라인 가져오기 오류:', error);
-      setGuidelines([]);
-    }
-  };
+  //     // setGuidelines(validGuidelines);
+  //   } catch (error) {
+  //     console.error('가이드라인 가져오기 오류:', error);
+  //     setGuidelines([]);
+  //   }
+  // };
 
   const isAllDistrictsView = district === 'all';
 
@@ -236,12 +234,12 @@ export default function DisplayDetailPage({
     return districtMap[districtName] || districtName.replace('구', '');
   };
 
-  // 가이드라인 가져오기
-  useEffect(() => {
-    if (districtObj?.name && !isAllDistrictsView) {
-      fetchGuidelines(districtObj.name);
-    }
-  }, [districtObj?.name, isAllDistrictsView]);
+  // // 가이드라인 가져오기
+  // useEffect(() => {
+  //   if (districtObj?.name && !isAllDistrictsView) {
+  //     fetchGuidelines(districtObj.name);
+  //   }
+  // }, [districtObj?.name, isAllDistrictsView]);
 
   // 상하반기 탭 변경 시 선택 상태 초기화 (선택적)
   // useEffect(() => {
@@ -342,35 +340,38 @@ export default function DisplayDetailPage({
       : filteredByPanelType;
 
   // 상하반기에 따른 필터링
-  const filteredByHalfPeriod = filteredByDistrict.map((item) => {
-    // 실시간 재고 정보가 있으면 사용, 없으면 기존 방식 사용
-    let faces = item.faces;
+  const filteredByHalfPeriod =
+    isMapoDistrict && mapoFilter === 'simin'
+      ? filteredByDistrict // 시민게시대는 기간/재고 필터링 없이 전체 출력
+      : filteredByDistrict.map((item) => {
+          // 실시간 재고 정보가 있으면 사용, 없으면 기존 방식 사용
+          let faces = item.faces;
 
-    if (item.inventory_info) {
-      if (
-        selectedHalfPeriod === 'first_half' &&
-        item.inventory_info.first_half
-      ) {
-        faces = item.inventory_info.first_half.available_slots;
-      } else if (
-        selectedHalfPeriod === 'second_half' &&
-        item.inventory_info.second_half
-      ) {
-        faces = item.inventory_info.second_half.available_slots;
-      }
-    } else {
-      // 기존 방식: 선택된 상하반기에 따른 마감수 표시
-      faces =
-        selectedHalfPeriod === 'first_half'
-          ? item.first_half_closure_quantity || item.faces
-          : item.second_half_closure_quantity || item.faces;
-    }
+          if (item.inventory_info) {
+            if (
+              selectedHalfPeriod === 'first_half' &&
+              item.inventory_info.first_half
+            ) {
+              faces = item.inventory_info.first_half.available_slots;
+            } else if (
+              selectedHalfPeriod === 'second_half' &&
+              item.inventory_info.second_half
+            ) {
+              faces = item.inventory_info.second_half.available_slots;
+            }
+          } else {
+            // 기존 방식: 선택된 상하반기에 따른 마감수 표시
+            faces =
+              selectedHalfPeriod === 'first_half'
+                ? item.first_half_closure_quantity || item.faces
+                : item.second_half_closure_quantity || item.faces;
+          }
 
-    return {
-      ...item,
-      faces,
-    };
-  });
+          return {
+            ...item,
+            faces,
+          };
+        });
 
   const filteredBillboards = isAllDistrictsView
     ? [...filteredByHalfPeriod].sort((a, b) =>
@@ -857,6 +858,7 @@ export default function DisplayDetailPage({
         isTopFixed: isTopFixed, // 상단광고 여부
         ...(panelSlotSnapshot && { panel_slot_snapshot: panelSlotSnapshot }), // 가격 상세 정보 추가
         panel_code: item.panel_code?.toString(),
+        photo_url: item.photo_url, // 게시대 사진 URL 추가
         // 사용자 프로필 정보 추가
         contact_person_name: defaultProfile?.contact_person_name,
         phone: defaultProfile?.phone,
@@ -872,6 +874,8 @@ export default function DisplayDetailPage({
         price: cartItem.price,
         hasSnapshot: !!cartItem.panel_slot_snapshot,
         snapshot: cartItem.panel_slot_snapshot,
+        photo_url: cartItem.photo_url,
+        hasPhotoUrl: !!cartItem.photo_url,
       });
 
       console.log('🔍 Adding item to cart:', cartItem);
@@ -902,7 +906,7 @@ export default function DisplayDetailPage({
           >
             <div className="relative aspect-[1/1] w-full overflow-hidden rounded-lg">
               <Image
-                src={item.photo_url || '/images/banner-display/landing.png'}
+                src={item.photo_url || '/images/no_image.png'}
                 alt={item.name}
                 fill
                 className={`md:object-cover sm:object-cover `}
@@ -1090,6 +1094,22 @@ export default function DisplayDetailPage({
     );
   };
 
+  // 상하반기 탭 노출 조건 함수
+  const showHalfPeriodTabs =
+    // 용산구, 송파구: 현수막게시대 탭만
+    ((isSongpaOrYongsan && currentPanelTypeFilter === 'panel') ||
+      // 관악구, 서대문구: 항상
+      districtObj?.code === 'gwanak' ||
+      districtObj?.code === 'seodaemun' ||
+      // 마포구: 연립형, 저단형만
+      (isMapoDistrict &&
+        (mapoFilter === 'yeollip' || mapoFilter === 'jeodan'))) &&
+    ((period && !isAllDistrictsView) ||
+      (isAllDistrictsView &&
+        selectedOption &&
+        selectedOption.option !== '전체' &&
+        selectedDistrictPeriod));
+
   return (
     <main className="min-h-screen flex flex-col bg-white pb-10">
       <div className="lg:min-w-[70rem] lg:max-w-[1500px]  mx-auto px-4 pt-[7rem]">
@@ -1211,26 +1231,21 @@ export default function DisplayDetailPage({
         )}
         {/* 상하반기 탭 - 개별 구 페이지에서만 표시하거나, 전체보기에서 특정 구를 선택했을 때만 표시 */}
         {/* 상단광고 탭에서는 상하반기 탭 숨김 */}
-        {((period && !isAllDistrictsView) ||
-          (isAllDistrictsView &&
-            selectedOption &&
-            selectedOption.option !== '전체' &&
-            selectedDistrictPeriod)) &&
-          !(isSongpaOrYongsan && currentPanelTypeFilter === 'top_fixed') && (
-            <HalfPeriodTabs
-              selectedPeriod={selectedHalfPeriod}
-              onPeriodChange={(newPeriod, year, month) => {
-                setSelectedHalfPeriod(newPeriod);
-                if (year !== undefined) setSelectedPeriodYear(year);
-                if (month !== undefined) setSelectedPeriodMonth(month);
-                // 선택된 기간이 변경되면 선택 상태 초기화
-                setSelectedIdsFirstHalf([]);
-                setSelectedIdsSecondHalf([]);
-              }}
-              districtName={districtObj?.name}
-              periodData={period}
-            />
-          )}
+        {showHalfPeriodTabs && (
+          <HalfPeriodTabs
+            selectedPeriod={selectedHalfPeriod}
+            onPeriodChange={(newPeriod, year, month) => {
+              setSelectedHalfPeriod(newPeriod);
+              if (year !== undefined) setSelectedPeriodYear(year);
+              if (month !== undefined) setSelectedPeriodMonth(month);
+              // 선택된 기간이 변경되면 선택 상태 초기화
+              setSelectedIdsFirstHalf([]);
+              setSelectedIdsSecondHalf([]);
+            }}
+            districtName={districtObj?.name}
+            periodData={period}
+          />
+        )}
         {/* View Type Selector */}
         <div className="flex items-center gap-4 mb-8 border-b border-gray-200 pb-4">
           <ViewTypeButton
@@ -1259,17 +1274,17 @@ export default function DisplayDetailPage({
                 guidelineSection.scrollIntoView({ behavior: 'smooth' });
               }
             }}
-            className="flex items-center gap-2 px-4 py-2 hover:cursor-pointer text-gray-600 hover:text-black border-b-2 border-transparent hover:border-black"
+            className="flex items-center gap-2 px-4 py-2 hover:cursor-pointer text-gray-800 hover:text-black border-b-2 border-transparent hover:border-black"
           >
-            <DocumentIcon className="w-7 h-6 text-gray-400" />
+            <DocumentIcon className="w-7 h-6 text-gray-600" />
             <span className="hidden md:inline">가이드라인 보기</span>
           </button>
           <button
             onClick={handleAIFileDownload}
-            className="flex items-center gap-2 px-4 py-2 hover:cursor-pointer text-gray-600 hover:text-black border-b-2 border-transparent hover:border-black"
+            className="flex items-center gap-2 px-4 py-2 hover:cursor-pointer text-gray-800 hover:text-black border-b-2 border-transparent hover:border-black"
           >
             <svg
-              className="w-7 h-6 text-gray-400"
+              className="w-7 h-6 text-gray-600"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -1326,12 +1341,7 @@ export default function DisplayDetailPage({
                 district={districtObj?.name}
               />
 
-              {/* 가이드라인 섹션 */}
-              <GuidelineSection
-                guidelines={guidelines}
-                districtName={districtObj?.name || ''}
-                isAllDistrictsView={isAllDistrictsView}
-              />
+              {/* 가이드라인 섹션 삭제 */}
             </>
           ) : (
             renderGalleryView()
