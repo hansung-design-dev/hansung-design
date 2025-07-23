@@ -2,6 +2,8 @@
 
 import Image from 'next/image';
 import ItemCard from '../../components/itemCard';
+import DraggableNoticePopup from '@/src/components/DraggableNoticePopup';
+import { useAdvancedNoticePopup } from '@/src/components/hooks/useAdvancedNoticePopup';
 
 const items = [
   {
@@ -61,6 +63,9 @@ const items = [
 ];
 
 export default function DigitalSignagePage() {
+  // 팝업 공지사항 훅 사용 (고급 팝업 시스템)
+  const { popupNotice, closePopup } = useAdvancedNoticePopup('digital_signage');
+
   return (
     <main className="min-h-screen bg-white ">
       {/* Header Section */}
@@ -92,6 +97,11 @@ export default function DigitalSignagePage() {
           ))}
         </div>
       </div>
+
+      {/* 팝업 공지사항 */}
+      {popupNotice && (
+        <DraggableNoticePopup notice={popupNotice} onClose={closePopup} />
+      )}
     </main>
   );
 }

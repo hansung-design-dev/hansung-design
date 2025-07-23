@@ -224,10 +224,12 @@ function CartItemRow({
             onClick={onOrderModify}
             disabled={disabled}
           >
-            {disabled && (
+            {disabled ? (
               <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                 <span className="text-lg font-bol">×</span>
               </span>
+            ) : (
+              '주문자수정'
             )}
           </Button>
         </div>
