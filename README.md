@@ -1,3 +1,36 @@
+# 한성웹 프로젝트
+
+## 최근 업데이트
+
+### 게첨사진 기능 추가 (2024년)
+
+- 고객지원 페이지에 게첨사진 탭 추가
+- 현수막게시대, LED전자게시대, 디지털사이니지 설치 완료 사진 관리
+- 분기별 설치 현황을 고객에게 공개
+- 아코디언 형태의 UI로 사진과 상세 정보 표시
+
+### 주요 기능
+
+- 게첨사진 조회 API (`/api/installation-photos`)
+- 디스플레이 타입별 필터링
+- 마크다운 형식의 내용 지원
+- 반응형 이미지 표시
+
+### 데이터베이스 스키마
+
+```sql
+-- 게첨사진 테이블
+CREATE TABLE installed_photos (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    display_type_id UUID NOT NULL REFERENCES display_types(id),
+    title VARCHAR(255) NOT NULL,
+    content TEXT,
+    photo_urls TEXT[] NOT NULL, -- 여러 사진 URL 배열
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
+
 # 한성디자인 웹사이트
 
 한성디자인의 LED 디스플레이 및 배너 광고 서비스 웹사이트입니다.

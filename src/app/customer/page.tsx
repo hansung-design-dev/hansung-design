@@ -2,6 +2,7 @@
 import React from 'react';
 import FaqSkeleton from '../../components/skeleton/FaqSkeleton';
 import NoticeSkeleton from '../../components/skeleton/NoticeSkeleton';
+import { InstallationPhoto } from '../../types/installation-photo';
 
 const faqCategories = [
   '디지털사이니지',
@@ -37,16 +38,20 @@ interface FaqItem {
 
 export default function CustomerPage() {
   const [activeTab, setActiveTab] = React.useState<
-    '공지사항' | '자주 묻는 질문'
-  >('공지사항');
+    '게첨사진' | '공지사항' | '자주 묻는 질문'
+  >('게첨사진');
   const [activeFaq, setActiveFaq] = React.useState(faqCategories[0]);
   const [expandedItemId, setExpandedItemId] = React.useState<string | null>(
     null
   );
   const [notices, setNotices] = React.useState<NoticeItem[]>([]);
   const [faqs, setFaqs] = React.useState<FaqItem[]>([]);
+  const [installationPhotos, setInstallationPhotos] = React.useState<
+    InstallationPhoto[]
+  >([]);
   const [loading, setLoading] = React.useState(true);
   const [faqLoading, setFaqLoading] = React.useState(false);
+  const [photoLoading, setPhotoLoading] = React.useState(false);
 
   // 공지사항 데이터 가져오기
   React.useEffect(() => {
@@ -66,6 +71,28 @@ export default function CustomerPage() {
 
     fetchNotices();
   }, []);
+
+  // 게첨사진 데이터 가져오기
+  React.useEffect(() => {
+    const fetchInstallationPhotos = async () => {
+      if (activeTab !== '게첨사진') return;
+
+      setPhotoLoading(true);
+      try {
+        const response = await fetch('/api/installation-photos?limit=20');
+        const data = await response.json();
+        if (data.installation_photos) {
+          setInstallationPhotos(data.installation_photos);
+        }
+      } catch (error) {
+        console.error('게첨사진 조회 오류:', error);
+      } finally {
+        setPhotoLoading(false);
+      }
+    };
+
+    fetchInstallationPhotos();
+  }, [activeTab]);
 
   // FAQ 데이터 가져오기
   React.useEffect(() => {
@@ -103,8 +130,8 @@ export default function CustomerPage() {
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // **텍스트**를 굵게
       .replace(/\*(.*?)\*/g, '<em>$1</em>') // *텍스트*를 기울임
       .replace(/■\s*(.*?)(?=\n|$)/g, '<strong>■ $1</strong>') // ■ 텍스트를 굵게
-      .replace(/^<p>/, '') // 첫 번째 <p> 태그 제거
-      .replace(/<\/p>$/, ''); // 마지막 </p> 태그 제거
+      .replace(/^/, '<p>') // 시작에 <p> 태그 추가
+      .replace(/$/, '</p>'); // 끝에 </p> 태그 추가
   };
 
   // 날짜 포맷팅
@@ -162,9 +189,18 @@ export default function CustomerPage() {
         {/* Left Nav */}
         <div className="w-72 flex-shrink-0">
           <div className="mb-10">
-            {/* 공지사항 탭 */}
+            {/* 게첨사진 탭 */}
             <div
               className={`text-1.25 font-700 mb-6 border-b-1 border-b-solid pb-4 border-gray-1 cursor-pointer ${
+                activeTab === '게첨사진' ? 'text-black' : 'text-gray-5'
+              }`}
+              onClick={() => setActiveTab('게첨사진')}
+            >
+              게첨사진
+            </div>
+            {/* 공지사항 탭 */}
+            <div
+              className={`text-1.25 font-600 mb-6 border-b-1 border-b-solid pb-4 border-gray-1 cursor-pointer ${
                 activeTab === '공지사항' ? 'text-black' : 'text-gray-5'
               }`}
               onClick={() => setActiveTab('공지사항')}
@@ -201,12 +237,103 @@ export default function CustomerPage() {
         {/* Main Content */}
         <main className="flex-1 w-1/3">
           <div className="text-2.5 font-500 mb-6 border-b-solid border-b-1 border-gray-1 pb-4">
-            {activeTab === '공지사항'
+            {activeTab === '게첨사진'
+              ? '게첨사진'
+              : activeTab === '공지사항'
               ? '공지사항'
               : `자주 묻는 질문 - ${activeFaq}`}
           </div>
 
-          {activeTab === '공지사항' ? (
+          {activeTab === '게첨사진' ? (
+            <div>
+              {photoLoading ? (
+                <div className="space-y-4">
+                  {[...Array(5)].map((_, index) => (
+                    <div
+                      key={index}
+                      className="border border-gray-200 rounded-lg p-4"
+                    >
+                      <div className="animate-pulse">
+                        <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                        <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
+                        <div className="h-48 bg-gray-200 rounded"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : installationPhotos.length > 0 ? (
+                <div className="space-y-6">
+                  {installationPhotos.map((photo) => (
+                    <div
+                      key={photo.id}
+                      className="border border-gray-200 rounded-lg overflow-hidden"
+                    >
+                      <div
+                        className="p-4 cursor-pointer hover:bg-gray-50"
+                        onClick={() => handleItemClick(photo.id)}
+                      >
+                        <div className="flex justify-between items-center">
+                          <h3 className="text-lg font-medium text-gray-900">
+                            {photo.title}
+                          </h3>
+                          <span className="text-sm text-gray-500">
+                            {photo.display_types?.name}
+                          </span>
+                        </div>
+                        <div className="text-sm text-gray-500 mt-1">
+                          {formatDate(photo.created_at)}
+                        </div>
+                      </div>
+                      {/* 아코디언 상세 내용 */}
+                      {expandedItemId === photo.id && (
+                        <div className="border-t border-gray-200 p-4 bg-gray-50">
+                          <div className="bg-white rounded-lg p-4">
+                            <div className="mb-4">
+                              {/* 여러 사진 표시 - 일렬로 */}
+                              <div className="flex flex-col space-y-4">
+                                {photo.photo_urls.map((photoUrl, index) => (
+                                  <div key={index} className="relative">
+                                    <img
+                                      src={photoUrl}
+                                      alt={`${photo.title} - 사진 ${index + 1}`}
+                                      className="w-full h-auto rounded-lg shadow-sm"
+                                      onError={(e) => {
+                                        const target =
+                                          e.target as HTMLImageElement;
+                                        target.src = '/images/no_image.png';
+                                      }}
+                                    />
+                                    <div className="absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
+                                      {index + 1} / {photo.photo_urls.length}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                            {photo.content && (
+                              <div
+                                className="text-gray-600 leading-relaxed whitespace-pre-line"
+                                dangerouslySetInnerHTML={{
+                                  __html: renderMarkdown(photo.content),
+                                }}
+                              />
+                            )}
+                            <div className="mt-4 text-sm text-gray-500">
+                              등록일: {formatDate(photo.created_at)}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  게첨사진이 없습니다.
+                </div>
+              )}
+            </div>
+          ) : activeTab === '공지사항' ? (
             <table className="w-full border-collapse text-lg">
               <thead>
                 <tr className="border-b-solid border-b-1 border-gray-1 text-gray-400 text-1.25 font-500">
