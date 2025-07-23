@@ -1,38 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/src/lib/supabase';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url);
-    const limit = searchParams.get('limit')
-      ? parseInt(searchParams.get('limit')!)
-      : 10;
-    const offset = searchParams.get('offset')
-      ? parseInt(searchParams.get('offset')!)
-      : 0;
-    const displayType = searchParams.get('display_type');
-    const isPopup = searchParams.get('is_popup') === 'true';
+    // display_type 필터링 (필요시 사용)
+    // if (displayType) {
+    //   // display_type 필터링 로직
+    // }
 
-    let query = supabase
-      .from('homepage_notice')
-      .select('*')
-      .eq('is_active', true);
-
-    // display_type 필터링
-    if (displayType) {
-      query = query.eq('display_type', displayType);
-    }
-
-    // 팝업 공지사항 필터링
-    if (isPopup) {
-      query = query.eq('is_popup', true);
-      // 현재 날짜가 팝업 기간 내에 있는지 확인
-      const today = new Date().toISOString().split('T')[0];
-      query = query.lte('popup_start_date', today).gte('popup_end_date', today);
-    }
+    // 팝업 공지사항 필터링 (필요시 사용)
+    // if (isPopup) {
+    //   // 팝업 공지사항 필터링 로직
+    // }
 
     // important 우선순위 공지사항 먼저 가져오기
-    const { data: importantNotices, error: importantError } = await query
+    const { data: importantNotices, error: importantError } = await supabase
+      .from('homepage_notice')
+      .select('*')
+      .eq('is_active', true)
       .eq('priority', 'important')
       .order('created_at', { ascending: false });
 
@@ -45,10 +30,12 @@ export async function GET(request: NextRequest) {
     }
 
     // 일반 공지사항 가져오기
-    const { data: normalNotices, error: normalError } = await query
-      .neq('priority', 'important')
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+    const { data: normalNotices, error: normalError } = await supabase
+      .from('homepage_notice')
+      .select('*')
+      .eq('is_active', true)
+      .eq('priority', 'normal')
+      .order('created_at', { ascending: false });
 
     if (normalError) {
       console.error('일반 공지사항 조회 오류:', normalError);
