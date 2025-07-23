@@ -57,8 +57,9 @@ export default function CustomerPage() {
   React.useEffect(() => {
     const fetchNotices = async () => {
       try {
-        const response = await fetch('/api/notices?limit=20');
+        const response = await fetch('/api/notices');
         const data = await response.json();
+        console.log('공지사항 데이터:', data); // 디버깅용
         if (data.notices) {
           setNotices(data.notices);
         }
@@ -120,18 +121,6 @@ export default function CustomerPage() {
 
   const handleItemClick = (itemId: string) => {
     setExpandedItemId(expandedItemId === itemId ? null : itemId);
-  };
-
-  // 마크다운 텍스트를 HTML로 변환하는 간단한 함수
-  const renderMarkdown = (text: string) => {
-    return text
-      .replace(/\n\n/g, '</p><p>') // 이중 줄바꿈을 단락으로
-      .replace(/\n/g, '<br>') // 단일 줄바꿈을 <br>로
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // **텍스트**를 굵게
-      .replace(/\*(.*?)\*/g, '<em>$1</em>') // *텍스트*를 기울임
-      .replace(/■\s*(.*?)(?=\n|$)/g, '<strong>■ $1</strong>') // ■ 텍스트를 굵게
-      .replace(/^/, '<p>') // 시작에 <p> 태그 추가
-      .replace(/$/, '</p>'); // 끝에 </p> 태그 추가
   };
 
   // 날짜 포맷팅
@@ -311,12 +300,9 @@ export default function CustomerPage() {
                               </div>
                             </div>
                             {photo.content && (
-                              <div
-                                className="text-gray-600 leading-relaxed whitespace-pre-line"
-                                dangerouslySetInnerHTML={{
-                                  __html: renderMarkdown(photo.content),
-                                }}
-                              />
+                              <div className="text-gray-600 leading-relaxed whitespace-pre-line">
+                                {photo.content}
+                              </div>
                             )}
                             <div className="mt-4 text-sm text-gray-500">
                               등록일: {formatDate(photo.created_at)}
@@ -385,14 +371,9 @@ export default function CustomerPage() {
                               <h3 className="text-xl font-bold mb-4">
                                 {notice.title}
                               </h3>
-                              <div
-                                className="text-gray-600 leading-relaxed"
-                                dangerouslySetInnerHTML={{
-                                  __html: `<p>${renderMarkdown(
-                                    notice.content
-                                  )}</p>`,
-                                }}
-                              />
+                              <div className="text-gray-600 leading-relaxed whitespace-pre-line">
+                                {notice.content}
+                              </div>
                               <div className="mt-4 text-sm text-gray-500">
                                 등록일: {formatDate(notice.created_at)}
                               </div>
@@ -433,12 +414,9 @@ export default function CustomerPage() {
                             <h4 className="text-md font-medium text-gray-900 mb-3">
                               A. 답변
                             </h4>
-                            <div
-                              className="text-gray-600 leading-relaxed"
-                              dangerouslySetInnerHTML={{
-                                __html: `<p>${renderMarkdown(faq.answer)}</p>`,
-                              }}
-                            />
+                            <div className="text-gray-600 leading-relaxed whitespace-pre-line">
+                              {faq.answer}
+                            </div>
                           </div>
                         </div>
                       )}

@@ -7,25 +7,49 @@ INSERT INTO installed_photos (display_type_id, title, content, photo_urls) VALUE
 (
   (SELECT id FROM display_types WHERE name = '현수막게시대' LIMIT 1),
   '2024년 1분기 현수막게시대 설치 완료',
-  '2024년 1분기 현수막게시대 설치가 완료되었습니다.\n\n■ 설치 지역: 강남구, 서초구, 마포구\n■ 설치 수량: 총 15개소\n■ 설치 완료일: 2024년 3월 31일\n\n모든 설치가 정상적으로 완료되어 광고 게시가 가능합니다.',
+  '2024년 1분기 현수막게시대 설치가 완료되었습니다.
+
+설치 지역: 강남구, 서초구, 마포구
+설치 수량: 총 15개소
+설치 완료일: 2024년 3월 31일
+
+모든 설치가 정상적으로 완료되어 광고 게시가 가능합니다.',
   ARRAY['/images/banner-display/landing.png', '/images/banner-display/panel_photos/songpa/1.jpg', '/images/banner-display/panel_photos/songpa/10.jpg']
 ),
 (
   (SELECT id FROM display_types WHERE name = '현수막게시대' LIMIT 1),
   '2024년 2분기 현수막게시대 추가 설치',
-  '2024년 2분기 현수막게시대 추가 설치가 완료되었습니다.\n\n■ 추가 설치 지역: 송파구, 강동구\n■ 추가 설치 수량: 총 8개소\n■ 설치 완료일: 2024년 6월 30일\n\n기존 설치소와 함께 총 23개소에서 광고 서비스를 제공합니다.',
+  '2024년 2분기 현수막게시대 추가 설치가 완료되었습니다.
+
+추가 설치 지역: 송파구, 강동구
+추가 설치 수량: 총 8개소
+설치 완료일: 2024년 6월 30일
+
+기존 설치소와 함께 총 23개소에서 광고 서비스를 제공합니다.',
   ARRAY['/images/banner-display/panel_photos/songpa/11.jpg', '/images/banner-display/panel_photos/mapo/1.jpg']
 ),
 (
   (SELECT id FROM display_types WHERE name = '현수막게시대' LIMIT 1),
   '2024년 3분기 현수막게시대 확장 설치',
-  '2024년 3분기 현수막게시대 확장 설치가 완료되었습니다.\n\n■ 확장 설치 지역: 영등포구, 구로구, 금천구\n■ 확장 설치 수량: 총 12개소\n■ 설치 완료일: 2024년 9월 30일\n\n기존 설치소와 함께 총 35개소에서 광고 서비스를 제공합니다.',
+  '2024년 3분기 현수막게시대 확장 설치가 완료되었습니다.
+
+확장 설치 지역: 영등포구, 구로구, 금천구
+확장 설치 수량: 총 12개소
+설치 완료일: 2024년 9월 30일
+
+기존 설치소와 함께 총 35개소에서 광고 서비스를 제공합니다.',
   ARRAY['/images/banner-display/panel_photos/mapo/multi/1.jpg', '/images/banner-display/panel_photos/mapo/multi/10.jpg', '/images/banner-display/panel_photos/mapo/multi/11.jpg']
 ),
 (
   (SELECT id FROM display_types WHERE name = '현수막게시대' LIMIT 1),
   '2024년 4분기 현수막게시대 최종 설치',
-  '2024년 4분기 현수막게시대 최종 설치가 완료되었습니다.\n\n■ 최종 설치 지역: 강서구, 양천구, 마포구 추가\n■ 최종 설치 수량: 총 10개소\n■ 설치 완료일: 2024년 12월 31일\n\n2024년 전체 현수막게시대 설치가 완료되어 총 45개소에서 광고 서비스를 제공합니다.',
+  '2024년 4분기 현수막게시대 최종 설치가 완료되었습니다.
+
+최종 설치 지역: 강서구, 양천구, 마포구 추가
+최종 설치 수량: 총 10개소
+설치 완료일: 2024년 12월 31일
+
+2024년 전체 현수막게시대 설치가 완료되어 총 45개소에서 광고 서비스를 제공합니다.',
   ARRAY['/images/banner-display/panel_photos/yongsan/1.jpg', '/images/banner-display/panel_photos/yongsan/10.jpg', '/images/banner-display/panel_photos/yongsan/11.jpg', '/images/banner-display/panel_photos/yongsan/16.jpg']
 );
 
