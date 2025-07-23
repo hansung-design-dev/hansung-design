@@ -4,6 +4,8 @@ import Image from 'next/image';
 import DistrictCard from '@/src/components/districtCard';
 import DistrictCardSkeleton from '@/src/components/skeleton/DistrictCardSkeleton';
 import { useEffect, useState } from 'react';
+import DraggableNoticePopup from '@/src/components/DraggableNoticePopup';
+import { useAdvancedNoticePopup } from '@/src/components/hooks/useAdvancedNoticePopup';
 
 interface District {
   id: number;
@@ -40,6 +42,9 @@ export default function LEDDisplayPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updatedDistricts, setUpdatedDistricts] = useState<District[]>([]);
+
+  // 팝업 공지사항 훅 사용 (고급 팝업 시스템)
+  const { popupNotice, closePopup } = useAdvancedNoticePopup('led_display');
 
   useEffect(() => {
     const fetchOptimizedData = async () => {
@@ -216,6 +221,11 @@ export default function LEDDisplayPage() {
               ))}
         </div>
       </div>
+
+      {/* 팝업 공지사항 */}
+      {popupNotice && (
+        <DraggableNoticePopup notice={popupNotice} onClose={closePopup} />
+      )}
     </main>
   );
 }

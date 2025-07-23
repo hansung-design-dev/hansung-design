@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import DistrictCard from '@/src/components/districtCard';
 import DistrictCardSkeleton from '@/src/components/skeleton/DistrictCardSkeleton';
+import DraggableNoticePopup from '@/src/components/DraggableNoticePopup';
+import { useAdvancedNoticePopup } from '@/src/components/hooks/useAdvancedNoticePopup';
 
 // Removed unused interfaces
 
@@ -57,6 +59,9 @@ export default function BannerDisplayPage() {
   const [districts, setDistricts] = useState<District[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // 팝업 공지사항 훅 사용 (고급 팝업 시스템)
+  const { popupNotice, closePopup } = useAdvancedNoticePopup('banner_display');
 
   // 최적화된 데이터 로딩 - 하나의 API로 모든 데이터 가져오기
   useEffect(() => {
@@ -233,6 +238,11 @@ export default function BannerDisplayPage() {
               ))}
         </div>
       </div>
+
+      {/* 팝업 공지사항 */}
+      {popupNotice && (
+        <DraggableNoticePopup notice={popupNotice} onClose={closePopup} />
+      )}
     </main>
   );
 }

@@ -9,6 +9,8 @@ import { useEffect, useState } from 'react';
 import { PublicDesignContent } from '@/src/types/public-design';
 import PublicDesignDesktopSkeleton from '@/src/components/skeleton/PublicDesignDesktopSkeleton';
 import PublicDesignSkeleton from '@/src/components/skeleton/PublicDesignSkeleton';
+import DraggableNoticePopup from '@/src/components/DraggableNoticePopup';
+import { useAdvancedNoticePopup } from '@/src/components/hooks/useAdvancedNoticePopup';
 
 interface ProjectItem extends BaseProjectItem {
   id: number;
@@ -18,6 +20,9 @@ export default function PublicDesignPage() {
   const router = useRouter();
   const [projects, setProjects] = useState<ProjectItem[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // 팝업 공지사항 훅 사용 (고급 팝업 시스템)
+  const { popupNotice, closePopup } = useAdvancedNoticePopup('public_design');
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -179,6 +184,11 @@ export default function PublicDesignPage() {
           </div>
         )}
       </section>
+
+      {/* 팝업 공지사항 */}
+      {popupNotice && (
+        <DraggableNoticePopup notice={popupNotice} onClose={closePopup} />
+      )}
     </main>
   );
 }
