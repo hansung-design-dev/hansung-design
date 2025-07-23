@@ -3,6 +3,29 @@
 import { useState, useEffect, useRef } from 'react';
 import { PopupNotice, PopupNoticeContent } from '@/src/types/popup-notice';
 
+// 타입 정의
+interface ChecklistItem {
+  text: string;
+  highlighted?: string[];
+  subItems?: string[];
+}
+
+interface HighlightItem {
+  text: string;
+  color?: string;
+  bold?: boolean;
+}
+
+interface PopupSection {
+  type: 'checklist' | 'highlight' | 'button' | 'divider' | 'text';
+  content:
+    | { items: ChecklistItem[] }
+    | { highlights: HighlightItem[] }
+    | { text: string; url?: string; style?: string }
+    | { height?: number; color?: string }
+    | string;
+}
+
 interface DraggableNoticePopupProps {
   notice: PopupNotice;
   onClose: () => void;
@@ -107,63 +130,69 @@ export default function DraggableNoticePopup({
     }
   }, [isDragging, dragOffset]);
 
-  const renderSection = (section: any, index: number) => {
+  const renderSection = (section: PopupSection, index: number) => {
     switch (section.type) {
       case 'checklist':
+        const checklistContent = section.content as { items: ChecklistItem[] };
         return (
           <div key={index} className="mb-4">
-            {section.content.items.map((item: any, itemIndex: number) => (
-              <div key={itemIndex} className="mb-3">
-                <div className="flex items-start">
-                  <span className="text-red-500 mr-2 mt-1">✔</span>
-                  <div className="flex-1">
-                    <div className="text-gray-800">
-                      {item.text
-                        .split(' ')
-                        .map((word: string, wordIndex: number) => {
-                          const isHighlighted =
-                            item.highlighted?.includes(word);
-                          return (
-                            <span
-                              key={wordIndex}
-                              className={
-                                isHighlighted
-                                  ? 'text-red-500 font-semibold'
-                                  : ''
-                              }
-                            >
-                              {word}{' '}
-                            </span>
-                          );
-                        })}
-                    </div>
-                    {item.subItems && (
-                      <div className="ml-6 mt-1">
-                        {item.subItems.map(
-                          (subItem: string, subIndex: number) => (
-                            <div
-                              key={subIndex}
-                              className="text-sm text-gray-600 mb-1"
-                            >
-                              • {subItem}
-                            </div>
-                          )
-                        )}
+            {checklistContent.items.map(
+              (item: ChecklistItem, itemIndex: number) => (
+                <div key={itemIndex} className="mb-3">
+                  <div className="flex items-start">
+                    <span className="text-red-500 mr-2 mt-1">✔</span>
+                    <div className="flex-1">
+                      <div className="text-gray-800">
+                        {item.text
+                          .split(' ')
+                          .map((word: string, wordIndex: number) => {
+                            const isHighlighted =
+                              item.highlighted?.includes(word);
+                            return (
+                              <span
+                                key={wordIndex}
+                                className={
+                                  isHighlighted
+                                    ? 'text-red-500 font-semibold'
+                                    : ''
+                                }
+                              >
+                                {word}{' '}
+                              </span>
+                            );
+                          })}
                       </div>
-                    )}
+                      {item.subItems && (
+                        <div className="ml-6 mt-1">
+                          {item.subItems.map(
+                            (subItem: string, subIndex: number) => (
+                              <div
+                                key={subIndex}
+                                className="text-sm text-gray-600 mb-1"
+                              >
+                                • {subItem}
+                              </div>
+                            )
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            )}
           </div>
         );
 
       case 'highlight':
+        const highlightContent = section.content as {
+          highlights: HighlightItem[];
+        };
         return (
           <div key={index} className="mb-4">
             <div className="text-gray-800">
-              {section.content.highlights.map(
-                (highlight: any, highlightIndex: number) => (
+              {highlightContent.highlights.map(
+                (highlight: HighlightItem, highlightIndex: number) => (
                   <span
                     key={highlightIndex}
                     className={`${
@@ -179,43 +208,53 @@ export default function DraggableNoticePopup({
         );
 
       case 'button':
+        const buttonContent = section.content as {
+          text: string;
+          url?: string;
+          style?: string;
+        };
         return (
           <div key={index} className="mb-4">
             <button
               className={`px-4 py-2 rounded ${
-                section.content.style === 'primary'
+                buttonContent.style === 'primary'
                   ? 'bg-blue-600 text-white hover:bg-blue-700'
-                  : section.content.style === 'danger'
+                  : buttonContent.style === 'danger'
                   ? 'bg-red-600 text-white hover:bg-red-700'
                   : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
               } transition-colors`}
               onClick={() => {
-                if (section.content.url) {
-                  window.open(section.content.url, '_blank');
+                if (buttonContent.url) {
+                  window.open(buttonContent.url, '_blank');
                 }
               }}
             >
-              {section.content.text}
+              {buttonContent.text}
             </button>
           </div>
         );
 
       case 'divider':
+        const dividerContent = section.content as {
+          height?: number;
+          color?: string;
+        };
         return (
           <div
             key={index}
             className="my-4"
             style={{
-              height: section.content.height || 1,
-              backgroundColor: section.content.color || '#e5e7eb',
+              height: dividerContent.height || 1,
+              backgroundColor: dividerContent.color || '#e5e7eb',
             }}
           />
         );
 
       default:
+        const textContent = section.content as string;
         return (
           <div key={index} className="mb-4 text-gray-800">
-            {section.content}
+            {textContent}
           </div>
         );
     }
