@@ -6,6 +6,7 @@ import DistrictCardSkeleton from '@/src/components/skeleton/DistrictCardSkeleton
 import { useEffect, useState } from 'react';
 import DraggableNoticePopup from '@/src/components/DraggableNoticePopup';
 import { useAdvancedNoticePopup } from '@/src/components/hooks/useAdvancedNoticePopup';
+import { HomepageContent } from '@/src/types/homepage-content';
 
 interface District {
   id: number;
@@ -42,6 +43,8 @@ export default function LEDDisplayPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updatedDistricts, setUpdatedDistricts] = useState<District[]>([]);
+  const [homepageContent, setHomepageContent] =
+    useState<HomepageContent | null>(null);
 
   // 팝업 공지사항 훅 사용 (고급 팝업 시스템)
   const { popupNotice, closePopup } = useAdvancedNoticePopup('led_display');
@@ -53,6 +56,17 @@ export default function LEDDisplayPage() {
         setError(null);
 
         console.log('🔍 Fetching optimized LED display data...');
+
+        // 홈페이지 컨텐츠 가져오기
+        const homepageResponse = await fetch(
+          '/api/homepage-contents?page=led_display&section=led_display'
+        );
+        if (homepageResponse.ok) {
+          const homepageData = await homepageResponse.json();
+          if (homepageData && homepageData.length > 0) {
+            setHomepageContent(homepageData[0]);
+          }
+        }
 
         // 통합 API 호출 - 모든 데이터를 한번에 가져오기
         const response = await fetch(
@@ -182,10 +196,10 @@ export default function LEDDisplayPage() {
       {/* Header Section */}
       <section className="lg:container lg:mx-auto lg:px-[8rem] sm:px-[1.5rem] pt-[6rem] pb-[3rem]">
         <h1 className="text-3.75 sm:text-2.5 font-[700] mb-4 font-gmarket">
-          LED 전자게시대
+          {homepageContent?.title || 'LED 전자게시대'}
         </h1>
         <p className="text-1.25 font-[500] sm:text-1 text-gray-600">
-          한 번의 광고, 수천 번의 노출
+          {homepageContent?.subtitle || '한 번의 광고, 수천 번의 노출'}
         </p>
       </section>
 
@@ -193,8 +207,8 @@ export default function LEDDisplayPage() {
       <section className=" mx-auto  mb-12">
         <div className="relative w-full h-[320px] md:h-[400px]  overflow-hidden">
           <Image
-            src="/images/led/landing.png"
-            alt="LED 전자게시대 메인 이미지"
+            src={homepageContent?.main_image_url || '/images/led/landing.png'}
+            alt={homepageContent?.title || 'LED 전자게시대 메인 이미지'}
             fill
             className="object-cover"
             priority
