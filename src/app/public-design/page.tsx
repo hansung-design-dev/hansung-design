@@ -11,6 +11,7 @@ import PublicDesignDesktopSkeleton from '@/src/components/skeleton/PublicDesignD
 import PublicDesignSkeleton from '@/src/components/skeleton/PublicDesignSkeleton';
 import DraggableNoticePopup from '@/src/components/DraggableNoticePopup';
 import { useAdvancedNoticePopup } from '@/src/components/hooks/useAdvancedNoticePopup';
+import { HomepageContent } from '@/src/types/homepage-content';
 
 interface ProjectItem extends BaseProjectItem {
   id: number;
@@ -20,6 +21,8 @@ export default function PublicDesignPage() {
   const router = useRouter();
   const [projects, setProjects] = useState<ProjectItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [homepageContent, setHomepageContent] =
+    useState<HomepageContent | null>(null);
 
   // 팝업 공지사항 훅 사용 (고급 팝업 시스템)
   const { popupNotice, closePopup } = useAdvancedNoticePopup('public_design');
@@ -27,6 +30,17 @@ export default function PublicDesignPage() {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
+        // 홈페이지 컨텐츠 가져오기
+        const homepageResponse = await fetch(
+          '/api/homepage-contents?page=public_design&section=public_design'
+        );
+        if (homepageResponse.ok) {
+          const homepageData = await homepageResponse.json();
+          if (homepageData && homepageData.length > 0) {
+            setHomepageContent(homepageData[0]);
+          }
+        }
+
         const response = await fetch('/api/public-design-projects');
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -117,7 +131,10 @@ export default function PublicDesignPage() {
       <section className=" mx-auto  mb-12">
         <div className="relative w-full h-[320px] md:h-[400px]  overflow-hidden">
           <Image
-            src="/images/public-design/landing.png"
+            src={
+              homepageContent?.main_image_url ||
+              '/images/public-design/landing.png'
+            }
             alt="공공디자인 메인 이미지"
             fill
             className="object-cover sm:object-left-top"

@@ -6,6 +6,7 @@ import DistrictCard from '@/src/components/districtCard';
 import DistrictCardSkeleton from '@/src/components/skeleton/DistrictCardSkeleton';
 import DraggableNoticePopup from '@/src/components/DraggableNoticePopup';
 import { useAdvancedNoticePopup } from '@/src/components/hooks/useAdvancedNoticePopup';
+import { HomepageContent } from '@/src/types/homepage-content';
 
 // Removed unused interfaces
 
@@ -59,6 +60,8 @@ export default function BannerDisplayPage() {
   const [districts, setDistricts] = useState<District[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [homepageContent, setHomepageContent] =
+    useState<HomepageContent | null>(null);
 
   // 팝업 공지사항 훅 사용 (고급 팝업 시스템)
   const { popupNotice, closePopup } = useAdvancedNoticePopup('banner_display');
@@ -71,6 +74,17 @@ export default function BannerDisplayPage() {
         setError(null);
 
         console.log('🔍 Fetching optimized banner display data...');
+
+        // 홈페이지 컨텐츠 가져오기
+        const homepageResponse = await fetch(
+          '/api/homepage-contents?page=banner_display&section=banner_display'
+        );
+        if (homepageResponse.ok) {
+          const homepageData = await homepageResponse.json();
+          if (homepageData && homepageData.length > 0) {
+            setHomepageContent(homepageData[0]);
+          }
+        }
 
         // 통합 API 호출 - 모든 데이터를 한번에 가져오기
         const response = await fetch(
@@ -211,7 +225,10 @@ export default function BannerDisplayPage() {
       <section className=" mx-auto  mb-12">
         <div className="relative w-full h-[320px] md:h-[400px]  overflow-hidden">
           <Image
-            src="/images/banner-display/landing.png"
+            src={
+              homepageContent?.main_image_url ||
+              '/images/banner-display/landing.png'
+            }
             alt="현수막게시대 메인 이미지"
             fill
             className="object-cover"

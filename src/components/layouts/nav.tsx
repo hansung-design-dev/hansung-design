@@ -32,6 +32,7 @@ interface NavProps {
 }
 
 const menuItems: MenuItem[] = [
+  { name: '회사소개', href: '/about' },
   { name: '공공디자인', href: '/public-design' },
   { name: 'LED전자게시대', href: '/led-display' },
   { name: '현수막게시대', href: '/banner-display' },

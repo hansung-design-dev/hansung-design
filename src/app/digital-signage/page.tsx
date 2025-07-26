@@ -1,9 +1,11 @@
 'use client';
 
 import Image from 'next/image';
+import { useEffect, useState } from 'react';
 import ItemCard from '../../components/itemCard';
 import DraggableNoticePopup from '@/src/components/DraggableNoticePopup';
 import { useAdvancedNoticePopup } from '@/src/components/hooks/useAdvancedNoticePopup';
+import { HomepageContent } from '@/src/types/homepage-content';
 
 const items = [
   {
@@ -63,26 +65,52 @@ const items = [
 ];
 
 export default function DigitalSignagePage() {
+  const [homepageContent, setHomepageContent] =
+    useState<HomepageContent | null>(null);
+
   // 팝업 공지사항 훅 사용 (고급 팝업 시스템)
   const { popupNotice, closePopup } = useAdvancedNoticePopup('digital_signage');
+
+  useEffect(() => {
+    const fetchHomepageContent = async () => {
+      try {
+        const response = await fetch(
+          '/api/homepage-contents?page=digital_signage&section=digital_signage'
+        );
+        if (response.ok) {
+          const data = await response.json();
+          if (data && data.length > 0) {
+            setHomepageContent(data[0]);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching homepage content:', error);
+      }
+    };
+
+    fetchHomepageContent();
+  }, []);
 
   return (
     <main className="min-h-screen bg-white ">
       {/* Header Section */}
       <section className="lg:container lg:mx-auto lg:px-[8rem] sm:px-[1.5rem] pt-[6rem] pb-[3rem]">
         <h1 className="text-3.75 sm:text-2.5 font-[700] mb-4 font-gmarket">
-          디지털사이니지
+          {homepageContent?.title || '디지털사이니지'}
         </h1>
         <p className="text-1.25 font-[500] text-gray-600 sm:text-1">
-          광고를 혁신하다, 공간을 스마트하게
+          {homepageContent?.subtitle || '광고를 혁신하다, 공간을 스마트하게'}
         </p>
       </section>
 
       <section className=" mx-auto mb-12">
         <div className="relative w-full h-[320px] md:h-[400px] overflow-hidden">
           <Image
-            src="/images/digital-sianage/landing.png"
-            alt="공공디자인 메인 이미지"
+            src={
+              homepageContent?.main_image_url ||
+              '/images/digital-sianage/landing.png'
+            }
+            alt={homepageContent?.title || '디지털 사이니지 메인 이미지'}
             fill
             className="object-cover"
             priority
