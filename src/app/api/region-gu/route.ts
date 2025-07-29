@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
       }
 
       // displayType이 있으면 계좌번호 정보도 함께 가져오기
-      let bankData = null;
+
       if (displayType) {
         const { data: displayTypeData, error: displayTypeError } =
           await supabase
