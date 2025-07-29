@@ -928,7 +928,7 @@ export default function Cart() {
     let updatedPanelSlotSnapshot = item.panel_slot_snapshot;
 
     // 공공기관용으로 변경된 경우 가격 정보 업데이트
-    if (profileData.is_public_institution && item.panel_info_id) {
+    if (profileData.is_public_institution && item.panel_id) {
       try {
         // banner_slot_price_policy에서 public_institution 가격 가져오기
         const response = await fetch(
@@ -940,14 +940,14 @@ export default function Cart() {
 
         if (result.success && result.data) {
           const panelInfo = result.data.find(
-            (panel: { id: string }) => panel.id === item.panel_info_id
+            (panel: { id: string }) => panel.id === item.panel_id
           );
           if (
             panelInfo &&
-            panelInfo.banner_slot_info &&
-            panelInfo.banner_slot_info.length > 0
+            panelInfo.banner_slots &&
+            panelInfo.banner_slots.length > 0
           ) {
-            const slotInfo = panelInfo.banner_slot_info[0];
+            const slotInfo = panelInfo.banner_slots[0];
             if (slotInfo.banner_slot_price_policy) {
               const publicInstitutionPolicy =
                 slotInfo.banner_slot_price_policy.find(
@@ -969,7 +969,7 @@ export default function Cart() {
                   banner_type: null,
                   slot_number: null,
                   total_price: publicInstitutionPolicy.total_price,
-                  panel_info_id: null,
+                  panel_id: null,
                   road_usage_fee: publicInstitutionPolicy.road_usage_fee,
                   advertising_fee: publicInstitutionPolicy.advertising_fee,
                   panel_slot_status: null,
@@ -1210,7 +1210,7 @@ export default function Cart() {
             name: item.name,
             price: item.price,
             quantity: 1,
-            panel_info_id: item.panel_info_id,
+            panel_id: item.panel_id,
             panel_slot_snapshot: item.panel_slot_snapshot,
             panel_slot_usage_id: item.panel_slot_usage_id,
             halfPeriod: item.halfPeriod,

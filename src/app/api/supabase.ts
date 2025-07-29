@@ -23,7 +23,7 @@ export const supabase = createClient(
 );
 
 // 타입 정의
-export interface PanelInfo {
+export interface Panel {
   id: string;
   display_type_id: string;
   region_gu_id: string;
@@ -38,7 +38,7 @@ export interface PanelInfo {
 
 export interface BannerPanelDetails {
   id: string;
-  panel_info_id: string;
+  panel_id: string;
   max_banners: number;
   panel_height: number;
   panel_width: number;
@@ -51,9 +51,9 @@ export interface BannerPanelDetails {
   panel_status: string;
 }
 
-export interface BannerSlotInfo {
+export interface BannerSlot {
   id: string;
-  panel_info_id: string;
+  panel_id: string;
   slot_number: number;
   slot_name: string;
   max_width: number;
@@ -109,7 +109,7 @@ export interface BannerDisplayData {
   created_at: string;
   updated_at: string;
   banner_panel_details: BannerPanelDetails;
-  banner_slot_info: BannerSlotInfo[];
+  banner_slots: BannerSlot[];
   region_gu: RegionGu;
   region_dong: RegionDong;
   price?: string;

@@ -42,7 +42,7 @@ export interface BaseBillboard {
   first_half_closure_quantity?: number;
   second_half_closure_quantity?: number;
   total_price?: number; // 실제 가격 (숫자)
-  panel_info_id?: string; // panel_info 테이블의 실제 ID
+  panel_id?: string; // panels 테이블의 실제 ID
   photo_url?: string; // 사진 URL 추가
   inventory_info?: {
     current_period: {
@@ -70,9 +70,9 @@ export interface BannerBillboard extends BaseBillboard {
   type: 'banner';
   is_for_admin?: boolean;
   banner_type?: string;
-  banner_slot_info?: {
+  banner_slots?: {
     id: string;
-    panel_info_id: string;
+    panel_id: string;
     slot_number: number;
     slot_name: string;
     max_width: number;

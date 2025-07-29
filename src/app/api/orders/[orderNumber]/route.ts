@@ -94,7 +94,7 @@ export async function GET(
       .select(
         `
         *,
-        panel_info!order_details_panel_info_id_fkey (
+        panels!order_details_panel_id_fkey (
           id,
           nickname,
           address,
@@ -106,16 +106,16 @@ export async function GET(
           panel_code,
           panel_type,
           max_banner,
-          region_gu!panel_info_region_gu_id_fkey (
+          region_gu!panels_region_gu_id_fkey (
             id,
             name,
             code
           ),
-          region_dong!panel_info_region_dong_id_fkey (
+          region_dong!panels_region_dong_id_fkey (
             id,
             name
           ),
-          display_types!panel_info_display_type_id_fkey (
+          display_types!panels_display_type_id_fkey (
             id,
             name,
             description
@@ -130,7 +130,7 @@ export async function GET(
           is_active,
           is_closed,
           banner_type,
-          banner_slot_info!panel_slot_usage_banner_slot_info_id_fkey (
+          banner_slots!panel_slot_usage_banner_slot_id_fkey (
             id,
             slot_name,
             max_width,
@@ -269,7 +269,7 @@ export async function GET(
     };
 
     // 주문자 정보 정리
-    const getCustomerInfo = () => {
+    const getCustomerData = () => {
       const userAuth = order.user_auth;
       const userProfile = order.user_profiles;
 
@@ -290,8 +290,8 @@ export async function GET(
       order: {
         ...order,
         projectName: getProjectName(),
-        customerInfo: getCustomerInfo(),
-        priceInfo: calculateOrderPrice(),
+        customerData: getCustomerData(),
+        priceData: calculateOrderPrice(),
       },
       orderDetails,
       designDrafts,

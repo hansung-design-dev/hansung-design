@@ -390,7 +390,7 @@ function PaymentPageContent() {
               quantity: number;
               district?: string;
               panel_type?: string;
-              panel_info_id?: string;
+              panel_id?: string;
               panel_slot_snapshot?: {
                 id?: string;
                 notes?: string;
@@ -404,7 +404,7 @@ function PaymentPageContent() {
                 banner_type?: string;
                 slot_number?: number;
                 total_price?: number;
-                panel_info_id?: string;
+                panel_id?: string;
                 road_usage_fee?: number;
                 advertising_fee?: number;
                 panel_slot_status?: string;
@@ -421,7 +421,7 @@ function PaymentPageContent() {
               district: detail.district || '',
               type: 'banner-display' as const,
               panel_type: detail.panel_type || 'panel',
-              panel_info_id: detail.panel_info_id,
+              panel_id: detail.panel_id,
               panel_slot_snapshot: detail.panel_slot_snapshot,
               panel_slot_usage_id: detail.panel_slot_usage_id,
               halfPeriod: detail.period,
@@ -852,7 +852,7 @@ function PaymentPageContent() {
                     >
                       <span>
                         {index + 1}. 패널번호:{' '}
-                        {item.panel_code || item.panel_info_id || '-'} / 이름:{' '}
+                        {item.panel_code || item.panel_id || '-'} / 이름:{' '}
                         {item.name || '-'} / 구: {item.district}
                       </span>
                     </div>

@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
         *,
         order_details (
           *,
-          panel_info (
+          panels (
             *,
             region_gu (
               name
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
 //   name: string;
 //   price: number;
 //   quantity: number;
-//   panel_info_id: string;
+//   panel_id: string;
 //   halfPeriod?: 'first_half' | 'second_half';
 //   selectedYear?: number; // 선택한 년도
 //   selectedMonth?: number; // 선택한 월
@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
 //     banner_type: string | null;
 //     slot_number: number | null;
 //     total_price: number | null;
-//     panel_info_id: string | null;
+//     panel_id: string | null;
 //     road_usage_fee: number | null;
 //     advertising_fee: number | null;
 //     panel_slot_status: string | null;
@@ -238,36 +238,36 @@ export async function POST(request: NextRequest) {
       let panelSlotUsageId = item.panel_slot_usage_id;
 
       if (!panelSlotUsageId && item.panel_slot_snapshot) {
-        // panel_slot_snapshot에서 banner_slot_info 찾기
-        const { data: bannerSlotInfo, error: bannerError } = await supabase
-          .from('banner_slot_info')
+        // panel_slot_snapshot에서 banner_slots 찾기
+        const { data: bannerSlotData, error: bannerError } = await supabase
+          .from('banner_slots')
           .select('id')
-          .eq('panel_info_id', item.panel_info_id)
+          .eq('panel_id', item.panel_id)
           .eq('slot_number', item.panel_slot_snapshot.slot_number)
           .single();
 
         if (bannerError) {
-          console.error('🔍 banner_slot_info 조회 오류:', bannerError);
-        } else if (bannerSlotInfo) {
-          // panel_info에서 display_type_id 가져오기
-          const { data: panelInfo, error: panelError } = await supabase
-            .from('panel_info')
+          console.error('🔍 banner_slots 조회 오류:', bannerError);
+        } else if (bannerSlotData) {
+          // panels에서 display_type_id 가져오기
+          const { data: panelData, error: panelError } = await supabase
+            .from('panels')
             .select('display_type_id')
-            .eq('id', item.panel_info_id)
+            .eq('id', item.panel_id)
             .single();
 
           if (panelError) {
-            console.error('🔍 panel_info 조회 오류:', panelError);
+            console.error('🔍 panels 조회 오류:', panelError);
           } else {
             // panel_slot_usage 레코드 생성 (order_details_id는 나중에 설정)
             const { data: newPanelSlotUsage, error: usageError } =
               await supabase
                 .from('panel_slot_usage')
                 .insert({
-                  display_type_id: panelInfo.display_type_id,
-                  panel_info_id: item.panel_info_id,
+                  display_type_id: panelData.display_type_id,
+                  panel_id: item.panel_id,
                   slot_number: item.panel_slot_snapshot.slot_number,
-                  banner_slot_info_id: bannerSlotInfo.id,
+                  banner_slot_id: bannerSlotData.id,
                   usage_type: 'banner_display',
                   attach_date_from: displayStartDate,
                   is_active: true,
@@ -290,7 +290,7 @@ export async function POST(request: NextRequest) {
       // 2. order_details 생성
       const orderDetail = {
         order_id: order.id,
-        panel_info_id: item.panel_info_id,
+        panel_id: item.panel_id,
         panel_slot_usage_id: panelSlotUsageId,
         slot_order_quantity: item.quantity,
         display_start_date: displayStartDate,
@@ -307,7 +307,7 @@ export async function POST(request: NextRequest) {
     const orderDetailsResult = await supabase
       .from('order_details')
       .insert(orderDetails)
-      .select('id, panel_slot_usage_id, panel_info_id, slot_order_quantity');
+      .select('id, panel_slot_usage_id, panel_id, slot_order_quantity');
 
     console.log('🔍 주문 상세 정보 생성 결과:', orderDetailsResult);
 
@@ -391,9 +391,9 @@ export async function POST(request: NextRequest) {
       const { data: inventoryData } = await supabase
         .from('banner_slot_inventory')
         .select('*')
-        .eq('panel_info_id', item.panel_info_id);
+        .eq('panel_id', item.panel_id);
 
-      console.log(`  - 패널 ${item.panel_info_id}:`, inventoryData);
+      console.log(`  - 패널 ${item.panel_id}:`, inventoryData);
     }
 
     return NextResponse.json({

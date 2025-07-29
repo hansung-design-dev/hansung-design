@@ -47,7 +47,7 @@ export interface PanelInfo {
 
 export interface BannerPanelDetails {
   id: string;
-  panel_info_id: string;
+  panel_id: string;
   max_banners: number;
   panel_height: number;
   panel_width: number;
@@ -62,7 +62,7 @@ export interface BannerPanelDetails {
 
 export interface BannerSlotInfo {
   id: string;
-  panel_info_id: string;
+  panel_id: string;
   slot_number: number;
   slot_name: string;
   max_width: number;
@@ -118,7 +118,7 @@ export interface BannerDisplayData {
   created_at: string;
   updated_at: string;
   banner_panel_details: BannerPanelDetails;
-  banner_slot_info: BannerSlotInfo[];
+  banner_slots: BannerSlotInfo[];
   region_gu: RegionGu;
   region_dong: RegionDong;
   price?: string;

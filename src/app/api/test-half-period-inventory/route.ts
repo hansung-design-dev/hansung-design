@@ -6,7 +6,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const {
       action,
-      panel_info_id,
+      panel_id,
       display_start_date,
       display_end_date,
       slot_order_quantity,
@@ -14,7 +14,7 @@ export async function POST(request: Request) {
 
     console.log('🧪 Testing half-period inventory flow...', {
       action,
-      panel_info_id,
+      panel_id,
       display_start_date,
       display_end_date,
       slot_order_quantity,
@@ -42,9 +42,9 @@ export async function POST(request: Request) {
             'region_gu_id',
             (
               await supabase
-                .from('panel_info')
+                .from('panels')
                 .select('region_gu_id')
-                .eq('id', panel_info_id)
+                .eq('id', panel_id)
                 .single()
             ).data?.region_gu_id
           )
@@ -66,9 +66,9 @@ export async function POST(request: Request) {
             'region_gu_id',
             (
               await supabase
-                .from('panel_info')
+                .from('panels')
                 .select('region_gu_id')
-                .eq('id', panel_info_id)
+                .eq('id', panel_id)
                 .single()
             ).data?.region_gu_id
           )
@@ -80,7 +80,7 @@ export async function POST(request: Request) {
           const inventoryResult = await supabase
             .from('banner_slot_inventory')
             .select('*')
-            .eq('panel_info_id', panel_info_id)
+            .eq('panel_id', panel_id)
             .eq('region_gu_display_period_id', periodResult.data.id)
             .single();
 
@@ -108,9 +108,9 @@ export async function POST(request: Request) {
             'region_gu_id',
             (
               await supabase
-                .from('panel_info')
+                .from('panels')
                 .select('region_gu_id')
-                .eq('id', panel_info_id)
+                .eq('id', panel_id)
                 .single()
             ).data?.region_gu_id
           )
@@ -128,7 +128,7 @@ export async function POST(request: Request) {
         const { data: currentInventory } = await supabase
           .from('banner_slot_inventory')
           .select('*')
-          .eq('panel_info_id', panel_info_id)
+          .eq('panel_id', panel_id)
           .eq('region_gu_display_period_id', periodData.id)
           .single();
 
@@ -167,7 +167,7 @@ export async function POST(request: Request) {
         const { data: inventoryStatus } = await supabase
           .from('half_period_inventory_status')
           .select('*')
-          .eq('panel_info_id', panel_info_id)
+          .eq('panel_id', panel_id)
           .order('year_month', { ascending: false })
           .order('half_period', { ascending: true });
 
@@ -196,7 +196,7 @@ export async function POST(request: Request) {
         const { data: debugOrders } = await supabase
           .from('half_period_debug_view')
           .select('*')
-          .eq('panel_info_id', panel_info_id)
+          .eq('panel_id', panel_id)
           .order('order_detail_id', { ascending: false });
 
         return NextResponse.json({

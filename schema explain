@@ -1,0 +1,790 @@
+## 📝 작성 가이드
+
+### 작성 시 참고사항:
+
+1. **설명:** 해당 테이블 제목
+2. **용도**: 해당 테이블이 어떤 비즈니스 목적으로 사용되는지 명확히 기술
+3. **컬럼 설명**: 각 컬럼이 저장하는 데이터의 의미와 용도를 구체적으로 설명
+4. **비즈니스 규칙**: 특별한 비즈니스 로직이나 제약사항이 있다면 설명란에 추가
+5. **참조 관계**: 외래키 관계가 있는 경우 어떤 비즈니스 관계를 나타내는지 설명
+
+### 예시:
+
+```
+테이블 용도: 관리자의 인증 정보를 저장하는 테이블로, 로그인 시 사용됩니다.
+
+| 컬럼명 | 설명 |
+|--------|------|
+| email | 관리자 로그인용 이메일 주소 (중복 불가) |
+| password_hash | bcrypt로 해시된 비밀번호 |
+| is_active | 계정 활성화 상태 (false시 로그인 불가) |
+
+```
+
+## ⚠️ 발견된 이슈들
+
+다음 항목들은 개발자님과 함께 검토가 필요합니다:
+
+1. **외래키 누락**: `customer_inquiries.answer_admin_id`에 FK 제약조건 없음
+2. **중복 참조**: `orders` 테이블에 사용자 참조 컬럼이 3개 존재
+3. **타임스탬프 불일치**: 일부 테이블은 `with time zone`, 일부는 `without time zone` 사용
+4. **보안 강화 필요**: `admin_auth` 테이블에 로그인 실패 횟수, 계정 잠금 등 보안 필드 부재
+5. **감사 로그 부재**: 관리자 활동 로그 테이블 없음
+
+## 1. Admin 관련 테이블
+
+### 1.1 admin_auth
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| email | text | NOT NULL, UNIQUE |  |
+| password_hash | text | NOT NULL |  |
+| is_active | boolean | DEFAULT true |  |
+| last_login_at | timestamp with time zone |  |  |
+| created_at | timestamp with time zone | DEFAULT now() |  |
+| updated_at | timestamp with time zone | DEFAULT now() |  |
+
+### 1.2 admin_profiles
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| admin_auth_id | uuid | NOT NULL, FK → admin_auth(id) |  |
+| name | text | NOT NULL |  |
+| department | text |  |  |
+| position | text |  |  |
+| phone | text |  |  |
+| role | text | NOT NULL, DEFAULT 'admin', CHECK (role = ANY (ARRAY['admin', 'super_admin', 'designer', 'sales'])) |  |
+| permissions | jsonb | DEFAULT '{}' |  |
+| is_active | boolean | DEFAULT true |  |
+| created_at | timestamp with time zone | DEFAULT now() |  |
+| updated_at | timestamp with time zone | DEFAULT now() |  |
+
+### 1.3 admin_order_verifications
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| order_id | uuid | NOT NULL, FK → orders(id) |  |
+| is_paid | boolean | DEFAULT false |  |
+| is_checked | boolean | DEFAULT false |  |
+| is_received_order | boolean | DEFAULT false |  |
+| is_received_payment | boolean | DEFAULT false |  |
+| is_draft_sent | boolean | DEFAULT false |  |
+| is_draft_received | boolean | DEFAULT false |  |
+| is_address_verified | boolean | DEFAULT false |  |
+| is_draft_verified | boolean | DEFAULT false |  |
+| received_payment_at | timestamp with time zone |  |  |
+| admin_notes | text |  |  |
+| verified_by | uuid | FK → admin_profiles(id) |  |
+| created_at | timestamp with time zone | DEFAULT now() |  |
+| updated_at | timestamp with time zone | DEFAULT now() |  |
+
+## 2. 사용자 관련 테이블
+
+### 2.1 user_auth
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| username | character varying | NOT NULL, UNIQUE |  |
+| email | character varying | NOT NULL, UNIQUE |  |
+| password | character varying | NOT NULL |  |
+| name | character varying | NOT NULL |  |
+| phone | character varying |  |  |
+| is_verified | boolean | DEFAULT false |  |
+| is_active | boolean | DEFAULT true |  |
+| terms_agreed | boolean | DEFAULT false |  |
+| privacy_agreed | boolean | DEFAULT false |  |
+| collection_agreed | boolean | DEFAULT false |  |
+| third_party_agreed | boolean | DEFAULT false |  |
+| agreed_at | timestamp with time zone |  |  |
+| last_login | timestamp with time zone |  |  |
+| created_at | timestamp with time zone | DEFAULT now() |  |
+| updated_at | timestamp with time zone | DEFAULT now() |  |
+
+### 2.2 user_profiles
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| user_auth_id | uuid | FK → user_auth(id) |  |
+| profile_title | text | NOT NULL |  |
+| company_name | text |  |  |
+| business_registration_file | text |  |  |
+| phone | text | NOT NULL |  |
+| email | text | NOT NULL |  |
+| contact_person_name | text | NOT NULL |  |
+| fax_number | text |  |  |
+| is_default | boolean | DEFAULT false |  |
+| is_public_institution | boolean | DEFAULT false |  |
+| is_company | boolean | DEFAULT false |  |
+| created_at | timestamp without time zone | DEFAULT now() |  |
+| updated_at | timestamp without time zone | DEFAULT now() |  |
+
+## 3. 패널/디스플레이 관련 테이블
+
+### 3.1 display_types
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| name | USER-DEFINED | NOT NULL |  |
+| description | text |  |  |
+| created_at | timestamp without time zone | DEFAULT now() |  |
+
+### 3.2 panel_info
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| display_type_id | uuid | FK → display_types(id) |  |
+| post_code | text | UNIQUE |  |
+| region_gu_id | uuid | FK → region_gu(id) |  |
+| region_dong_id | uuid | FK → region_dong(id) |  |
+| nickname | text | NOT NULL |  |
+| address | text |  |  |
+| photo_url | text |  |  |
+| location_url | text |  |  |
+| map_url | text |  |  |
+| latitude | numeric |  |  |
+| longitude | numeric |  |  |
+| panel_status | USER-DEFINED | DEFAULT 'active' |  |
+| maintenance_notes | text |  |  |
+| panel_code | smallint | CHECK (panel_code >= 1 AND panel_code <= 100) |  |
+| panel_type | USER-DEFINED |  |  |
+| max_banner | integer | DEFAULT 1 |  |
+| notes | text |  |  |
+| created_at | timestamp without time zone | DEFAULT now() |  |
+| updated_at | timestamp without time zone | DEFAULT now() |  |
+
+### 3.3 led_panel_details
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| panel_info_id | uuid | NOT NULL, UNIQUE, FK → panel_info(id) |  |
+| exposure_count | integer | CHECK (exposure_count >= 0) |  |
+| panel_width | integer | CHECK (panel_width > 0) |  |
+| panel_height | integer | CHECK (panel_height > 0) |  |
+| max_banners | integer | DEFAULT 20, CHECK (max_banners > 0) |  |
+| created_at | timestamp without time zone | DEFAULT now() |  |
+| updated_at | timestamp without time zone | DEFAULT now() |  |
+
+### 3.4 banner_panel_details
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| panel_info_id | uuid | NOT NULL, UNIQUE, FK → panel_info(id) |  |
+| is_for_admin | boolean | DEFAULT false |  |
+| created_at | timestamp without time zone | DEFAULT now() |  |
+| updated_at | timestamp without time zone | DEFAULT now() |  |
+
+## 4. 슬롯 관련 테이블
+
+### 4.1 banner_slot_info
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| panel_info_id | uuid | NOT NULL, FK → panel_info(id) |  |
+| slot_number | numeric | NOT NULL |  |
+| slot_name | text |  |  |
+| max_width | numeric |  |  |
+| max_height | numeric |  |  |
+| banner_type | USER-DEFINED |  |  |
+| price_unit | USER-DEFINED | DEFAULT '15 days' |  |
+| panel_slot_status | USER-DEFINED | DEFAULT 'available' |  |
+| notes | text |  |  |
+| created_at | timestamp without time zone | DEFAULT now() |  |
+| updated_at | timestamp without time zone | DEFAULT now() |  |
+
+### 4.2 led_slot_info
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| panel_info_id | uuid | NOT NULL, FK → panel_info(id) |  |
+| slot_name | text |  |  |
+| slot_width_px | integer |  |  |
+| slot_height_px | integer |  |  |
+| position_x | integer | DEFAULT 0 |  |
+| position_y | integer | DEFAULT 0 |  |
+| slot_number | integer | NOT NULL, CHECK (slot_number >= 1 AND slot_number <= 30) |  |
+| total_price | numeric | CHECK (total_price >= 0) |  |
+| tax_price | numeric | CHECK (tax_price >= 0) |  |
+| advertising_fee | numeric | CHECK (advertising_fee >= 0) |  |
+| road_usage_fee | numeric | CHECK (road_usage_fee >= 0) |  |
+| administrative_fee | numeric | CHECK (administrative_fee >= 0) |  |
+| price_unit | USER-DEFINED | DEFAULT '15 days' |  |
+| panel_slot_status | USER-DEFINED | DEFAULT 'available' |  |
+| first_half_closure_quantity | integer | DEFAULT 0 |  |
+| second_half_closure_quantity | integer | DEFAULT 0 |  |
+| notes | text |  |  |
+| created_at | timestamp without time zone | DEFAULT now() |  |
+| updated_at | timestamp without time zone | DEFAULT now() |  |
+
+### 4.3 panel_slot_usage
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| display_type_id | uuid | FK → display_types(id) |  |
+| panel_info_id | uuid | FK → panel_info(id) |  |
+| banner_slot_info_id | uuid | FK → banner_slot_info(id) |  |
+| slot_number | integer |  |  |
+| usage_type | text |  |  |
+| attach_date_from | date |  |  |
+| unit_price | numeric | CHECK (unit_price >= 0) |  |
+| banner_type | USER-DEFINED | NOT NULL |  |
+| is_active | boolean | DEFAULT true |  |
+| is_closed | boolean | DEFAULT false |  |
+| created_at | timestamp without time zone | DEFAULT now() |  |
+| updated_at | timestamp without time zone | DEFAULT now() |  |
+
+## 5. 재고 관리 테이블
+
+### 5.1 banner_slot_inventory
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| panel_info_id | uuid | FK → panel_info(id) |  |
+| region_gu_display_period_id | uuid | FK → region_gu_display_periods(id) |  |
+| total_slots | integer | NOT NULL, DEFAULT 0 |  |
+| available_slots | integer | NOT NULL, DEFAULT 0 |  |
+| closed_slots | integer | DEFAULT 0 |  |
+| created_at | timestamp without time zone | DEFAULT now() |  |
+| updated_at | timestamp without time zone | DEFAULT now() |  |
+
+### 5.2 led_display_inventory
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| panel_info_id | uuid | NOT NULL, FK → panel_info(id) |  |
+| region_gu_display_period_id | uuid | NOT NULL, FK → region_gu_display_periods(id) |  |
+| total_faces | integer | NOT NULL, DEFAULT 20 |  |
+| available_faces | integer | NOT NULL, DEFAULT 20 |  |
+| closed_faces | integer | DEFAULT 0 |  |
+| created_at | timestamp without time zone | DEFAULT now() |  |
+| updated_at | timestamp without time zone | DEFAULT now() |  |
+
+### 5.3 top_fixed_banner_inventory
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| panel_info_id | uuid | NOT NULL, FK → panel_info(id) |  |
+| region_gu_display_period_id | uuid | NOT NULL, FK → region_gu_display_periods(id) |  |
+| banner_slot_info_id | uuid | FK → banner_slot_info(id) |  |
+| total_slots | integer | NOT NULL, DEFAULT 1 |  |
+| available_slots | integer | NOT NULL, DEFAULT 1 |  |
+| closed_faces | integer | DEFAULT 0 |  |
+| created_at | timestamp without time zone | DEFAULT now() |  |
+| updated_at | timestamp without time zone | DEFAULT now() |  |
+
+## 6. 주문/결제 관련 테이블
+
+### 6.1 orders
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| auth_user_id | uuid | FK → user_auth(id) |  |
+| user_profile_id | uuid | FK → user_profiles(id) |  |
+| user_auth_id | uuid | DEFAULT '00000000-0000-0000-0000-000000000000', FK → user_auth(id) |  |
+| order_number | character varying |  |  |
+| payment_method_id | uuid | FK → payment_methods(id) |  |
+| payment_status | text | DEFAULT 'pending', CHECK (payment_status = ANY (ARRAY['pending', 'waiting_admin_approval', 'approved', 'completed', 'cancelled'])) |  |
+| order_status | USER-DEFINED | DEFAULT 'pending' |  |
+| design_drafts_id | uuid | FK → design_drafts(id) |  |
+| draft_delivery_method | text | CHECK (draft_delivery_method = ANY (ARRAY['email', 'upload'])) |  |
+| panel_slot_snapshot | jsonb |  |  |
+| created_at | timestamp without time zone | DEFAULT now() |  |
+| updated_at | timestamp without time zone | DEFAULT now() |  |
+
+### 6.2 order_details
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| order_id | uuid | FK → orders(id) |  |
+| panel_info_id | uuid | FK → panel_info(id) |  |
+| panel_slot_usage_id | uuid | FK → panel_slot_usage(id) |  |
+| slot_order_quantity | integer |  |  |
+| display_start_date | date |  |  |
+| display_end_date | date |  |  |
+| created_at | timestamp without time zone | DEFAULT now() |  |
+| updated_at | timestamp without time zone | DEFAULT now() |  |
+
+### 6.3 payment_methods
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| name | text | NOT NULL |  |
+| method_type | text | NOT NULL |  |
+| method_code | text | NOT NULL, UNIQUE |  |
+| description | text |  |  |
+| is_active | boolean | DEFAULT true |  |
+| is_online | boolean | DEFAULT true |  |
+| requires_admin_approval | boolean | DEFAULT false |  |
+| created_at | timestamp with time zone | DEFAULT now() |  |
+| updated_at | timestamp with time zone | DEFAULT now() |  |
+
+### 6.4 payments
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| order_id | uuid | NOT NULL, FK → orders(id) |  |
+| payment_method_id | uuid | NOT NULL, FK → payment_methods(id) |  |
+| payment_provider | text |  |  |
+| amount | numeric | NOT NULL, CHECK (amount > 0) |  |
+| payment_status | text | NOT NULL, DEFAULT 'pending', CHECK (payment_status = ANY (ARRAY['pending', 'completed', 'failed', 'cancelled', 'refunded'])) |  |
+| transaction_id | text |  |  |
+| payment_date | timestamp with time zone |  |  |
+| admin_approval_status | text | DEFAULT 'pending', CHECK (admin_approval_status = ANY (ARRAY['pending', 'approved', 'rejected'])) |  |
+| admin_notes | text |  |  |
+| depositor_name | text |  |  |
+| deposit_date | timestamp with time zone |  |  |
+| is_require_tax_filing | boolean |  |  |
+| is_agreed_caution | boolean |  |  |
+| created_at | timestamp with time zone | DEFAULT now() |  |
+| updated_at | timestamp with time zone | DEFAULT now() |  |
+
+## 7. 디자인 관련 테이블
+
+### 7.1 design_drafts
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| user_profile_id | uuid | FK → user_profiles(id) |  |
+| admin_profile_id | uuid | FK → admin_profiles(id) |  |
+| project_name | text |  |  |
+| file_name | text |  |  |
+| file_url | text |  |  |
+| file_extension | text |  |  |
+| file_size | integer |  |  |
+| draft_category | text | NOT NULL, DEFAULT 'initial', CHECK (draft_category = ANY (ARRAY['initial', 'feedback', 'revision', 'final'])) |  |
+| notes | text |  |  |
+| is_approved | boolean | DEFAULT false |  |
+| created_at | timestamp with time zone | DEFAULT now() |  |
+| updated_at | timestamp with time zone | DEFAULT now() |  |
+
+### 7.2 public_design_contents
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| project_id | uuid |  |  |
+| design_contents_type | USER-DEFINED | NOT NULL |  |
+| title | text |  |  |
+| subtitle | text |  |  |
+| description | text |  |  |
+| image_url | text |  |  |
+| alt_text | text |  |  |
+| display_order | integer | DEFAULT 0 |  |
+| is_active | boolean | DEFAULT true |  |
+| created_at | timestamp with time zone | DEFAULT now() |  |
+| updated_at | timestamp with time zone | DEFAULT now() |  |
+
+### 7.3 installed_photos
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| display_type_id | uuid | NOT NULL, FK → display_types(id) |  |
+| title | character varying | NOT NULL |  |
+| content | text |  |  |
+| photo_urls | ARRAY | NOT NULL |  |
+| created_at | timestamp with time zone | DEFAULT now() |  |
+| updated_at | timestamp with time zone | DEFAULT now() |  |
+
+## 8. 가격 정책 테이블
+
+### 8.1 banner_slot_price_policy
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | NOT NULL |  |
+| banner_slot_info_id | uuid | NOT NULL, FK → banner_slot_info(id) |  |
+| price_usage_type | USER-DEFINED | NOT NULL |  |
+| tax_price | integer | NOT NULL, DEFAULT 0 |  |
+| road_usage_fee | integer | NOT NULL, DEFAULT 0 |  |
+| advertising_fee | integer | NOT NULL, DEFAULT 0 |  |
+| total_price | integer | NOT NULL, DEFAULT 0 |  |
+| created_at | timestamp with time zone | DEFAULT now() |  |
+| updated_at | timestamp with time zone | DEFAULT now() |  |
+
+### 8.2 led_display_price_policy
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| panel_info_id | uuid | NOT NULL, UNIQUE, FK → panel_info(id) |  |
+| price_usage_type | USER-DEFINED | DEFAULT 'default' |  |
+| tax_price | integer | NOT NULL, DEFAULT 0 |  |
+| road_usage_fee | integer | NOT NULL, DEFAULT 0 |  |
+| advertising_fee | integer | NOT NULL, DEFAULT 0 |  |
+| total_price | integer | NOT NULL, DEFAULT 0 |  |
+| created_at | timestamp with time zone | DEFAULT now() |  |
+| updated_at | timestamp with time zone | DEFAULT now() |  |
+
+## 9. 지역 관련 테이블
+
+### 9.1 region_gu
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| code | text | NOT NULL, UNIQUE |  |
+| name | character varying | NOT NULL |  |
+| logo_image_url | text |  |  |
+| phone_number | text |  |  |
+| is_active | USER-DEFINED | DEFAULT 'false' |  |
+| created_at | timestamp with time zone | DEFAULT now() |  |
+| updated_at | timestamp with time zone | DEFAULT now() |  |
+
+### 9.2 region_dong
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| district_code | text | NOT NULL, FK → region_gu(code) |  |
+| name | character varying | NOT NULL |  |
+| created_at | timestamp with time zone | DEFAULT now() |  |
+| updated_at | timestamp with time zone | DEFAULT now() |  |
+
+### 9.3 region_gu_display_periods
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| display_type_id | uuid | FK → display_types(id) |  |
+| region_gu_id | uuid | FK → region_gu(id) |  |
+| year_month | character varying | NOT NULL |  |
+| period | USER-DEFINED |  |  |
+| period_from | date |  |  |
+| period_to | date |  |  |
+| created_at | timestamp without time zone | DEFAULT now() |  |
+| updated_at | timestamp without time zone | DEFAULT now() |  |
+
+## 10. 고객 서비스 관련 테이블
+
+### 10.1 customer_inquiries
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| user_auth_id | uuid | NOT NULL |  |
+| title | text | NOT NULL |  |
+| content | text | NOT NULL |  |
+| product_name | text |  |  |
+| inquiry_status | USER-DEFINED | DEFAULT 'pending' |  |
+| answer_content | text |  |  |
+| answer_admin_id | uuid |  |  |
+| answered_at | timestamp with time zone |  |  |
+| closed_at | timestamp with time zone |  |  |
+| created_at | timestamp with time zone | DEFAULT now() |  |
+| updated_at | timestamp with time zone | DEFAULT now() |  |
+
+### 10.2 customer_service
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| user_id | uuid | FK → user_auth(id) |  |
+| homepage_menu_type | uuid | FK → homepage_menu_types(id) |  |
+| title | character varying | NOT NULL |  |
+| content | text | NOT NULL |  |
+| status | character varying | NOT NULL, DEFAULT 'pending' |  |
+| answer | text |  |  |
+| answered_at | timestamp with time zone |  |  |
+| cs_categories | USER-DEFINED |  |  |
+| created_at | timestamp with time zone | DEFAULT now() |  |
+| updated_at | timestamp with time zone | DEFAULT now() |  |
+
+## 11. 홈페이지 관련 테이블
+
+### 11.1 homepage_menu_types
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| name | USER-DEFINED | NOT NULL |  |
+| description | text |  |  |
+| created_at | timestamp with time zone |  |  |
+| updated_at | timestamp with time zone |  |  |
+
+### 11.2 homepage_contents
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| homepage_menu_types | uuid | FK → homepage_menu_types(id) |  |
+| title | text | NOT NULL |  |
+| subtitle | text | NOT NULL |  |
+| description | text |  |  |
+| description_list | ARRAY |  |  |
+| main_image_url | text |  |  |
+| page | USER-DEFINED |  |  |
+| created_at | timestamp without time zone | DEFAULT now() |  |
+| updated_at | timestamp without time zone | DEFAULT now() |  |
+
+### 11.3 homepage_notice
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| title | text | NOT NULL |  |
+| content | text | NOT NULL |  |
+| is_active | boolean | DEFAULT true |  |
+| priority | USER-DEFINED | DEFAULT 'normal' |  |
+| created_at | timestamp without time zone | DEFAULT now() |  |
+| updated_at | timestamp without time zone | DEFAULT now() |  |
+
+## 12. 기타 테이블
+
+### 12.1 bank_info
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| region_gu_id | uuid | FK → region_gu(id) |  |
+| display_type_id | uuid | FK → display_types(id) |  |
+| bank_name | character varying |  |  |
+| account_number | character varying |  |  |
+| depositor | character varying |  |  |
+| contact | text |  |  |
+| created_at | timestamp without time zone | DEFAULT now() |  |
+| updated_at | timestamp without time zone | DEFAULT now() |  |
+
+### 12.2 notice_categories
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| name | character varying | NOT NULL |  |
+| sub_name | character varying | NOT NULL |  |
+| display_order | integer | DEFAULT 0 |  |
+| is_active | boolean | DEFAULT true |  |
+| created_at | timestamp without time zone | DEFAULT now() |  |
+| updated_at | timestamp without time zone |  |  |
+
+### 12.3 panel_guideline
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| display_category_id | uuid | FK → display_types(id) |  |
+| region_gu_id | uuid |  |  |
+| guideline_type | USER-DEFINED |  |  |
+| notes | text |  |  |
+| order_period | text |  |  |
+| main_notice | text |  |  |
+| warning_notice | text |  |  |
+| show_warning | boolean | DEFAULT true |  |
+| image_url | ARRAY |  |  |
+| created_at | timestamp without time zone | DEFAULT now() |  |
+| updated_at | timestamp without time zone | DEFAULT now() |  |
+
+### 12.4 panel_popup_notices
+
+**설명:** 
+
+**용도:**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+| --- | --- | --- | --- |
+| id | uuid | PK, NOT NULL, DEFAULT gen_random_uuid() |  |
+| display_category_id | uuid | FK → display_types(id) |  |
+| region_gu_id | uuid | FK → region_gu(id) |  |
+| notice_categories_id | uuid |  |  |
+| title | text |  |  |
+| content | json |  |  |
+| image_url | text |  |  |
+| hide_oneday | boolean | DEFAULT false |  |
+| start_date | date |  |  |
+| end_date | date |  |  |
+| created_at | timestamp without time zone | DEFAULT now() |  |
+| updated_at | timestamp without time zone | DEFAULT now() |  |
+
+---
+
+## 📝 작성 가이드
+
+### 작성 시 참고사항:
+
+1. **설명:** 해당 테이블 제목
+2. **용도**: 해당 테이블이 어떤 비즈니스 목적으로 사용되는지 명확히 기술
+3. **컬럼 설명**: 각 컬럼이 저장하는 데이터의 의미와 용도를 구체적으로 설명
+4. **비즈니스 규칙**: 특별한 비즈니스 로직이나 제약사항이 있다면 설명란에 추가
+5. **참조 관계**: 외래키 관계가 있는 경우 어떤 비즈니스 관계를 나타내는지 설명
+
+### 예시:
+
+```
+테이블 용도: 관리자의 인증 정보를 저장하는 테이블로, 로그인 시 사용됩니다.
+
+| 컬럼명 | 설명 |
+|--------|------|
+| email | 관리자 로그인용 이메일 주소 (중복 불가) |
+| password_hash | bcrypt로 해시된 비밀번호 |
+| is_active | 계정 활성화 상태 (false시 로그인 불가) |
+
+```
+
+## ⚠️ 발견된 이슈들
+
+다음 항목들은 개발자님과 함께 검토가 필요합니다:
+
+1. **외래키 누락**: `customer_inquiries.answer_admin_id`에 FK 제약조건 없음
+2. **중복 참조**: `orders` 테이블에 사용자 참조 컬럼이 3개 존재
+3. **타임스탬프 불일치**: 일부 테이블은 `with time zone`, 일부는 `without time zone` 사용
+4. **보안 강화 필요**: `admin_auth` 테이블에 로그인 실패 횟수, 계정 잠금 등 보안 필드 부재
+5. **감사 로그 부재**: 관리자 활동 로그 테이블 없음

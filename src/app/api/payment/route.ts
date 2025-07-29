@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       paymentMethodId,
       amount,
       draftDeliveryMethod,
-      cardInfo, // 카드 정보 추가
+      cardData, // 카드 정보 추가
     } = body;
 
     switch (action) {
@@ -64,9 +64,9 @@ export async function POST(request: NextRequest) {
         }
 
         // 2. 카드 결제 검증 (모의)
-        if (paymentMethod.method_type === 'card' && cardInfo) {
+        if (paymentMethod.method_type === 'card' && cardData) {
           // 실제로는 PG사 API 호출
-          const isValidCard = validateCardInfo(cardInfo);
+          const isValidCard = validateCardData(cardData);
           if (!isValidCard) {
             return NextResponse.json(
               {
@@ -281,7 +281,7 @@ export async function POST(request: NextRequest) {
 }
 
 // 카드 정보 검증 함수 (모의)
-function validateCardInfo(cardInfo: {
+function validateCardData(cardData: {
   cardNumber: string;
   expiryMonth: string;
   expiryYear: string;
@@ -289,13 +289,13 @@ function validateCardInfo(cardInfo: {
 }): boolean {
   // 실제로는 더 정교한 검증 필요
   return !!(
-    cardInfo &&
-    cardInfo.cardNumber &&
-    cardInfo.cardNumber.length >= 13 &&
-    cardInfo.expiryMonth &&
-    cardInfo.expiryYear &&
-    cardInfo.cvv &&
-    cardInfo.cvv.length >= 3
+    cardData &&
+    cardData.cardNumber &&
+    cardData.cardNumber.length >= 13 &&
+    cardData.expiryMonth &&
+    cardData.expiryYear &&
+    cardData.cvv &&
+    cardData.cvv.length >= 3
   );
 }
 

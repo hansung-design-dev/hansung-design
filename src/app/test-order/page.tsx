@@ -27,7 +27,7 @@ export default function TestOrderPage() {
         },
         body: JSON.stringify({
           total_price: 500000,
-          panel_info_id: 'test-panel-1',
+          panel_id: 'test-panel-1',
           order_details: [
             {
               slot_id: 'test-slot-1',

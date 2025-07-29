@@ -20,9 +20,9 @@ async function testSupabaseConnection() {
     console.log('✅ Supabase connection successful');
     console.log('Test data:', testData);
 
-    // 2. panel_info 테이블 확인
+    // 2. panels 테이블 확인
     const { data: panelData, error: panelError } = await supabase
-      .from('panel_info')
+      .from('panels')
       .select('*')
       .limit(5);
 
@@ -67,7 +67,7 @@ async function testSupabaseConnection() {
       message: 'All tests passed',
       data: {
         displayTypes: testData?.length || 0,
-        panelInfo: panelData?.length || 0,
+        panelData: panelData?.length || 0,
         bannerDetails: bannerData?.length || 0,
         regions: regionData?.length || 0,
       },

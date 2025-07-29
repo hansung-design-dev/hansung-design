@@ -9,8 +9,8 @@ BEGIN
   -- order_details의 display_start_date와 display_end_date를 기반으로 해당하는 기간 찾기
   SELECT rgdp.id INTO period_id
   FROM region_gu_display_periods rgdp
-  JOIN panel_info pi ON pi.region_gu_id = rgdp.region_gu_id
-  WHERE pi.id = NEW.panel_info_id
+  JOIN panels pi ON pi.region_gu_id = rgdp.region_gu_id
+  WHERE pi.id = NEW.panel_id
     AND rgdp.display_type_id = pi.display_type_id
     AND (
       -- 기간이 완전히 겹치는 경우
@@ -24,7 +24,7 @@ BEGIN
   IF period_id IS NOT NULL THEN
     SELECT available_slots, total_slots INTO current_inventory
     FROM banner_slot_inventory
-    WHERE panel_info_id = NEW.panel_info_id
+    WHERE panel_id = NEW.panel_id
       AND region_gu_display_period_id = period_id;
     
     -- 재고 정보가 있고, 주문 수량이 가용 재고를 초과하는 경우
@@ -34,8 +34,8 @@ BEGIN
     END IF;
   ELSE
     -- 기간을 찾지 못한 경우 경고
-    RAISE WARNING '기간을 찾을 수 없음: panel_info_id=%, display_start_date=%, display_end_date=%', 
-      NEW.panel_info_id, NEW.display_start_date, NEW.display_end_date;
+    RAISE WARNING '기간을 찾을 수 없음: panel_id=%, display_start_date=%, display_end_date=%', 
+      NEW.panel_id, NEW.display_start_date, NEW.display_end_date;
   END IF;
   
   RETURN NEW;
@@ -99,49 +99,49 @@ BEGIN
     
     -- 1. 마포구 시민게시대 찾기 (bulletin-board 타입)
     SELECT pi.id INTO v_mapo_bulletin_id 
-    FROM panel_info pi 
+    FROM panels pi 
     JOIN region_gu rg ON pi.region_gu_id = rg.id 
     WHERE rg.name = '마포구' AND pi.panel_type = 'bulletin-board' 
     LIMIT 1;
     
     -- 2. 송파구 패널 찾기
     SELECT pi.id INTO v_songpa_panel_id 
-    FROM panel_info pi 
+    FROM panels pi 
     JOIN region_gu rg ON pi.region_gu_id = rg.id 
     WHERE rg.name = '송파구' 
     LIMIT 1;
     
     -- 3. 용산구 패널 찾기
     SELECT pi.id INTO v_yongsan_panel_id 
-    FROM panel_info pi 
+    FROM panels pi 
     JOIN region_gu rg ON pi.region_gu_id = rg.id 
     WHERE rg.name = '용산구' 
     LIMIT 1;
     
     -- 4. 마포구 저단형 찾기 (lower-panel)
     SELECT pi.id INTO v_mapo_lower_id 
-    FROM panel_info pi 
+    FROM panels pi 
     JOIN region_gu rg ON pi.region_gu_id = rg.id 
     WHERE rg.name = '마포구' AND pi.panel_type = 'lower-panel' 
     LIMIT 1;
     
     -- 5. 마포구 연립형 찾기 (multi-panel)
     SELECT pi.id INTO v_mapo_multi_id 
-    FROM panel_info pi 
+    FROM panels pi 
     JOIN region_gu rg ON pi.region_gu_id = rg.id 
     WHERE rg.name = '마포구' AND pi.panel_type = 'multi-panel' 
     LIMIT 1;
     
     -- 6. 서대문구 행정용 찾기
     SELECT pi.id INTO v_seodaemun_admin_id 
-    FROM panel_info pi 
+    FROM panels pi 
     JOIN region_gu rg ON pi.region_gu_id = rg.id 
     WHERE rg.name = '서대문구' 
     LIMIT 1;
     
     -- 7. LED 게시대 찾기
     SELECT pi.id INTO v_led_panel_id 
-    FROM panel_info pi 
+    FROM panels pi 
     WHERE pi.panel_type = 'led' 
     LIMIT 1;
     
@@ -161,7 +161,7 @@ BEGIN
     -- 상반기 주문 1: 마포구 시민게시대 (포스터 지참 후 방문 신청)
     IF v_mapo_bulletin_id IS NOT NULL THEN
         INSERT INTO orders (
-            id, user_id, panel_info_id, panel_slot_usage_id, total_price, depositor_name, 
+            id, user_id, panel_id, panel_slot_usage_id, total_price, depositor_name, 
             deposit_date, is_paid, is_checked, payment_method, half_period,
             is_received_order, is_received_paymenet, is_draft_sent, is_draft_received, 
             is_address_verified, is_draft_verified, display_location, received_payment_at,
@@ -187,7 +187,7 @@ BEGIN
     -- 상반기 주문 2: 송파구 상담문의
     IF v_songpa_panel_id IS NOT NULL THEN
         INSERT INTO orders (
-            id, user_id, panel_info_id, panel_slot_usage_id, total_price, depositor_name, 
+            id, user_id, panel_id, panel_slot_usage_id, total_price, depositor_name, 
             deposit_date, is_paid, is_checked, payment_method, half_period,
             is_received_order, is_received_paymenet, is_draft_sent, is_draft_received, 
             is_address_verified, is_draft_verified, display_location, received_payment_at,
@@ -213,7 +213,7 @@ BEGIN
     -- 상반기 주문 3: 용산구 상담문의
     IF v_yongsan_panel_id IS NOT NULL THEN
         INSERT INTO orders (
-            id, user_id, panel_info_id, panel_slot_usage_id, total_price, depositor_name, 
+            id, user_id, panel_id, panel_slot_usage_id, total_price, depositor_name, 
             deposit_date, is_paid, is_checked, payment_method, half_period,
             is_received_order, is_received_paymenet, is_draft_sent, is_draft_received, 
             is_address_verified, is_draft_verified, display_location, received_payment_at,
@@ -239,7 +239,7 @@ BEGIN
     -- 상반기 주문 4: 마포구 저단형
     IF v_mapo_lower_id IS NOT NULL THEN
         INSERT INTO orders (
-            id, user_id, panel_info_id, panel_slot_usage_id, total_price, depositor_name, 
+            id, user_id, panel_id, panel_slot_usage_id, total_price, depositor_name, 
             deposit_date, is_paid, is_checked, payment_method, half_period,
             is_received_order, is_received_paymenet, is_draft_sent, is_draft_received, 
             is_address_verified, is_draft_verified, display_location, received_payment_at,
@@ -265,7 +265,7 @@ BEGIN
     -- 상반기 주문 5: 마포구 연립형
     IF v_mapo_multi_id IS NOT NULL THEN
         INSERT INTO orders (
-            id, user_id, panel_info_id, panel_slot_usage_id, total_price, depositor_name, 
+            id, user_id, panel_id, panel_slot_usage_id, total_price, depositor_name, 
             deposit_date, is_paid, is_checked, payment_method, half_period,
             is_received_order, is_received_paymenet, is_draft_sent, is_draft_received, 
             is_address_verified, is_draft_verified, display_location, received_payment_at,
@@ -291,7 +291,7 @@ BEGIN
     -- 상반기 주문 6: 서대문구 행정용
     IF v_seodaemun_admin_id IS NOT NULL THEN
         INSERT INTO orders (
-            id, user_id, panel_info_id, panel_slot_usage_id, total_price, depositor_name, 
+            id, user_id, panel_id, panel_slot_usage_id, total_price, depositor_name, 
             deposit_date, is_paid, is_checked, payment_method, half_period,
             is_received_order, is_received_paymenet, is_draft_sent, is_draft_received, 
             is_address_verified, is_draft_verified, display_location, received_payment_at,
@@ -317,7 +317,7 @@ BEGIN
     -- 상반기 주문 7: LED 게시대
     IF v_led_panel_id IS NOT NULL THEN
         INSERT INTO orders (
-            id, user_id, panel_info_id, panel_slot_usage_id, total_price, depositor_name, 
+            id, user_id, panel_id, panel_slot_usage_id, total_price, depositor_name, 
             deposit_date, is_paid, is_checked, payment_method, half_period,
             is_received_order, is_received_paymenet, is_draft_sent, is_draft_received, 
             is_address_verified, is_draft_verified, display_location, received_payment_at,
@@ -347,7 +347,7 @@ BEGIN
     -- 하반기 주문 1: 마포구 시민게시대 (포스터 지참 후 방문 신청)
     IF v_mapo_bulletin_id IS NOT NULL THEN
         INSERT INTO orders (
-            id, user_id, panel_info_id, panel_slot_usage_id, total_price, depositor_name, 
+            id, user_id, panel_id, panel_slot_usage_id, total_price, depositor_name, 
             deposit_date, is_paid, is_checked, payment_method, half_period,
             is_received_order, is_received_paymenet, is_draft_sent, is_draft_received, 
             is_address_verified, is_draft_verified, display_location, received_payment_at,
@@ -373,7 +373,7 @@ BEGIN
     -- 하반기 주문 2: 송파구 상담문의
     IF v_songpa_panel_id IS NOT NULL THEN
         INSERT INTO orders (
-            id, user_id, panel_info_id, panel_slot_usage_id, total_price, depositor_name, 
+            id, user_id, panel_id, panel_slot_usage_id, total_price, depositor_name, 
             deposit_date, is_paid, is_checked, payment_method, half_period,
             is_received_order, is_received_paymenet, is_draft_sent, is_draft_received, 
             is_address_verified, is_draft_verified, display_location, received_payment_at,
@@ -399,7 +399,7 @@ BEGIN
     -- 하반기 주문 3: 용산구 상담문의
     IF v_yongsan_panel_id IS NOT NULL THEN
         INSERT INTO orders (
-            id, user_id, panel_info_id, panel_slot_usage_id, total_price, depositor_name, 
+            id, user_id, panel_id, panel_slot_usage_id, total_price, depositor_name, 
             deposit_date, is_paid, is_checked, payment_method, half_period,
             is_received_order, is_received_paymenet, is_draft_sent, is_draft_received, 
             is_address_verified, is_draft_verified, display_location, received_payment_at,
@@ -425,7 +425,7 @@ BEGIN
     -- 하반기 주문 4: 마포구 저단형
     IF v_mapo_lower_id IS NOT NULL THEN
         INSERT INTO orders (
-            id, user_id, panel_info_id, panel_slot_usage_id, total_price, depositor_name, 
+            id, user_id, panel_id, panel_slot_usage_id, total_price, depositor_name, 
             deposit_date, is_paid, is_checked, payment_method, half_period,
             is_received_order, is_received_paymenet, is_draft_sent, is_draft_received, 
             is_address_verified, is_draft_verified, display_location, received_payment_at,
@@ -451,7 +451,7 @@ BEGIN
     -- 하반기 주문 5: 마포구 연립형
     IF v_mapo_multi_id IS NOT NULL THEN
         INSERT INTO orders (
-            id, user_id, panel_info_id, panel_slot_usage_id, total_price, depositor_name, 
+            id, user_id, panel_id, panel_slot_usage_id, total_price, depositor_name, 
             deposit_date, is_paid, is_checked, payment_method, half_period,
             is_received_order, is_received_paymenet, is_draft_sent, is_draft_received, 
             is_address_verified, is_draft_verified, display_location, received_payment_at,
@@ -477,7 +477,7 @@ BEGIN
     -- 하반기 주문 6: 서대문구 행정용
     IF v_seodaemun_admin_id IS NOT NULL THEN
         INSERT INTO orders (
-            id, user_id, panel_info_id, panel_slot_usage_id, total_price, depositor_name, 
+            id, user_id, panel_id, panel_slot_usage_id, total_price, depositor_name, 
             deposit_date, is_paid, is_checked, payment_method, half_period,
             is_received_order, is_received_paymenet, is_draft_sent, is_draft_received, 
             is_address_verified, is_draft_verified, display_location, received_payment_at,
@@ -503,7 +503,7 @@ BEGIN
     -- 하반기 주문 7: LED 게시대
     IF v_led_panel_id IS NOT NULL THEN
         INSERT INTO orders (
-            id, user_id, panel_info_id, panel_slot_usage_id, total_price, depositor_name, 
+            id, user_id, panel_id, panel_slot_usage_id, total_price, depositor_name, 
             deposit_date, is_paid, is_checked, payment_method, half_period,
             is_received_order, is_received_paymenet, is_draft_sent, is_draft_received, 
             is_address_verified, is_draft_verified, display_location, received_payment_at,
@@ -543,20 +543,20 @@ DECLARE
     v_snapshot JSONB;
 BEGIN
     -- 디버깅 로그
-    RAISE NOTICE 'order_details 트리거 실행: order_id = %, panel_info_id = %', 
-        NEW.order_id, NEW.panel_info_id;
+    RAISE NOTICE 'order_details 트리거 실행: order_id = %, panel_id = %', 
+        NEW.order_id, NEW.panel_id;
     
-    -- panel_info_id가 없으면 처리하지 않음
-    IF NEW.panel_info_id IS NULL THEN
-        RAISE NOTICE 'panel_info_id가 NULL이므로 처리 중단';
+    -- panel_id가 없으면 처리하지 않음
+    IF NEW.panel_id IS NULL THEN
+        RAISE NOTICE 'panel_id가 NULL이므로 처리 중단';
         RETURN NEW;
     END IF;
     
     -- 패널 타입 확인
     SELECT dt.name INTO v_panel_type
-    FROM panel_info pi
+    FROM panels pi
     JOIN display_types dt ON pi.display_type_id = dt.id
-    WHERE pi.id = NEW.panel_info_id;
+    WHERE pi.id = NEW.panel_id;
     
     RAISE NOTICE '패널 타입: %', v_panel_type;
     
@@ -573,8 +573,8 @@ BEGIN
                 bsp.advertising_fee as policy_advertising_fee
             INTO v_slot_record 
             FROM panel_slot_usage psu
-            JOIN banner_slot_info bsi ON psu.banner_slot_info_id = bsi.id
-            LEFT JOIN banner_slot_price_policy bsp ON bsi.id = bsp.banner_slot_info_id 
+            JOIN banner_slots bsi ON psu.banner_slot_id = bsi.id
+            LEFT JOIN banner_slot_price_policy bsp ON bsi.id = bsp.banner_slot_id 
                 AND bsp.price_usage_type = 'default'  -- 기본값, 필요시 사용자 타입에 따라 변경
             WHERE psu.id = NEW.panel_slot_usage_id;
             
@@ -589,10 +589,10 @@ BEGIN
                 bsp.road_usage_fee as policy_road_usage_fee,
                 bsp.advertising_fee as policy_advertising_fee
             INTO v_slot_record 
-            FROM banner_slot_info bsi
-            LEFT JOIN banner_slot_price_policy bsp ON bsi.id = bsp.banner_slot_info_id 
+            FROM banner_slots bsi
+            LEFT JOIN banner_slot_price_policy bsp ON bsi.id = bsp.banner_slot_id 
                 AND bsp.price_usage_type = 'default'  -- 기본값, 필요시 사용자 타입에 따라 변경
-            WHERE bsi.panel_info_id = NEW.panel_info_id
+            WHERE bsi.panel_id = NEW.panel_id
               AND bsi.slot_number = 1;
             
             RAISE NOTICE '배너 슬롯 조회 (기본값): slot_number = %, id = %, policy_total_price = %', 
@@ -605,7 +605,7 @@ BEGIN
             -- panel_slot_usage가 있으면 해당 슬롯 사용
             SELECT lsi.* INTO v_slot_record 
             FROM panel_slot_usage psu
-            JOIN led_slot_info lsi ON psu.panel_info_id = lsi.panel_info_id 
+            JOIN led_slots lsi ON psu.panel_id = lsi.panel_id 
                 AND psu.slot_number = lsi.slot_number
             WHERE psu.id = NEW.panel_slot_usage_id;
             
@@ -614,8 +614,8 @@ BEGIN
         ELSE
             -- panel_slot_usage가 없으면 1번 슬롯 사용
             SELECT * INTO v_slot_record 
-            FROM led_slot_info
-            WHERE panel_info_id = NEW.panel_info_id
+            FROM led_slots
+            WHERE panel_id = NEW.panel_id
               AND slot_number = 1;
             
             RAISE NOTICE 'LED 슬롯 조회 (기본값): slot_number = %, id = %', 
@@ -804,7 +804,7 @@ BEGIN
         LOOP
             -- LED 디스플레이 패널들에 대해 재고 생성
             INSERT INTO led_display_inventory (
-                panel_info_id,
+                panel_id,
                 region_gu_display_period_id,
                 total_faces,
                 available_faces,
@@ -816,13 +816,13 @@ BEGIN
                 20, -- 각 게시대별 20개 면
                 20, -- 초기 가용 면
                 0   -- 초기 폐쇄 면
-            FROM panel_info pi
+            FROM panels pi
             WHERE pi.region_gu_id = region_record.id
               AND pi.display_type_id = led_display_type_id
               AND pi.panel_status = 'active'
               AND NOT EXISTS (
                   SELECT 1 FROM led_display_inventory ldi
-                  WHERE ldi.panel_info_id = pi.id
+                  WHERE ldi.panel_id = pi.id
                     AND ldi.region_gu_display_period_id = period_record.id
               );
         END LOOP;
@@ -1016,8 +1016,8 @@ BEGIN
     -- Get the display_type_id for 'led_display'
     SELECT id INTO v_display_type_id FROM display_types WHERE name = 'led_display' LIMIT 1;
 
-    -- Step 1: Insert into panel_info
-    INSERT INTO panel_info (
+    -- Step 1: Insert into panels
+    INSERT INTO panels (
         display_type_id,
         panel_code,
         region_gu_id,
@@ -1041,7 +1041,7 @@ BEGIN
 
     -- Step 2: Insert into led_panel_details
     INSERT INTO led_panel_details (
-        panel_info_id,
+        panel_id,
         exposure_count,
         max_banners,
         panel_width,
@@ -1055,9 +1055,9 @@ BEGIN
         p_slot_height_px
     );
 
-    -- Step 3: Insert into led_slot_info
-    INSERT INTO led_slot_info (
-        panel_info_id,
+    -- Step 3: Insert into led_slots
+    INSERT INTO led_slots (
+        panel_id,
         slot_number,
         slot_width_px,
         slot_height_px,
@@ -1099,8 +1099,8 @@ BEGIN
     -- Get the display_type_id for 'banner_display'
     SELECT id INTO v_display_type_id FROM display_types WHERE name = 'banner_display' LIMIT 1;
 
-    -- Step 1: Insert into panel_info
-    INSERT INTO panel_info (
+    -- Step 1: Insert into panels
+    INSERT INTO panels (
         display_type_id,
         panel_code,
         region_gu_id,
@@ -1124,7 +1124,7 @@ BEGIN
 
     -- Step 2: Insert into banner_panel_details
     INSERT INTO banner_panel_details (
-        panel_info_id,
+        panel_id,
         max_banners,
         is_for_admin -- 상업용
     )
@@ -1134,10 +1134,10 @@ BEGIN
         FALSE 
     );
 
-    -- Step 3: Insert into banner_slot_info, creating 12 slots per panel
+    -- Step 3: Insert into banner_slots, creating 12 slots per panel
     FOR slot_num IN 1..12 LOOP
-        INSERT INTO banner_slot_info (
-            panel_info_id,
+        INSERT INTO banner_slots (
+            panel_id,
             slot_number,
             total_price,
             tax_price,
@@ -1170,8 +1170,8 @@ BEGIN
     -- Get the display_type_id for 'banner_display'
     SELECT id INTO v_display_type_id FROM display_types WHERE name = 'banner_display' LIMIT 1;
 
-    -- Step 1: Insert into panel_info
-    INSERT INTO panel_info (
+    -- Step 1: Insert into panels
+    INSERT INTO panels (
         display_type_id,
         panel_code,
         region_gu_id,
@@ -1195,7 +1195,7 @@ BEGIN
 
     -- Step 2: Insert into banner_panel_details
     INSERT INTO banner_panel_details (
-        panel_info_id,
+        panel_id,
         max_banners,
         panel_width,
         panel_height,
@@ -1209,10 +1209,10 @@ BEGIN
         TRUE 
     );
 
-    -- Step 3: Insert into banner_slot_info, create slots based on max_banners
+    -- Step 3: Insert into banner_slots, create slots based on max_banners
     FOR slot_num IN 1..p_max_banners LOOP
-        INSERT INTO banner_slot_info (
-            panel_info_id,
+        INSERT INTO banner_slots (
+            panel_id,
             slot_number,
             max_width,
             max_height,
@@ -1250,8 +1250,8 @@ BEGIN
     -- Get the display_type_id for 'banner_display'
     SELECT id INTO v_display_type_id FROM display_types WHERE name = 'banner_display' LIMIT 1;
 
-    -- Step 1: Insert into panel_info
-    INSERT INTO panel_info (
+    -- Step 1: Insert into panels
+    INSERT INTO panels (
         display_type_id,
         panel_code,
         region_gu_id,
@@ -1275,7 +1275,7 @@ BEGIN
 
     -- Step 2: Insert into banner_panel_details
     INSERT INTO banner_panel_details (
-        panel_info_id,
+        panel_id,
         max_banners,
         panel_width,
         panel_height,
@@ -1289,10 +1289,10 @@ BEGIN
         FALSE 
     );
 
-    -- Step 3: Insert into banner_slot_info, create slots based on max_banners
+    -- Step 3: Insert into banner_slots, create slots based on max_banners
     FOR slot_num IN 1..p_max_banners LOOP
-        INSERT INTO banner_slot_info (
-            panel_info_id,
+        INSERT INTO banner_slots (
+            panel_id,
             slot_number,
             max_width,
             max_height,
@@ -1327,8 +1327,8 @@ BEGIN
     -- Get the display_type_id for 'banner_display'
     SELECT id INTO v_display_type_id FROM display_types WHERE name = 'banner_display' LIMIT 1;
 
-    -- Step 1: Insert into panel_info
-    INSERT INTO panel_info (
+    -- Step 1: Insert into panels
+    INSERT INTO panels (
         display_type_id,
         panel_code,
         region_gu_id,
@@ -1352,7 +1352,7 @@ BEGIN
 
     -- Step 2: Insert into banner_panel_details
     INSERT INTO banner_panel_details (
-        panel_info_id,
+        panel_id,
         max_banners,
         panel_width,
         panel_height,
@@ -1366,9 +1366,9 @@ BEGIN
         FALSE 
     );
 
-    -- Step 3: Insert into banner_slot_info, assuming one primary slot per panel
-    INSERT INTO banner_slot_info (
-        panel_info_id,
+    -- Step 3: Insert into banner_slots, assuming one primary slot per panel
+    INSERT INTO banner_slots (
+        panel_id,
         slot_number,
         max_width,
         max_height,
@@ -1403,8 +1403,8 @@ BEGIN
     -- Get the display_type_id for 'banner_display'
     SELECT id INTO v_display_type_id FROM display_types WHERE name = 'banner_display' LIMIT 1;
 
-    -- Step 1: Insert into panel_info (casting panel_code to int2)
-    INSERT INTO panel_info (
+    -- Step 1: Insert into panels (casting panel_code to int2)
+    INSERT INTO panels (
         display_type_id,
         panel_code,
         region_gu_id,
@@ -1426,7 +1426,7 @@ BEGIN
 
     -- Step 2: Insert into banner_panel_details
     INSERT INTO banner_panel_details (
-        panel_info_id,
+        panel_id,
         max_banners,
         is_for_admin -- 상업용
     )
@@ -1436,9 +1436,9 @@ BEGIN
         FALSE 
     );
 
-    -- Step 3: Insert into banner_slot_info, assuming one primary slot per panel
-    INSERT INTO banner_slot_info (
-        panel_info_id,
+    -- Step 3: Insert into banner_slots, assuming one primary slot per panel
+    INSERT INTO banner_slots (
+        panel_id,
         slot_number,
         max_width,
         max_height,
@@ -1467,8 +1467,8 @@ BEGIN
     -- Get the display_type_id for 'banner_display'
     SELECT id INTO v_display_type_id FROM display_types WHERE name = 'banner_display' LIMIT 1;
 
-    -- Step 1: Insert into panel_info
-    INSERT INTO panel_info (
+    -- Step 1: Insert into panels
+    INSERT INTO panels (
         display_type_id,
         post_code,
         region_gu_id,
@@ -1490,7 +1490,7 @@ BEGIN
 
     -- Step 2: Insert into banner_panel_details
     INSERT INTO banner_panel_details (
-        panel_info_id,
+        panel_id,
         max_banners,
         is_for_admin -- 상업용
     )
@@ -1500,9 +1500,9 @@ BEGIN
         FALSE 
     );
 
-    -- Step 3: Insert into banner_slot_info, assuming one primary slot per panel
-    INSERT INTO banner_slot_info (
-        panel_info_id,
+    -- Step 3: Insert into banner_slots, assuming one primary slot per panel
+    INSERT INTO banner_slots (
+        panel_id,
         slot_number,
         max_width,
         max_height,
@@ -1531,7 +1531,7 @@ BEGIN
     -- 같은 패널의 같은 슬롯이 같은 기간에 이미 예약되어 있는지 확인
     SELECT ps.id INTO conflicting_usage
     FROM panel_slot_usage ps
-    WHERE ps.panel_info_id = NEW.panel_info_id
+    WHERE ps.panel_id = NEW.panel_id
       AND ps.slot_number = NEW.slot_number
       AND ps.is_active = true
       AND ps.is_closed = false
@@ -1559,8 +1559,8 @@ BEGIN
   -- order_details의 display_start_date와 display_end_date를 기반으로 해당하는 기간 찾기
   SELECT rgdp.id INTO period_id
   FROM region_gu_display_periods rgdp
-  JOIN panel_info pi ON pi.region_gu_id = rgdp.region_gu_id
-  WHERE pi.id = OLD.panel_info_id
+  JOIN panels pi ON pi.region_gu_id = rgdp.region_gu_id
+  WHERE pi.id = OLD.panel_id
     AND rgdp.display_type_id = pi.display_type_id
     AND (
       -- 기간이 완전히 겹치는 경우
@@ -1577,7 +1577,7 @@ BEGIN
       available_slots = LEAST(total_slots, available_slots + OLD.slot_order_quantity),
       closed_slots = GREATEST(0, closed_slots - OLD.slot_order_quantity),
       updated_at = NOW()
-    WHERE panel_info_id = OLD.panel_info_id
+    WHERE panel_id = OLD.panel_id
       AND region_gu_display_period_id = period_id;
   END IF;
   
@@ -1594,8 +1594,8 @@ BEGIN
   -- order_details의 display_start_date와 display_end_date를 기반으로 해당하는 기간 찾기
   SELECT rgdp.id INTO period_id
   FROM region_gu_display_periods rgdp
-  JOIN panel_info pi ON pi.region_gu_id = rgdp.region_gu_id
-  WHERE pi.id = NEW.panel_info_id
+  JOIN panels pi ON pi.region_gu_id = rgdp.region_gu_id
+  WHERE pi.id = NEW.panel_id
     AND rgdp.display_type_id = pi.display_type_id
     AND (
       -- 기간이 완전히 겹치는 경우
@@ -1612,21 +1612,21 @@ BEGIN
       available_slots = GREATEST(0, available_slots - NEW.slot_order_quantity),
       closed_slots = closed_slots + NEW.slot_order_quantity,
       updated_at = NOW()
-    WHERE panel_info_id = NEW.panel_info_id
+    WHERE panel_id = NEW.panel_id
       AND region_gu_display_period_id = period_id;
     
     -- 재고 정보가 없으면 새로 생성
     IF NOT FOUND THEN
-      SELECT * INTO panel_record FROM panel_info WHERE id = NEW.panel_info_id;
+      SELECT * INTO panel_record FROM panels WHERE id = NEW.panel_id;
       INSERT INTO banner_slot_inventory (
-        panel_info_id,
+        panel_id,
         region_gu_display_period_id,
         total_slots,
         available_slots,
         closed_slots
       )
       VALUES (
-        NEW.panel_info_id,
+        NEW.panel_id,
         period_id,
         panel_record.max_banner,
         GREATEST(0, panel_record.max_banner - NEW.slot_order_quantity),
@@ -1635,8 +1635,8 @@ BEGIN
     END IF;
   ELSE
     -- 기간을 찾지 못한 경우 로그 출력 (디버깅용)
-    RAISE NOTICE '기간을 찾을 수 없음: panel_info_id=%, display_start_date=%, display_end_date=%', 
-      NEW.panel_info_id, NEW.display_start_date, NEW.display_end_date;
+    RAISE NOTICE '기간을 찾을 수 없음: panel_id=%, display_start_date=%, display_end_date=%', 
+      NEW.panel_id, NEW.display_start_date, NEW.display_end_date;
   END IF;
   
   RETURN NEW;
@@ -1647,8 +1647,8 @@ END;
 BEGIN
   -- Check if this is a top-fixed banner (slot_number = 0)
   IF EXISTS (
-    SELECT 1 FROM banner_slot_info 
-    WHERE id = NEW.banner_slot_info_id 
+    SELECT 1 FROM banner_slots 
+    WHERE id = NEW.banner_slot_id 
     AND slot_number = 0
     AND banner_type = 'top_fixed'
   ) THEN
@@ -1656,7 +1656,7 @@ BEGIN
     UPDATE top_fixed_banner_inventory 
     SET available_slots = 0,
         updated_at = NOW()
-    WHERE panel_info_id = NEW.panel_info_id;
+    WHERE panel_id = NEW.panel_id;
   END IF;
   
   RETURN NEW;
@@ -1739,8 +1739,8 @@ BEFORE UPDATE
 ROW
 
 
-update_banner_slot_info_updated_at	
-banner_slot_info
+update_banner_slots_updated_at	
+banner_slots
 
 update_updated_at_column
 
@@ -1811,8 +1811,8 @@ BEFORE UPDATE
 ROW
 
 
-update_led_slot_info_updated_at	
-led_slot_info
+update_led_slots_updated_at	
+led_slots
 
 update_updated_at_column
 
@@ -1856,8 +1856,8 @@ BEFORE UPDATE
 ROW
 
 
-update_panel_info_updated_at	
-panel_info
+update_panels_updated_at	
+panels
 
 update_updated_at_column
 

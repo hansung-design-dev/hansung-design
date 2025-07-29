@@ -47,7 +47,7 @@ interface PanelSlotUsage {
   is_active?: boolean;
   is_closed?: boolean;
   banner_type?: string;
-  banner_slot_info?: {
+  banner_slots?: {
     id: string;
     slot_name?: string;
     max_width?: number;
@@ -62,12 +62,12 @@ interface PanelSlotUsage {
 interface OrderDetail {
   id: string;
   order_id: string;
-  panel_info_id: string;
+  panel_id: string;
   panel_slot_usage_id?: string;
   slot_order_quantity: number;
   display_start_date?: string;
   display_end_date?: string;
-  panel_info?: PanelInfo;
+  panels?: PanelInfo;
   panel_slot_usage?: PanelSlotUsage;
 }
 
@@ -127,7 +127,7 @@ interface Order {
     banner_type?: string;
     slot_number?: number;
     total_price?: number;
-    panel_info_id?: string;
+    panel_id?: string;
     road_usage_fee?: number;
     advertising_fee?: number;
     panel_slot_status?: string;
@@ -305,10 +305,10 @@ export default function OrdersPage() {
         id: globalIndex++,
         // 게시대명: address (nickname)
         title:
-          (item.panel_info?.address || '') +
-          (item.panel_info?.nickname ? ` (${item.panel_info.nickname})` : ''),
+          (item.panels?.address || '') +
+          (item.panels?.nickname ? ` (${item.panels.nickname})` : ''),
         // 행정동
-        location: item.panel_info?.region_gu?.name || '',
+        location: item.panels?.region_gu?.name || '',
         // 마감여부(주문상태)
         status: getStatusDisplay(order.payment_status),
         orderId: order.order_number,
@@ -437,7 +437,7 @@ export default function OrdersPage() {
     const order = detail.order || ({} as Order);
     const orderDetails = detail.orderDetails || [];
     const orderDetail = orderDetails[0] || ({} as OrderDetail);
-    const panelInfo = orderDetail.panel_info || ({} as PanelInfo);
+    const panelInfo = orderDetail.panels || ({} as PanelInfo);
     const customerInfo = detail.customerInfo || {};
     const priceInfo = detail.priceInfo || {};
     const payments = detail.payments || [];

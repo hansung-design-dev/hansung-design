@@ -11,7 +11,7 @@ export interface CartItem {
   selectedYear?: number; // 선택한 년도 (예: 2025)
   selectedMonth?: number; // 선택한 월 (예: 7)
   panel_type?: string;
-  panel_info_id?: string; // panel_info 테이블의 실제 ID
+  panel_id?: string; // panels 테이블의 실제 ID
   isTopFixed?: boolean; // 상단광고 여부
   is_public_institution?: boolean; // 공공기관용 여부
   is_company?: boolean; // 기업용 여부
@@ -41,7 +41,7 @@ export interface CartItem {
     banner_type: string | null;
     slot_number: number | null;
     total_price: number | null;
-    panel_info_id: string | null;
+    panel_id: string | null;
     road_usage_fee: number | null;
     advertising_fee: number | null;
     panel_slot_status: string | null;
@@ -152,7 +152,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
       }
       console.log('🔍 Adding item to cart:', {
         id: action.item.id,
-        panel_info_id: action.item.panel_info_id,
+        panel_id: action.item.panel_id,
         name: action.item.name,
         price: action.item.price,
         halfPeriod: action.item.halfPeriod,

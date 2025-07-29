@@ -19,7 +19,7 @@ interface BannerDisplayData {
   panel_status: string;
   panel_code?: number;
   panel_type?: string;
-  max_banner?: number; // panel_info에서 가져오는 max_banner
+  max_banner?: number; // panels에서 가져오는 max_banner
   photo_url?: string; // 사진 URL 추가
   latitude?: number; // 위도 추가
   longitude?: number; // 경도 추가
@@ -27,14 +27,14 @@ interface BannerDisplayData {
   updated_at: string;
   banner_panel_details: {
     id: string;
-    panel_info_id: string;
+    panel_id: string;
     is_for_admin?: boolean;
     created_at: string;
     updated_at: string;
   };
-  banner_slot_info: {
+  banner_slots: {
     id: string;
-    panel_info_id: string;
+    panel_id: string;
     slot_number: number;
     slot_name: string;
     max_width: number;
@@ -299,11 +299,11 @@ export default function BannerDisplayPage({
                   ? item.address
                   : item.address;
 
-              // banner_slot_info에서 slot_number에 따라 적절한 슬롯 찾기
+              // banner_slots에서 slot_number에 따라 적절한 슬롯 찾기
               const findSlotByType = () => {
                 if (
-                  !item.banner_slot_info ||
-                  item.banner_slot_info.length === 0
+                  !item.banner_slots ||
+                  item.banner_slots.length === 0
                 ) {
                   return null;
                 }
@@ -311,7 +311,7 @@ export default function BannerDisplayPage({
                 // 디버깅: 모든 슬롯 정보 출력
                 console.log(
                   '🔍 모든 슬롯:',
-                  item.banner_slot_info.map((slot) => ({
+                  item.banner_slots.map((slot) => ({
                     slot_number: slot.slot_number,
                     banner_type: slot.banner_type,
                     total_price: slot.total_price,
@@ -319,12 +319,12 @@ export default function BannerDisplayPage({
                 );
 
                 // 상단광고 슬롯 찾기 (banner_type으로만 구분)
-                const topFixedSlot = item.banner_slot_info.find(
+                const topFixedSlot = item.banner_slots.find(
                   (slot) => slot.banner_type === 'top_fixed'
                 );
 
                 // 현수막게시대 슬롯 찾기 (banner_type으로만 구분)
-                const panelSlot = item.banner_slot_info.find(
+                const panelSlot = item.banner_slots.find(
                   (slot) =>
                     slot.banner_type === 'panel' ||
                     slot.banner_type === 'semi_auto'
@@ -344,7 +344,7 @@ export default function BannerDisplayPage({
                 nickname: item.nickname,
                 district: item.region_gu.name,
                 photo_url: item.photo_url, // 사진 URL 로그 추가
-                bannerSlotInfo: item.banner_slot_info?.map((slot) => ({
+                bannerSlotInfo: item.banner_slots?.map((slot) => ({
                   slot_number: slot.slot_number,
                   banner_type: slot.banner_type,
                   total_price: slot.total_price,
@@ -381,7 +381,7 @@ export default function BannerDisplayPage({
                     price = `${pricePolicies[0].total_price?.toLocaleString()}원`;
                   }
                 } else {
-                  // 기존 로직 (banner_slot_info의 total_price 사용)
+                  // 기존 로직 (banner_slots의 total_price 사용)
                   totalPrice = slots.panelSlot.total_price || 0;
                   price = `${slots.panelSlot.total_price?.toLocaleString()}원`;
                 }
@@ -413,7 +413,7 @@ export default function BannerDisplayPage({
                 ? 'top_fixed'
                 : slots?.panelSlot?.banner_type || undefined;
 
-              // 상하반기별 마감수 정보 (panel_info에서 가져오기)
+              // 상하반기별 마감수 정보 (panels에서 가져오기)
               const firstHalfClosureQuantity = item.first_half_closure_quantity;
               const secondHalfClosureQuantity =
                 item.second_half_closure_quantity;
@@ -429,10 +429,10 @@ export default function BannerDisplayPage({
               const isForAdmin =
                 item.banner_panel_details?.is_for_admin || false;
 
-              // panel_info에서 max_banner 가져오기
+              // panels에서 max_banner 가져오기
               const maxBanners = item.max_banner || 0;
 
-              // banner_slot_info에서 적절한 슬롯의 크기 정보 가져오기
+              // banner_slots에서 적절한 슬롯의 크기 정보 가져오기
               const getSlotSize = () => {
                 if (isTopFixed && slots?.topFixedSlot) {
                   return {
@@ -476,9 +476,9 @@ export default function BannerDisplayPage({
                 panel_type: item.panel_type,
                 first_half_closure_quantity: firstHalfClosureQuantity,
                 second_half_closure_quantity: secondHalfClosureQuantity,
-                panel_info_id: item.id, // 원본 panel_info UUID
+                panel_id: item.id, // 원본 panels UUID
                 photo_url: item.photo_url, // 사진 URL 추가
-                banner_slot_info: item.banner_slot_info, // banner_slot_info 보존
+                banner_slots: item.banner_slots, // banner_slots 보존
                 inventory_info: item.inventory_info, // 실시간 재고 정보 추가
               };
             }
@@ -507,7 +507,7 @@ export default function BannerDisplayPage({
         if (districtObj?.name) {
           const districtDataResult = await getDistrictData(districtObj.name);
           if (districtDataResult) {
-            setBankInfo(districtDataResult.bank_info);
+            setBankInfo(districtDataResult.bank_accounts);
           }
         }
       } catch (err) {

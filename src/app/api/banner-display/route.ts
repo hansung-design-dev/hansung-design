@@ -9,7 +9,7 @@ export interface BannerDisplayData {
   address: string;
   panel_status: string;
   panel_type: string;
-  max_banner: number; // panel_info에서 가져오는 max_banner
+  max_banner: number; // panels에서 가져오는 max_banner
   photo_url?: string; // 사진 URL 추가
   latitude?: number; // 위도 추가
   longitude?: number; // 경도 추가
@@ -27,7 +27,7 @@ export interface BannerDisplayData {
     id: string;
     is_for_admin: boolean;
   };
-  banner_slot_info: {
+  banner_slots: {
     id: string;
     slot_number: number;
     slot_name: string;
@@ -47,7 +47,7 @@ export interface BannerDisplayData {
     }[];
   }[];
   banner_slot_inventory?: BannerSlotInventory[];
-  inventory_info?: {
+  inventory_data?: {
     current_period: {
       total_slots: number;
       available_slots: number;
@@ -112,10 +112,10 @@ interface DistrictMapItem {
   }[];
 }
 
-interface PanelInfoWithSlots {
+interface PanelWithSlots {
   id: string;
   panel_type: string;
-  banner_slot_info: {
+  banner_slots: {
     slot_number: number;
     banner_slot_price_policy: {
       id: string;
@@ -128,7 +128,7 @@ interface PanelInfoWithSlots {
   }[];
 }
 
-interface BankInfoData {
+interface BankData {
   id: string;
   bank_name: string;
   account_number: string;
@@ -155,7 +155,7 @@ interface ProcessedDistrictData {
     second_half_from: string | null;
     second_half_to: string | null;
   } | null;
-  bank_info: BankInfoData | null;
+  bank_accounts: BankData | null;
   pricePolicies: {
     id: string;
     price_usage_type: string;
@@ -220,7 +220,7 @@ async function getBannerDisplaysByDistrict(districtName: string) {
     console.log('🔍 Target year month for inventory:', targetYearMonth);
 
     const query = supabase
-      .from('panel_info')
+      .from('panels')
       .select(
         `
         *,
@@ -228,7 +228,7 @@ async function getBannerDisplaysByDistrict(districtName: string) {
           id,
           is_for_admin
         ),
-        banner_slot_info (
+        banner_slots (
           id,
           slot_number,
           slot_name,
@@ -309,7 +309,7 @@ async function getBannerDisplaysByDistrict(districtName: string) {
 
       return {
         ...item,
-        inventory_info: {
+        inventory_data: {
           current_period: currentPeriodInventory
             ? {
                 total_slots: currentPeriodInventory.total_slots,
@@ -348,8 +348,8 @@ async function getBannerDisplaysByDistrict(districtName: string) {
           panel_code: item.panel_code,
           panel_type: item.panel_type,
           nickname: item.nickname,
-          banner_slot_info_count: item.banner_slot_info?.length || 0,
-          inventory_info: item.inventory_info,
+          banner_slots_count: item.banner_slots?.length || 0,
+          inventory_data: item.inventory_data,
         })) || [],
     });
 
@@ -369,7 +369,7 @@ async function getAllBannerDisplays() {
     const displayType = await getBannerDisplayTypeId();
 
     const { data, error } = await supabase
-      .from('panel_info')
+      .from('panels')
       .select(
         `
         *,
@@ -377,7 +377,7 @@ async function getAllBannerDisplays() {
           id,
           is_for_admin
         ),
-        banner_slot_info (
+        banner_slots (
           id,
           slot_number,
           slot_name,
@@ -428,7 +428,7 @@ async function getAllBannerDisplays() {
 async function getBannerDisplayCountsByDistrict() {
   try {
     const { data, error } = await supabase
-      .from('panel_info')
+      .from('panels')
       .select(
         `
         region_gu!inner (
@@ -500,9 +500,9 @@ async function getAllDistrictsData() {
   try {
     console.log('🔍 Fetching all districts data for banner display...');
 
-    // 1. panel_info에서 현수막 게시대 구 목록과 데이터 추출 (두 단계 조건)
+    // 1. panels 현수막 게시대 구 목록과 데이터 추출 (두 단계 조건)
     const { data: panelData, error: panelError } = await supabase
-      .from('panel_info')
+      .from('panels')
       .select(
         `
         region_gu!inner(
@@ -571,10 +571,10 @@ async function getAllDistrictsData() {
           total_price: number;
         }[] = [];
 
-        const { data: panelInfoList } = await supabase
-          .from('panel_info')
+        const { data: panelList } = await supabase
+          .from('panels')
           .select(
-            `id, panel_type, banner_slot_info (slot_number, banner_slot_price_policy (*))`
+            `id, panel_type, banner_slots (slot_number, banner_slot_price_policy (*))`
           )
           .eq('region_gu_id', district.id)
           .eq('display_type_id', (await getBannerDisplayTypeId()).id)
@@ -590,15 +590,13 @@ async function getAllDistrictsData() {
           .order('id', { ascending: true })
           .limit(20); // 여러 패널이 있을 수 있으니 20개까지 조회
 
-        if (panelInfoList && panelInfoList.length > 0) {
-          // slot_number=1인 banner_slot_info만 추출
-          const slotInfos = panelInfoList.flatMap((panel: PanelInfoWithSlots) =>
-            (panel.banner_slot_info || []).filter(
-              (slot) => slot.slot_number === 1
-            )
+        if (panelList && panelList.length > 0) {
+          // slot_number=1인 banner_slots만 추출
+          const slotData = panelList.flatMap((panel: PanelWithSlots) =>
+            (panel.banner_slots || []).filter((slot) => slot.slot_number === 1)
           );
           // 모든 슬롯의 price_policy를 합쳐서 unique하게
-          const allPolicies = slotInfos.flatMap(
+          const allPolicies = slotData.flatMap(
             (slot) => slot.banner_slot_price_policy || []
           );
           // price_usage_type별로 첫 번째만 남기기
@@ -703,7 +701,7 @@ async function getAllDistrictsData() {
 
         // 계좌번호 정보 가져오기
         const { data: bankData } = await supabase
-          .from('bank_info')
+          .from('bank_accounts')
           .select(
             `
             *,
@@ -728,7 +726,7 @@ async function getAllDistrictsData() {
           logo_image_url: district.logo_image_url,
           panel_status: district.panel_status,
           period: currentPeriodData,
-          bank_info: bankData as BankInfoData | null,
+          bank_accounts: bankData as BankData | null,
           pricePolicies: pricePolicies,
         };
       })

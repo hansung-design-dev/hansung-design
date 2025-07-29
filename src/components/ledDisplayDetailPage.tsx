@@ -302,7 +302,7 @@ export default function LEDDisplayDetailPage({
           price: priceForCart,
           // LED 전자게시대는 상시접수이므로 상하반기 정보 제거
           panel_type: item.panel_type,
-          panel_info_id: item.panel_info_id, // 원본 UUID
+          panel_id: item.panel_id, // 원본 UUID
           panel_code: item.panel_code?.toString(),
           photo_url: item.photo_url || undefined, // 게시대 사진 URL 추가
           // 사용자 프로필 정보 추가
@@ -358,7 +358,7 @@ export default function LEDDisplayDetailPage({
         price: priceForCart,
         // LED 전자게시대는 상시접수이므로 상하반기 정보 제거
         panel_type: item.panel_type,
-        panel_info_id: item.panel_info_id, // 원본 UUID
+        panel_id: item.panel_id, // 원본 UUID
         panel_code: item.panel_code?.toString(),
         photo_url: item.photo_url || undefined, // 게시대 사진 URL 추가
         // 사용자 프로필 정보 추가

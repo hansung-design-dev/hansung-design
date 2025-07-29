@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
       }
 
       // displayType이 있으면 계좌번호 정보도 함께 가져오기
-      let bankInfo = null;
+      let bankData = null;
       if (displayType) {
         const { data: displayTypeData, error: displayTypeError } =
           await supabase
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
 
         if (!displayTypeError) {
           const { data: bankData, error: bankError } = await supabase
-            .from('bank_info')
+            .from('bank_accounts')
             .select(
               `
               id,
@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
             .single();
 
           if (!bankError && bankData) {
-            bankInfo = {
+            bankData = {
               id: bankData.id,
               bank_name: bankData.bank_name,
               account_number: bankData.account_number,
@@ -126,10 +126,10 @@ export async function GET(request: NextRequest) {
       }
 
       // 상하반기별 마감수 정보 가져오기
-      let halfPeriodInfo = null;
+      let halfPeriodData = null;
       if (displayType === 'banner_display' || displayType === 'led_display') {
         const { data: panelData, error: panelError } = await supabase
-          .from('panel_info')
+          .from('panels')
           .select(
             `
             first_half_closure_quantity,
@@ -150,7 +150,7 @@ export async function GET(request: NextRequest) {
           .limit(1);
 
         if (!panelError && panelData && panelData.length > 0) {
-          halfPeriodInfo = {
+          halfPeriodData = {
             first_half_closure_quantity:
               panelData[0].first_half_closure_quantity || 0,
             second_half_closure_quantity:
@@ -161,8 +161,8 @@ export async function GET(request: NextRequest) {
 
       const responseData = {
         ...regionData,
-        bank_info: bankInfo,
-        half_period_info: halfPeriodInfo,
+        bank_accounts: bankData,
+        half_period_data: halfPeriodData,
       };
 
       return NextResponse.json({
@@ -220,7 +220,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    if (action === 'getBankInfo' && districtName && displayType) {
+    if (action === 'getBankData' && districtName && displayType) {
       // 계좌번호 정보만 가져오기 (기존 bank-info API 호환성)
       const { data: regionData, error: regionError } = await supabase
         .from('region_gu')
@@ -251,7 +251,7 @@ export async function GET(request: NextRequest) {
       }
 
       const { data, error } = await supabase
-        .from('bank_info')
+        .from('bank_accounts')
         .select(
           `
           id,

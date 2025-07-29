@@ -36,7 +36,7 @@ export interface LEDDisplayData {
     panel_width: number;
     panel_height: number;
   };
-  led_slot_info: {
+  led_slots: {
     id: string;
     slot_number: number;
     slot_width_px: number;
@@ -167,7 +167,7 @@ export default function LEDDisplayPage() {
     });
 
     return sortedData.map((item) => {
-      const firstSlot = item.led_slot_info[0];
+      const firstSlot = item.led_slots[0];
 
       // 구별 가나다순 ID 조합 (중복 방지)
       const districtCode = item.region_gu.code;
@@ -177,13 +177,13 @@ export default function LEDDisplayPage() {
         .padStart(2, '0')}-${item.id}`; // UUID 추가로 고유성 보장
 
       const price =
-        item.led_slot_info && item.led_slot_info.length > 0
-          ? `${item.led_slot_info[0].total_price?.toLocaleString()}원`
+        item.led_slots && item.led_slots.length > 0
+          ? `${item.led_slots[0].total_price?.toLocaleString()}원`
           : '문의';
 
       const totalPrice =
-        item.led_slot_info && item.led_slot_info.length > 0
-          ? item.led_slot_info[0].total_price
+        item.led_slots && item.led_slots.length > 0
+          ? item.led_slots[0].total_price
           : 0;
 
       return {
@@ -217,7 +217,7 @@ export default function LEDDisplayPage() {
         administrative_fee: firstSlot?.administrative_fee || 0,
         price_unit: firstSlot?.price_unit || '',
         panel_slot_status: firstSlot?.panel_slot_status || '',
-        panel_info_id: item.id, // 원본 panel_info UUID
+        panel_id: item.id, // 원본 panels UUID
       };
     });
   }
@@ -349,7 +349,7 @@ export default function LEDDisplayPage() {
               logo_image_url: districtDataResult.logo_image_url,
               panel_status: districtDataResult.panel_status,
             });
-            setBankInfo(districtDataResult.bank_info);
+            setBankInfo(districtDataResult.bank_accounts);
           } else {
             // API에서 데이터를 가져오지 못한 경우에도 기본 정보 생성
             setDistrictData({

@@ -29,8 +29,8 @@ export async function POST() {
           -- order_details의 display_start_date와 display_end_date를 기반으로 해당하는 기간 찾기
           SELECT rgdp.id INTO period_id
           FROM region_gu_display_periods rgdp
-          JOIN panel_info pi ON pi.region_gu_id = rgdp.region_gu_id
-          WHERE pi.id = NEW.panel_info_id
+          JOIN panels pi ON pi.region_gu_id = rgdp.region_gu_id
+          WHERE pi.id = NEW.panel_id
             AND rgdp.display_type_id = pi.display_type_id
             AND (
               -- 기간이 완전히 겹치는 경우
@@ -47,21 +47,21 @@ export async function POST() {
               available_slots = GREATEST(0, available_slots - NEW.slot_order_quantity),
               closed_slots = closed_slots + NEW.slot_order_quantity,
               updated_at = NOW()
-            WHERE panel_info_id = NEW.panel_info_id
+            WHERE panel_id = NEW.panel_id
               AND region_gu_display_period_id = period_id;
             
             -- 재고 정보가 없으면 새로 생성
             IF NOT FOUND THEN
-              SELECT * INTO panel_record FROM panel_info WHERE id = NEW.panel_info_id;
+              SELECT * INTO panel_record FROM panels WHERE id = NEW.panel_id;
               INSERT INTO banner_slot_inventory (
-                panel_info_id,
+                panel_id,
                 region_gu_display_period_id,
                 total_slots,
                 available_slots,
                 closed_slots
               )
               VALUES (
-                NEW.panel_info_id,
+                NEW.panel_id,
                 period_id,
                 panel_record.max_banner,
                 GREATEST(0, panel_record.max_banner - NEW.slot_order_quantity),
@@ -70,8 +70,8 @@ export async function POST() {
             END IF;
           ELSE
             -- 기간을 찾지 못한 경우 로그 출력 (디버깅용)
-            RAISE NOTICE '기간을 찾을 수 없음: panel_info_id=%, display_start_date=%, display_end_date=%', 
-              NEW.panel_info_id, NEW.display_start_date, NEW.display_end_date;
+            RAISE NOTICE '기간을 찾을 수 없음: panel_id=%, display_start_date=%, display_end_date=%', 
+              NEW.panel_id, NEW.display_start_date, NEW.display_end_date;
           END IF;
           
           RETURN NEW;
@@ -91,8 +91,8 @@ export async function POST() {
           -- order_details의 display_start_date와 display_end_date를 기반으로 해당하는 기간 찾기
           SELECT rgdp.id INTO period_id
           FROM region_gu_display_periods rgdp
-          JOIN panel_info pi ON pi.region_gu_id = rgdp.region_gu_id
-          WHERE pi.id = OLD.panel_info_id
+          JOIN panels pi ON pi.region_gu_id = rgdp.region_gu_id
+          WHERE pi.id = OLD.panel_id
             AND rgdp.display_type_id = pi.display_type_id
             AND (
               -- 기간이 완전히 겹치는 경우
@@ -109,7 +109,7 @@ export async function POST() {
               available_slots = LEAST(total_slots, available_slots + OLD.slot_order_quantity),
               closed_slots = GREATEST(0, closed_slots - OLD.slot_order_quantity),
               updated_at = NOW()
-            WHERE panel_info_id = OLD.panel_info_id
+            WHERE panel_id = OLD.panel_id
               AND region_gu_display_period_id = period_id;
           END IF;
           
@@ -131,8 +131,8 @@ export async function POST() {
           -- order_details의 display_start_date와 display_end_date를 기반으로 해당하는 기간 찾기
           SELECT rgdp.id INTO period_id
           FROM region_gu_display_periods rgdp
-          JOIN panel_info pi ON pi.region_gu_id = rgdp.region_gu_id
-          WHERE pi.id = NEW.panel_info_id
+          JOIN panels pi ON pi.region_gu_id = rgdp.region_gu_id
+          WHERE pi.id = NEW.panel_id
             AND rgdp.display_type_id = pi.display_type_id
             AND (
               -- 기간이 완전히 겹치는 경우
@@ -146,7 +146,7 @@ export async function POST() {
           IF period_id IS NOT NULL THEN
             SELECT available_slots, total_slots INTO current_inventory
             FROM banner_slot_inventory
-            WHERE panel_info_id = NEW.panel_info_id
+            WHERE panel_id = NEW.panel_id
               AND region_gu_display_period_id = period_id;
             
             -- 재고 정보가 있고, 주문 수량이 가용 재고를 초과하는 경우
@@ -156,8 +156,8 @@ export async function POST() {
             END IF;
           ELSE
             -- 기간을 찾지 못한 경우 경고
-            RAISE WARNING '기간을 찾을 수 없음: panel_info_id=%, display_start_date=%, display_end_date=%', 
-              NEW.panel_info_id, NEW.display_start_date, NEW.display_end_date;
+            RAISE WARNING '기간을 찾을 수 없음: panel_id=%, display_start_date=%, display_end_date=%', 
+              NEW.panel_id, NEW.display_start_date, NEW.display_end_date;
           END IF;
           
           RETURN NEW;
@@ -191,7 +191,7 @@ export async function POST() {
       sql: `
         -- 디버깅을 위한 유틸리티 함수
         CREATE OR REPLACE FUNCTION debug_order_period_matching(
-          p_panel_info_id UUID,
+          p_panel_id UUID,
           p_display_start_date DATE,
           p_display_end_date DATE
         ) RETURNS TABLE(
@@ -219,8 +219,8 @@ export async function POST() {
               ELSE false
             END as matched
           FROM region_gu_display_periods rgdp
-          JOIN panel_info pi ON pi.region_gu_id = rgdp.region_gu_id
-          WHERE pi.id = p_panel_info_id
+          JOIN panels pi ON pi.region_gu_id = rgdp.region_gu_id
+          WHERE pi.id = p_panel_id
             AND rgdp.display_type_id = pi.display_type_id;
         END;
         $$ LANGUAGE plpgsql;
@@ -232,9 +232,9 @@ export async function POST() {
       sql: `
         -- 재고 현황 확인 함수
         CREATE OR REPLACE FUNCTION get_inventory_status(
-          p_panel_info_id UUID DEFAULT NULL
+          p_panel_id UUID DEFAULT NULL
         ) RETURNS TABLE(
-          panel_info_id UUID,
+          panel_id UUID,
           panel_name TEXT,
           district TEXT,
           year_month TEXT,
@@ -249,7 +249,7 @@ export async function POST() {
         BEGIN
           RETURN QUERY
           SELECT 
-            pi.id as panel_info_id,
+            pi.id as panel_id,
             pi.nickname as panel_name,
             rgu.name as district,
             rgdp.year_month,
@@ -264,12 +264,12 @@ export async function POST() {
               WHEN bsi.available_slots <= bsi.total_slots * 0.2 THEN '재고부족'
               ELSE '재고있음'
             END as inventory_status
-          FROM panel_info pi
+          FROM panels pi
           LEFT JOIN region_gu rgu ON pi.region_gu_id = rgu.id
-          LEFT JOIN banner_slot_inventory bsi ON pi.id = bsi.panel_info_id
+          LEFT JOIN banner_slot_inventory bsi ON pi.id = bsi.panel_id
           LEFT JOIN region_gu_display_periods rgdp ON bsi.region_gu_display_period_id = rgdp.id
           WHERE pi.display_type_id = (SELECT id FROM display_types WHERE name = 'banner_display')
-            AND (p_panel_info_id IS NULL OR pi.id = p_panel_info_id)
+            AND (p_panel_id IS NULL OR pi.id = p_panel_id)
           ORDER BY rgdp.year_month DESC, rgdp.period, bsi.updated_at DESC;
         END;
         $$ LANGUAGE plpgsql;
@@ -280,10 +280,10 @@ export async function POST() {
     await supabase.rpc('exec_sql', {
       sql: `
         CREATE INDEX IF NOT EXISTS idx_banner_slot_inventory_panel_period 
-        ON banner_slot_inventory(panel_info_id, region_gu_display_period_id);
+        ON banner_slot_inventory(panel_id, region_gu_display_period_id);
 
         CREATE INDEX IF NOT EXISTS idx_order_details_display_dates 
-        ON order_details(panel_info_id, display_start_date, display_end_date);
+        ON order_details(panel_id, display_start_date, display_end_date);
 
         CREATE INDEX IF NOT EXISTS idx_region_gu_display_periods_dates 
         ON region_gu_display_periods(region_gu_id, display_type_id, period_from, period_to);

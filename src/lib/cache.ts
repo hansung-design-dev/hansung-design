@@ -64,7 +64,7 @@ export const cacheKeys = {
     district ? `banner_displays_${district}` : 'banner_displays_all',
   ledDisplays: (district?: string) =>
     district ? `led_displays_${district}` : 'led_displays_all',
-  bankInfo: (district: string) => `bank_info_${district}`,
+  bankInfo: (district: string) => `bank_accounts_${district}`,
   displayPeriods: (district: string) => `display_periods_${district}`,
   userProfile: (userId: string) => `user_profile_${userId}`,
   orders: (userId: string) => `orders_${userId}`,

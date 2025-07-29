@@ -95,7 +95,7 @@ export default function LEDDisplayPage() {
               second_half_from: string;
               second_half_to: string;
             } | null;
-            bank_info?: {
+            bank_accounts?: {
               id: string;
               bank_name: string;
               account_number: string;
@@ -128,7 +128,7 @@ export default function LEDDisplayPage() {
               src: '/images/led/landing.png',
               panel_status: district.panel_status || 'active',
               period: district.period || null,
-              bankInfo: district.bank_info || null,
+              bank_accounts: district.bank_accounts || null,
             };
           }
         );

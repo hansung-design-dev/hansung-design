@@ -113,7 +113,7 @@ export default function BannerDisplayPage() {
               second_half_from: string;
               second_half_to: string;
             } | null;
-            bank_info?: {
+            bank_accounts?: {
               id: string;
               bank_name: string;
               account_number: string;
@@ -160,7 +160,7 @@ export default function BannerDisplayPage() {
               src: '/images/banner-display/landing.png',
               panel_status: district.panel_status,
               period: district.period || null,
-              bankInfo: district.bank_info || null,
+              bank_accounts: district.bank_accounts || null,
               pricePolicies: district.pricePolicies || [],
             };
           }

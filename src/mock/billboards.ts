@@ -155,14 +155,14 @@ export const panelInfoData = [
 export const ledPanelDetails = [
   {
     id: uuidv4(),
-    panel_info_id: panelInfoData[0].id,
+    panel_id: panelInfoData[0].id,
     exposure_count: 50000,
     panel_width: 1920,
     panel_height: 1080,
   },
   {
     id: uuidv4(),
-    panel_info_id: panelInfoData[1].id,
+    panel_id: panelInfoData[1].id,
     exposure_count: 45000,
     panel_width: 1600,
     panel_height: 900,
@@ -173,7 +173,7 @@ export const ledPanelDetails = [
 export const bannerPanelDetails = [
   {
     id: uuidv4(),
-    panel_info_id: panelInfoData[2].id,
+    panel_id: panelInfoData[2].id,
     max_banners: 3,
     panel_height: 3.5,
     panel_width: 2.5,
@@ -181,7 +181,7 @@ export const bannerPanelDetails = [
   },
   {
     id: uuidv4(),
-    panel_info_id: panelInfoData[3].id,
+    panel_id: panelInfoData[3].id,
     max_banners: 4,
     panel_height: 4.0,
     panel_width: 3.0,
@@ -193,7 +193,7 @@ export const bannerPanelDetails = [
 export const ledSlotInfo = [
   {
     id: uuidv4(),
-    panel_info_id: panelInfoData[0].id,
+    panel_id: panelInfoData[0].id,
     slot_name: '메인 화면',
     slot_width_px: 1920,
     slot_height_px: 1080,
@@ -206,7 +206,7 @@ export const ledSlotInfo = [
   },
   {
     id: uuidv4(),
-    panel_info_id: panelInfoData[1].id,
+    panel_id: panelInfoData[1].id,
     slot_name: '메인 화면',
     slot_width_px: 1600,
     slot_height_px: 900,
@@ -223,7 +223,7 @@ export const ledSlotInfo = [
 export const bannerSlotInfo = [
   {
     id: uuidv4(),
-    panel_info_id: panelInfoData[2].id,
+    panel_id: panelInfoData[2].id,
     slot_number: 1,
     slot_name: '1번 면',
     max_width: 2.0,
@@ -236,7 +236,7 @@ export const bannerSlotInfo = [
   },
   {
     id: uuidv4(),
-    panel_info_id: panelInfoData[2].id,
+    panel_id: panelInfoData[2].id,
     slot_number: 2,
     slot_name: '2번 면',
     max_width: 2.0,
@@ -249,7 +249,7 @@ export const bannerSlotInfo = [
   },
   {
     id: uuidv4(),
-    panel_info_id: panelInfoData[2].id,
+    panel_id: panelInfoData[2].id,
     slot_number: 3,
     slot_name: '3번 면',
     max_width: 2.0,
@@ -262,7 +262,7 @@ export const bannerSlotInfo = [
   },
   {
     id: uuidv4(),
-    panel_info_id: panelInfoData[3].id,
+    panel_id: panelInfoData[3].id,
     slot_number: 1,
     slot_name: '1번 면',
     max_width: 2.5,
@@ -275,7 +275,7 @@ export const bannerSlotInfo = [
   },
   {
     id: uuidv4(),
-    panel_info_id: panelInfoData[3].id,
+    panel_id: panelInfoData[3].id,
     slot_number: 2,
     slot_name: '2번 면',
     max_width: 2.5,
@@ -288,7 +288,7 @@ export const bannerSlotInfo = [
   },
   {
     id: uuidv4(),
-    panel_info_id: panelInfoData[3].id,
+    panel_id: panelInfoData[3].id,
     slot_number: 3,
     slot_name: '3번 면',
     max_width: 2.5,
@@ -301,7 +301,7 @@ export const bannerSlotInfo = [
   },
   {
     id: uuidv4(),
-    panel_info_id: panelInfoData[3].id,
+    panel_id: panelInfoData[3].id,
     slot_number: 4,
     slot_name: '4번 면',
     max_width: 2.5,
@@ -319,7 +319,7 @@ export const panelSlotUsage = [
   {
     id: uuidv4(),
     display_type_id: displayTypes[0].id,
-    panel_info_id: panelInfoData[0].id,
+    panel_id: panelInfoData[0].id,
     slot_number: 1,
     usage_type: 'led_display',
     attach_date_from: new Date('2024-03-01'),
@@ -333,7 +333,7 @@ export const panelSlotUsage = [
   {
     id: uuidv4(),
     display_type_id: displayTypes[1].id,
-    panel_info_id: panelInfoData[2].id,
+    panel_id: panelInfoData[2].id,
     slot_number: 1,
     usage_type: 'banner_display',
     attach_date_from: new Date('2024-03-01'),
@@ -351,10 +351,10 @@ export const ledItems = panelInfoData
   .filter((panel) => panel.display_type_id === displayTypes[0].id)
   .map((panel) => {
     const ledDetail = ledPanelDetails.find(
-      (detail) => detail.panel_info_id === panel.id
+      (detail) => detail.panel_id === panel.id
     );
     const slotInfo = ledSlotInfo.find(
-      (slot) => slot.panel_info_id === panel.id
+      (slot) => slot.panel_id === panel.id
     );
     const dong = regionDongData.find(
       (dong) => dong.id === panel.region_dong_id
@@ -381,10 +381,10 @@ export const bannerItems = panelInfoData
   .filter((panel) => panel.display_type_id === displayTypes[1].id)
   .map((panel) => {
     const bannerDetail = bannerPanelDetails.find(
-      (detail) => detail.panel_info_id === panel.id
+      (detail) => detail.panel_id === panel.id
     );
     const slots = bannerSlotInfo.filter(
-      (slot) => slot.panel_info_id === panel.id
+      (slot) => slot.panel_id === panel.id
     );
     const dong = regionDongData.find(
       (dong) => dong.id === panel.region_dong_id

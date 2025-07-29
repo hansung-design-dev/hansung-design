@@ -13,7 +13,7 @@ interface PanelInfo {
 // Removed unused interfaces
 
 interface InventoryStatus {
-  panel_info_id: string;
+  panel_id: string;
   panel_name: string;
   district: string;
   year_month: string;
@@ -74,7 +74,7 @@ export default function TestHalfPeriodInventory() {
         },
         body: JSON.stringify({
           action,
-          panel_info_id: selectedPanel,
+          panel_id: selectedPanel,
           display_start_date: displayStartDate,
           display_end_date: displayEndDate,
           slot_order_quantity: slotOrderQuantity,
@@ -99,7 +99,7 @@ export default function TestHalfPeriodInventory() {
 
     try {
       const response = await fetch(
-        `/api/test-half-period-inventory?panel_info_id=${selectedPanel}`
+        `/api/test-half-period-inventory?panel_id=${selectedPanel}`
       );
       const data = await response.json();
       if (data.success) {

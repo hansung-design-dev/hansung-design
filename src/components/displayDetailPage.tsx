@@ -313,24 +313,24 @@ export default function DisplayDetailPage({
       })
     : billboards;
 
-  // 송파구, 용산구 필터에 따른 데이터 필터링 (banner_slot_info의 banner_type 사용)
+  // 송파구, 용산구 필터에 따른 데이터 필터링 (banner_slots의 banner_type 사용)
   const filteredByPanelType = isSongpaOrYongsan
     ? filteredByMapo.filter((item) => {
-        // banner_slot_info에서 banner_type 확인
-        if (item.type === 'banner' && item.banner_slot_info) {
+        // banner_slots에서 banner_type 확인
+        if (item.type === 'banner' && item.banner_slots) {
           if (currentPanelTypeFilter === 'top_fixed') {
             // 상단광고 탭: banner_type이 'top_fixed'인 슬롯이 있는 아이템만 (송파구만)
-            return item.banner_slot_info.some(
+            return item.banner_slots.some(
               (slot) => slot.banner_type === 'top_fixed'
             );
           } else if (currentPanelTypeFilter === 'panel') {
             // 현수막게시대 탭: banner_type이 'panel'인 슬롯이 있는 아이템
-            return item.banner_slot_info.some(
+            return item.banner_slots.some(
               (slot) => slot.banner_type === 'panel'
             );
           } else if (currentPanelTypeFilter === 'semi_auto') {
             // 반자동 탭: banner_type이 'semi_auto'인 슬롯이 있는 아이템 (용산구만)
-            return item.banner_slot_info.some(
+            return item.banner_slots.some(
               (slot) => slot.banner_type === 'semi_auto'
             );
           }
@@ -575,17 +575,17 @@ export default function DisplayDetailPage({
         itemPrice: item.price,
       });
 
-      // banner_slot_info에서 가격 정보 가져오기 (snapshot용) - BannerBillboard 타입인 경우만
+      // banner_slots에서 가격 정보 가져오기 (snapshot용) - BannerBillboard 타입인 경우만
       if (
         item.type === 'banner' &&
-        'banner_slot_info' in item &&
-        item.banner_slot_info &&
-        item.banner_slot_info.length > 0
+        'banner_slots' in item &&
+        item.banner_slots &&
+        item.banner_slots.length > 0
       ) {
         console.log('🔍 Creating panel_slot_snapshot for item:', {
           itemId: item.id,
           itemName: item.name,
-          bannerSlotInfo: item.banner_slot_info.map((slot) => ({
+          bannerSlotInfo: item.banner_slots.map((slot) => ({
             banner_type: slot.banner_type,
             slot_number: slot.slot_number,
             total_price: slot.total_price,
@@ -605,12 +605,12 @@ export default function DisplayDetailPage({
 
         if (currentPanelTypeFilter === 'top_fixed') {
           // 상단광고 탭: banner_type이 'top_fixed'인 슬롯 찾기
-          slotInfo = item.banner_slot_info.find(
+          slotInfo = item.banner_slots.find(
             (slot) => slot.banner_type === 'top_fixed'
           );
           console.log('🔍 Looking for top_fixed slot:', {
             foundTopFixedSlot: !!slotInfo,
-            allSlots: item.banner_slot_info.map((slot) => ({
+            allSlots: item.banner_slots.map((slot) => ({
               banner_type: slot.banner_type,
               slot_number: slot.slot_number,
               hasPricePolicy: !!slot.banner_slot_price_policy?.length,
@@ -618,12 +618,12 @@ export default function DisplayDetailPage({
           });
         } else if (currentPanelTypeFilter === 'semi_auto') {
           // 반자동 탭: banner_type이 'semi_auto'인 슬롯 찾기
-          slotInfo = item.banner_slot_info.find(
+          slotInfo = item.banner_slots.find(
             (slot) => slot.banner_type === 'semi_auto'
           );
           console.log('🔍 Looking for semi_auto slot:', {
             foundSemiAutoSlot: !!slotInfo,
-            allSlots: item.banner_slot_info.map((slot) => ({
+            allSlots: item.banner_slots.map((slot) => ({
               banner_type: slot.banner_type,
               slot_number: slot.slot_number,
               hasPricePolicy: !!slot.banner_slot_price_policy?.length,
@@ -631,12 +631,12 @@ export default function DisplayDetailPage({
           });
         } else {
           // 현수막게시대 탭: banner_type이 'panel'인 슬롯 찾기
-          slotInfo = item.banner_slot_info.find(
+          slotInfo = item.banner_slots.find(
             (slot) => slot.banner_type === 'panel' && slot.slot_number > 0
           );
           console.log('🔍 Looking for panel slot:', {
             foundPanelSlot: !!slotInfo,
-            allSlots: item.banner_slot_info.map((slot) => ({
+            allSlots: item.banner_slots.map((slot) => ({
               banner_type: slot.banner_type,
               slot_number: slot.slot_number,
               hasPricePolicy: !!slot.banner_slot_price_policy?.length,
@@ -646,7 +646,7 @@ export default function DisplayDetailPage({
 
         if (!slotInfo) {
           // 적절한 슬롯이 없으면 첫 번째 슬롯 사용
-          slotInfo = item.banner_slot_info[0];
+          slotInfo = item.banner_slots[0];
           console.log('🔍 No appropriate slot found, using first slot');
         } else {
           console.log('🔍 Found appropriate slot, using it');
@@ -689,7 +689,7 @@ export default function DisplayDetailPage({
               banner_type: slotInfo.banner_type,
               slot_number: slotInfo.slot_number,
               total_price: defaultPolicy.total_price,
-              panel_info_id: slotInfo.panel_info_id,
+              panel_id: slotInfo.panel_id,
               road_usage_fee: defaultPolicy.road_usage_fee,
               advertising_fee: defaultPolicy.advertising_fee,
               panel_slot_status: slotInfo.panel_slot_status,
@@ -707,7 +707,7 @@ export default function DisplayDetailPage({
               banner_type: string | null;
               slot_number: number | null;
               total_price: number | null;
-              panel_info_id: string | null;
+              panel_id: string | null;
               road_usage_fee: number | null;
               advertising_fee: number | null;
               panel_slot_status: string | null;
@@ -733,7 +733,7 @@ export default function DisplayDetailPage({
               banner_type: slotInfo.banner_type,
               slot_number: slotInfo.slot_number,
               total_price: firstPolicy.total_price,
-              panel_info_id: slotInfo.panel_info_id,
+              panel_id: slotInfo.panel_id,
               road_usage_fee: firstPolicy.road_usage_fee,
               advertising_fee: firstPolicy.advertising_fee,
               panel_slot_status: slotInfo.panel_slot_status,
@@ -751,7 +751,7 @@ export default function DisplayDetailPage({
               banner_type: string | null;
               slot_number: number | null;
               total_price: number | null;
-              panel_info_id: string | null;
+              panel_id: string | null;
               road_usage_fee: number | null;
               advertising_fee: number | null;
               panel_slot_status: string | null;
@@ -762,7 +762,7 @@ export default function DisplayDetailPage({
             );
           }
         } else {
-          // 기존 로직 (banner_slot_info의 total_price 사용)
+          // 기존 로직 (banner_slots의 total_price 사용)
           panelSlotSnapshot = {
             id: slotInfo.id,
             notes: slotInfo.notes,
@@ -777,7 +777,7 @@ export default function DisplayDetailPage({
             banner_type: slotInfo.banner_type,
             slot_number: slotInfo.slot_number,
             total_price: slotInfo.total_price || 0,
-            panel_info_id: slotInfo.panel_info_id,
+            panel_id: slotInfo.panel_id,
             road_usage_fee: slotInfo.road_usage_fee || 0,
             advertising_fee: slotInfo.advertising_fee || 0,
             panel_slot_status: slotInfo.panel_slot_status,
@@ -795,7 +795,7 @@ export default function DisplayDetailPage({
             banner_type: string | null;
             slot_number: number | null;
             total_price: number | null;
-            panel_info_id: string | null;
+            panel_id: string | null;
             road_usage_fee: number | null;
             advertising_fee: number | null;
             panel_slot_status: string | null;
@@ -806,12 +806,12 @@ export default function DisplayDetailPage({
           );
         }
       } else {
-        console.log('🔍 No banner_slot_info found for item:', {
+        console.log('🔍 No banner_slots found for item:', {
           itemId: item.id,
           itemType: item.type,
-          hasBannerSlotInfo: 'banner_slot_info' in item,
+          hasBannerSlotInfo: 'banner_slots' in item,
           bannerSlotInfoLength:
-            'banner_slot_info' in item ? item.banner_slot_info?.length : 'N/A',
+            'banner_slots' in item ? item.banner_slots?.length : 'N/A',
         });
       }
 
@@ -865,7 +865,7 @@ export default function DisplayDetailPage({
         selectedPeriodFrom,
         selectedPeriodTo,
         panel_type: isTopFixed ? 'top_fixed' : item.panel_type,
-        panel_info_id: item.panel_info_id, // 원본 UUID
+        panel_id: item.panel_id, // 원본 UUID
         isTopFixed: isTopFixed, // 상단광고 여부
         ...(panelSlotSnapshot && { panel_slot_snapshot: panelSlotSnapshot }), // 가격 상세 정보 추가
         panel_code: item.panel_code?.toString(),
