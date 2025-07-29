@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
       }
 
       // displayType이 있으면 계좌번호 정보도 함께 가져오기
-
+      let bankData = null;
       if (displayType) {
         const { data: displayTypeData, error: displayTypeError } =
           await supabase
@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
             .single();
 
         if (!displayTypeError) {
-          const { data: bankData, error: bankError } = await supabase
+          const { data: bankAccountData, error: bankError } = await supabase
             .from('bank_accounts')
             .select(
               `
@@ -106,12 +106,12 @@ export async function GET(request: NextRequest) {
             .eq('display_type_id', displayTypeData.id)
             .single();
 
-          if (!bankError && bankData) {
+          if (!bankError && bankAccountData) {
             bankData = {
-              id: bankData.id,
-              bank_name: bankData.bank_name,
-              account_number: bankData.account_number,
-              depositor: bankData.depositor,
+              id: bankAccountData.id,
+              bank_name: bankAccountData.bank_name,
+              account_number: bankAccountData.account_number,
+              depositor: bankAccountData.depositor,
               region_gu: {
                 id: regionData.id,
                 name: regionData.name,
