@@ -40,6 +40,8 @@ interface District {
     };
   } | null;
   panel_status?: string;
+  phone_number?: string;
+  display_type_id?: string;
   pricePolicies?: {
     id: string;
     price_usage_type:
@@ -88,7 +90,7 @@ export default function BannerDisplayPage() {
 
         // 통합 API 호출 - 모든 데이터를 한번에 가져오기
         const response = await fetch(
-          '/api/banner-display?action=getAllDistrictsData'
+          '/api/banner-display?action=getOptimizedDistrictsData'
         );
         const result = await response.json();
 
@@ -107,6 +109,8 @@ export default function BannerDisplayPage() {
             code: string;
             logo_image_url?: string;
             panel_status?: string;
+            phone_number?: string;
+            display_type_id?: string;
             period?: {
               first_half_from: string;
               first_half_to: string;
@@ -160,16 +164,27 @@ export default function BannerDisplayPage() {
               src: '/images/banner-display/landing.png',
               panel_status: district.panel_status,
               period: district.period || null,
-              bank_accounts: district.bank_accounts || null,
+              bankInfo: district.bank_accounts || null,
+              phone_number: district.phone_number,
+              display_type_id: district.display_type_id,
               pricePolicies: district.pricePolicies || [],
             };
           }
         );
 
-        // 구별 가나다순 정렬
-        processedDistricts.sort((a, b) => a.name.localeCompare(b.name));
+        // API에서 이미 정렬된 순서를 사용 (관악구, 마포구, 서대문구, 송파구, 용산구, 강북구)
 
         console.log('🔍 Final processed districts:', processedDistricts);
+
+        // 가격 정보 디버깅 로그 추가
+        processedDistricts.forEach((district) => {
+          console.log(`🔍 ${district.name} 가격 정보:`, {
+            name: district.name,
+            pricePolicies: district.pricePolicies,
+            pricePoliciesLength: district.pricePolicies?.length || 0,
+          });
+        });
+
         setDistricts(processedDistricts);
       } catch (err) {
         console.error('Error fetching optimized data:', err);

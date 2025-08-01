@@ -1,20 +1,25 @@
 'use client';
 
-import ProjectRow from '@/src/components/projectRow';
-import { ProjectItem as BaseProjectItem } from '@/src/components/projectRow';
+import ProjectRow, {
+  ProjectItem as BaseProjectItem,
+} from '@/src/components/projectRow';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { PublicDesignContent } from '@/src/types/public-design';
 import PublicDesignDesktopSkeleton from '@/src/components/skeleton/PublicDesignDesktopSkeleton';
 import PublicDesignSkeleton from '@/src/components/skeleton/PublicDesignSkeleton';
 import DraggableNoticePopup from '@/src/components/DraggableNoticePopup';
 import { useAdvancedNoticePopup } from '@/src/components/hooks/useAdvancedNoticePopup';
 import { HomepageContent } from '@/src/types/homepage-content';
+import { publicDesignCategories } from '@/src/mock/public-design';
 
-interface ProjectItem extends BaseProjectItem {
+interface ProjectItem {
   id: number;
+  name: string;
+  description: string;
+  listImage: string;
+  categoryId: string;
 }
 
 export default function PublicDesignPage() {
@@ -26,6 +31,19 @@ export default function PublicDesignPage() {
 
   // 팝업 공지사항 훅 사용 (고급 팝업 시스템)
   const { popupNotice, closePopup } = useAdvancedNoticePopup('public_design');
+
+  // ProjectRow용 데이터로 변환하는 함수
+  const convertToProjectRowData = (
+    projects: ProjectItem[]
+  ): BaseProjectItem[] => {
+    return projects.map((project) => ({
+      id: project.id,
+      imageSrc: project.listImage,
+      title: project.name,
+      subtitle: project.description,
+      description: project.description,
+    }));
+  };
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -41,20 +59,14 @@ export default function PublicDesignPage() {
           }
         }
 
-        const response = await fetch('/api/public-design-projects');
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-
-        // API 데이터를 ProjectItem 형식으로 변환
-        const transformedProjects: ProjectItem[] = data.map(
-          (item: PublicDesignContent) => ({
-            id: item.display_order, // display_order를 ID로 사용
-            imageSrc: item.image_url || '/images/public-design-image2.jpeg',
-            title: item.title || '',
-            subtitle: item.subtitle || '',
-            description: item.description || '',
+        // 로컬 데이터 사용 - 카테고리별로 프로젝트 변환
+        const transformedProjects: ProjectItem[] = publicDesignCategories.map(
+          (category, index) => ({
+            id: index + 1,
+            name: category.name,
+            description: category.description,
+            listImage: category.listImage[0], // 첫 번째 이미지 사용
+            categoryId: category.id.toString(),
           })
         );
 
@@ -65,38 +77,19 @@ export default function PublicDesignPage() {
         setProjects([
           {
             id: 1,
-            imageSrc: '/images/public-design-image2.jpeg',
-            title: '브랜드 아이템',
-            subtitle: '간판개선사업',
-            description: '도시의 새로운 경험을 만드는 브랜드',
+            name: '간판개선사업',
+            description: '도시 경관을 아름답게 만드는 간판 개선 프로젝트',
+            listImage:
+              '/images/public-design/banner_improvment/2018/당진/list/02.jpg',
+            categoryId: '1',
           },
           {
             id: 2,
-            imageSrc: '/images/public-design-image2.jpeg',
-            title: '공공디자인',
-            subtitle: '서브타이틀',
-            description: '도시 경관을 아름답게 만드는 디자인',
-          },
-          {
-            id: 3,
-            imageSrc: '/images/public-design-image2.jpeg',
-            title: '공공시설물',
-            subtitle: '서브타이틀',
-            description: '도시의 기능을 높이는 시설물',
-          },
-          {
-            id: 4,
-            imageSrc: '/images/public-design-image2.jpeg',
-            title: '스마트 시티',
-            subtitle: '서브타이틀',
-            description: '미래 도시의 새로운 가능성',
-          },
-          {
-            id: 5,
-            imageSrc: '/images/public-design-image2.jpeg',
-            title: '도시 경관',
-            subtitle: '서브타이틀',
-            description: '도시 환경을 개선하는 디자인',
+            name: '환경개선사업',
+            description: '도시 환경을 개선하는 공공디자인 프로젝트',
+            listImage:
+              '/images/public-design/env_improvememt/사당4동 가로환경개선/03.jpg',
+            categoryId: '2',
           },
         ]);
       } finally {
@@ -107,12 +100,10 @@ export default function PublicDesignPage() {
     fetchProjects();
   }, []);
 
-  // 줄마다 필요한 개수만큼 slice
+  // 줄마다 필요한 개수만큼 slice (각 줄에 2개씩, 2개 카테고리로 2줄 구성)
   const rows = [
-    projects.slice(0, 2), // 2개: 큰+작은
-    projects.slice(2, 5), // 3개: 작은2+큰
-    projects.slice(5, 7), // 2개: 큰+작은
-    projects.slice(7, 10), // 3개: 작은2+큰
+    [projects[0], projects[0]], // 간판개선사업을 2개로 복제
+    [projects[1], projects[1]], // 환경개선사업을 2개로 복제
   ];
 
   return (
@@ -126,7 +117,6 @@ export default function PublicDesignPage() {
           도시의 일상에서 만나는 시간과 공간의 경험 디자인
         </p>
       </section>
-
       {/* Main Visual Image */}
       <section className=" mx-auto  mb-12">
         <div className="relative w-full h-[320px] md:h-[400px]  overflow-hidden">
@@ -142,7 +132,6 @@ export default function PublicDesignPage() {
           />
         </div>
       </section>
-
       {/* Projects Grid Section for lg/md */}
       <section className="mx-auto lg:px-10 md:px-10 sm:px-4 lg:pb-[12rem] md:pb-[12rem] sm:pb-[1rem]">
         {loading ? (
@@ -151,11 +140,15 @@ export default function PublicDesignPage() {
           <div className="flex flex-col lg:gap-[12rem] md:gap-[12rem] sm:gap-[1rem] ">
             {rows.map((rowProjects, idx) => (
               <div key={idx} className="h-[400px] cursor-pointer relative">
-                <Link href={`/public-design/${rowProjects[0].id}`}>
+                <Link
+                  href={`/public-design/${
+                    rowProjects[0].categoryId || rowProjects[0].id
+                  }`}
+                >
                   <ProjectRow
-                    projects={rowProjects}
-                    largeCardFirst={idx % 2 === 0}
-                    splitSmallSection={idx % 2 !== 0}
+                    projects={convertToProjectRowData(rowProjects)}
+                    largeCardFirst={idx === 0}
+                    splitSmallSection={false}
                     showTitleOnLargeOnly={true}
                   />
                 </Link>
@@ -164,7 +157,6 @@ export default function PublicDesignPage() {
           </div>
         )}
       </section>
-
       {/* Mobile Version */}
       <section className="px-4 pb-[12rem] lg:hidden md:hidden sm:hidden">
         {loading ? (
@@ -175,22 +167,21 @@ export default function PublicDesignPage() {
               <div
                 className="w-full h-[400px] cursor-pointer"
                 key={project.id}
-                onClick={() => router.push(`/public-design/${project.id}`)}
+                onClick={() =>
+                  router.push(
+                    `/public-design/${project.categoryId || project.id}`
+                  )
+                }
               >
                 <div className="relative w-full h-full">
                   <Image
-                    src={project.imageSrc}
-                    alt={project.title}
+                    src={project.listImage}
+                    alt={project.name}
                     fill
                     className="object-cover rounded-[1rem]"
                   />
                   <div className="absolute bottom-8 left-8 text-white">
-                    <div className="text-1.5 font-500 pb-2">
-                      {project.title}
-                    </div>
-                    <span className="text-1.25 mb-2 block">
-                      {project.subtitle}
-                    </span>
+                    <div className="text-1.5 font-500 pb-2">{project.name}</div>
                     <p className="text-1 font-normal mt-1">
                       {project.description}
                     </p>
@@ -201,11 +192,6 @@ export default function PublicDesignPage() {
           </div>
         )}
       </section>
-
-      {/* 팝업 공지사항 */}
-      {popupNotice && (
-        <DraggableNoticePopup notice={popupNotice} onClose={closePopup} />
-      )}
     </main>
   );
 }

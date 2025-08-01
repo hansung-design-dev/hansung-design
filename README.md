@@ -80,13 +80,13 @@ CREATE TABLE installed_photos (
 
 ### 디스플레이 관련 테이블
 
-- `panel_info`: 패널 기본 정보
+- `panels`: 패널 기본 정보
 - `banner_panel_details`: 배너 패널 상세 정보
-- `banner_slot_info`: 배너 슬롯 정보
+- `banner_slots`: 배너 슬롯 정보
 - `region_gu`: 구 정보
 - `region_dong`: 동 정보
 - `display_types`: 디스플레이 타입
-- `bank_info`: 은행 계좌 정보
+- `bank_accounts`: 은행 계좌 정보
 
 ## 설치 및 실행
 

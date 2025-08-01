@@ -8,6 +8,8 @@ export type Category =
   | '현수막'
   | '디지털사이니지';
 
+export type PublicDesignCategory = '간판개선' | '공공디자인' | '환경개선';
+
 export type ViewType = 'location' | 'gallery' | 'list';
 
 export type Status = '진행중' | '송출중' | '완료' | '대기중';
@@ -437,6 +439,16 @@ export interface CategoryFilterProps {
 export interface RollingGalleryProps {
   images: GalleryImage[];
   autoPlayInterval?: number;
+}
+
+export interface PublicDesignItem {
+  id: string;
+  category: PublicDesignCategory;
+  year?: number;
+  location: string;
+  image_urls: string[];
+  created_at: string;
+  updated_at: string;
 }
 
 export interface ProjectRowProps {

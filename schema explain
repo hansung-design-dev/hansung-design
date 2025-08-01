@@ -158,7 +158,7 @@
 | description | text |  |  |
 | created_at | timestamp without time zone | DEFAULT now() |  |
 
-### 3.2 panel_info
+### 3.2 panels
 
 **설명:** 
 

@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import ProjectCard from '@/src/components/projectCard';
 import { PublicDesignDetailResponse } from '@/src/types/public-design';
 import PublicDesignDesktopSkeleton from '@/src/components/skeleton/PublicDesignDesktopSkeleton';
+import { getCategoryById } from '@/src/mock/public-design';
 
 export default function PublicDesignDetailPage() {
   const params = useParams();
@@ -17,73 +18,47 @@ export default function PublicDesignDetailPage() {
   useEffect(() => {
     const fetchProjectDetail = async () => {
       try {
-        const response = await fetch(`/api/public-design-projects/${id}`);
-        if (!response.ok) {
-          if (response.status === 404) {
-            console.error('Project not found');
-            setProjectData(null);
-            return;
-          }
-          throw new Error(`HTTP error! status: ${response.status}`);
+        // 로컬 데이터에서 카테고리 정보 가져오기
+        const category = getCategoryById(id);
+        if (!category) {
+          console.error('Category not found');
+          setProjectData(null);
+          return;
         }
-        const data = await response.json();
-        setProjectData(data);
-      } catch (error) {
-        console.error('Error fetching project detail:', error);
-        // 에러 시 기본 데이터 사용
-        setProjectData({
+
+        // PublicDesignDetailResponse 형식으로 변환
+        const transformedData: PublicDesignDetailResponse = {
           project: {
-            id: '1',
-            project_id: '1',
+            id: category.id.toString(),
+            project_id: category.id.toString(),
             design_contents_type: 'list',
-            title: '브랜드 아이템',
-            subtitle: '간판개선사업',
-            description: '도시의 새로운 경험을 만드는 브랜드',
-            image_url: '/images/public-design-image2.jpeg',
+            title: category.name,
+            subtitle: category.description,
+            description: category.description,
+            image_url: category.listImage[0], // 첫 번째 이미지 사용
             display_order: 1,
             is_active: true,
             created_at: '',
             updated_at: '',
           },
-          detailContents: [
-            {
-              id: '1',
-              project_id: '1',
-              design_contents_type: 'detail',
-              title: '디자인 구성도',
-              alt_text: '디자인 구성도',
-              image_url: '/images/publicdesign-detailpage-image.png',
-              display_order: 1,
-              is_active: true,
-              created_at: '',
-              updated_at: '',
-            },
-            {
-              id: '2',
-              project_id: '1',
-              design_contents_type: 'detail',
-              title: '디자인 상세 이미지1',
-              alt_text: '디자인 상세 이미지1',
-              image_url: '/images/public-design-image2.jpeg',
-              display_order: 2,
-              is_active: true,
-              created_at: '',
-              updated_at: '',
-            },
-            {
-              id: '3',
-              project_id: '1',
-              design_contents_type: 'detail',
-              title: '디자인 상세 이미지2',
-              alt_text: '디자인 상세 이미지2',
-              image_url: '/images/public-design-image2.jpeg',
-              display_order: 3,
-              is_active: true,
-              created_at: '',
-              updated_at: '',
-            },
-          ],
-        });
+          detailContents: category.detailImages.map((imageUrl, index) => ({
+            id: `${category.id}-${index + 1}`,
+            project_id: category.id.toString(),
+            design_contents_type: 'detail',
+            title: `${category.name} 상세 이미지 ${index + 1}`,
+            alt_text: `${category.name} 상세 이미지 ${index + 1}`,
+            image_url: imageUrl,
+            display_order: index + 1,
+            is_active: true,
+            created_at: '',
+            updated_at: '',
+          })),
+        };
+
+        setProjectData(transformedData);
+      } catch (error) {
+        console.error('Error fetching project detail:', error);
+        setProjectData(null);
       } finally {
         setLoading(false);
       }

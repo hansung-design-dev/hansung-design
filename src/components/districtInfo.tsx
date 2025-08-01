@@ -26,6 +26,8 @@ interface DistrictInfoProps {
   districtName?: string;
   flexRow?: boolean;
   isLEDDisplay?: boolean;
+  phoneNumber?: string;
+  displayTypeId?: string;
   pricePolicies?: {
     id: string;
     price_usage_type:
@@ -39,6 +41,7 @@ interface DistrictInfoProps {
     road_usage_fee: number;
     advertising_fee: number;
     total_price: number;
+    displayName?: string;
   }[];
 }
 
@@ -48,6 +51,8 @@ export default function DistrictInfo({
   districtName,
   flexRow = false,
   isLEDDisplay = false,
+  phoneNumber,
+  displayTypeId,
   pricePolicies,
 }: DistrictInfoProps) {
   // 디버깅용 로그
@@ -59,6 +64,8 @@ export default function DistrictInfo({
     bankInfo,
     flexRow,
     isLEDDisplay,
+    phoneNumber,
+    displayTypeId,
   });
 
   // 구별 신청 시간 표시
@@ -110,12 +117,12 @@ export default function DistrictInfo({
       )}
 
       {/* 전화번호 */}
-      {districtName && (
+      {phoneNumber && (
         <div className="border-b border-gray-200 pb-2">
           <div className="text-0.875 font-medium text-gray-500 mb-1">
             문의전화
           </div>
-          <PhoneNumber districtName={districtName} flexRow={flexRow} />
+          <div className="text-1 font-medium">{phoneNumber}</div>
         </div>
       )}
 
@@ -139,6 +146,19 @@ export default function DistrictInfo({
           />
         </div>
       )}
+
+      {/* 가격 정보 디버깅 로그 */}
+      {(() => {
+        console.log('🔍 DistrictInfo 가격 정보 디버깅:', {
+          districtName,
+          isLEDDisplay,
+          pricePolicies,
+          pricePoliciesLength: pricePolicies?.length || 0,
+          shouldShowPrice:
+            !isLEDDisplay && pricePolicies && pricePolicies.length > 0,
+        });
+        return null;
+      })()}
     </div>
   );
 }

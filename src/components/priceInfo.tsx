@@ -11,6 +11,7 @@ interface PricePolicy {
   road_usage_fee: number;
   advertising_fee: number;
   total_price: number;
+  displayName?: string; // 새로운 필드 추가
 }
 
 interface PriceInfoProps {
@@ -56,8 +57,22 @@ export default function PriceInfo({
     }
   };
 
-  // 구별 특별한 표시 로직
+  // 새로운 API에서 받은 displayName을 사용하는 로직
   const getDistrictSpecificDisplay = () => {
+    // displayName이 있는 경우 (새로운 API 사용)
+    if (pricePolicies.some(policy => policy.displayName)) {
+      return (
+        <div className="text-sm text-gray-600 space-y-1">
+          {pricePolicies.map((policy) => (
+            <div key={policy.id}>
+              {policy.displayName}: {policy.total_price?.toLocaleString()}원
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // 기존 로직 (하위 호환성)
     switch (districtName) {
       case '강북구':
         return (
@@ -106,7 +121,7 @@ export default function PriceInfo({
               {groupedPolicies.default?.[1]?.total_price?.toLocaleString()}원
             </div>
             <div>
-              저단형행정용:{' '}
+              저단형행정용:
               {groupedPolicies.public_institution?.[1]?.total_price?.toLocaleString()}
               원
             </div>
@@ -117,7 +132,7 @@ export default function PriceInfo({
         return (
           <div className="text-sm text-gray-600 space-y-1">
             <div>
-              상업용:{' '}
+              상업용:
               {groupedPolicies.default?.[0]?.total_price?.toLocaleString()}원
             </div>
             <div>

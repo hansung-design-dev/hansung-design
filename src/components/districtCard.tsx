@@ -32,6 +32,8 @@ interface District {
       name: string;
     };
   } | null;
+  phone_number?: string;
+  display_type_id?: string;
   pricePolicies?: {
     id: string;
     price_usage_type:
@@ -130,6 +132,8 @@ export default function DistrictCard({
                     flexRow={false}
                     isLEDDisplay={isLEDDisplay}
                     pricePolicies={district.pricePolicies}
+                    phoneNumber={district.phone_number}
+                    displayTypeId={district.display_type_id}
                   />
                 </div>
               </div>
@@ -153,7 +157,7 @@ export default function DistrictCard({
     <div className="flex items-center justify-center lg:pb-4">
       <Link
         href={href}
-        className="w-full lg:h-[30rem] md:h-[24rem] bg-gray-4 rounded-[1.25rem] flex flex-col overflow-hidden"
+        className="w-full lg:h-[36rem] md:h-[28rem] bg-gray-4 rounded-[1.25rem] flex flex-col overflow-hidden"
         {...(isGangbuk &&
           !isLEDDisplay && { target: '_blank', rel: 'noopener noreferrer' })}
       >
@@ -181,6 +185,8 @@ export default function DistrictCard({
                   flexRow={false}
                   isLEDDisplay={isLEDDisplay}
                   pricePolicies={district.pricePolicies}
+                  phoneNumber={district.phone_number}
+                  displayTypeId={district.display_type_id}
                 />
               </div>
             </div>

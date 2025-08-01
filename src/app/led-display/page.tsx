@@ -128,7 +128,7 @@ export default function LEDDisplayPage() {
               src: '/images/led/landing.png',
               panel_status: district.panel_status || 'active',
               period: district.period || null,
-              bank_accounts: district.bank_accounts || null,
+              bankInfo: district.bank_accounts || null,
             };
           }
         );
