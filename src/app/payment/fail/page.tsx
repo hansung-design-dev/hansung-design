@@ -2,91 +2,113 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
+import Nav from '@/src/components/layouts/nav';
 
 export default function PaymentFailPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [errorInfo, setErrorInfo] = useState<{
-    code: string;
-    message: string;
+    errorCode: string;
+    errorMessage: string;
     orderId: string;
   } | null>(null);
 
   useEffect(() => {
-    const code = searchParams.get('code');
-    const message = searchParams.get('message');
+    const errorCode = searchParams.get('errorCode');
+    const errorMessage = searchParams.get('errorMessage');
     const orderId = searchParams.get('orderId');
 
-    if (code && message && orderId) {
-      setErrorInfo({ code, message, orderId });
+    if (errorCode || errorMessage) {
+      setErrorInfo({
+        errorCode: errorCode || 'UNKNOWN_ERROR',
+        errorMessage: errorMessage || '알 수 없는 오류가 발생했습니다.',
+        orderId: orderId || '',
+      });
     }
   }, [searchParams]);
 
+  const handleRetryPayment = () => {
+    router.push('/cart');
+  };
+
+  const handleGoToHome = () => {
+    router.push('/');
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8">
-        <div className="text-center">
-          <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
-            <svg
-              className="h-8 w-8 text-red-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </div>
+    <main className="min-h-screen bg-white pt-[5.5rem] bg-gray-100 lg:px-[10rem]">
+      <Nav variant="default" className="bg-white" />
 
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            결제에 실패했습니다
-          </h1>
+      <div className="container mx-auto px-4 sm:px-1 py-8">
+        <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-8">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg
+                className="w-8 h-8 text-red-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </div>
 
-          <p className="text-gray-600 mb-6">
-            결제 처리 중 오류가 발생했습니다. 다시 시도해주세요.
-          </p>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              결제에 실패했습니다
+            </h1>
 
-          {errorInfo && (
-            <div className="bg-red-50 rounded-lg p-4 mb-6">
-              <div className="text-sm text-red-600">
-                <div className="flex justify-between mb-2">
-                  <span>오류 코드:</span>
-                  <span className="font-mono">{errorInfo.code}</span>
-                </div>
-                <div className="flex justify-between mb-2">
-                  <span>오류 메시지:</span>
-                  <span className="font-mono">{errorInfo.message}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>주문 ID:</span>
-                  <span className="font-mono">{errorInfo.orderId}</span>
+            <p className="text-gray-600 mb-6">
+              결제 처리 중 오류가 발생했습니다. 다시 시도해주세요.
+            </p>
+
+            {errorInfo && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <div className="space-y-2 text-sm">
+                  {errorInfo.orderId && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">주문번호:</span>
+                      <span className="font-medium">{errorInfo.orderId}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">오류코드:</span>
+                    <span className="font-medium text-red-600">
+                      {errorInfo.errorCode}
+                    </span>
+                  </div>
+                  <div className="text-left">
+                    <span className="text-gray-600">오류내용:</span>
+                    <p className="text-red-600 mt-1">
+                      {errorInfo.errorMessage}
+                    </p>
+                  </div>
                 </div>
               </div>
+            )}
+
+            <div className="space-y-3">
+              <button
+                onClick={handleRetryPayment}
+                className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                다시 결제하기
+              </button>
+
+              <button
+                onClick={handleGoToHome}
+                className="w-full bg-gray-200 text-gray-800 py-3 px-4 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                홈으로 돌아가기
+              </button>
             </div>
-          )}
-
-          <div className="space-y-3">
-            <Link
-              href="/cart"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors block"
-            >
-              장바구니로 돌아가기
-            </Link>
-
-            <Link
-              href="/"
-              className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-3 px-4 rounded-lg transition-colors block"
-            >
-              홈으로 돌아가기
-            </Link>
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

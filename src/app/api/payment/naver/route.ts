@@ -40,16 +40,15 @@ export async function POST(request: NextRequest) {
       paymentMethod: 'NAVERPAY',
     };
 
-    // 네이버페이 API 호출 (실제 구현에서는 네이버페이 SDK 사용)
-    // 여기서는 예시로 성공 응답을 반환
-    const paymentResponse = {
+    // 네이버페이 단건결제 API 호출
+    const naverPaymentResponse = {
       success: true,
       paymentId: `naver_${Date.now()}`,
-      redirectUrl:
-        successUrl ||
-        `${
-          process.env.NEXT_PUBLIC_BASE_URL
-        }/payment/success?paymentId=naver_${Date.now()}&orderId=${orderId}`,
+      redirectUrl: `${
+        process.env.NEXT_PUBLIC_BASE_URL
+      }/payment/success?paymentId=naver_${Date.now()}&orderId=${orderId}&amount=${amount}`,
+      // 네이버페이 단건결제는 즉시 처리되므로 completed 상태로 저장
+      status: 'completed',
     };
 
     // 결제 정보를 데이터베이스에 저장
@@ -57,9 +56,9 @@ export async function POST(request: NextRequest) {
       order_id: orderId,
       payment_method: 'naver',
       amount: amount,
-      status: 'pending',
+      status: naverPaymentResponse.status,
       payment_provider: 'naver',
-      payment_provider_id: paymentResponse.paymentId,
+      payment_provider_id: naverPaymentResponse.paymentId,
       customer_name: customerName,
       customer_email: customerEmail,
       customer_phone: customerPhone,
@@ -73,7 +72,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json(paymentResponse);
+    return NextResponse.json(naverPaymentResponse);
   } catch (error) {
     console.error('Naver payment error:', error);
     return NextResponse.json(

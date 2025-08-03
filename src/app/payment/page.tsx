@@ -61,7 +61,6 @@ function PaymentPageContent() {
 
   const [selectedItems, setSelectedItems] = useState<CartItem[]>([]);
   const [groupedItems, setGroupedItems] = useState<GroupedCartItem[]>([]);
-  const [sendByEmail, setSendByEmail] = useState(false);
   const [isApprovedOrder, setIsApprovedOrder] = useState(false);
   const [isAgreedCaution, setIsAgreedCaution] = useState(false);
   const [projectName, setProjectName] = useState('');
@@ -111,6 +110,7 @@ function PaymentPageContent() {
   const [completedDistricts, setCompletedDistricts] = useState<string[]>([]);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
   const [successDistrict, setSuccessDistrict] = useState<string | null>(null);
+  const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
 
   // 일괄적용 핸들러들
   const handleBulkProjectNameToggle = () => {
@@ -277,12 +277,21 @@ function PaymentPageContent() {
   useEffect(() => {
     const itemsParam = searchParams.get('items');
     const approvedParam = searchParams.get('approved');
+    const orderIdParam = searchParams.get('orderId');
     console.log('🔍 Payment page - itemsParam:', itemsParam);
     console.log('🔍 Payment page - approvedParam:', approvedParam);
+    console.log('🔍 Payment page - orderIdParam:', orderIdParam);
     console.log('🔍 Payment page - cart:', cart);
 
     if (approvedParam === 'true') {
       setIsApprovedOrder(true);
+    }
+
+    // 주문 ID가 있는 경우 (결제대기 주문)
+    if (orderIdParam) {
+      setPendingOrderId(orderIdParam);
+      fetchPendingOrder(orderIdParam);
+      return;
     }
 
     if (itemsParam) {
@@ -356,9 +365,11 @@ function PaymentPageContent() {
         errors.projectName = '작업이름을 입력해주세요.';
       }
 
-      // 2. 파일업로드 방식 검사
-      if (!sendByEmail && !selectedFile) {
-        errors.fileUpload = '파일을 업로드하거나 이메일 전송을 선택해주세요.';
+      // 2. 파일업로드 방식 검사 (일괄적용이 켜져있을 때만)
+      if (bulkApply.fileUpload || bulkApply.emailMethod) {
+        if (!selectedFile && !bulkApply.emailMethod) {
+          errors.fileUpload = '파일을 업로드하거나 이메일 전송을 선택해주세요.';
+        }
       }
 
       // 3. 유의사항 동의 검사
@@ -371,7 +382,7 @@ function PaymentPageContent() {
   }, [
     projectName,
     selectedFile,
-    sendByEmail,
+    bulkApply,
     isAgreedCaution,
     selectedItems.length,
   ]);
@@ -442,6 +453,61 @@ function PaymentPageContent() {
     } catch (error) {
       console.error('Failed to fetch approved order items:', error);
       // setError('승인된 주문 정보를 불러오는데 실패했습니다.'); // Removed setError
+    }
+  };
+
+  // 결제대기 주문 정보 가져오기
+  const fetchPendingOrder = async (orderId: string) => {
+    try {
+      const response = await fetch(`/api/orders/${orderId}`);
+      const data = await response.json();
+
+      if (data.success && data.data) {
+        const order = data.data.order;
+        const orderDetails = data.data.orderDetails;
+        const payments = data.data.payments;
+
+        // 주문 정보를 GroupedCartItem 형태로 변환
+        const groupedItem: GroupedCartItem = {
+          id: order.id,
+          name: order.projectName || '상담신청 주문',
+          items: orderDetails.map((detail: {
+            id: string;
+            panels?: {
+              address?: string;
+              region_gu?: { name: string };
+              panel_type?: string;
+            };
+          }) => ({
+            id: detail.id,
+            name: detail.panels?.address || '상담신청',
+            price: payments?.[0]?.amount || 0,
+            district: detail.panels?.region_gu?.name || '상담신청',
+            panel_type: detail.panels?.panel_type || '상담신청',
+            is_public_institution:
+              order.user_profiles?.is_public_institution || false,
+            is_company: order.user_profiles?.is_company || false,
+            user_profile_id: order.user_profile_id,
+            contact_person_name: order.user_profiles?.contact_person_name || '',
+            phone: order.user_profiles?.phone || '',
+            company_name: order.user_profiles?.company_name || '',
+            email: order.user_profiles?.email || '',
+          })),
+          totalPrice: payments?.[0]?.amount || 0,
+          district: orderDetails?.[0]?.panels?.region_gu?.name || '상담신청',
+          type: 'banner-display', // 기본값
+          panel_type: orderDetails?.[0]?.panels?.panel_type || '상담신청',
+          contact_person_name: order.user_profiles?.contact_person_name || '',
+          phone: order.user_profiles?.phone || '',
+          company_name: order.user_profiles?.company_name || '',
+          email: order.user_profiles?.email || '',
+        };
+
+        setGroupedItems([groupedItem]);
+        setIsApprovedOrder(true);
+      }
+    } catch (error) {
+      console.error('결제대기 주문 조회 실패:', error);
     }
   };
 
@@ -550,26 +616,7 @@ function PaymentPageContent() {
     });
   };
 
-  // 이메일 선택 핸들러 (묶음 결제용)
-  const handleEmailSelect = (isEmail: boolean) => {
-    setSendByEmail(isEmail);
 
-    setGroupedItems((prevGroups) => {
-      return prevGroups.map((group) => ({
-        ...group,
-        fileUploadMethod: isEmail ? ('email' as const) : null,
-        emailAddress: isEmail ? 'banner114@hanmail.net' : null,
-        selectedFile: null,
-        fileName: null,
-        fileSize: null,
-        fileType: null,
-      }));
-    });
-
-    if (isEmail) {
-      setSelectedFile(null);
-    }
-  };
 
   // 에러가 있는 경우 에러 화면 표시 (현재는 사용하지 않음)
   // if (/* error && */ !isProcessing) {
@@ -635,6 +682,31 @@ function PaymentPageContent() {
         setSuccessDistrict(group.district);
         setSuccessModalOpen(true);
         setPaymentModalOpen(null);
+
+        // 결제대기 주문의 경우 상태 업데이트
+        if (pendingOrderId) {
+          try {
+            await fetch(`/api/orders/${pendingOrderId}/update-status`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                payment_status:
+                  modalPaymentMethod === 'bank_transfer'
+                    ? 'pending_deposit'
+                    : 'completed',
+              }),
+            });
+          } catch (error) {
+            console.error('주문 상태 업데이트 실패:', error);
+          }
+        }
+
+        // 계좌이체의 경우 리다이렉트 URL로 이동
+        if (modalPaymentMethod === 'bank_transfer' && result.redirectUrl) {
+          window.location.href = result.redirectUrl;
+        }
       } else {
         // 결제 실패
         alert(`결제 실패: ${result.errorMessage}`);
@@ -768,12 +840,12 @@ function PaymentPageContent() {
                   <div className="flex-1 space-y-2">
                     <CustomFileUpload
                       onFileSelect={handleFileSelect}
-                      disabled={sendByEmail}
+                      disabled={bulkApply.emailMethod}
                       placeholder="시안 파일을 선택해주세요"
                       className="w-full md:w-[21.25rem] sm:w-[13rem]"
                     />
                     <div className="flex flex-col gap-2 items-start">
-                      {sendByEmail && (
+                      {bulkApply.emailMethod && (
                         <p className="text-xs text-gray-500 ml-6">
                           banner114@hanmail.net로 시안을 보내드리겠습니다.
                         </p>
