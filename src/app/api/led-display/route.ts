@@ -308,7 +308,7 @@ async function getAllDistrictsData() {
     // 4. 각 활성화된 구별로 데이터 처리
     const processedDistricts = await Promise.all(
       sortedRegions.map(async (region) => {
-        // 가격 정책 정보 조회
+        // 가격 정책 정보 조회 (해당 구의 LED 패널에서 가격 정보 가져오기)
         let pricePolicies: {
           id: string;
           price_usage_type: string;
@@ -318,10 +318,20 @@ async function getAllDistrictsData() {
           total_price: number;
         }[] = [];
 
+        // 해당 구의 LED 패널 중 첫 번째 패널의 가격 정보를 가져옴
         const { data: ledPricePolicy } = await supabase
           .from('led_display_price_policy')
           .select('*')
-          .eq('panel_id', region.id)
+          .eq('panel_id', (
+            await supabase
+              .from('panels')
+              .select('id')
+              .eq('region_gu_id', region.id)
+              .eq('display_type_id', '3119f6ed-81e4-4d62-b785-6a33bc7928f9')
+              .eq('panel_status', 'active')
+              .limit(1)
+              .single()
+          ).data?.id)
           .limit(1);
 
         if (ledPricePolicy && ledPricePolicy.length > 0) {
