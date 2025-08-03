@@ -8,7 +8,9 @@ import { useProfile } from '@/src/contexts/profileContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CartItem } from '@/src/contexts/cartContext';
 import CustomFileUpload from '@/src/components/ui/CustomFileUpload';
-import Image from 'next/image';
+// import Image from 'next/image';
+import PaymentMethodSelector from '@/src/components/payment/PaymentMethodSelector';
+import { processPayment } from '@/src/lib/payment';
 
 // UserProfile 타입 정의
 interface UserProfile {
@@ -97,9 +99,9 @@ function PaymentPageContent() {
 
   // 결제 모달 상태
   const [paymentModalOpen, setPaymentModalOpen] = useState<string | null>(null);
-  const [modalPaymentMethod, setModalPaymentMethod] = useState<
-    'card' | 'bank_transfer'
-  >('card');
+  const [modalPaymentMethod, setModalPaymentMethod] = useState<string>('card');
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
   const [modalTaxInvoice, setModalTaxInvoice] = useState(false);
 
   // 결제 처리 상태
@@ -605,11 +607,43 @@ function PaymentPageContent() {
   //   );
   // }
 
-  // 결제 성공 시 호출 (이것만 남기고 기존 handleSingleGroupPayment 제거)
+  // 결제 처리 함수
   const handleSingleGroupPayment = async (group: GroupedCartItem) => {
-    setCompletedDistricts((prev) => [...prev, group.district]);
-    setSuccessDistrict(group.district);
-    setSuccessModalOpen(true);
+    try {
+      setIsProcessingPayment(true);
+
+      // 결제 요청 데이터 생성
+      const paymentRequest = {
+        orderId: `order_${Date.now()}_${group.district}`,
+        amount: group.totalPrice,
+        orderName: `${group.district} ${group.type} 광고`,
+        customerName: group.contact_person_name || '고객',
+        customerEmail: group.email || 'customer@example.com',
+        customerPhone: group.phone || '010-0000-0000',
+        successUrl: `${window.location.origin}/payment/success`,
+        failUrl: `${window.location.origin}/payment/fail`,
+        cancelUrl: `${window.location.origin}/payment/cancel`,
+      };
+
+      // 결제 처리
+      const result = await processPayment(modalPaymentMethod, paymentRequest);
+
+      if (result.success) {
+        // 결제 성공
+        setCompletedDistricts((prev) => [...prev, group.district]);
+        setSuccessDistrict(group.district);
+        setSuccessModalOpen(true);
+        setPaymentModalOpen(null);
+      } else {
+        // 결제 실패
+        alert(`결제 실패: ${result.errorMessage}`);
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      alert('결제 처리 중 오류가 발생했습니다.');
+    } finally {
+      setIsProcessingPayment(false);
+    }
   };
 
   // 결제 안한 구만 보여주기
@@ -1097,85 +1131,12 @@ function PaymentPageContent() {
             <h3 className="text-lg font-bold mb-4">{paymentModalOpen} 결제</h3>
 
             {/* 결제 방법 선택 */}
-            <div className="mb-4 flex flex-col gap-2">
-              <h4 className="font-semibold mb-2">결제 방법</h4>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 h-8">
-                  <input
-                    type="radio"
-                    id="modal-card"
-                    name="modalPaymentMethod"
-                    value="card"
-                    checked={modalPaymentMethod === 'card'}
-                    onChange={(e) =>
-                      setModalPaymentMethod(
-                        e.target.value as 'card' | 'bank_transfer'
-                      )
-                    }
-                    className="w-4 h-4"
-                  />
-                  <label htmlFor="modal-card">카드 결제</label>
-                </div>
-                <div className="flex items-center gap-2 h-8">
-                  <input
-                    type="radio"
-                    id="modal-bank"
-                    name="modalPaymentMethod"
-                    value="bank_transfer"
-                    checked={modalPaymentMethod === 'bank_transfer'}
-                    onChange={(e) =>
-                      setModalPaymentMethod(
-                        e.target.value as 'card' | 'bank_transfer'
-                      )
-                    }
-                    className="w-4 h-4"
-                  />
-                  <label htmlFor="modal-bank">계좌이체</label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    id="modal-card"
-                    name="modalPaymentMethod"
-                    value="card"
-                    checked={modalPaymentMethod === 'card'}
-                    onChange={(e) =>
-                      setModalPaymentMethod(
-                        e.target.value as 'card' | 'bank_transfer'
-                      )
-                    }
-                    className="w-4 h-4"
-                  />
-                  <Image
-                    src="/svg/kakao-pay.svg"
-                    alt="kakao-pay"
-                    width={50}
-                    height={30}
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    id="modal-card"
-                    name="modalPaymentMethod"
-                    value="card"
-                    checked={modalPaymentMethod === 'card'}
-                    onChange={(e) =>
-                      setModalPaymentMethod(
-                        e.target.value as 'card' | 'bank_transfer'
-                      )
-                    }
-                    className="w-4 h-4"
-                  />
-
-                  <Image
-                    src="/svg/naver-pay.svg"
-                    alt="bnaver-pay"
-                    width={50}
-                    height={30}
-                  />
-                </div>
-              </div>
+            <div className="mb-4">
+              <PaymentMethodSelector
+                selectedMethod={modalPaymentMethod}
+                onMethodChange={setModalPaymentMethod}
+                disabled={isProcessingPayment}
+              />
             </div>
 
             {/* 세금계산서 */}
@@ -1220,13 +1181,12 @@ function PaymentPageContent() {
                   );
                   if (group) {
                     await handleSingleGroupPayment(group);
-                    setPaymentModalOpen(null);
                   }
                 }}
-                disabled={isProcessing}
+                disabled={isProcessingPayment}
                 className="flex-1 bg-blue-600 text-white py-2 rounded"
               >
-                {isProcessing ? '처리 중...' : '결제하기'}
+                {isProcessingPayment ? '결제 처리 중...' : '결제하기'}
               </Button>
             </div>
           </div>

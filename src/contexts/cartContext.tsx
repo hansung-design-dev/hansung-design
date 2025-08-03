@@ -86,7 +86,7 @@ const CART_STORAGE_KEY = 'hansung_cart';
 // 15분을 밀리초로 변환
 const CART_EXPIRY_TIME = 15 * 60 * 1000;
 
-// localStorage에서 장바구니 로드
+// localStorage에서 장바구니 로드 (무한루프 방지)
 const loadCartFromStorage = (): CartState => {
   if (typeof window === 'undefined') {
     return { items: [], lastUpdated: Date.now() };
@@ -107,12 +107,11 @@ const loadCartFromStorage = (): CartState => {
     // 15분이 지났으면 일반 아이템만 리셋, 상담신청 아이템은 유지
     if (now - cartState.lastUpdated > CART_EXPIRY_TIME) {
       console.log('🔍 Regular cart items expired, clearing...');
-      const updatedState = {
+      // localStorage.setItem 제거 - 무한루프 방지
+      return {
         items: consultingItems, // 상담신청 아이템만 유지
         lastUpdated: now,
       };
-      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(updatedState));
-      return updatedState;
     }
 
     console.log('🔍 Cart loaded from storage:', cartState);
@@ -214,32 +213,39 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     lastUpdated: Date.now(),
   });
 
-  // 컴포넌트 마운트 시 localStorage에서 장바구니 로드
+  //   // 컴포넌트 마운트 시 localStorage에서 장바구니 로드
   useEffect(() => {
+    console.log('🔄 CartContext: Loading cart from storage...');
     const savedCart = loadCartFromStorage();
+    console.log('🔄 CartContext: Saved cart loaded:', savedCart);
     dispatch({ type: 'LOAD_CART', state: savedCart });
   }, []);
 
-  // 15분마다 장바구니 만료 체크
+  // 15분마다 장바구니 만료 체크 (무한루프 방지)
   useEffect(() => {
+    console.log('🔄 CartContext: Setting up expiry check interval...');
     const checkExpiry = () => {
       const now = Date.now();
+      console.log('🔄 CartContext: Checking expiry, current state:', state);
       if (now - state.lastUpdated > CART_EXPIRY_TIME) {
         console.log(
           '🔍 Regular cart items expired during session, clearing...'
         );
         // 상담신청 아이템만 유지하고 일반 아이템 제거
         const consultingItems = state.items.filter((item) => item.price === 0);
+        console.log(
+          '🔄 CartContext: Dispatching LOAD_CART with consulting items:',
+          consultingItems
+        );
         dispatch({
           type: 'LOAD_CART',
           state: { items: consultingItems, lastUpdated: now },
         });
       }
     };
-
     const interval = setInterval(checkExpiry, 60000); // 1분마다 체크
     return () => clearInterval(interval);
-  }, [state.lastUpdated, state.items]);
+  }, []); // 빈 의존성 배열로 변경 - 무한루프 방지
 
   return (
     <CartContext.Provider value={{ cart: state.items, dispatch }}>
