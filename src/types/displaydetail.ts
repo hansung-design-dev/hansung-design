@@ -6,6 +6,7 @@ export interface District {
   logo: string;
   src: string;
   code: string;
+  phone_number?: string;
 }
 
 export interface DistrictItem {

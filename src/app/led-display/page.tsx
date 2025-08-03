@@ -117,13 +117,21 @@ export default function LEDDisplayPage() {
                 name: string;
               };
             } | null;
+            phone_number?: string;
             pricePolicies?: {
               id: string;
-              price_usage_type: string;
+              price_usage_type:
+                | 'default'
+                | 'public_institution'
+                | 're_order'
+                | 'self_install'
+                | 'reduction_by_admin'
+                | 'rent-place';
               tax_price: number;
               road_usage_fee: number;
               advertising_fee: number;
               total_price: number;
+              displayName?: string;
             }[];
           }) => {
             // 백엔드에서 받은 panel_status를 그대로 사용
@@ -145,7 +153,23 @@ export default function LEDDisplayPage() {
               panel_status: district.panel_status || 'active',
               period: district.period || null,
               bankInfo: district.bank_accounts || null,
-              pricePolicies: district.pricePolicies || [],
+              phone_number: district.phone_number,
+              pricePolicies:
+                district.pricePolicies?.map((policy) => ({
+                  id: policy.id,
+                  price_usage_type: policy.price_usage_type as
+                    | 'default'
+                    | 'public_institution'
+                    | 're_order'
+                    | 'self_install'
+                    | 'reduction_by_admin'
+                    | 'rent-place',
+                  tax_price: policy.tax_price,
+                  road_usage_fee: policy.road_usage_fee,
+                  advertising_fee: policy.advertising_fee,
+                  total_price: policy.total_price,
+                  displayName: undefined,
+                })) || [],
             };
           }
         );

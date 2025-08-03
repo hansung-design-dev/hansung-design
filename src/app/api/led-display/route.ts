@@ -109,7 +109,7 @@ async function getLEDDisplaysByDistrict(districtName: string) {
           name,
           code
         ),
-        region_dong!inner (
+        region_dong (
           id,
           name
         )
@@ -180,7 +180,7 @@ async function getAllLEDDisplays() {
           name,
           code
         ),
-        region_dong!inner (
+        region_dong (
           id,
           name
         )
@@ -304,7 +304,7 @@ async function getAllDistrictsData() {
     // 1. region_gu 테이블에서 led_display가 활성화된 구와 준비중인 구 목록 가져오기
     const { data: activeRegions, error: regionError } = await supabase
       .from('region_gu')
-      .select('*')
+      .select('*, phone_number')
       .eq('display_type_id', '3119f6ed-81e4-4d62-b785-6a33bc7928f9')
       .in('is_active', ['true', 'maintenance']);
 
@@ -401,6 +401,7 @@ async function getAllDistrictsData() {
           logo_image_url: region.logo_image_url,
           panel_status:
             region.is_active === 'maintenance' ? 'maintenance' : 'active',
+          phone_number: region.phone_number,
           bank_accounts: bankData,
           pricePolicies: pricePolicies,
           period: {

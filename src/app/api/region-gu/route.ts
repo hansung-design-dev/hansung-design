@@ -105,6 +105,7 @@ export async function GET(request: NextRequest) {
             )
             .eq('region_gu_id', regionData.id)
             .eq('display_type_id', displayTypeData.id)
+            .limit(1)
             .single();
 
           if (!bankError && bankAccountData) {

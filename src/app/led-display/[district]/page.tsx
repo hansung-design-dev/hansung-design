@@ -118,16 +118,16 @@ export default function LEDDisplayPage() {
       isAllDistricts
         ? {
             id: 0,
-            name: '전체 보기',
+            name: '전체보기',
             code: 'all',
-            icon: '/images/district-icon/all.svg',
+            icon: '/svg/all.svg',
             description: '모든 자치구',
             count: 0,
             size: '',
             led_count: 0,
             banner_count: 0,
             sizeOfPeople: '',
-            logo: '/images/district-icon/all.svg',
+            logo: '/svg/all.svg',
             src: '',
           }
         : bannerDistricts.find((d) => d.code === district),
@@ -145,6 +145,7 @@ export default function LEDDisplayPage() {
     code: string;
     logo_image_url?: string;
     panel_status?: string;
+    phone_number?: string;
   } | null>(null);
 
   const [dropdownOptions, setDropdownOptions] = useState<DropdownOption[]>([
@@ -193,21 +194,23 @@ export default function LEDDisplayPage() {
         name: item.nickname || item.address,
         address: item.address,
         nickname: item.nickname,
-        neighborhood: item.region_dong.name,
+        neighborhood: item.region_dong?.name || '',
         period: '상시',
         price: price,
-        size: `${item.led_panel_details.panel_width}x${item.led_panel_details.panel_height}`,
-        faces: item.led_panel_details.max_banners,
+        size: item.led_panel_details
+          ? `${item.led_panel_details.panel_width}x${item.led_panel_details.panel_height}`
+          : '0x0',
+        faces: item.led_panel_details?.max_banners || 0,
         latitude: item.latitude || 37.5665, // API에서 받아온 실제 좌표 사용
         longitude: item.longitude || 126.978,
         photo_url: item.photo_url,
         status: item.panel_status,
-        panel_width: item.led_panel_details.panel_width,
-        panel_height: item.led_panel_details.panel_height,
+        panel_width: item.led_panel_details?.panel_width || 0,
+        panel_height: item.led_panel_details?.panel_height || 0,
         panel_code: item.panel_code,
         panel_type: item.panel_type,
-        exposure_count: item.led_panel_details.exposure_count,
-        max_banners: item.led_panel_details.max_banners,
+        exposure_count: item.led_panel_details?.exposure_count || 0,
+        max_banners: item.led_panel_details?.max_banners || 0,
         slot_width_px: firstSlot?.slot_width_px || 0,
         slot_height_px: firstSlot?.slot_height_px || 0,
         total_price: totalPrice,
@@ -354,6 +357,10 @@ export default function LEDDisplayPage() {
                 logo_image_url: districtDataResult.logo_image_url,
                 panel_status: 'active', // 임시로 active 설정, 나중에 billboards 상태에 따라 업데이트
               });
+              console.log(
+                '🔍 Bank info from API:',
+                districtDataResult.bank_accounts
+              );
               setBankInfo(districtDataResult.bank_accounts);
             } else {
               // API에서 데이터를 가져오지 못한 경우에도 기본 정보 생성
@@ -361,7 +368,9 @@ export default function LEDDisplayPage() {
                 id: '0',
                 name: districtName,
                 code: district,
-                logo_image_url: `/images/district-icon/${district}-gu.png`,
+                logo_image_url: isAllDistricts
+                  ? '/svg/all.svg'
+                  : `/images/district-icon/${district}-gu.png`,
                 panel_status: 'active', // 임시로 active 설정
               });
             }
@@ -372,7 +381,9 @@ export default function LEDDisplayPage() {
               id: '0',
               name: districtName,
               code: district,
-              logo_image_url: `/images/district-icon/${district}-gu.png`,
+              logo_image_url: isAllDistricts
+                ? '/svg/all.svg'
+                : `/images/district-icon/${district}-gu.png`,
               panel_status: 'active', // 임시로 active 설정
             });
           }
@@ -465,8 +476,11 @@ export default function LEDDisplayPage() {
               count: billboards.length,
               logo:
                 districtData.logo_image_url ||
-                `/images/district-icon/${districtData.code}-gu.png`,
+                (isAllDistricts
+                  ? '/svg/all.svg'
+                  : `/images/district-icon/${districtData.code}-gu.png`),
               src: '/images/led/landing.png',
+              phone_number: districtData.phone_number,
             }
           : {
               id: 0,
@@ -474,8 +488,11 @@ export default function LEDDisplayPage() {
               code: district,
               description: `${district} LED 전자게시대`,
               count: billboards.length,
-              logo: `/images/district-icon/${district}-gu.png`,
+              logo: isAllDistricts
+                ? '/svg/all.svg'
+                : `/images/district-icon/${district}-gu.png`,
               src: '/images/led/landing.png',
+              phone_number: undefined,
             }
       }
       billboards={billboards}
@@ -494,11 +511,15 @@ export default function LEDDisplayPage() {
           id: '0',
           name: district,
           code: district,
-          logo_image_url: `/images/district-icon/${district}-gu.png`,
+          logo_image_url: isAllDistricts
+            ? '/svg/all.svg'
+            : `/images/district-icon/${district}-gu.png`,
           panel_status: 'active',
+          phone_number: undefined,
         }
       }
       bankInfo={bankInfo || null}
+      pricePolicies={[]}
     />
   );
 }

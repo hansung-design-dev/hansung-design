@@ -142,6 +142,7 @@ export default function DistrictInfo({
           <PriceInfo
             pricePolicies={pricePolicies}
             districtName={districtName || ''}
+            isLEDDisplay={isLEDDisplay}
           />
         </div>
       )}
