@@ -65,6 +65,7 @@ function PaymentPageContent() {
   const [isApprovedOrder, setIsApprovedOrder] = useState(false);
   const [isAgreedCaution, setIsAgreedCaution] = useState(false);
   const [projectName, setProjectName] = useState('');
+  const [tempProjectName, setTempProjectName] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [validationErrors, setValidationErrors] = useState<{
     projectName: string;
@@ -687,14 +688,20 @@ function PaymentPageContent() {
                 <div className="flex flex-col gap-1">
                   <input
                     type="text"
-                    value={projectName}
+                    value={tempProjectName}
                     onChange={(e) => {
-                      setProjectName(e.target.value);
+                      setTempProjectName(e.target.value);
                       if (validationErrors.projectName) {
                         setValidationErrors((prev) => ({
                           ...prev,
                           projectName: '',
                         }));
+                      }
+                    }}
+                    onBlur={() => {
+                      setProjectName(tempProjectName);
+                      if (bulkApply.projectName) {
+                        applyBulkSettings();
                       }
                     }}
                     className={`w-full md:w-[21.25rem] sm:w-[13rem] border border-solid shadow-none rounded px-4 h-[3rem] ${
@@ -808,7 +815,7 @@ function PaymentPageContent() {
                     </h4>
                     <div className="space-y-1 text-sm text-blue-700">
                       {bulkApply.projectName && projectName && (
-                        <div>📝 작업이름: {projectName}</div>
+                        <div> 작업이름: {projectName}</div>
                       )}
                       {bulkApply.fileUpload && selectedFile && (
                         <div>📎 파일: {selectedFile.name}</div>
