@@ -37,6 +37,14 @@ interface District {
     };
   } | null;
   panel_status?: string;
+  pricePolicies?: {
+    id: string;
+    price_usage_type: string;
+    tax_price: number;
+    road_usage_fee: number;
+    advertising_fee: number;
+    total_price: number;
+  }[];
 }
 
 export default function LEDDisplayPage() {
@@ -109,6 +117,14 @@ export default function LEDDisplayPage() {
                 name: string;
               };
             } | null;
+            pricePolicies?: {
+              id: string;
+              price_usage_type: string;
+              tax_price: number;
+              road_usage_fee: number;
+              advertising_fee: number;
+              total_price: number;
+            }[];
           }) => {
             // 백엔드에서 받은 panel_status를 그대로 사용
             const isMaintenance = district.panel_status === 'maintenance';
@@ -129,6 +145,7 @@ export default function LEDDisplayPage() {
               panel_status: district.panel_status || 'active',
               period: district.period || null,
               bankInfo: district.bank_accounts || null,
+              pricePolicies: district.pricePolicies || [],
             };
           }
         );

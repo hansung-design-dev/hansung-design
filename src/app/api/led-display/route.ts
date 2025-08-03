@@ -20,7 +20,6 @@ export interface LEDDisplayData {
   region_dong: {
     id: string;
     name: string;
-    district_code: string;
   };
   led_panel_details: {
     id: string;
@@ -112,8 +111,7 @@ async function getLEDDisplaysByDistrict(districtName: string) {
         ),
         region_dong!inner (
           id,
-          name,
-          district_code
+          name
         )
       `
       )
@@ -184,8 +182,7 @@ async function getAllLEDDisplays() {
         ),
         region_dong!inner (
           id,
-          name,
-          district_code
+          name
         )
       `
       )
@@ -238,6 +235,30 @@ async function getLEDDisplayCountsByDistrict() {
   }
 }
 
+// 사용 가능한 구 목록 조회
+async function getAvailableDistricts() {
+  try {
+    const { data, error } = await supabase
+      .from('region_gu')
+      .select('name')
+      .eq('display_type_id', '3119f6ed-81e4-4d62-b785-6a33bc7928f9')
+      .in('is_active', ['true', 'maintenance'])
+      .order('name', { ascending: true });
+
+    if (error) {
+      throw error;
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: data || [],
+    });
+  } catch (error) {
+    console.error('❌ Error in getAvailableDistricts:', error);
+    throw error;
+  }
+}
+
 // GET 요청 처리
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -250,6 +271,8 @@ export async function GET(request: NextRequest) {
     switch (action) {
       case 'getAllDistrictsData':
         return await getAllDistrictsData();
+      case 'getAvailableDistricts':
+        return await getAvailableDistricts();
       case 'getCounts':
         return await getLEDDisplayCountsByDistrict();
       case 'getByDistrict':
@@ -318,31 +341,37 @@ async function getAllDistrictsData() {
           total_price: number;
         }[] = [];
 
-        // 해당 구의 LED 패널 중 첫 번째 패널의 가격 정보를 가져옴
-        const { data: ledPricePolicy } = await supabase
+        // 해당 구의 LED 패널들의 가격 정보를 가져옴
+        const { data: ledPricePolicies } = await supabase
           .from('led_display_price_policy')
           .select('*')
-          .eq('panel_id', (
-            await supabase
-              .from('panels')
-              .select('id')
-              .eq('region_gu_id', region.id)
-              .eq('display_type_id', '3119f6ed-81e4-4d62-b785-6a33bc7928f9')
-              .eq('panel_status', 'active')
-              .limit(1)
-              .single()
-          ).data?.id)
-          .limit(1);
+          .in(
+            'panel_id',
+            (
+              await supabase
+                .from('panels')
+                .select('id')
+                .eq('region_gu_id', region.id)
+                .eq('display_type_id', '3119f6ed-81e4-4d62-b785-6a33bc7928f9')
+                .eq('panel_status', 'active')
+            ).data?.map((p) => p.id) || []
+          );
 
-        if (ledPricePolicy && ledPricePolicy.length > 0) {
-          pricePolicies = ledPricePolicy.map((policy) => ({
-            id: policy.id,
-            price_usage_type: policy.price_usage_type,
-            tax_price: policy.tax_price,
-            road_usage_fee: policy.road_usage_fee,
-            advertising_fee: policy.advertising_fee,
-            total_price: policy.total_price,
-          }));
+        if (ledPricePolicies && ledPricePolicies.length > 0) {
+          // default 타입의 가격 정책을 우선적으로 사용
+          const defaultPolicy =
+            ledPricePolicies.find((p) => p.price_usage_type === 'default') ||
+            ledPricePolicies[0];
+          pricePolicies = [
+            {
+              id: defaultPolicy.id,
+              price_usage_type: defaultPolicy.price_usage_type,
+              tax_price: defaultPolicy.tax_price,
+              road_usage_fee: defaultPolicy.road_usage_fee,
+              advertising_fee: defaultPolicy.advertising_fee,
+              total_price: defaultPolicy.total_price,
+            },
+          ];
         }
 
         // 계좌번호 정보 가져오기
@@ -374,6 +403,12 @@ async function getAllDistrictsData() {
             region.is_active === 'maintenance' ? 'maintenance' : 'active',
           bank_accounts: bankData,
           pricePolicies: pricePolicies,
+          period: {
+            first_half_from: '2024-01-01',
+            first_half_to: '2024-12-31',
+            second_half_from: '2024-01-01',
+            second_half_to: '2024-12-31',
+          },
         };
       })
     );

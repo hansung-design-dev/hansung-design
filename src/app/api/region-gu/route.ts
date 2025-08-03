@@ -69,6 +69,7 @@ export async function GET(request: NextRequest) {
         .from('region_gu')
         .select('id, name, code, logo_image_url, phone_number')
         .eq('name', districtName)
+        .limit(1)
         .single();
 
       if (regionError) {
