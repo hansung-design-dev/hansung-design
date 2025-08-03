@@ -471,28 +471,31 @@ function PaymentPageContent() {
         const groupedItem: GroupedCartItem = {
           id: order.id,
           name: order.projectName || '상담신청 주문',
-          items: orderDetails.map((detail: {
-            id: string;
-            panels?: {
-              address?: string;
-              region_gu?: { name: string };
-              panel_type?: string;
-            };
-          }) => ({
-            id: detail.id,
-            name: detail.panels?.address || '상담신청',
-            price: payments?.[0]?.amount || 0,
-            district: detail.panels?.region_gu?.name || '상담신청',
-            panel_type: detail.panels?.panel_type || '상담신청',
-            is_public_institution:
-              order.user_profiles?.is_public_institution || false,
-            is_company: order.user_profiles?.is_company || false,
-            user_profile_id: order.user_profile_id,
-            contact_person_name: order.user_profiles?.contact_person_name || '',
-            phone: order.user_profiles?.phone || '',
-            company_name: order.user_profiles?.company_name || '',
-            email: order.user_profiles?.email || '',
-          })),
+          items: orderDetails.map(
+            (detail: {
+              id: string;
+              panels?: {
+                address?: string;
+                region_gu?: { name: string };
+                panel_type?: string;
+              };
+            }) => ({
+              id: detail.id,
+              name: detail.panels?.address || '상담신청',
+              price: payments?.[0]?.amount || 0,
+              district: detail.panels?.region_gu?.name || '상담신청',
+              panel_type: detail.panels?.panel_type || '상담신청',
+              is_public_institution:
+                order.user_profiles?.is_public_institution || false,
+              is_company: order.user_profiles?.is_company || false,
+              user_profile_id: order.user_profile_id,
+              contact_person_name:
+                order.user_profiles?.contact_person_name || '',
+              phone: order.user_profiles?.phone || '',
+              company_name: order.user_profiles?.company_name || '',
+              email: order.user_profiles?.email || '',
+            })
+          ),
           totalPrice: payments?.[0]?.amount || 0,
           district: orderDetails?.[0]?.panels?.region_gu?.name || '상담신청',
           type: 'banner-display', // 기본값
@@ -615,8 +618,6 @@ function PaymentPageContent() {
       }));
     });
   };
-
-
 
   // 에러가 있는 경우 에러 화면 표시 (현재는 사용하지 않음)
   // if (/* error && */ !isProcessing) {
