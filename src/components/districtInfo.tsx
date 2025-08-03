@@ -1,5 +1,4 @@
 import BankInfo from './bankInfo';
-import PhoneNumber from './phoneNumber';
 import PriceInfo from './priceInfo';
 
 interface DistrictInfoProps {

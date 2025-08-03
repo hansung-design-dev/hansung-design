@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { PopupNotice, PopupNoticeContent } from '@/src/types/popup-notice';
 
 // 타입 정의
@@ -96,16 +96,19 @@ export default function DraggableNoticePopup({
   };
 
   // 드래그 중
-  const handleMouseMove = (e: MouseEvent) => {
-    if (isDragging && popupRef.current) {
-      // 직접 DOM 조작으로 실시간 반응
-      popupRef.current.style.left = `${e.clientX - dragOffset.x}px`;
-      popupRef.current.style.top = `${e.clientY - dragOffset.y}px`;
-    }
-  };
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (isDragging && popupRef.current) {
+        // 직접 DOM 조작으로 실시간 반응
+        popupRef.current.style.left = `${e.clientX - dragOffset.x}px`;
+        popupRef.current.style.top = `${e.clientY - dragOffset.y}px`;
+      }
+    },
+    [isDragging, dragOffset]
+  );
 
   // 드래그 종료
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     if (popupRef.current) {
       // 드래그 종료 시 현재 위치를 상태에 동기화
       const rect = popupRef.current.getBoundingClientRect();
@@ -115,7 +118,7 @@ export default function DraggableNoticePopup({
       });
     }
     setIsDragging(false);
-  };
+  }, []);
 
   // 마우스 이벤트 리스너 등록/해제
   useEffect(() => {
@@ -128,7 +131,7 @@ export default function DraggableNoticePopup({
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [isDragging, dragOffset]);
+  }, [isDragging, dragOffset, handleMouseMove, handleMouseUp]);
 
   const renderSection = (section: PopupSection, index: number) => {
     switch (section.type) {

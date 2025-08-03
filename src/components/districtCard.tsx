@@ -47,6 +47,7 @@ interface District {
     road_usage_fee: number;
     advertising_fee: number;
     total_price: number;
+    displayName?: string;
   }[];
 }
 

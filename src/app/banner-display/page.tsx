@@ -90,7 +90,7 @@ export default function BannerDisplayPage() {
 
         // 통합 API 호출 - 모든 데이터를 한번에 가져오기
         const response = await fetch(
-          '/api/banner-display?action=getOptimizedDistrictsData'
+          '/api/banner-display?action=getUltraFastDistrictsData'
         );
         const result = await response.json();
 

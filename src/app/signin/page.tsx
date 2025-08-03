@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useAuth } from '@/src/contexts/authContext';
 import { useRouter } from 'next/navigation';
+// import KakaoLoginButton from '@/src/components/auth/KakaoLoginButton';
 
 export default function Signin() {
   const [formData, setFormData] = useState({
@@ -126,16 +127,16 @@ export default function Signin() {
         </form>
 
         {/* 카카오 로그인 버튼 */}
-        <button className="relative w-full h-[4rem] flex items-center justify-center bg-[#FEE500] text-1.25 font-500 rounded mb-3">
+        {/* <KakaoLoginButton className="w-full h-[4rem] text-1.25 font-500 rounded mb-3">
           <Image
             src="/svg/kakao-icon.svg"
             alt="카카오"
             width={28}
             height={26}
-            className="h-[1.625rem] w-[1.76rem] mr-2 absolute left-10"
+            className="h-[1.625rem] w-[1.76rem] mr-2"
           />
           카카오로 로그인
-        </button>
+        </KakaoLoginButton> */}
 
         {/* 회원가입 버튼 */}
         <Link

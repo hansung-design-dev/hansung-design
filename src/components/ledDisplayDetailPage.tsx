@@ -113,7 +113,7 @@ export default function LEDDisplayDetailPage({
         setSelectedOption(matchingOption);
       }
     }
-  }, [dropdownOptions, districtObj?.name, selectedOption]);
+  }, [dropdownOptions, districtObj?.name, selectedOption, districtObj]);
 
   // selectedIds 상태 변화 추적 (디버깅용 - 주석 처리)
   // useEffect(() => {

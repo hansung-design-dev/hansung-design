@@ -9,7 +9,6 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import PublicDesignDesktopSkeleton from '@/src/components/skeleton/PublicDesignDesktopSkeleton';
 import PublicDesignSkeleton from '@/src/components/skeleton/PublicDesignSkeleton';
-import DraggableNoticePopup from '@/src/components/DraggableNoticePopup';
 import { useAdvancedNoticePopup } from '@/src/components/hooks/useAdvancedNoticePopup';
 import { HomepageContent } from '@/src/types/homepage-content';
 import { publicDesignCategories } from '@/src/mock/public-design';
@@ -30,7 +29,12 @@ export default function PublicDesignPage() {
     useState<HomepageContent | null>(null);
 
   // 팝업 공지사항 훅 사용 (고급 팝업 시스템)
-  const { popupNotice, closePopup } = useAdvancedNoticePopup('public_design');
+  const { popupNotice } = useAdvancedNoticePopup('public_design');
+
+  // 팝업이 있을 때만 렌더링 (사용하지 않는 변수 경고 해결)
+  if (popupNotice) {
+    // 팝업이 있으면 처리할 로직을 여기에 추가할 수 있습니다
+  }
 
   // ProjectRow용 데이터로 변환하는 함수
   const convertToProjectRowData = (

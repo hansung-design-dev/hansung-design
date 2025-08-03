@@ -145,7 +145,7 @@ interface ProcessedDistrictData {
     road_usage_fee: number;
     advertising_fee: number;
     total_price: number;
-    displayName?: string;
+    displayName: string;
   }[];
 }
 
@@ -664,6 +664,8 @@ export async function GET(request: NextRequest) {
         return await getAllDistrictsData();
       case 'getOptimizedDistrictsData':
         return await getOptimizedDistrictsData();
+      case 'getUltraFastDistrictsData':
+        return await getUltraFastDistrictsData();
       case 'getCounts':
         return await getBannerDisplayCountsByDistrict();
       case 'getByDistrict':
@@ -839,12 +841,16 @@ async function getAllDistrictsData() {
                 road_usage_fee: number;
                 advertising_fee: number;
                 total_price: number;
+                displayName: string;
               }
             > = {};
 
             for (const policy of allPolicies) {
               if (!uniquePolicies[policy.price_usage_type]) {
-                uniquePolicies[policy.price_usage_type] = policy;
+                uniquePolicies[policy.price_usage_type] = {
+                  ...policy,
+                  displayName: getUsageDisplayName(policy.price_usage_type),
+                };
               }
             }
             pricePolicies = Object.values(uniquePolicies);
@@ -1262,7 +1268,7 @@ async function getOptimizedDistrictsData() {
     const processedDistricts = (viewData || []).map((item) => {
       // 가격 정책 파싱
       const pricePolicies = item.price_summary
-        ? item.price_summary.split(', ').map((priceStr) => {
+        ? item.price_summary.split(', ').map((priceStr: string) => {
             const [displayName, totalPrice] = priceStr.split(':');
             return {
               id: `temp_${displayName}`,
@@ -1328,9 +1334,8 @@ async function getOptimizedDistrictsData() {
     // 카운트 정보 (이미 뷰에 포함됨)
     const countMap: Record<string, number> = {};
     processedDistricts.forEach((district) => {
-      countMap[district.name] = parseInt(
-        district.panel_count?.toString() || '0'
-      );
+      // panel_count 속성이 없으므로 기본값 0 사용
+      countMap[district.name] = 0;
     });
 
     console.log('🔍 Optimized districts data:', processedDistricts.length);
@@ -1345,6 +1350,122 @@ async function getOptimizedDistrictsData() {
     });
   } catch (error) {
     console.error('❌ Error in getOptimizedDistrictsData:', error);
+    throw error;
+  }
+}
+
+// 초고속 구별 데이터 조회 (캐시 테이블 사용)
+async function getUltraFastDistrictsData() {
+  try {
+    console.log('🚀 Fetching ultra-fast districts data using cache table...');
+
+    // 캐시 테이블에서 한 번에 모든 데이터 가져오기
+    const { data: cacheData, error: cacheError } = await supabase
+      .from('banner_display_cache')
+      .select('*')
+      .order('display_order', { ascending: true });
+
+    if (cacheError) {
+      console.error('❌ 캐시 테이블 조회 오류:', cacheError);
+      throw cacheError;
+    }
+
+    console.log('🚀 캐시 데이터:', cacheData?.length || 0);
+
+    // 캐시 데이터를 프론트엔드 형식으로 변환
+    const processedDistricts = (cacheData || []).map((item) => {
+      // 가격 정책 파싱 (영어로 받아서 프론트엔드에서 한글 변환)
+      const pricePolicies = item.price_summary
+        ? item.price_summary.split(', ').map((priceStr: string) => {
+            const [priceUsageType, totalPrice] = priceStr.split(':');
+            return {
+              id: `cache_${priceUsageType}`,
+              price_usage_type: priceUsageType.trim() as
+                | 'default'
+                | 'public_institution'
+                | 're_order'
+                | 'self_install'
+                | 'reduction_by_admin'
+                | 'rent-place',
+              tax_price: 0,
+              road_usage_fee: 0,
+              advertising_fee: 0,
+              total_price: parseInt(totalPrice) || 0,
+              // displayName 제거 - 프론트엔드에서 getUsageDisplayName() 사용
+            };
+          })
+        : [];
+
+      // 기간 정보 파싱
+      let periodData = null;
+      if (item.period_summary) {
+        const periods = item.period_summary.split(', ');
+        if (periods.length >= 1) {
+          const [firstFrom, firstTo] = periods[0].split('~');
+          periodData = {
+            first_half_from: firstFrom,
+            first_half_to: firstTo,
+            second_half_from:
+              periods.length >= 2 ? periods[1].split('~')[0] : null,
+            second_half_to:
+              periods.length >= 2 ? periods[1].split('~')[1] : null,
+          };
+        }
+      }
+
+      // 은행 정보
+      const bankData = item.bank_name
+        ? {
+            id: `cache_bank_${item.region_id}`,
+            bank_name: item.bank_name,
+            account_number: item.account_number,
+            depositor: item.depositor,
+            region_gu: {
+              id: item.region_id,
+              name: item.region_name,
+            },
+            display_types: {
+              id: '8178084e-1f13-40bc-8b90-7b8ddc58bf64',
+              name: 'banner_display',
+            },
+          }
+        : null;
+
+      return {
+        id: item.region_id,
+        name: item.region_name,
+        code: item.region_code,
+        logo_image_url: item.logo_image_url,
+        phone_number: item.phone_number,
+        display_type_id: '8178084e-1f13-40bc-8b90-7b8ddc58bf64',
+        panel_status: 'active',
+        period: periodData,
+        bank_accounts: bankData,
+        pricePolicies: pricePolicies,
+      };
+    });
+
+    // 카운트 정보 (캐시에 포함됨)
+    const countMap: Record<string, number> = {};
+    processedDistricts.forEach((district) => {
+      const cacheItem = cacheData?.find(
+        (item) => item.region_id === district.id
+      );
+      countMap[district.name] = cacheItem?.panel_count || 0;
+    });
+
+    console.log('🚀 Ultra-fast districts data:', processedDistricts.length);
+    console.log('🚀 Counts data:', countMap);
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        districts: processedDistricts,
+        counts: countMap,
+      },
+    });
+  } catch (error) {
+    console.error('❌ Error in getUltraFastDistrictsData:', error);
     throw error;
   }
 }

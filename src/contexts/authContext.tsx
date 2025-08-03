@@ -1,13 +1,14 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { UserAuth } from '@/src/types/auth';
 
 interface User {
   id: string;
   username: string;
   email: string;
   name: string;
-  phone: string;
+  phone?: string;
   is_verified?: boolean;
 }
 
@@ -25,6 +26,7 @@ interface AuthContextType {
     username: string,
     password: string
   ) => Promise<{ success: boolean; error?: string }>;
+  login: (user: User | UserAuth) => void;
   signUp: (
     email: string,
     password: string,
@@ -133,8 +135,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const login = (user: User | UserAuth) => {
+    setUser(user);
+    sessionStorage.setItem('user', JSON.stringify(user));
+    // 사용자 ID를 쿠키에 저장 (API에서 사용)
+    document.cookie = `user_id=${user.id}; path=/; max-age=86400`; // 24시간
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider
+      value={{ user, loading, signIn, login, signUp, signOut }}
+    >
       {children}
     </AuthContext.Provider>
   );

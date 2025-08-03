@@ -269,6 +269,11 @@ export default function DisplayDetailPage({
 
   // 아이템이 선택 가능한지 확인하는 함수
   const isItemSelectable = (item: DisplayBillboard) => {
+    // 0. 마감된 게시대인지 확인
+    if (item.is_closed) {
+      return false;
+    }
+
     // 1. 기한 확인: 현재 선택된 기간이 신청 가능한지 확인
     let isPeriodValid = true;
     if (period) {

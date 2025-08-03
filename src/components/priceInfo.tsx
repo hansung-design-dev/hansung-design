@@ -60,11 +60,11 @@ export default function PriceInfo({
   // 새로운 API에서 받은 displayName을 사용하는 로직
   const getDistrictSpecificDisplay = () => {
     // displayName이 있는 경우 (새로운 API 사용)
-    if (pricePolicies.some(policy => policy.displayName)) {
+    if (pricePolicies.some((policy) => policy.displayName)) {
       return (
         <div className="text-sm text-gray-600 space-y-1">
-          {pricePolicies.map((policy) => (
-            <div key={policy.id}>
+          {pricePolicies.map((policy, index) => (
+            <div key={`${policy.id || policy.price_usage_type}_${index}`}>
               {policy.displayName}: {policy.total_price?.toLocaleString()}원
             </div>
           ))}
@@ -193,12 +193,14 @@ export default function PriceInfo({
         // 기본 표시: 모든 가격 정책을 표시
         return (
           <div className="text-sm text-gray-600 space-y-1">
-            {Object.entries(groupedPolicies).map(([usageType, policies]) => (
-              <div key={usageType}>
-                {getUsageDisplayName(usageType)}:{' '}
-                {policies[0]?.total_price?.toLocaleString()}원
-              </div>
-            ))}
+            {Object.entries(groupedPolicies).map(
+              ([usageType, policies], index) => (
+                <div key={`${usageType}_${index}`}>
+                  {getUsageDisplayName(usageType)}:{' '}
+                  {policies[0]?.total_price?.toLocaleString()}원
+                </div>
+              )
+            )}
           </div>
         );
     }

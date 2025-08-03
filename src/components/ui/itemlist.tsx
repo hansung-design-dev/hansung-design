@@ -216,6 +216,8 @@ const ItemList: React.FC<ItemTableProps> = ({
                     item.type === 'banner' && item.is_for_admin
                       ? 'bg-yellow-100 hover:bg-yellow-200'
                       : ''
+                  } ${
+                    item.is_closed ? 'bg-gray-100 text-gray-500 opacity-60' : ''
                   }`}
                   onClick={(e) => handleRowClick(e, item.id)}
                 >
@@ -235,17 +237,26 @@ const ItemList: React.FC<ItemTableProps> = ({
                           onChange={(e) =>
                             onItemSelect?.(item.id, e.target.checked)
                           }
-                          className="hover:cursor-pointer"
+                          disabled={item.is_closed}
+                          className={`hover:cursor-pointer ${
+                            item.is_closed
+                              ? 'opacity-50 cursor-not-allowed'
+                              : ''
+                          }`}
                         />
                       )}
                     </td>
                   )}
                   <td className="text-center pl-4">
-                    {item.panel_code || item.id}
+                    <span className={item.is_closed ? 'text-gray-500' : ''}>
+                      {item.panel_code || item.id}
+                    </span>
                   </td>
                   <td className="pl-4">
                     <div
-                      className="font-medium text-black cursor-pointer"
+                      className={`font-medium cursor-pointer ${
+                        item.is_closed ? 'text-gray-500' : 'text-black'
+                      }`}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleItemClick(item.id);
@@ -254,7 +265,11 @@ const ItemList: React.FC<ItemTableProps> = ({
                       {item.nickname && <span> {item.nickname} - </span>}
                       {item.address ? <span>{item.address}</span> : <></>}
                       {item.neighborhood && (
-                        <span className="ml-1 text-gray-500">
+                        <span
+                          className={`ml-1 ${
+                            item.is_closed ? 'text-gray-400' : 'text-gray-500'
+                          }`}
+                        >
                           {item.neighborhood}
                         </span>
                       )}
@@ -349,10 +364,17 @@ const ItemList: React.FC<ItemTableProps> = ({
                         onItemSelect?.(item.id, e.target.checked)
                       }
                       onClick={(e) => e.stopPropagation()}
-                      className="mr-2"
+                      disabled={item.is_closed}
+                      className={`mr-2 ${
+                        item.is_closed ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
                     />
                   ))}
-                <span className="text-sm text-gray-500 font-medium">
+                <span
+                  className={`text-sm font-medium ${
+                    item.is_closed ? 'text-gray-400' : 'text-gray-500'
+                  }`}
+                >
                   No. {item.panel_code || item.id}
                 </span>
               </div>
@@ -361,11 +383,19 @@ const ItemList: React.FC<ItemTableProps> = ({
                   className="flex items-center gap-2"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <div className="font-medium text-black">
+                  <div
+                    className={`font-medium ${
+                      item.is_closed ? 'text-gray-500' : 'text-black'
+                    }`}
+                  >
                     {item.nickname && <span>{item.nickname} - </span>}
                     {item.address ? <span>{item.address}</span> : <></>}
                     {item.neighborhood && (
-                      <span className="ml-1 text-gray-500">
+                      <span
+                        className={`ml-1 ${
+                          item.is_closed ? 'text-gray-400' : 'text-gray-500'
+                        }`}
+                      >
                         {item.neighborhood}
                       </span>
                     )}
@@ -373,11 +403,19 @@ const ItemList: React.FC<ItemTableProps> = ({
                 </div>
               )}
               {!showCheckbox && (
-                <div className="font-medium text-black">
+                <div
+                  className={`font-medium ${
+                    item.is_closed ? 'text-gray-500' : 'text-black'
+                  }`}
+                >
                   {item.nickname && <span>{item.nickname} - </span>}
                   {item.address ? <span>{item.address}</span> : <></>}
                   {item.neighborhood && (
-                    <span className="ml-1 text-gray-500">
+                    <span
+                      className={`ml-1 ${
+                        item.is_closed ? 'text-gray-400' : 'text-gray-500'
+                      }`}
+                    >
                       {item.neighborhood}
                     </span>
                   )}

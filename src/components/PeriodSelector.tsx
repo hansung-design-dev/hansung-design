@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from './button/button';
 
 interface PeriodSelectorProps {
@@ -50,9 +50,17 @@ export default function PeriodSelector({
     halfPeriod || 'first_half'
   );
 
+  // onPeriodChange를 useCallback으로 메모이제이션
+  const memoizedOnPeriodChange = useCallback(
+    (year: number, month: number, halfPeriod: 'first_half' | 'second_half') => {
+      onPeriodChange(year, month, halfPeriod);
+    },
+    [onPeriodChange]
+  );
+
   useEffect(() => {
-    onPeriodChange(displayYear, displayMonth, period);
-  }, [period, displayYear, displayMonth]);
+    memoizedOnPeriodChange(displayYear, displayMonth, period);
+  }, [period, displayYear, displayMonth, memoizedOnPeriodChange]);
 
   const getPeriodText = (period: 'first_half' | 'second_half') => {
     return period === 'first_half' ? '상반기 (1-15일)' : '하반기 (16-31일)';
