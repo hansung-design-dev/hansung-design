@@ -141,67 +141,67 @@ async function getLEDDisplaysByDistrict(districtName: string) {
   }
 }
 
-// 모든 구의 LED Display 데이터 조회
-async function getAllLEDDisplays() {
-  try {
-    const displayType = await getLEDDisplayTypeId();
+// // 모든 구의 LED Display 데이터 조회
+// async function getAllLEDDisplays() {
+//   try {
+//     const displayType = await getLEDDisplayTypeId();
 
-    const { data, error } = await supabase
-      .from('panels')
-      .select(
-        `
-        *,
-        led_panel_details (
-          id,
-          exposure_count,
-          panel_width,
-          panel_height,
-          max_banners
-        ),
-        led_slots (
-          id,
-          slot_number,
-          slot_name,
-          slot_width_px,
-          slot_height_px,
-          position_x,
-          position_y,
-          total_price,
-          tax_price,
-          advertising_fee,
-          road_usage_fee,
-          administrative_fee,
-          price_unit,
-          panel_slot_status,
-          notes
-        ),
-        region_gu!inner (
-          id,
-          name,
-          code
-        ),
-        region_dong (
-          id,
-          name
-        )
-      `
-      )
-      .eq('display_type_id', displayType.id)
-      .eq('panel_status', 'active')
-      .order('panel_code', { ascending: true });
+//     const { data, error } = await supabase
+//       .from('panels')
+//       .select(
+//         `
+//         *,
+//         led_panel_details (
+//           id,
+//           exposure_count,
+//           panel_width,
+//           panel_height,
+//           max_banners
+//         ),
+//         led_slots (
+//           id,
+//           slot_number,
+//           slot_name,
+//           slot_width_px,
+//           slot_height_px,
+//           position_x,
+//           position_y,
+//           total_price,
+//           tax_price,
+//           advertising_fee,
+//           road_usage_fee,
+//           administrative_fee,
+//           price_unit,
+//           panel_slot_status,
+//           notes
+//         ),
+//         region_gu!inner (
+//           id,
+//           name,
+//           code
+//         ),
+//         region_dong (
+//           id,
+//           name
+//         )
+//       `
+//       )
+//       .eq('display_type_id', displayType.id)
+//       .eq('panel_status', 'active')
+//       .order('panel_code', { ascending: true });
 
-    if (error) {
-      throw error;
-    }
+//     if (error) {
+//       throw error;
+//     }
 
-    return NextResponse.json({
-      success: true,
-      data: data as LEDDisplayData[],
-    });
-  } catch (error) {
-    throw error;
-  }
-}
+//     return NextResponse.json({
+//       success: true,
+//       data: data as LEDDisplayData[],
+//     });
+//   } catch (error) {
+//     throw error;
+//   }
+// }
 
 // 구별 LED Display 개수 조회 (새로운 region_gu_display_types 테이블 활용)
 async function getLEDDisplayCountsByDistrict() {
