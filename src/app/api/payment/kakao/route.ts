@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 카카오페이 결제 요청 생성
+    // 카카오페이 결제 요청 생성 (실제 카카오페이 API 연동 시 사용)
     const kakaoPaymentRequest = {
       amount: amount,
       orderId: orderId,
@@ -39,6 +39,9 @@ export async function POST(request: NextRequest) {
         cancelUrl || `${process.env.NEXT_PUBLIC_BASE_URL}/payment/cancel`,
       paymentMethod: 'KAKAOPAY',
     };
+
+    // 임시로 콘솔에 출력 (실제 API 연동 시 제거)
+    console.log('카카오페이 요청 데이터:', kakaoPaymentRequest);
 
     // 카카오페이 단건결제 API 호출
     const kakaoPaymentResponse = {

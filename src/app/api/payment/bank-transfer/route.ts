@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 계좌이체 결제 요청 생성
+    // 계좌이체 결제 요청 생성 (실제 은행 API 연동 시 사용)
     const bankTransferRequest = {
       amount: amount,
       orderId: orderId,
@@ -39,6 +39,9 @@ export async function POST(request: NextRequest) {
         cancelUrl || `${process.env.NEXT_PUBLIC_BASE_URL}/payment/cancel`,
       paymentMethod: 'BANK_TRANSFER',
     };
+
+    // 임시로 콘솔에 출력 (실제 API 연동 시 제거)
+    console.log('계좌이체 요청 데이터:', bankTransferRequest);
 
     // 계좌이체는 입금확인중 상태로 처리
     const bankTransferResponse = {

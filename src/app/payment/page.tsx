@@ -388,9 +388,9 @@ function PaymentPageContent() {
   ]);
 
   // 승인된 주문의 아이템 정보 가져오기
-  const fetchApprovedOrderItems = async (orderId: string) => {
+  const fetchApprovedOrderItems = async (orderNumber: string) => {
     try {
-      const response = await fetch(`/api/orders/${orderId}`);
+      const response = await fetch(`/api/orders/${orderNumber}`);
       const data = await response.json();
 
       if (data.success) {
@@ -457,9 +457,9 @@ function PaymentPageContent() {
   };
 
   // 결제대기 주문 정보 가져오기
-  const fetchPendingOrder = async (orderId: string) => {
+  const fetchPendingOrder = async (orderNumber: string) => {
     try {
-      const response = await fetch(`/api/orders/${orderId}`);
+      const response = await fetch(`/api/orders/${orderNumber}`);
       const data = await response.json();
 
       if (data.success && data.data) {

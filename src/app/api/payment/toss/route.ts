@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 토스페이먼츠 결제 요청 생성
+    // 토스페이먼츠 결제 요청 생성 (실제 토스페이먼츠 SDK 연동 시 사용)
     const tossPaymentRequest = {
       amount: amount,
       orderId: orderId,
@@ -42,6 +42,9 @@ export async function POST(request: NextRequest) {
       flowMode: 'DEFAULT',
       easyPay: 'TOSSPAY',
     };
+
+    // 임시로 콘솔에 출력 (실제 SDK 연동 시 제거)
+    console.log('토스페이먼츠 요청 데이터:', tossPaymentRequest);
 
     // 토스페이먼츠 API 호출 (실제 구현에서는 토스페이먼츠 SDK 사용)
     // 여기서는 예시로 성공 응답을 반환

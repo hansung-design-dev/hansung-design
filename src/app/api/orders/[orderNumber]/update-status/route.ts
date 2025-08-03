@@ -3,13 +3,13 @@ import { supabase } from '@/src/lib/supabase';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { orderId: string } }
+  { params }: { params: Promise<{ orderNumber: string }> }
 ) {
   try {
-    const { orderId } = params;
+    const { orderNumber } = await params;
     const { payment_status } = await request.json();
 
-    if (!orderId || !payment_status) {
+    if (!orderNumber || !payment_status) {
       return NextResponse.json(
         { success: false, error: '필수 파라미터가 누락되었습니다.' },
         { status: 400 }
@@ -23,7 +23,7 @@ export async function POST(
         payment_status,
         updated_at: new Date().toISOString(),
       })
-      .eq('order_number', orderId);
+      .eq('order_number', orderNumber);
 
     if (orderError) {
       console.error('Order status update error:', orderError);
