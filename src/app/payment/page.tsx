@@ -678,119 +678,167 @@ function PaymentPageContent() {
                 </label>
               </div>
             </div>
-            <div className="flex flex-col sm:flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4 sm:gap-2">
-              <label className="w-full md:w-[9rem] text-gray-600 font-medium">
-                작업이름
-              </label>
-              <div className="flex flex-col gap-1">
-                <input
-                  type="text"
-                  value={projectName}
-                  onChange={(e) => {
-                    setProjectName(e.target.value);
-                    if (validationErrors.projectName) {
-                      setValidationErrors((prev) => ({
-                        ...prev,
-                        projectName: '',
-                      }));
-                    }
-                  }}
-                  className={`w-full md:w-[21.25rem] sm:w-[13rem] border border-solid shadow-none rounded px-4 h-[3rem] ${
-                    validationErrors.projectName
-                      ? 'border-red-500'
-                      : 'border-gray-300'
-                  }`}
-                  placeholder="작업 이름을 입력하세요"
-                />
-                {validationErrors.projectName && (
-                  <span className="text-red-500 text-sm">
-                    {validationErrors.projectName}
-                  </span>
-                )}
-              </div>
-            </div>
-          </section>
-
-          {/* 시안 업로드 UI (한 번만) */}
-          <section className="p-6 border rounded-lg shadow-sm flex flex-col gap-4 sm:p-2">
-            <div className="flex items-center justify-between mb-4 border-b-solid border-black border-b-[0.1rem] pb-4">
-              <h2 className="text-1.25 text-gray-2 font-bold">시안 업로드</h2>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="bulkFileUpload"
-                    checked={bulkApply.fileUpload}
-                    onChange={handleBulkFileUploadToggle}
-                    className="w-4 h-4"
-                  />
-                  <label
-                    htmlFor="bulkFileUpload"
-                    className="text-sm text-gray-600"
-                  >
-                    파일 일괄적용
-                  </label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="bulkEmailMethod"
-                    checked={bulkApply.emailMethod}
-                    onChange={handleBulkEmailMethodToggle}
-                    className="w-4 h-4"
-                  />
-                  <label
-                    htmlFor="bulkEmailMethod"
-                    className="text-sm text-gray-600"
-                  >
-                    이메일 일괄적용
-                  </label>
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col sm:flex-col md:flex-row items-start justify-between gap-2 md:gap-4 sm:gap-2">
-                <label className="w-full md:w-[9rem] text-gray-600 font-medium pt-2">
-                  파일업로드
+            {bulkApply.projectName && (
+              <div className="flex flex-col sm:flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4 sm:gap-2">
+                <label className="w-full md:w-[9rem] text-gray-600 font-medium">
+                  작업이름
                 </label>
-                <div className="flex-1 space-y-2">
-                  <CustomFileUpload
-                    onFileSelect={handleFileSelect}
-                    disabled={sendByEmail}
-                    placeholder="시안 파일을 선택해주세요"
-                    className="w-full md:w-[21.25rem] sm:w-[13rem]"
+                <div className="flex flex-col gap-1">
+                  <input
+                    type="text"
+                    value={projectName}
+                    onChange={(e) => {
+                      setProjectName(e.target.value);
+                      if (validationErrors.projectName) {
+                        setValidationErrors((prev) => ({
+                          ...prev,
+                          projectName: '',
+                        }));
+                      }
+                    }}
+                    className={`w-full md:w-[21.25rem] sm:w-[13rem] border border-solid shadow-none rounded px-4 h-[3rem] ${
+                      validationErrors.projectName
+                        ? 'border-red-500'
+                        : 'border-gray-300'
+                    }`}
+                    placeholder="작업 이름을 입력하세요"
                   />
-                  <div className="flex flex-col gap-2 items-start">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="sendByEmail"
-                        checked={sendByEmail}
-                        onChange={(e) => handleEmailSelect(e.target.checked)}
-                        className="w-4 h-4"
-                      />
-                      <label
-                        htmlFor="sendByEmail"
-                        className="text-sm text-gray-500"
-                      >
-                        이메일로 파일 보낼게요
-                      </label>
-                    </div>
-                    {sendByEmail && (
-                      <p className="text-xs text-gray-500 ml-6">
-                        banner114@hanmail.net로 시안을 보내드리겠습니다.
-                      </p>
-                    )}
-                  </div>
-                  {validationErrors.fileUpload && (
+                  {validationErrors.projectName && (
                     <span className="text-red-500 text-sm">
-                      {validationErrors.fileUpload}
+                      {validationErrors.projectName}
                     </span>
                   )}
                 </div>
               </div>
-            </div>
+            )}
           </section>
+
+          {/* 시안 업로드 UI - 일괄적용이 켜져있을 때만 표시 */}
+          {(bulkApply.fileUpload || bulkApply.emailMethod) && (
+            <section className="p-6 border rounded-lg shadow-sm flex flex-col gap-4 sm:p-2">
+              <div className="flex items-center justify-between mb-4 border-b-solid border-black border-b-[0.1rem] pb-4">
+                <h2 className="text-1.25 text-gray-2 font-bold">시안 업로드</h2>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="bulkFileUpload"
+                      checked={bulkApply.fileUpload}
+                      onChange={handleBulkFileUploadToggle}
+                      className="w-4 h-4"
+                    />
+                    <label
+                      htmlFor="bulkFileUpload"
+                      className="text-sm text-gray-600"
+                    >
+                      파일 일괄적용
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="bulkEmailMethod"
+                      checked={bulkApply.emailMethod}
+                      onChange={handleBulkEmailMethodToggle}
+                      className="w-4 h-4"
+                    />
+                    <label
+                      htmlFor="bulkEmailMethod"
+                      className="text-sm text-gray-600"
+                    >
+                      이메일 일괄적용
+                    </label>
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col sm:flex-col md:flex-row items-start justify-between gap-2 md:gap-4 sm:gap-2">
+                  <label className="w-full md:w-[9rem] text-gray-600 font-medium pt-2">
+                    파일업로드
+                  </label>
+                  <div className="flex-1 space-y-2">
+                    <CustomFileUpload
+                      onFileSelect={handleFileSelect}
+                      disabled={sendByEmail}
+                      placeholder="시안 파일을 선택해주세요"
+                      className="w-full md:w-[21.25rem] sm:w-[13rem]"
+                    />
+                    <div className="flex flex-col gap-2 items-start">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="sendByEmail"
+                          checked={sendByEmail}
+                          onChange={(e) => handleEmailSelect(e.target.checked)}
+                          className="w-4 h-4"
+                        />
+                        <label
+                          htmlFor="sendByEmail"
+                          className="text-sm text-gray-500"
+                        >
+                          이메일로 파일 보낼게요
+                        </label>
+                      </div>
+                      {sendByEmail && (
+                        <p className="text-xs text-gray-500 ml-6">
+                          banner114@hanmail.net로 시안을 보내드리겠습니다.
+                        </p>
+                      )}
+                    </div>
+                    {validationErrors.fileUpload && (
+                      <span className="text-red-500 text-sm">
+                        {validationErrors.fileUpload}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col sm:flex-col md:flex-row items-start justify-between gap-2 md:gap-4 sm:gap-2">
+                  <label className="w-full md:w-[9rem] text-gray-600 font-medium pt-2">
+                    파일업로드
+                  </label>
+                  <div className="flex-1 space-y-2">
+                    <CustomFileUpload
+                      onFileSelect={handleFileSelect}
+                      disabled={sendByEmail}
+                      placeholder="시안 파일을 선택해주세요"
+                      className="w-full md:w-[21.25rem] sm:w-[13rem]"
+                    />
+                    <div className="flex flex-col gap-2 items-start">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="sendByEmail"
+                          checked={sendByEmail}
+                          onChange={(e) => handleEmailSelect(e.target.checked)}
+                          className="w-4 h-4"
+                        />
+                        <label
+                          htmlFor="sendByEmail"
+                          className="text-sm text-gray-500"
+                        >
+                          이메일로 파일 보낼게요
+                        </label>
+                      </div>
+                      {sendByEmail && (
+                        <p className="text-xs text-gray-500 ml-6">
+                          banner114@hanmail.net로 시안을 보내드리겠습니다.
+                        </p>
+                      )}
+                    </div>
+                    {validationErrors.fileUpload && (
+                      <span className="text-red-500 text-sm">
+                        {validationErrors.fileUpload}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
           {/* 구별 카드 */}
           {visibleGroups.map((group) => (
             <section
@@ -807,70 +855,96 @@ function PaymentPageContent() {
               </div>
               {/* 구별 개별 입력 필드들 */}
               <div className="space-y-4 mb-4">
-                {/* 구별 작업이름 */}
-                <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
-                  <label className="w-full sm:w-[8rem] text-gray-600 font-medium text-sm">
-                    작업이름
-                  </label>
-                  <div className="flex-1">
-                    <input
-                      type="text"
-                      value={groupStates[group.district]?.projectName || ''}
-                      onChange={(e) =>
-                        handleGroupProjectNameChange(
-                          group.district,
-                          e.target.value
-                        )
-                      }
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                      placeholder="작업 이름을 입력하세요"
-                    />
+                {/* 일괄적용 정보 표시 */}
+                {(bulkApply.projectName ||
+                  bulkApply.fileUpload ||
+                  bulkApply.emailMethod) && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h4 className="text-sm font-semibold text-blue-800 mb-2">
+                      일괄적용 설정
+                    </h4>
+                    <div className="space-y-1 text-sm text-blue-700">
+                      {bulkApply.projectName && projectName && (
+                        <div>📝 작업이름: {projectName}</div>
+                      )}
+                      {bulkApply.fileUpload && selectedFile && (
+                        <div>📎 파일: {selectedFile.name}</div>
+                      )}
+                      {bulkApply.emailMethod && (
+                        <div>📧 이메일: banner114@hanmail.net</div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* 구별 시안 업로드 */}
-                <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
-                  <label className="w-full sm:w-[8rem] text-gray-600 font-medium text-sm">
-                    시안 업로드
-                  </label>
-                  <div className="flex-1 space-y-2">
-                    <CustomFileUpload
-                      onFileSelect={(file) =>
-                        handleGroupFileSelect(group.district, file)
-                      }
-                      disabled={groupStates[group.district]?.sendByEmail}
-                      placeholder="시안 파일을 선택해주세요"
-                      className="w-full"
-                    />
-                    <div className="flex items-center gap-2">
+                {/* 구별 작업이름 - 일괄적용이 꺼져있을 때만 표시 */}
+                {!bulkApply.projectName && (
+                  <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
+                    <label className="w-full sm:w-[8rem] text-gray-600 font-medium text-sm">
+                      작업이름
+                    </label>
+                    <div className="flex-1">
                       <input
-                        type="checkbox"
-                        id={`email-${group.district}`}
-                        checked={
-                          groupStates[group.district]?.sendByEmail || false
-                        }
+                        type="text"
+                        value={groupStates[group.district]?.projectName || ''}
                         onChange={(e) =>
-                          handleGroupEmailSelect(
+                          handleGroupProjectNameChange(
                             group.district,
-                            e.target.checked
+                            e.target.value
                           )
                         }
-                        className="w-4 h-4"
+                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                        placeholder="작업 이름을 입력하세요"
                       />
-                      <label
-                        htmlFor={`email-${group.district}`}
-                        className="text-sm text-gray-500"
-                      >
-                        이메일로 파일 보낼게요
-                      </label>
                     </div>
-                    {groupStates[group.district]?.sendByEmail && (
-                      <p className="text-xs text-gray-500 ml-6">
-                        banner114@hanmail.net로 시안을 보내드리겠습니다.
-                      </p>
-                    )}
                   </div>
-                </div>
+                )}
+
+                {/* 구별 시안 업로드 - 일괄적용이 꺼져있을 때만 표시 */}
+                {!bulkApply.fileUpload && !bulkApply.emailMethod && (
+                  <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
+                    <label className="w-full sm:w-[8rem] text-gray-600 font-medium text-sm">
+                      시안 업로드
+                    </label>
+                    <div className="flex-1 space-y-2">
+                      <CustomFileUpload
+                        onFileSelect={(file) =>
+                          handleGroupFileSelect(group.district, file)
+                        }
+                        disabled={groupStates[group.district]?.sendByEmail}
+                        placeholder="시안 파일을 선택해주세요"
+                        className="w-full"
+                      />
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id={`email-${group.district}`}
+                          checked={
+                            groupStates[group.district]?.sendByEmail || false
+                          }
+                          onChange={(e) =>
+                            handleGroupEmailSelect(
+                              group.district,
+                              e.target.checked
+                            )
+                          }
+                          className="w-4 h-4"
+                        />
+                        <label
+                          htmlFor={`email-${group.district}`}
+                          className="text-sm text-gray-500"
+                        >
+                          이메일로 파일 보낼게요
+                        </label>
+                      </div>
+                      {groupStates[group.district]?.sendByEmail && (
+                        <p className="text-xs text-gray-500 ml-6">
+                          banner114@hanmail.net로 시안을 보내드리겠습니다.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* 구별 아이템 목록 */}
