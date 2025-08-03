@@ -678,6 +678,7 @@ function PaymentPageContent() {
                 </label>
               </div>
             </div>
+            {/* 시안업로드 섹셕 */}
             {bulkApply.projectName && (
               <div className="flex flex-col sm:flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4 sm:gap-2">
                 <label className="w-full md:w-[9rem] text-gray-600 font-medium">
@@ -713,8 +714,8 @@ function PaymentPageContent() {
             )}
           </section>
 
-          {/* 시안 업로드 UI - 일괄적용이 켜져있을 때만 표시 */}
-          {(bulkApply.fileUpload || bulkApply.emailMethod) && (
+          {/* 시안 업로드 UI */}
+          {bulkApply.projectName && (
             <section className="p-6 border rounded-lg shadow-sm flex flex-col gap-4 sm:p-2">
               <div className="flex items-center justify-between mb-4 border-b-solid border-black border-b-[0.1rem] pb-4">
                 <h2 className="text-1.25 text-gray-2 font-bold">시안 업로드</h2>
@@ -751,6 +752,7 @@ function PaymentPageContent() {
                   </div>
                 </div>
               </div>
+
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col sm:flex-col md:flex-row items-start justify-between gap-2 md:gap-4 sm:gap-2">
                   <label className="w-full md:w-[9rem] text-gray-600 font-medium pt-2">
@@ -764,65 +766,6 @@ function PaymentPageContent() {
                       className="w-full md:w-[21.25rem] sm:w-[13rem]"
                     />
                     <div className="flex flex-col gap-2 items-start">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          id="sendByEmail"
-                          checked={sendByEmail}
-                          onChange={(e) => handleEmailSelect(e.target.checked)}
-                          className="w-4 h-4"
-                        />
-                        <label
-                          htmlFor="sendByEmail"
-                          className="text-sm text-gray-500"
-                        >
-                          이메일로 파일 보낼게요
-                        </label>
-                      </div>
-                      {sendByEmail && (
-                        <p className="text-xs text-gray-500 ml-6">
-                          banner114@hanmail.net로 시안을 보내드리겠습니다.
-                        </p>
-                      )}
-                    </div>
-                    {validationErrors.fileUpload && (
-                      <span className="text-red-500 text-sm">
-                        {validationErrors.fileUpload}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </section>
-          )}
-              <div className="flex flex-col gap-4">
-                <div className="flex flex-col sm:flex-col md:flex-row items-start justify-between gap-2 md:gap-4 sm:gap-2">
-                  <label className="w-full md:w-[9rem] text-gray-600 font-medium pt-2">
-                    파일업로드
-                  </label>
-                  <div className="flex-1 space-y-2">
-                    <CustomFileUpload
-                      onFileSelect={handleFileSelect}
-                      disabled={sendByEmail}
-                      placeholder="시안 파일을 선택해주세요"
-                      className="w-full md:w-[21.25rem] sm:w-[13rem]"
-                    />
-                    <div className="flex flex-col gap-2 items-start">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          id="sendByEmail"
-                          checked={sendByEmail}
-                          onChange={(e) => handleEmailSelect(e.target.checked)}
-                          className="w-4 h-4"
-                        />
-                        <label
-                          htmlFor="sendByEmail"
-                          className="text-sm text-gray-500"
-                        >
-                          이메일로 파일 보낼게요
-                        </label>
-                      </div>
                       {sendByEmail && (
                         <p className="text-xs text-gray-500 ml-6">
                           banner114@hanmail.net로 시안을 보내드리겠습니다.
@@ -901,7 +844,7 @@ function PaymentPageContent() {
                 )}
 
                 {/* 구별 시안 업로드 - 일괄적용이 꺼져있을 때만 표시 */}
-                {!bulkApply.fileUpload && !bulkApply.emailMethod && (
+                {!bulkApply.projectName && (
                   <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
                     <label className="w-full sm:w-[8rem] text-gray-600 font-medium text-sm">
                       시안 업로드
