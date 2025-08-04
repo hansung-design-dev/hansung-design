@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Nav from '@/src/components/layouts/nav';
 
-export default function PaymentCancelPage() {
+function PaymentCancelContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [cancelInfo, setCancelInfo] = useState<{
@@ -99,5 +99,13 @@ export default function PaymentCancelPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function PaymentCancelPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PaymentCancelContent />
+    </Suspense>
   );
 }
