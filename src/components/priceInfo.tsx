@@ -17,11 +17,13 @@ interface PricePolicy {
 interface PriceInfoProps {
   pricePolicies: PricePolicy[];
   districtName: string;
+  isLEDDisplay?: boolean;
 }
 
 export default function PriceInfo({
   pricePolicies,
   districtName,
+  isLEDDisplay = false,
 }: PriceInfoProps) {
   if (!pricePolicies || pricePolicies.length === 0) {
     return null;
@@ -59,6 +61,31 @@ export default function PriceInfo({
 
   // 새로운 API에서 받은 displayName을 사용하는 로직
   const getDistrictSpecificDisplay = () => {
+    // LED 전자게시대인 경우 displayName 사용
+    if (isLEDDisplay) {
+      const commercialPolicy = pricePolicies.find(
+        (policy) => policy.price_usage_type === 'default'
+      );
+      if (commercialPolicy && commercialPolicy.displayName) {
+        return (
+          <div className="text-sm text-gray-600 space-y-1">
+            <div>{commercialPolicy.displayName}</div>
+          </div>
+        );
+      }
+      // displayName이 없는 경우 fallback
+      if (commercialPolicy) {
+        return (
+          <div className="text-sm text-gray-600 space-y-1">
+            <div>
+              상업용: {commercialPolicy.total_price?.toLocaleString()}원
+            </div>
+          </div>
+        );
+      }
+      return null;
+    }
+
     // displayName이 있는 경우 (새로운 API 사용)
     if (pricePolicies.some((policy) => policy.displayName)) {
       return (

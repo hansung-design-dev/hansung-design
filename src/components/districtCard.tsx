@@ -98,7 +98,7 @@ export default function DistrictCard({
   if (isMaintenance) {
     return (
       <div className="flex items-center justify-center lg:pb-4">
-        <div className="w-full lg:h-[36rem] md:h-[26rem] bg-gray-4 rounded-[1.25rem] flex flex-col overflow-hidden opacity-60 cursor-not-allowed">
+        <div className="w-full lg:h-[36rem] md:h-[28rem] bg-gray-4 rounded-[1.25rem] flex flex-col overflow-hidden opacity-60 cursor-not-allowed">
           <div className="flex-1 flex flex-col lg:gap-[0.75rem] md:gap-[1.5rem] p-6 lg:py-8">
             <div className="flex flex-col lg:gap-[1.5rem] md:gap-[1.5rem] sm:gap-4">
               <div className="flex gap-[1rem]">
@@ -118,12 +118,7 @@ export default function DistrictCard({
                 <div className="lg:text-1 text-red md:text-0.75">
                   현재 준비 중입니다.
                 </div>
-                <div className="text-gray-14 text-0.875 font-500">
-                  <div className="sm:pt-0 lg:pt-0 md:pt-0">
-                    서비스 준비 중입니다. <br />
-                    조금만 기다려 주세요.
-                  </div>
-                </div>
+
                 {/* 준비중인 구에서도 문의전화와 입금계좌 정보 표시 */}
                 <div className="text-gray-14 pt-4">
                   <DistrictInfo
@@ -140,14 +135,17 @@ export default function DistrictCard({
               </div>
             </div>
           </div>
-          <div className="relative w-full h-[12rem]">
-            <Image
-              src={district.src}
-              alt={district.name}
-              fill
-              className="object-cover"
-            />
-          </div>
+          {/* LED 전자게시대에서만 하단 이미지 표시 */}
+          {isLEDDisplay && (
+            <div className="relative w-full h-[12rem]">
+              <Image
+                src={district.src}
+                alt={district.name}
+                fill
+                className="object-cover"
+              />
+            </div>
+          )}
         </div>
       </div>
     );
@@ -193,6 +191,17 @@ export default function DistrictCard({
             </div>
           </div>
         </div>
+        {/* LED 전자게시대에서만 하단 이미지 표시 */}
+        {isLEDDisplay && (
+          <div className="relative w-full h-[12rem]">
+            <Image
+              src={district.src}
+              alt={district.name}
+              fill
+              className="object-cover"
+            />
+          </div>
+        )}
       </Link>
     </div>
   );

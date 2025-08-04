@@ -69,6 +69,7 @@ export async function GET(request: NextRequest) {
         .from('region_gu')
         .select('id, name, code, logo_image_url, phone_number')
         .eq('name', districtName)
+        .limit(1)
         .single();
 
       if (regionError) {
@@ -104,6 +105,7 @@ export async function GET(request: NextRequest) {
             )
             .eq('region_gu_id', regionData.id)
             .eq('display_type_id', displayTypeData.id)
+            .limit(1)
             .single();
 
           if (!bankError && bankAccountData) {

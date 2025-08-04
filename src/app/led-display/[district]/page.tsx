@@ -118,16 +118,16 @@ export default function LEDDisplayPage() {
       isAllDistricts
         ? {
             id: 0,
-            name: '전체 보기',
+            name: '전체보기',
             code: 'all',
-            icon: '/images/district-icon/all.svg',
+            icon: '/svg/all.svg',
             description: '모든 자치구',
             count: 0,
             size: '',
             led_count: 0,
             banner_count: 0,
             sizeOfPeople: '',
-            logo: '/images/district-icon/all.svg',
+            logo: '/svg/all.svg',
             src: '',
           }
         : bannerDistricts.find((d) => d.code === district),
@@ -145,6 +145,7 @@ export default function LEDDisplayPage() {
     code: string;
     logo_image_url?: string;
     panel_status?: string;
+    phone_number?: string;
   } | null>(null);
 
   const [dropdownOptions, setDropdownOptions] = useState<DropdownOption[]>([
@@ -193,21 +194,23 @@ export default function LEDDisplayPage() {
         name: item.nickname || item.address,
         address: item.address,
         nickname: item.nickname,
-        neighborhood: item.region_dong.name,
+        neighborhood: item.region_dong?.name || '',
         period: '상시',
         price: price,
-        size: `${item.led_panel_details.panel_width}x${item.led_panel_details.panel_height}`,
-        faces: item.led_panel_details.max_banners,
+        size: item.led_panel_details
+          ? `${item.led_panel_details.panel_width}x${item.led_panel_details.panel_height}`
+          : '0x0',
+        faces: item.led_panel_details?.max_banners || 0,
         latitude: item.latitude || 37.5665, // API에서 받아온 실제 좌표 사용
         longitude: item.longitude || 126.978,
         photo_url: item.photo_url,
         status: item.panel_status,
-        panel_width: item.led_panel_details.panel_width,
-        panel_height: item.led_panel_details.panel_height,
+        panel_width: item.led_panel_details?.panel_width || 0,
+        panel_height: item.led_panel_details?.panel_height || 0,
         panel_code: item.panel_code,
         panel_type: item.panel_type,
-        exposure_count: item.led_panel_details.exposure_count,
-        max_banners: item.led_panel_details.max_banners,
+        exposure_count: item.led_panel_details?.exposure_count || 0,
+        max_banners: item.led_panel_details?.max_banners || 0,
         slot_width_px: firstSlot?.slot_width_px || 0,
         slot_height_px: firstSlot?.slot_height_px || 0,
         total_price: totalPrice,
@@ -234,21 +237,21 @@ export default function LEDDisplayPage() {
         if (result.success && result.data) {
           const options = [
             { id: 0, option: '전체보기' },
-            ...result.data.map(
-              (
-                district: { name: string; panel_status?: string },
-                index: number
-              ) => ({
-                id: index + 1,
-                option: district.name,
-                panel_status: district.panel_status, // 상태 정보를 별도로 저장
-              })
-            ),
+            ...result.data.map((district: { name: string }, index: number) => ({
+              id: index + 1,
+              option: district.name,
+            })),
           ];
           setDropdownOptions(options);
         }
       } catch (error) {
         console.error('Failed to fetch available districts:', error);
+        // 에러가 발생해도 기본 옵션 설정
+        setDropdownOptions([
+          { id: 0, option: '전체보기' },
+          { id: 1, option: '관악구' },
+          { id: 2, option: '마포구' },
+        ]);
       }
     }
 
@@ -324,46 +327,71 @@ export default function LEDDisplayPage() {
         console.log('🔍 Using district name:', districtName);
 
         // 1. LED 데이터 가져오기
-        const data = isAllDistricts
-          ? await getAllLEDDisplays()
-          : await getLEDDisplaysByDistrict(districtName);
+        try {
+          const data = isAllDistricts
+            ? await getAllLEDDisplays()
+            : await getLEDDisplaysByDistrict(districtName);
 
-        if (data && data.length > 0) {
-          const transformed = transformLEDData(data);
-          setBillboards(transformed);
-        } else if (isAllDistricts) {
-          setBillboards([]);
-        } else {
-          // 실제 데이터가 없으면 준비 중으로 처리
+          if (data && data.length > 0) {
+            const transformed = transformLEDData(data);
+            setBillboards(transformed);
+          } else {
+            // 데이터가 없으면 빈 배열로 설정
+            setBillboards([]);
+          }
+        } catch (error) {
+          console.error('Failed to fetch LED data:', error);
+          // 에러가 발생해도 빈 배열로 설정하여 페이지가 로드되도록 함
           setBillboards([]);
         }
 
-        // 3. 구 정보와 계좌번호 정보 가져오기 (전체보기가 아닌 경우에만)
+        // 2. 구 정보와 계좌번호 정보 가져오기 (전체보기가 아닌 경우에만)
         if (!isAllDistricts && districtName) {
-          const districtDataResult = await getDistrictData(districtName);
-          if (districtDataResult) {
-            setDistrictData({
-              id: districtDataResult.id,
-              name: districtDataResult.name,
-              code: districtDataResult.code,
-              logo_image_url: districtDataResult.logo_image_url,
-              panel_status: districtDataResult.panel_status,
-            });
-            setBankInfo(districtDataResult.bank_accounts);
-          } else {
-            // API에서 데이터를 가져오지 못한 경우에도 기본 정보 생성
+          try {
+            const districtDataResult = await getDistrictData(districtName);
+            if (districtDataResult) {
+              setDistrictData({
+                id: districtDataResult.id,
+                name: districtDataResult.name,
+                code: districtDataResult.code,
+                logo_image_url: districtDataResult.logo_image_url,
+                panel_status: 'active', // 임시로 active 설정, 나중에 billboards 상태에 따라 업데이트
+              });
+              console.log(
+                '🔍 Bank info from API:',
+                districtDataResult.bank_accounts
+              );
+              setBankInfo(districtDataResult.bank_accounts);
+            } else {
+              // API에서 데이터를 가져오지 못한 경우에도 기본 정보 생성
+              setDistrictData({
+                id: '0',
+                name: districtName,
+                code: district,
+                logo_image_url: isAllDistricts
+                  ? '/svg/all.svg'
+                  : `/images/district-icon/${district}-gu.png`,
+                panel_status: 'active', // 임시로 active 설정
+              });
+            }
+          } catch (error) {
+            console.warn('Failed to fetch district data:', error);
+            // 에러가 발생해도 기본 정보 생성
             setDistrictData({
               id: '0',
               name: districtName,
               code: district,
-              logo_image_url: `/images/district-icon/${district}-gu.png`,
-              panel_status: 'maintenance', // 기본값으로 maintenance 설정
+              logo_image_url: isAllDistricts
+                ? '/svg/all.svg'
+                : `/images/district-icon/${district}-gu.png`,
+              panel_status: 'active', // 임시로 active 설정
             });
           }
         }
       } catch (err) {
         console.error('❌ Error fetching LED data:', err);
         setError(`데이터를 불러오는 중 오류가 발생했습니다: ${err}`);
+        // 에러가 발생해도 로딩 상태를 해제하여 페이지가 표시되도록 함
       } finally {
         setLoading(false);
       }
@@ -373,6 +401,21 @@ export default function LEDDisplayPage() {
       fetchLEDData();
     }
   }, [district, districtObj, isAllDistricts]);
+
+  // billboards 상태가 변경될 때마다 panel_status 업데이트
+  useEffect(() => {
+    if (districtData && !isAllDistricts) {
+      const hasLEDData = billboards.length > 0;
+      setDistrictData((prev) =>
+        prev
+          ? {
+              ...prev,
+              panel_status: hasLEDData ? 'active' : 'maintenance',
+            }
+          : prev
+      );
+    }
+  }, [billboards.length, isAllDistricts]); // districtData 의존성 제거
 
   if (loading) {
     return (
@@ -410,7 +453,7 @@ export default function LEDDisplayPage() {
     );
   }
 
-  if (error) {
+  if (error && billboards.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-lg text-red-500">
@@ -430,19 +473,53 @@ export default function LEDDisplayPage() {
               name: districtData.name,
               code: districtData.code,
               description: `${districtData.name} LED 전자게시대`,
-              count: 0,
+              count: billboards.length,
               logo:
                 districtData.logo_image_url ||
-                `/images/district-icon/${districtData.code}-gu.png`,
+                (isAllDistricts
+                  ? '/svg/all.svg'
+                  : `/images/district-icon/${districtData.code}-gu.png`),
               src: '/images/led/landing.png',
+              phone_number: districtData.phone_number,
             }
-          : districtObj
+          : {
+              id: 0,
+              name: district,
+              code: district,
+              description: `${district} LED 전자게시대`,
+              count: billboards.length,
+              logo: isAllDistricts
+                ? '/svg/all.svg'
+                : `/images/district-icon/${district}-gu.png`,
+              src: '/images/led/landing.png',
+              phone_number: undefined,
+            }
       }
       billboards={billboards}
-      dropdownOptions={dropdownOptions}
+      dropdownOptions={
+        dropdownOptions.length > 0
+          ? dropdownOptions
+          : [
+              { id: 0, option: '전체보기' },
+              { id: 1, option: '관악구' },
+              { id: 2, option: '마포구' },
+            ]
+      }
       defaultView="gallery"
-      districtData={districtData}
-      bankInfo={bankInfo}
+      districtData={
+        districtData || {
+          id: '0',
+          name: district,
+          code: district,
+          logo_image_url: isAllDistricts
+            ? '/svg/all.svg'
+            : `/images/district-icon/${district}-gu.png`,
+          panel_status: 'active',
+          phone_number: undefined,
+        }
+      }
+      bankInfo={bankInfo || null}
+      pricePolicies={[]}
     />
   );
 }

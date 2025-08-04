@@ -35,6 +35,7 @@ export default function LEDDisplayDetailPage({
   defaultView = 'gallery',
   districtData,
   bankInfo,
+  pricePolicies,
 }: {
   district: string;
   districtObj: District | undefined;
@@ -62,7 +63,24 @@ export default function LEDDisplayDetailPage({
       name: string;
     };
   } | null;
+  pricePolicies?: {
+    id: string;
+    price_usage_type:
+      | 'default'
+      | 'public_institution'
+      | 're_order'
+      | 'self_install'
+      | 'reduction_by_admin'
+      | 'rent-place';
+    tax_price: number;
+    road_usage_fee: number;
+    advertising_fee: number;
+    total_price: number;
+    displayName?: string;
+  }[];
 }) {
+  const isAllDistrictsView = district === 'all';
+
   const [selectedOption, setSelectedOption] = useState<{
     id: number;
     option: string;
@@ -74,6 +92,10 @@ export default function LEDDisplayDetailPage({
         (option) => option.option === districtObj.name
       );
       return matchingOption || null;
+    }
+    // 전체보기 페이지인 경우 기본값 설정
+    if (isAllDistrictsView) {
+      return { id: 0, option: '전체보기' };
     }
     return null;
   });
@@ -96,10 +118,21 @@ export default function LEDDisplayDetailPage({
     console.log('🔍 LED Detail - dropdownOptions:', dropdownOptions);
     console.log('🔍 LED Detail - selectedOption:', selectedOption);
 
-    if (districtObj?.name && dropdownOptions.length > 0) {
-      const matchingOption = dropdownOptions.find(
-        (option) => option.option === districtObj.name
-      );
+    if (dropdownOptions.length > 0) {
+      let matchingOption = null;
+
+      // 전체보기 페이지인 경우
+      if (isAllDistrictsView) {
+        matchingOption = dropdownOptions.find(
+          (option) => option.option === '전체보기'
+        );
+      } else if (districtObj?.name) {
+        // 특정 구 페이지인 경우
+        matchingOption = dropdownOptions.find(
+          (option) => option.option === districtObj.name
+        );
+      }
+
       console.log('🔍 LED Detail - matchingOption:', matchingOption);
 
       if (
@@ -113,7 +146,13 @@ export default function LEDDisplayDetailPage({
         setSelectedOption(matchingOption);
       }
     }
-  }, [dropdownOptions, districtObj?.name, selectedOption, districtObj]);
+  }, [
+    dropdownOptions,
+    districtObj?.name,
+    selectedOption,
+    districtObj,
+    isAllDistrictsView,
+  ]);
 
   // selectedIds 상태 변화 추적 (디버깅용 - 주석 처리)
   // useEffect(() => {
@@ -139,8 +178,6 @@ export default function LEDDisplayDetailPage({
   //     console.log('🔍 선택된 아이템 없음');
   //   }
   // }, [selectedIds, billboards]);
-
-  const isAllDistrictsView = district === 'all';
 
   // 구 이름을 코드로 변환하는 함수
   const getDistrictCode = (districtName: string): string => {
@@ -177,12 +214,15 @@ export default function LEDDisplayDetailPage({
   };
 
   const filteredByDistrict =
-    isAllDistrictsView && selectedOption
+    isAllDistrictsView && selectedOption && selectedOption.option !== '전체보기'
       ? billboards.filter((item) => item.district === selectedOption.option)
       : billboards;
 
   // 디버깅: 원본 데이터 확인
-  // console.log('🔍 원본 billboards 데이터:', billboards);
+  console.log('🔍 원본 billboards 데이터:', billboards);
+  console.log('🔍 isAllDistrictsView:', isAllDistrictsView);
+  console.log('🔍 selectedOption:', selectedOption);
+  console.log('🔍 filteredByDistrict:', filteredByDistrict);
 
   // 상하반기에 따른 필터링
   const filteredByHalfPeriod = filteredByDistrict.map((item) => ({
@@ -196,6 +236,8 @@ export default function LEDDisplayDetailPage({
         a.district.localeCompare(b.district)
       )
     : filteredByHalfPeriod;
+
+  console.log('🔍 filteredBillboards:', filteredBillboards);
 
   // LED 전용 구분 컬럼에 표시할 값 계산 함수
   const getLEDPanelTypeLabel = (panelType?: string) => {
@@ -228,8 +270,8 @@ export default function LEDDisplayDetailPage({
     const districtName = item.option;
     console.log('🔍 Selected district name:', districtName);
 
-    // 개별 구 페이지에서 다른 구를 선택했을 때 해당 구의 페이지로 이동
-    if (!isAllDistrictsView && item.option !== '전체보기') {
+    // 구를 선택했을 때 해당 구의 페이지로 이동
+    if (item.option !== '전체보기') {
       const districtCode = getDistrictCode(districtName);
       console.log(
         '🔍 Converting district name to code:',
@@ -620,8 +662,11 @@ export default function LEDDisplayDetailPage({
             {(districtObj || selectedOption || districtData) && (
               <Image
                 src={
-                  districtData?.logo_image_url ||
-                  `/images/district-icon/${district}-gu.png`
+                  selectedOption?.option === '전체보기' ||
+                  districtObj?.name === '전체보기'
+                    ? '/svg/all.svg'
+                    : districtData?.logo_image_url ||
+                      `/images/district-icon/${district}-gu.png`
                 }
                 alt={
                   districtData?.name ||
@@ -635,10 +680,13 @@ export default function LEDDisplayDetailPage({
               />
             )}
             <h2 className="text-2.25 font-900 font-gmarket inline-block align-middle">
-              {districtData?.name ||
-                selectedOption?.option ||
-                districtObj?.name ||
-                '도봉구'}
+              {selectedOption?.option === '전체보기' ||
+              districtObj?.name === '전체보기'
+                ? '전체보기'
+                : districtData?.name ||
+                  selectedOption?.option ||
+                  districtObj?.name ||
+                  '도봉구'}
             </h2>
           </div>
 
@@ -647,6 +695,8 @@ export default function LEDDisplayDetailPage({
             districtName={districtObj?.name}
             flexRow={true}
             isLEDDisplay={true}
+            pricePolicies={pricePolicies}
+            phoneNumber={districtObj?.phone_number}
           />
         </div>
         {/* 상하반기 탭 - 개별 구 페이지에서만 표시

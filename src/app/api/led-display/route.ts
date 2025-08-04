@@ -20,7 +20,6 @@ export interface LEDDisplayData {
   region_dong: {
     id: string;
     name: string;
-    district_code: string;
   };
   led_panel_details: {
     id: string;
@@ -110,10 +109,9 @@ async function getLEDDisplaysByDistrict(districtName: string) {
           name,
           code
         ),
-        region_dong!inner (
+        region_dong (
           id,
-          name,
-          district_code
+          name
         )
       `
       )
@@ -143,68 +141,67 @@ async function getLEDDisplaysByDistrict(districtName: string) {
   }
 }
 
-// 모든 구의 LED Display 데이터 조회
-async function getAllLEDDisplays() {
-  try {
-    const displayType = await getLEDDisplayTypeId();
+// // 모든 구의 LED Display 데이터 조회
+// async function getAllLEDDisplays() {
+//   try {
+//     const displayType = await getLEDDisplayTypeId();
 
-    const { data, error } = await supabase
-      .from('panels')
-      .select(
-        `
-        *,
-        led_panel_details (
-          id,
-          exposure_count,
-          panel_width,
-          panel_height,
-          max_banners
-        ),
-        led_slots (
-          id,
-          slot_number,
-          slot_name,
-          slot_width_px,
-          slot_height_px,
-          position_x,
-          position_y,
-          total_price,
-          tax_price,
-          advertising_fee,
-          road_usage_fee,
-          administrative_fee,
-          price_unit,
-          panel_slot_status,
-          notes
-        ),
-        region_gu!inner (
-          id,
-          name,
-          code
-        ),
-        region_dong!inner (
-          id,
-          name,
-          district_code
-        )
-      `
-      )
-      .eq('display_type_id', displayType.id)
-      .eq('panel_status', 'active')
-      .order('panel_code', { ascending: true });
+//     const { data, error } = await supabase
+//       .from('panels')
+//       .select(
+//         `
+//         *,
+//         led_panel_details (
+//           id,
+//           exposure_count,
+//           panel_width,
+//           panel_height,
+//           max_banners
+//         ),
+//         led_slots (
+//           id,
+//           slot_number,
+//           slot_name,
+//           slot_width_px,
+//           slot_height_px,
+//           position_x,
+//           position_y,
+//           total_price,
+//           tax_price,
+//           advertising_fee,
+//           road_usage_fee,
+//           administrative_fee,
+//           price_unit,
+//           panel_slot_status,
+//           notes
+//         ),
+//         region_gu!inner (
+//           id,
+//           name,
+//           code
+//         ),
+//         region_dong (
+//           id,
+//           name
+//         )
+//       `
+//       )
+//       .eq('display_type_id', displayType.id)
+//       .eq('panel_status', 'active')
+//       .order('panel_code', { ascending: true });
 
-    if (error) {
-      throw error;
-    }
+//     if (error) {
+//       throw error;
+//     }
 
-    return NextResponse.json({
-      success: true,
-      data: data as LEDDisplayData[],
-    });
-  } catch (error) {
-    throw error;
-  }
-}
+//     return NextResponse.json({
+//       success: true,
+//       data: data as LEDDisplayData[],
+//     });
+//   } catch (error) {
+//     throw error;
+//   }
+// }
 
 // 구별 LED Display 개수 조회 (새로운 region_gu_display_types 테이블 활용)
 async function getLEDDisplayCountsByDistrict() {
@@ -238,6 +235,30 @@ async function getLEDDisplayCountsByDistrict() {
   }
 }
 
+// 사용 가능한 구 목록 조회
+async function getAvailableDistricts() {
+  try {
+    const { data, error } = await supabase
+      .from('region_gu')
+      .select('name')
+      .eq('display_type_id', '3119f6ed-81e4-4d62-b785-6a33bc7928f9')
+      .in('is_active', ['true', 'maintenance'])
+      .order('name', { ascending: true });
+
+    if (error) {
+      throw error;
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: data || [],
+    });
+  } catch (error) {
+    console.error('❌ Error in getAvailableDistricts:', error);
+    throw error;
+  }
+}
+
 // GET 요청 처리
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -250,12 +271,14 @@ export async function GET(request: NextRequest) {
     switch (action) {
       case 'getAllDistrictsData':
         return await getAllDistrictsData();
+      case 'getAvailableDistricts':
+        return await getAvailableDistricts();
       case 'getCounts':
         return await getLEDDisplayCountsByDistrict();
       case 'getByDistrict':
         return await getLEDDisplaysByDistrict(district!);
       case 'getAll':
-        return await getAllLEDDisplays();
+        return await getAllDistrictsData();
       default:
         return NextResponse.json(
           { success: false, error: 'Invalid action' },
@@ -274,112 +297,81 @@ export async function GET(request: NextRequest) {
 // 새로운 통합 API - 모든 구 데이터를 한번에 가져오기 (최적화된 버전)
 async function getAllDistrictsData() {
   try {
-    console.log(
-      '🔍 Fetching all districts data for LED display (new table structure)...'
-    );
+    console.log('🔍 Fetching LED display cache data...');
 
-    // 1. region_gu 테이블에서 led_display가 활성화된 구와 준비중인 구 목록 가져오기
-    const { data: activeRegions, error: regionError } = await supabase
-      .from('region_gu')
+    // 1. 캐시 테이블에서 LED 전자게시대 구별 카드 정보 가져오기
+    const { data: cacheData, error: cacheError } = await supabase
+      .from('led_display_cache')
       .select('*')
-      .eq('display_type_id', '3119f6ed-81e4-4d62-b785-6a33bc7928f9')
-      .in('is_active', ['true', 'maintenance']);
+      .order('display_order', { ascending: true });
 
-    if (regionError) {
-      console.error('❌ Error fetching active regions:', regionError);
-      throw regionError;
+    if (cacheError) {
+      console.error('❌ Error fetching cache data:', cacheError);
+      throw cacheError;
     }
 
-    // 2. regions 데이터
-    const regions = activeRegions || [];
+    console.log('🔍 Cache data found:', cacheData?.length || 0);
 
-    // 3. 구별 카드 순서 변경: 가나다순 정렬 (LED는 모든 구가 포함되므로 가나다순 유지)
-    const sortedRegions = regions.sort((a, b) => {
-      // 먼저 상태별로 정렬 (true -> maintenance)
-      if (a.is_active !== b.is_active) {
-        return a.is_active === 'true' ? -1 : 1;
-      }
-      // 같은 상태 내에서는 가나다순
-      return a.name.localeCompare(b.name);
-    });
+    // 2. 캐시 데이터를 API 응답 형식으로 변환
+    const processedDistricts =
+      cacheData?.map((cache) => {
+        // 가격 정책 정보 변환
+        const pricePolicies = cache.price_summary
+          ? [
+              {
+                id: `cache-${cache.region_gu_id}`,
+                price_usage_type: 'default',
+                tax_price: 0,
+                road_usage_fee: 0,
+                advertising_fee: 0,
+                total_price: 0,
+                displayName: cache.price_summary,
+              },
+            ]
+          : [];
 
-    console.log('🔍 Active regions found:', sortedRegions?.length || 0);
-
-    // 4. 각 활성화된 구별로 데이터 처리
-    const processedDistricts = await Promise.all(
-      sortedRegions.map(async (region) => {
-        // 가격 정책 정보 조회
-        let pricePolicies: {
-          id: string;
-          price_usage_type: string;
-          tax_price: number;
-          road_usage_fee: number;
-          advertising_fee: number;
-          total_price: number;
-        }[] = [];
-
-        const { data: ledPricePolicy } = await supabase
-          .from('led_display_price_policy')
-          .select('*')
-          .eq('panel_id', region.id)
-          .limit(1);
-
-        if (ledPricePolicy && ledPricePolicy.length > 0) {
-          pricePolicies = ledPricePolicy.map((policy) => ({
-            id: policy.id,
-            price_usage_type: policy.price_usage_type,
-            tax_price: policy.tax_price,
-            road_usage_fee: policy.road_usage_fee,
-            advertising_fee: policy.advertising_fee,
-            total_price: policy.total_price,
-          }));
-        }
-
-        // 계좌번호 정보 가져오기
-        const { data: bankData } = await supabase
-          .from('bank_accounts')
-          .select(
-            `
-            *,
-            region_gu!inner(
-              id,
-              name
-            ),
-            display_types!inner(
-              id,
-              name
-            )
-          `
-          )
-          .eq('region_gu_id', region.id)
-          .eq('display_types.name', 'led_display')
-          .single();
+        // 입금계좌 정보 변환
+        const bank_accounts = cache.bank_name
+          ? {
+              id: `cache-${cache.region_gu_id}`,
+              bank_name: cache.bank_name,
+              account_number: cache.account_number,
+              depositor: cache.depositor,
+              region_gu: {
+                id: cache.region_gu_id,
+                name: cache.region_name,
+              },
+              display_types: {
+                id: '3119f6ed-81e4-4d62-b785-6a33bc7928f9',
+                name: 'led_display',
+              },
+            }
+          : null;
 
         return {
-          id: region.id,
-          name: region.name,
-          code: region.code,
-          logo_image_url: region.logo_image_url,
-          panel_status:
-            region.is_active === 'maintenance' ? 'maintenance' : 'active',
-          bank_accounts: bankData,
+          id: cache.region_gu_id,
+          name: cache.region_name,
+          code: cache.region_code,
+          logo_image_url: cache.logo_image_url,
+          image: cache.district_image_url, // 구별 대표이미지
+          panel_status: cache.panel_status || 'active', // 캐시에서 panel_status 가져오기
+          phone_number: cache.phone_number,
+          bank_accounts: bank_accounts,
           pricePolicies: pricePolicies,
+          period: {
+            first_half_from: '2024-01-01',
+            first_half_to: '2024-12-31',
+            second_half_from: '2024-01-01',
+            second_half_to: '2024-12-31',
+          },
         };
-      })
-    );
+      }) || [];
 
-    // 5. 카운트 정보 가져오기
+    // 3. 카운트 정보 (캐시에서 panel_count 사용)
     const countMap: Record<string, number> = {};
-    for (const region of sortedRegions) {
-      const { count } = await supabase
-        .from('panels')
-        .select('*', { count: 'exact', head: true })
-        .eq('region_gu_id', region.id)
-        .eq('display_type_id', '3119f6ed-81e4-4d62-b785-6a33bc7928f9')
-        .eq('panel_status', 'active');
-
-      countMap[region.name] = count || 0;
-    }
+    cacheData?.forEach((cache) => {
+      countMap[cache.region_name] = cache.panel_count || 0;
+    });
 
     console.log('🔍 Processed districts data:', processedDistricts.length);
     console.log('🔍 Counts data:', countMap);

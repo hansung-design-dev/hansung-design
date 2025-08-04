@@ -158,9 +158,7 @@ export default function BannerDisplayPage() {
                 : `${district.name} 현수막게시대`,
               count:
                 (data.counts as Record<string, number>)[district.name] || 0,
-              logo:
-                district.logo_image_url ||
-                `/images/district-icon/${district.code}-gu.png`,
+              logo: `/images/district-icon/${district.code}-gu.png`,
               src: '/images/banner-display/landing.png',
               panel_status: district.panel_status,
               period: district.period || null,

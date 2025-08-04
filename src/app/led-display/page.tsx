@@ -16,6 +16,7 @@ interface District {
   logo: string;
   src: string;
   code: string;
+  phone_number?: string;
   period?: {
     first_half_from: string;
     first_half_to: string;
@@ -37,6 +38,21 @@ interface District {
     };
   } | null;
   panel_status?: string;
+  pricePolicies?: {
+    id: string;
+    price_usage_type:
+      | 'default'
+      | 'public_institution'
+      | 're_order'
+      | 'self_install'
+      | 'reduction_by_admin'
+      | 'rent-place';
+    tax_price: number;
+    road_usage_fee: number;
+    advertising_fee: number;
+    total_price: number;
+    displayName?: string;
+  }[];
 }
 
 export default function LEDDisplayPage() {
@@ -69,13 +85,32 @@ export default function LEDDisplayPage() {
         }
 
         // 통합 API 호출 - 모든 데이터를 한번에 가져오기
-        const response = await fetch(
-          '/api/led-display?action=getAllDistrictsData'
-        );
-        const result = await response.json();
+        console.log('🔍 Fetching LED display data from API...');
 
-        if (!result.success) {
-          throw new Error(result.error || 'Failed to fetch district data');
+        let result;
+        try {
+          const response = await fetch('/api/led-display?action=getAll', {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+
+          console.log('🔍 Response status:', response.status);
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          result = await response.json();
+          console.log('🔍 API response received:', result);
+
+          if (!result.success) {
+            throw new Error(result.error || 'Failed to fetch district data');
+          }
+        } catch (error) {
+          console.error('❌ API call failed:', error);
+          throw error;
         }
 
         const data = result.data;
@@ -88,6 +123,7 @@ export default function LEDDisplayPage() {
             name: string;
             code: string;
             logo_image_url?: string;
+            image?: string;
             panel_status?: string;
             period?: {
               first_half_from: string;
@@ -109,6 +145,22 @@ export default function LEDDisplayPage() {
                 name: string;
               };
             } | null;
+            phone_number?: string;
+            pricePolicies?: {
+              id: string;
+              price_usage_type:
+                | 'default'
+                | 'public_institution'
+                | 're_order'
+                | 'self_install'
+                | 'reduction_by_admin'
+                | 'rent-place';
+              tax_price: number;
+              road_usage_fee: number;
+              advertising_fee: number;
+              total_price: number;
+              displayName?: string;
+            }[];
           }) => {
             // 백엔드에서 받은 panel_status를 그대로 사용
             const isMaintenance = district.panel_status === 'maintenance';
@@ -125,10 +177,27 @@ export default function LEDDisplayPage() {
               logo:
                 district.logo_image_url ||
                 `/images/district-icon/${district.code}-gu.png`,
-              src: '/images/led/landing.png',
+              src: district.image || '/images/led/landing.png',
               panel_status: district.panel_status || 'active',
               period: district.period || null,
               bankInfo: district.bank_accounts || null,
+              phone_number: district.phone_number,
+              pricePolicies:
+                district.pricePolicies?.map((policy) => ({
+                  id: policy.id,
+                  price_usage_type: policy.price_usage_type as
+                    | 'default'
+                    | 'public_institution'
+                    | 're_order'
+                    | 'self_install'
+                    | 'reduction_by_admin'
+                    | 'rent-place',
+                  tax_price: policy.tax_price,
+                  road_usage_fee: policy.road_usage_fee,
+                  advertising_fee: policy.advertising_fee,
+                  total_price: policy.total_price,
+                  displayName: policy.displayName,
+                })) || [],
             };
           }
         );

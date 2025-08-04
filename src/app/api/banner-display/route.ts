@@ -127,7 +127,6 @@ interface ProcessedDistrictData {
   id: string;
   name: string;
   code: string;
-  logo_image_url: string | null;
   phone_number?: string;
   display_type_id: string;
   panel_status: string;
@@ -737,7 +736,6 @@ async function getAllDistrictsData() {
       id: region.id,
       name: region.name,
       code: region.code,
-      logo_image_url: region.logo_image_url,
       phone_number: region.phone_number,
       display_type_id: region.display_type_id,
       is_active: region.is_active,
@@ -924,7 +922,6 @@ async function getAllDistrictsData() {
           id: region.id,
           name: region.name,
           code: region.code,
-          logo_image_url: region.logo_image_url,
           phone_number: region.phone_number,
           display_type_id: (await getBannerDisplayTypeId()).id,
           panel_status: 'active',
@@ -1321,7 +1318,6 @@ async function getOptimizedDistrictsData() {
         id: item.region_id,
         name: item.region_name,
         code: item.region_code,
-        logo_image_url: item.logo_image_url,
         phone_number: item.phone_number,
         display_type_id: '8178084e-1f13-40bc-8b90-7b8ddc58bf64',
         panel_status: 'active',
@@ -1435,7 +1431,6 @@ async function getUltraFastDistrictsData() {
         id: item.region_id,
         name: item.region_name,
         code: item.region_code,
-        logo_image_url: item.logo_image_url,
         phone_number: item.phone_number,
         display_type_id: '8178084e-1f13-40bc-8b90-7b8ddc58bf64',
         panel_status: 'active',

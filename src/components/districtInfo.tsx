@@ -133,8 +133,8 @@ export default function DistrictInfo({
         <BankInfo flexRow={flexRow} bankInfo={bankInfo} />
       </div>
 
-      {/* 가격정보 (현수막게시대의 경우에만) */}
-      {!isLEDDisplay && pricePolicies && pricePolicies.length > 0 && (
+      {/* 가격정보 (LED 전자게시대와 현수막게시대 모두 표시) */}
+      {pricePolicies && pricePolicies.length > 0 && (
         <div className="border-t border-gray-200 pt-2">
           <div className="text-0.875 font-medium text-gray-500 mb-1">
             가격정보
@@ -142,6 +142,7 @@ export default function DistrictInfo({
           <PriceInfo
             pricePolicies={pricePolicies}
             districtName={districtName || ''}
+            isLEDDisplay={isLEDDisplay}
           />
         </div>
       )}
