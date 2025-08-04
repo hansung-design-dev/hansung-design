@@ -8,7 +8,9 @@ import { useProfile } from '@/src/contexts/profileContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CartItem } from '@/src/contexts/cartContext';
 import CustomFileUpload from '@/src/components/ui/CustomFileUpload';
-import Image from 'next/image';
+// import Image from 'next/image';
+import PaymentMethodSelector from '@/src/components/payment/PaymentMethodSelector';
+import { processPayment } from '@/src/lib/payment';
 
 // UserProfile 타입 정의
 interface UserProfile {
@@ -59,10 +61,10 @@ function PaymentPageContent() {
 
   const [selectedItems, setSelectedItems] = useState<CartItem[]>([]);
   const [groupedItems, setGroupedItems] = useState<GroupedCartItem[]>([]);
-  const [sendByEmail, setSendByEmail] = useState(false);
   const [isApprovedOrder, setIsApprovedOrder] = useState(false);
   const [isAgreedCaution, setIsAgreedCaution] = useState(false);
   const [projectName, setProjectName] = useState('');
+  const [tempProjectName, setTempProjectName] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [validationErrors, setValidationErrors] = useState<{
     projectName: string;
@@ -97,9 +99,9 @@ function PaymentPageContent() {
 
   // 결제 모달 상태
   const [paymentModalOpen, setPaymentModalOpen] = useState<string | null>(null);
-  const [modalPaymentMethod, setModalPaymentMethod] = useState<
-    'card' | 'bank_transfer'
-  >('card');
+  const [modalPaymentMethod, setModalPaymentMethod] = useState<string>('card');
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
   const [modalTaxInvoice, setModalTaxInvoice] = useState(false);
 
   // 결제 처리 상태
@@ -108,6 +110,7 @@ function PaymentPageContent() {
   const [completedDistricts, setCompletedDistricts] = useState<string[]>([]);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
   const [successDistrict, setSuccessDistrict] = useState<string | null>(null);
+  const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
 
   // 일괄적용 핸들러들
   const handleBulkProjectNameToggle = () => {
@@ -274,12 +277,21 @@ function PaymentPageContent() {
   useEffect(() => {
     const itemsParam = searchParams.get('items');
     const approvedParam = searchParams.get('approved');
+    const orderIdParam = searchParams.get('orderId');
     console.log('🔍 Payment page - itemsParam:', itemsParam);
     console.log('🔍 Payment page - approvedParam:', approvedParam);
+    console.log('🔍 Payment page - orderIdParam:', orderIdParam);
     console.log('🔍 Payment page - cart:', cart);
 
     if (approvedParam === 'true') {
       setIsApprovedOrder(true);
+    }
+
+    // 주문 ID가 있는 경우 (결제대기 주문)
+    if (orderIdParam) {
+      setPendingOrderId(orderIdParam);
+      fetchPendingOrder(orderIdParam);
+      return;
     }
 
     if (itemsParam) {
@@ -353,9 +365,11 @@ function PaymentPageContent() {
         errors.projectName = '작업이름을 입력해주세요.';
       }
 
-      // 2. 파일업로드 방식 검사
-      if (!sendByEmail && !selectedFile) {
-        errors.fileUpload = '파일을 업로드하거나 이메일 전송을 선택해주세요.';
+      // 2. 파일업로드 방식 검사 (일괄적용이 켜져있을 때만)
+      if (bulkApply.fileUpload || bulkApply.emailMethod) {
+        if (!selectedFile && !bulkApply.emailMethod) {
+          errors.fileUpload = '파일을 업로드하거나 이메일 전송을 선택해주세요.';
+        }
       }
 
       // 3. 유의사항 동의 검사
@@ -368,15 +382,15 @@ function PaymentPageContent() {
   }, [
     projectName,
     selectedFile,
-    sendByEmail,
+    bulkApply,
     isAgreedCaution,
     selectedItems.length,
   ]);
 
   // 승인된 주문의 아이템 정보 가져오기
-  const fetchApprovedOrderItems = async (orderId: string) => {
+  const fetchApprovedOrderItems = async (orderNumber: string) => {
     try {
-      const response = await fetch(`/api/orders/${orderId}`);
+      const response = await fetch(`/api/orders/${orderNumber}`);
       const data = await response.json();
 
       if (data.success) {
@@ -439,6 +453,64 @@ function PaymentPageContent() {
     } catch (error) {
       console.error('Failed to fetch approved order items:', error);
       // setError('승인된 주문 정보를 불러오는데 실패했습니다.'); // Removed setError
+    }
+  };
+
+  // 결제대기 주문 정보 가져오기
+  const fetchPendingOrder = async (orderNumber: string) => {
+    try {
+      const response = await fetch(`/api/orders/${orderNumber}`);
+      const data = await response.json();
+
+      if (data.success && data.data) {
+        const order = data.data.order;
+        const orderDetails = data.data.orderDetails;
+        const payments = data.data.payments;
+
+        // 주문 정보를 GroupedCartItem 형태로 변환
+        const groupedItem: GroupedCartItem = {
+          id: order.id,
+          name: order.projectName || '상담신청 주문',
+          items: orderDetails.map(
+            (detail: {
+              id: string;
+              panels?: {
+                address?: string;
+                region_gu?: { name: string };
+                panel_type?: string;
+              };
+            }) => ({
+              id: detail.id,
+              name: detail.panels?.address || '상담신청',
+              price: payments?.[0]?.amount || 0,
+              district: detail.panels?.region_gu?.name || '상담신청',
+              panel_type: detail.panels?.panel_type || '상담신청',
+              is_public_institution:
+                order.user_profiles?.is_public_institution || false,
+              is_company: order.user_profiles?.is_company || false,
+              user_profile_id: order.user_profile_id,
+              contact_person_name:
+                order.user_profiles?.contact_person_name || '',
+              phone: order.user_profiles?.phone || '',
+              company_name: order.user_profiles?.company_name || '',
+              email: order.user_profiles?.email || '',
+            })
+          ),
+          totalPrice: payments?.[0]?.amount || 0,
+          district: orderDetails?.[0]?.panels?.region_gu?.name || '상담신청',
+          type: 'banner-display', // 기본값
+          panel_type: orderDetails?.[0]?.panels?.panel_type || '상담신청',
+          contact_person_name: order.user_profiles?.contact_person_name || '',
+          phone: order.user_profiles?.phone || '',
+          company_name: order.user_profiles?.company_name || '',
+          email: order.user_profiles?.email || '',
+        };
+
+        setGroupedItems([groupedItem]);
+        setIsApprovedOrder(true);
+      }
+    } catch (error) {
+      console.error('결제대기 주문 조회 실패:', error);
     }
   };
 
@@ -547,27 +619,6 @@ function PaymentPageContent() {
     });
   };
 
-  // 이메일 선택 핸들러 (묶음 결제용)
-  const handleEmailSelect = (isEmail: boolean) => {
-    setSendByEmail(isEmail);
-
-    setGroupedItems((prevGroups) => {
-      return prevGroups.map((group) => ({
-        ...group,
-        fileUploadMethod: isEmail ? ('email' as const) : null,
-        emailAddress: isEmail ? 'banner114@hanmail.net' : null,
-        selectedFile: null,
-        fileName: null,
-        fileSize: null,
-        fileType: null,
-      }));
-    });
-
-    if (isEmail) {
-      setSelectedFile(null);
-    }
-  };
-
   // 에러가 있는 경우 에러 화면 표시 (현재는 사용하지 않음)
   // if (/* error && */ !isProcessing) {
   //   // Removed error
@@ -605,11 +656,68 @@ function PaymentPageContent() {
   //   );
   // }
 
-  // 결제 성공 시 호출 (이것만 남기고 기존 handleSingleGroupPayment 제거)
+  // 결제 처리 함수
   const handleSingleGroupPayment = async (group: GroupedCartItem) => {
-    setCompletedDistricts((prev) => [...prev, group.district]);
-    setSuccessDistrict(group.district);
-    setSuccessModalOpen(true);
+    try {
+      setIsProcessingPayment(true);
+
+      // 결제 요청 데이터 생성
+      const paymentRequest = {
+        orderId: `order_${Date.now()}_${group.district}`,
+        amount: group.totalPrice,
+        orderName: `${group.district} ${group.type} 광고`,
+        customerName: group.contact_person_name || '고객',
+        customerEmail: group.email || 'customer@example.com',
+        customerPhone: group.phone || '010-0000-0000',
+        successUrl: `${window.location.origin}/payment/success`,
+        failUrl: `${window.location.origin}/payment/fail`,
+        cancelUrl: `${window.location.origin}/payment/cancel`,
+      };
+
+      // 결제 처리
+      const result = await processPayment(modalPaymentMethod, paymentRequest);
+
+      if (result.success) {
+        // 결제 성공
+        setCompletedDistricts((prev) => [...prev, group.district]);
+        setSuccessDistrict(group.district);
+        setSuccessModalOpen(true);
+        setPaymentModalOpen(null);
+
+        // 결제대기 주문의 경우 상태 업데이트
+        if (pendingOrderId) {
+          try {
+            await fetch(`/api/orders/${pendingOrderId}/update-status`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                payment_status:
+                  modalPaymentMethod === 'bank_transfer'
+                    ? 'pending_deposit'
+                    : 'completed',
+              }),
+            });
+          } catch (error) {
+            console.error('주문 상태 업데이트 실패:', error);
+          }
+        }
+
+        // 계좌이체의 경우 리다이렉트 URL로 이동
+        if (modalPaymentMethod === 'bank_transfer' && result.redirectUrl) {
+          window.location.href = result.redirectUrl;
+        }
+      } else {
+        // 결제 실패
+        alert(`결제 실패: ${result.errorMessage}`);
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      alert('결제 처리 중 오류가 발생했습니다.');
+    } finally {
+      setIsProcessingPayment(false);
+    }
   };
 
   // 결제 안한 구만 보여주기
@@ -644,119 +752,116 @@ function PaymentPageContent() {
                 </label>
               </div>
             </div>
-            <div className="flex flex-col sm:flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4 sm:gap-2">
-              <label className="w-full md:w-[9rem] text-gray-600 font-medium">
-                작업이름
-              </label>
-              <div className="flex flex-col gap-1">
-                <input
-                  type="text"
-                  value={projectName}
-                  onChange={(e) => {
-                    setProjectName(e.target.value);
-                    if (validationErrors.projectName) {
-                      setValidationErrors((prev) => ({
-                        ...prev,
-                        projectName: '',
-                      }));
-                    }
-                  }}
-                  className={`w-full md:w-[21.25rem] sm:w-[13rem] border border-solid shadow-none rounded px-4 h-[3rem] ${
-                    validationErrors.projectName
-                      ? 'border-red-500'
-                      : 'border-gray-300'
-                  }`}
-                  placeholder="작업 이름을 입력하세요"
-                />
-                {validationErrors.projectName && (
-                  <span className="text-red-500 text-sm">
-                    {validationErrors.projectName}
-                  </span>
-                )}
-              </div>
-            </div>
-          </section>
-
-          {/* 시안 업로드 UI (한 번만) */}
-          <section className="p-6 border rounded-lg shadow-sm flex flex-col gap-4 sm:p-2">
-            <div className="flex items-center justify-between mb-4 border-b-solid border-black border-b-[0.1rem] pb-4">
-              <h2 className="text-1.25 text-gray-2 font-bold">시안 업로드</h2>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="bulkFileUpload"
-                    checked={bulkApply.fileUpload}
-                    onChange={handleBulkFileUploadToggle}
-                    className="w-4 h-4"
-                  />
-                  <label
-                    htmlFor="bulkFileUpload"
-                    className="text-sm text-gray-600"
-                  >
-                    파일 일괄적용
-                  </label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="bulkEmailMethod"
-                    checked={bulkApply.emailMethod}
-                    onChange={handleBulkEmailMethodToggle}
-                    className="w-4 h-4"
-                  />
-                  <label
-                    htmlFor="bulkEmailMethod"
-                    className="text-sm text-gray-600"
-                  >
-                    이메일 일괄적용
-                  </label>
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col sm:flex-col md:flex-row items-start justify-between gap-2 md:gap-4 sm:gap-2">
-                <label className="w-full md:w-[9rem] text-gray-600 font-medium pt-2">
-                  파일업로드
+            {/* 시안업로드 섹셕 */}
+            {bulkApply.projectName && (
+              <div className="flex flex-col sm:flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4 sm:gap-2">
+                <label className="w-full md:w-[9rem] text-gray-600 font-medium">
+                  작업이름
                 </label>
-                <div className="flex-1 space-y-2">
-                  <CustomFileUpload
-                    onFileSelect={handleFileSelect}
-                    disabled={sendByEmail}
-                    placeholder="시안 파일을 선택해주세요"
-                    className="w-full md:w-[21.25rem] sm:w-[13rem]"
+                <div className="flex flex-col gap-1">
+                  <input
+                    type="text"
+                    value={tempProjectName}
+                    onChange={(e) => {
+                      setTempProjectName(e.target.value);
+                      if (validationErrors.projectName) {
+                        setValidationErrors((prev) => ({
+                          ...prev,
+                          projectName: '',
+                        }));
+                      }
+                    }}
+                    onBlur={() => {
+                      setProjectName(tempProjectName);
+                      if (bulkApply.projectName) {
+                        applyBulkSettings();
+                      }
+                    }}
+                    className={`w-full md:w-[21.25rem] sm:w-[13rem] border border-solid shadow-none rounded px-4 h-[3rem] ${
+                      validationErrors.projectName
+                        ? 'border-red-500'
+                        : 'border-gray-300'
+                    }`}
+                    placeholder="작업 이름을 입력하세요"
                   />
-                  <div className="flex flex-col gap-2 items-start">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="sendByEmail"
-                        checked={sendByEmail}
-                        onChange={(e) => handleEmailSelect(e.target.checked)}
-                        className="w-4 h-4"
-                      />
-                      <label
-                        htmlFor="sendByEmail"
-                        className="text-sm text-gray-500"
-                      >
-                        이메일로 파일 보낼게요
-                      </label>
-                    </div>
-                    {sendByEmail && (
-                      <p className="text-xs text-gray-500 ml-6">
-                        banner114@hanmail.net로 시안을 보내드리겠습니다.
-                      </p>
-                    )}
-                  </div>
-                  {validationErrors.fileUpload && (
+                  {validationErrors.projectName && (
                     <span className="text-red-500 text-sm">
-                      {validationErrors.fileUpload}
+                      {validationErrors.projectName}
                     </span>
                   )}
                 </div>
               </div>
-            </div>
+            )}
           </section>
+
+          {/* 시안 업로드 UI */}
+          {bulkApply.projectName && (
+            <section className="p-6 border rounded-lg shadow-sm flex flex-col gap-4 sm:p-2">
+              <div className="flex items-center justify-between mb-4 border-b-solid border-black border-b-[0.1rem] pb-4">
+                <h2 className="text-1.25 text-gray-2 font-bold">시안 업로드</h2>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="bulkFileUpload"
+                      checked={bulkApply.fileUpload}
+                      onChange={handleBulkFileUploadToggle}
+                      className="w-4 h-4"
+                    />
+                    <label
+                      htmlFor="bulkFileUpload"
+                      className="text-sm text-gray-600"
+                    >
+                      파일 일괄적용
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="bulkEmailMethod"
+                      checked={bulkApply.emailMethod}
+                      onChange={handleBulkEmailMethodToggle}
+                      className="w-4 h-4"
+                    />
+                    <label
+                      htmlFor="bulkEmailMethod"
+                      className="text-sm text-gray-600"
+                    >
+                      이메일 일괄적용
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col sm:flex-col md:flex-row items-start justify-between gap-2 md:gap-4 sm:gap-2">
+                  <label className="w-full md:w-[9rem] text-gray-600 font-medium pt-2">
+                    파일업로드
+                  </label>
+                  <div className="flex-1 space-y-2">
+                    <CustomFileUpload
+                      onFileSelect={handleFileSelect}
+                      disabled={bulkApply.emailMethod}
+                      placeholder="시안 파일을 선택해주세요"
+                      className="w-full md:w-[21.25rem] sm:w-[13rem]"
+                    />
+                    <div className="flex flex-col gap-2 items-start">
+                      {bulkApply.emailMethod && (
+                        <p className="text-xs text-gray-500 ml-6">
+                          banner114@hanmail.net로 시안을 보내드리겠습니다.
+                        </p>
+                      )}
+                    </div>
+                    {validationErrors.fileUpload && (
+                      <span className="text-red-500 text-sm">
+                        {validationErrors.fileUpload}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
           {/* 구별 카드 */}
           {visibleGroups.map((group) => (
             <section
@@ -773,70 +878,96 @@ function PaymentPageContent() {
               </div>
               {/* 구별 개별 입력 필드들 */}
               <div className="space-y-4 mb-4">
-                {/* 구별 작업이름 */}
-                <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
-                  <label className="w-full sm:w-[8rem] text-gray-600 font-medium text-sm">
-                    작업이름
-                  </label>
-                  <div className="flex-1">
-                    <input
-                      type="text"
-                      value={groupStates[group.district]?.projectName || ''}
-                      onChange={(e) =>
-                        handleGroupProjectNameChange(
-                          group.district,
-                          e.target.value
-                        )
-                      }
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                      placeholder="작업 이름을 입력하세요"
-                    />
+                {/* 일괄적용 정보 표시 */}
+                {(bulkApply.projectName ||
+                  bulkApply.fileUpload ||
+                  bulkApply.emailMethod) && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h4 className="text-sm font-semibold text-blue-800 mb-2">
+                      일괄적용 설정
+                    </h4>
+                    <div className="space-y-1 text-sm text-blue-700">
+                      {bulkApply.projectName && projectName && (
+                        <div> 작업이름: {projectName}</div>
+                      )}
+                      {bulkApply.fileUpload && selectedFile && (
+                        <div>📎 파일: {selectedFile.name}</div>
+                      )}
+                      {bulkApply.emailMethod && (
+                        <div>📧 이메일: banner114@hanmail.net</div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* 구별 시안 업로드 */}
-                <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
-                  <label className="w-full sm:w-[8rem] text-gray-600 font-medium text-sm">
-                    시안 업로드
-                  </label>
-                  <div className="flex-1 space-y-2">
-                    <CustomFileUpload
-                      onFileSelect={(file) =>
-                        handleGroupFileSelect(group.district, file)
-                      }
-                      disabled={groupStates[group.district]?.sendByEmail}
-                      placeholder="시안 파일을 선택해주세요"
-                      className="w-full"
-                    />
-                    <div className="flex items-center gap-2">
+                {/* 구별 작업이름 - 일괄적용이 꺼져있을 때만 표시 */}
+                {!bulkApply.projectName && (
+                  <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
+                    <label className="w-full sm:w-[8rem] text-gray-600 font-medium text-sm">
+                      작업이름
+                    </label>
+                    <div className="flex-1">
                       <input
-                        type="checkbox"
-                        id={`email-${group.district}`}
-                        checked={
-                          groupStates[group.district]?.sendByEmail || false
-                        }
+                        type="text"
+                        value={groupStates[group.district]?.projectName || ''}
                         onChange={(e) =>
-                          handleGroupEmailSelect(
+                          handleGroupProjectNameChange(
                             group.district,
-                            e.target.checked
+                            e.target.value
                           )
                         }
-                        className="w-4 h-4"
+                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                        placeholder="작업 이름을 입력하세요"
                       />
-                      <label
-                        htmlFor={`email-${group.district}`}
-                        className="text-sm text-gray-500"
-                      >
-                        이메일로 파일 보낼게요
-                      </label>
                     </div>
-                    {groupStates[group.district]?.sendByEmail && (
-                      <p className="text-xs text-gray-500 ml-6">
-                        banner114@hanmail.net로 시안을 보내드리겠습니다.
-                      </p>
-                    )}
                   </div>
-                </div>
+                )}
+
+                {/* 구별 시안 업로드 - 일괄적용이 꺼져있을 때만 표시 */}
+                {!bulkApply.projectName && (
+                  <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
+                    <label className="w-full sm:w-[8rem] text-gray-600 font-medium text-sm">
+                      시안 업로드
+                    </label>
+                    <div className="flex-1 space-y-2">
+                      <CustomFileUpload
+                        onFileSelect={(file) =>
+                          handleGroupFileSelect(group.district, file)
+                        }
+                        disabled={groupStates[group.district]?.sendByEmail}
+                        placeholder="시안 파일을 선택해주세요"
+                        className="w-full"
+                      />
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id={`email-${group.district}`}
+                          checked={
+                            groupStates[group.district]?.sendByEmail || false
+                          }
+                          onChange={(e) =>
+                            handleGroupEmailSelect(
+                              group.district,
+                              e.target.checked
+                            )
+                          }
+                          className="w-4 h-4"
+                        />
+                        <label
+                          htmlFor={`email-${group.district}`}
+                          className="text-sm text-gray-500"
+                        >
+                          이메일로 파일 보낼게요
+                        </label>
+                      </div>
+                      {groupStates[group.district]?.sendByEmail && (
+                        <p className="text-xs text-gray-500 ml-6">
+                          banner114@hanmail.net로 시안을 보내드리겠습니다.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* 구별 아이템 목록 */}
@@ -1097,85 +1228,12 @@ function PaymentPageContent() {
             <h3 className="text-lg font-bold mb-4">{paymentModalOpen} 결제</h3>
 
             {/* 결제 방법 선택 */}
-            <div className="mb-4 flex flex-col gap-2">
-              <h4 className="font-semibold mb-2">결제 방법</h4>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 h-8">
-                  <input
-                    type="radio"
-                    id="modal-card"
-                    name="modalPaymentMethod"
-                    value="card"
-                    checked={modalPaymentMethod === 'card'}
-                    onChange={(e) =>
-                      setModalPaymentMethod(
-                        e.target.value as 'card' | 'bank_transfer'
-                      )
-                    }
-                    className="w-4 h-4"
-                  />
-                  <label htmlFor="modal-card">카드 결제</label>
-                </div>
-                <div className="flex items-center gap-2 h-8">
-                  <input
-                    type="radio"
-                    id="modal-bank"
-                    name="modalPaymentMethod"
-                    value="bank_transfer"
-                    checked={modalPaymentMethod === 'bank_transfer'}
-                    onChange={(e) =>
-                      setModalPaymentMethod(
-                        e.target.value as 'card' | 'bank_transfer'
-                      )
-                    }
-                    className="w-4 h-4"
-                  />
-                  <label htmlFor="modal-bank">계좌이체</label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    id="modal-card"
-                    name="modalPaymentMethod"
-                    value="card"
-                    checked={modalPaymentMethod === 'card'}
-                    onChange={(e) =>
-                      setModalPaymentMethod(
-                        e.target.value as 'card' | 'bank_transfer'
-                      )
-                    }
-                    className="w-4 h-4"
-                  />
-                  <Image
-                    src="/svg/kakao-pay.svg"
-                    alt="kakao-pay"
-                    width={50}
-                    height={30}
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    id="modal-card"
-                    name="modalPaymentMethod"
-                    value="card"
-                    checked={modalPaymentMethod === 'card'}
-                    onChange={(e) =>
-                      setModalPaymentMethod(
-                        e.target.value as 'card' | 'bank_transfer'
-                      )
-                    }
-                    className="w-4 h-4"
-                  />
-
-                  <Image
-                    src="/svg/naver-pay.svg"
-                    alt="bnaver-pay"
-                    width={50}
-                    height={30}
-                  />
-                </div>
-              </div>
+            <div className="mb-4">
+              <PaymentMethodSelector
+                selectedMethod={modalPaymentMethod}
+                onMethodChange={setModalPaymentMethod}
+                disabled={isProcessingPayment}
+              />
             </div>
 
             {/* 세금계산서 */}
@@ -1220,13 +1278,12 @@ function PaymentPageContent() {
                   );
                   if (group) {
                     await handleSingleGroupPayment(group);
-                    setPaymentModalOpen(null);
                   }
                 }}
-                disabled={isProcessing}
+                disabled={isProcessingPayment}
                 className="flex-1 bg-blue-600 text-white py-2 rounded"
               >
-                {isProcessing ? '처리 중...' : '결제하기'}
+                {isProcessingPayment ? '결제 처리 중...' : '결제하기'}
               </Button>
             </div>
           </div>

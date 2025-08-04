@@ -75,6 +75,31 @@ export async function processNaverPayment(
   }
 }
 
+// 계좌이체 결제 처리
+export async function processBankTransferPayment(
+  paymentRequest: PaymentRequest
+): Promise<PaymentResponse> {
+  try {
+    const response = await fetch('/api/payment/bank-transfer', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(paymentRequest),
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('Bank transfer payment error:', error);
+    return {
+      success: false,
+      errorCode: 'PAYMENT_ERROR',
+      errorMessage: '결제 처리 중 오류가 발생했습니다.',
+    };
+  }
+}
+
 // 결제 수단에 따른 결제 처리 함수
 export async function processPayment(
   method: string,
@@ -87,6 +112,8 @@ export async function processPayment(
       return processKakaoPayment(paymentRequest);
     case 'naver':
       return processNaverPayment(paymentRequest);
+    case 'bank_transfer':
+      return processBankTransferPayment(paymentRequest);
     default:
       return {
         success: false,

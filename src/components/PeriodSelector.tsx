@@ -50,17 +50,18 @@ export default function PeriodSelector({
     halfPeriod || 'first_half'
   );
 
-  // onPeriodChange를 useCallback으로 메모이제이션
+  // onPeriodChange를 useCallback으로 메모이제이션 (무한루프 방지)
   const memoizedOnPeriodChange = useCallback(
     (year: number, month: number, halfPeriod: 'first_half' | 'second_half') => {
       onPeriodChange(year, month, halfPeriod);
     },
-    [onPeriodChange]
+    [] // 빈 의존성 배열로 변경 - 무한루프 방지
   );
 
+  // 초기 로드 시에만 호출 (무한루프 방지)
   useEffect(() => {
     memoizedOnPeriodChange(displayYear, displayMonth, period);
-  }, [period, displayYear, displayMonth, memoizedOnPeriodChange]);
+  }, []); // 빈 의존성 배열로 변경 - 컴포넌트 마운트 시에만 실행
 
   const getPeriodText = (period: 'first_half' | 'second_half') => {
     return period === 'first_half' ? '상반기 (1-15일)' : '하반기 (16-31일)';
@@ -82,7 +83,10 @@ export default function PeriodSelector({
           <Button
             size="xs"
             variant={period === 'first_half' ? 'filledBlack' : 'outlinedBlack'}
-            onClick={() => setPeriod('first_half')}
+            onClick={() => {
+              setPeriod('first_half');
+              memoizedOnPeriodChange(displayYear, displayMonth, 'first_half');
+            }}
             disabled={disabled}
             className="text-xs"
           >
@@ -91,7 +95,10 @@ export default function PeriodSelector({
           <Button
             size="xs"
             variant={period === 'second_half' ? 'filledBlack' : 'outlinedBlack'}
-            onClick={() => setPeriod('second_half')}
+            onClick={() => {
+              setPeriod('second_half');
+              memoizedOnPeriodChange(displayYear, displayMonth, 'second_half');
+            }}
             disabled={disabled}
             className="text-xs"
           >
