@@ -59,10 +59,6 @@ function PaymentCancelContent() {
               결제가 취소되었습니다
             </h1>
 
-            <p className="text-gray-600 mb-6">
-              결제가 취소되었습니다. 언제든지 다시 결제하실 수 있습니다.
-            </p>
-
             {cancelInfo && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
                 <div className="space-y-2 text-sm">
