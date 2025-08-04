@@ -40,7 +40,7 @@ export async function POST(
         payment_status,
         updated_at: new Date().toISOString(),
       })
-      .eq('order_id', orderId);
+      .eq('order_id', orderNumber);
 
     if (paymentError) {
       console.error('Payment status update error:', paymentError);
