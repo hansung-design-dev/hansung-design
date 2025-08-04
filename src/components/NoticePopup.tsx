@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/src/contexts/authContext';
 
 interface NoticePopupProps {
   notice: {
@@ -15,25 +16,50 @@ interface NoticePopupProps {
 
 export default function NoticePopup({ notice, onClose }: NoticePopupProps) {
   const [isVisible, setIsVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
-    // 팝업이 이미 닫혀있는지 확인
-    const isClosed = localStorage.getItem(`popup_closed_${notice.id}`);
-    const isHiddenToday = localStorage.getItem(
-      `popup_hidden_today_${notice.id}`
-    );
+    const checkNoticeVisibility = async () => {
+      if (!user?.id) {
+        // 로그인하지 않은 경우 localStorage 사용
+        const isClosed = localStorage.getItem(`popup_closed_${notice.id}`);
+        const isHiddenToday = localStorage.getItem(
+          `popup_hidden_today_${notice.id}`
+        );
 
-    if (isClosed || isHiddenToday) {
-      return;
-    }
+        if (isClosed || isHiddenToday) {
+          setIsLoading(false);
+          return;
+        }
+      } else {
+        // 로그인한 경우 서버에서 숨김 설정 확인
+        try {
+          const response = await fetch(
+            `/api/notices/hide?user_id=${user.id}&notice_id=${notice.id}`
+          );
+          const data = await response.json();
 
-    // 애니메이션을 위한 지연
-    const timer = setTimeout(() => {
-      setIsVisible(true);
-    }, 100);
+          if (data.success && data.isHidden) {
+            setIsLoading(false);
+            return;
+          }
+        } catch (error) {
+          console.error('Error checking notice visibility:', error);
+        }
+      }
 
-    return () => clearTimeout(timer);
-  }, [notice.id]);
+      setIsLoading(false);
+      // 애니메이션을 위한 지연
+      const timer = setTimeout(() => {
+        setIsVisible(true);
+      }, 100);
+
+      return () => clearTimeout(timer);
+    };
+
+    checkNoticeVisibility();
+  }, [notice.id, user?.id]);
 
   const handleClose = () => {
     setIsVisible(false);
@@ -42,18 +68,58 @@ export default function NoticePopup({ notice, onClose }: NoticePopupProps) {
     }, 300);
   };
 
-  const handleHideToday = () => {
-    const today = new Date().toDateString();
-    localStorage.setItem(`popup_hidden_today_${notice.id}`, today);
+  const handleHideToday = async () => {
+    if (user?.id) {
+      // 로그인한 경우 서버에 저장
+      try {
+        await fetch('/api/notices/hide', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            user_id: user.id,
+            notice_id: notice.id,
+            hide_type: 'oneday',
+          }),
+        });
+      } catch (error) {
+        console.error('Error hiding notice for one day:', error);
+      }
+    } else {
+      // 로그인하지 않은 경우 localStorage 사용
+      const today = new Date().toDateString();
+      localStorage.setItem(`popup_hidden_today_${notice.id}`, today);
+    }
     handleClose();
   };
 
-  const handleClosePermanently = () => {
-    localStorage.setItem(`popup_closed_${notice.id}`, 'true');
+  const handleClosePermanently = async () => {
+    if (user?.id) {
+      // 로그인한 경우 서버에 저장
+      try {
+        await fetch('/api/notices/hide', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            user_id: user.id,
+            notice_id: notice.id,
+            hide_type: 'permanent',
+          }),
+        });
+      } catch (error) {
+        console.error('Error hiding notice permanently:', error);
+      }
+    } else {
+      // 로그인하지 않은 경우 localStorage 사용
+      localStorage.setItem(`popup_closed_${notice.id}`, 'true');
+    }
     handleClose();
   };
 
-  if (!isVisible) {
+  if (isLoading || !isVisible) {
     return null;
   }
 
