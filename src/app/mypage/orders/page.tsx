@@ -225,6 +225,7 @@ export default function OrdersPage() {
   const [isCancelSuccessModalOpen, setIsCancelSuccessModalOpen] =
     useState(false);
   const [orderToCancel, setOrderToCancel] = useState<string | null>(null);
+  const [pendingPaymentOrders, setPendingPaymentOrders] = useState<Order[]>([]);
 
   // 신청취소 핸들러
   const handleCancelClick = (orderNumber: string) => {
@@ -273,6 +274,12 @@ export default function OrdersPage() {
     setOrderToCancel(null);
   };
 
+  // 결제하기 핸들러
+  const handlePaymentClick = (order: Order) => {
+    // 결제 페이지로 이동 (주문 ID를 쿼리 파라미터로 전달)
+    window.location.href = `/payment?orderId=${order.order_number}`;
+  };
+
   // 주문 데이터 fetch
   const fetchOrders = useCallback(async () => {
     if (!user?.id) return;
@@ -296,6 +303,14 @@ export default function OrdersPage() {
   useEffect(() => {
     if (user) fetchOrders();
   }, [user, fetchOrders]);
+
+  // 결제대기 상태의 주문 필터링
+  useEffect(() => {
+    const pendingOrders = orders.filter(
+      (order) => order.payment_status === 'pending_payment'
+    );
+    setPendingPaymentOrders(pendingOrders);
+  }, [orders]);
 
   // 리스트에 표시할 데이터 변환
   const transformOrdersForDisplay = (): DisplayItem[] => {
@@ -323,6 +338,10 @@ export default function OrdersPage() {
   const getStatusDisplay = (status: string): string => {
     switch (status) {
       case 'pending':
+        return '입금확인 중';
+      case 'pending_payment':
+        return '결제대기 중';
+      case 'pending_deposit':
         return '입금확인 중';
       case 'confirmed':
         return '결제완료';
@@ -499,6 +518,53 @@ export default function OrdersPage() {
       <Nav variant="default" className="bg-white sm:px-0" />
       <MypageContainer activeTab="주문내역">
         <h1 className="text-2xl font-bold mb-8">주문내역</h1>
+
+        {/* 결제대기 상태의 주문들 */}
+        {pendingPaymentOrders.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-lg font-semibold mb-4 text-blue-600">
+              결제대기 주문
+            </h2>
+            <div className="space-y-4">
+              {pendingPaymentOrders.map((order) => (
+                <div
+                  key={order.id}
+                  className="bg-white border border-gray-200 rounded-lg p-4"
+                >
+                  <div className="flex justify-between items-center mb-3">
+                    <div>
+                      <h3 className="font-medium text-gray-900">
+                        주문번호: {order.order_number}
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        {order.order_details?.[0]?.panels?.address || '상품명'}
+                        {order.order_details?.[0]?.panels?.nickname &&
+                          ` (${order.order_details[0].panels.nickname})`}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-600">
+                        {(order.payments?.[0]?.amount || 0).toLocaleString()}원
+                      </p>
+                      <span className="inline-block bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">
+                        결제대기 중
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex justify-end space-x-2">
+                    <button
+                      onClick={() => handlePaymentClick(order)}
+                      className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
+                    >
+                      결제하기
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <OrderItemList
           items={items}
           expandedItemId={expandedItemId}

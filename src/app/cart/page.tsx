@@ -22,7 +22,7 @@ import { CartItem } from '@/src/contexts/cartContext';
 //   is_company?: boolean;
 //   created_at: string;
 // }
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import UserProfileModal from '@/src/components/modal/UserProfileModal';
 
 import ConsultationModal from '@/src/components/modal/ConsultationModal';
@@ -117,13 +117,13 @@ function CartGroupCard({
   );
 }
 
-interface InquiryStatus {
-  [productId: string]: {
-    status: string;
-    answer_content?: string;
-    answered_at?: string;
-  };
-}
+// interface InquiryStatus {
+//   [productId: string]: {
+//     status: string;
+//     answer_content?: string;
+//     answered_at?: string;
+//   };
+// }
 
 function CartItemRow({
   item,
@@ -459,7 +459,7 @@ export default function Cart() {
   } | null>(null);
   const [isUpdateSuccessModalOpen, setIsUpdateSuccessModalOpen] =
     useState(false);
-  const [inquiryStatuses, setInquiryStatuses] = useState<InquiryStatus>({});
+  // const [inquiryStatuses, setInquiryStatuses] = useState<InquiryStatus>({});
   // (defaultProfile, district 변수 선언 제거)
 
   // 현재 주문수정 버튼을 클릭한 아이템 ID
@@ -482,13 +482,13 @@ export default function Cart() {
     if (profiles.length > 0) {
       // defaultProf 변수 및 관련 코드 제거
     }
-  }, [profiles]);
+  }, []); // profiles 의존성 제거 - 최초 1회만 실행
 
-  // URL 해시를 확인하여 상담신청 탭으로 자동 이동
+  // URL 해시를 확인하여 상담신청 탭으로 자동 이동 (무한루프 방지)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const hash = window.location.hash;
-      if (hash === '#consultation') {
+      if (hash === '#consultation' && activeTab !== 'consulting') {
         setActiveTab('consulting');
         // 상담신청 섹션으로 스크롤
         setTimeout(() => {
@@ -499,336 +499,139 @@ export default function Cart() {
         }, 100);
       }
     }
-  }, []);
+  }, []); // activeTab 의존성 제거 - URL 해시만 확인
 
   // useEffect에서 cart를 바꾸는 로직 완전히 제거!
   // cart는 오직 아이템 추가/삭제/프로필 변경 등 명확한 액션에서만 dispatch로 바뀜
 
-  // 결제신청/상담신청 분류 로직 (useMemo)
-  const groupedItems = useMemo(() => {
-    const consultingItems: CartItem[] = [];
-    const paymentItems: CartItem[] = [];
+  // 결제신청/상담신청 분류 로직 (무한루프 방지 - useMemo 제거)
+  const consultingItems: CartItem[] = [];
+  const paymentItems: CartItem[] = [];
 
-    // 디버깅: 장바구니 아이템들의 정보 출력
-    console.log(
-      '🔍 Cart - All cart items for classification:',
-      cart.map((item) => ({
-        id: item.id,
-        name: item.name,
-        type: item.type,
-        panel_type: item.panel_type,
-        panel_slot_snapshot_banner_type: item.panel_slot_snapshot?.banner_type,
-        district: item.district,
-        price: item.price,
-      }))
-    );
+  cart.forEach((item) => {
+    const panelType =
+      item.panel_type || item.panel_slot_snapshot?.banner_type || 'panel';
 
-    cart.forEach((item) => {
-      const panelType =
-        item.panel_type || item.panel_slot_snapshot?.banner_type || 'panel';
-
-      console.log('🔍 Cart - Item classification:', {
-        itemId: item.id,
-        itemName: item.name,
-        itemType: item.type,
-        panelType: panelType,
-        isLED: item.type === 'led-display',
-        isTopFixed: item.type === 'banner-display' && panelType === 'top_fixed',
-        shouldBeConsulting:
-          item.type === 'led-display' ||
-          (item.type === 'banner-display' && panelType === 'top_fixed'),
-      });
-
-      // 상담신청: LED 전자게시대 전체, 상단광고(용산구/송파구), 디지털사이니지
-      if (
-        item.type === 'led-display' ||
-        (item.type === 'banner-display' && panelType === 'top_fixed') ||
-        item.type === 'digital-signage'
-      ) {
-        consultingItems.push(item);
-        console.log('🔍 Cart - Added to consulting items:', item.name);
-        return;
-      }
-
-      // 결제신청: 현수막게시대 전체 구
-      paymentItems.push(item);
-      console.log('🔍 Cart - Added to payment items:', item.name);
-    });
-
-    // 결제신청 아이템들을 구별로 분류
-    const districtGroups: { [district: string]: CartItem[] } = {};
-
-    paymentItems.forEach((item) => {
-      const district = item.district;
-      if (!districtGroups[district]) {
-        districtGroups[district] = [];
-      }
-      districtGroups[district].push(item);
-    });
-
-    console.log('🔍 Cart - Final classification result:', {
-      consultingItemsCount: consultingItems.length,
-      paymentItemsCount: paymentItems.length,
-      consultingItems: consultingItems.map((item) => ({
-        id: item.id,
-        name: item.name,
-        type: item.type,
-      })),
-      paymentItems: paymentItems.map((item) => ({
-        id: item.id,
-        name: item.name,
-        type: item.type,
-        district: item.district,
-      })),
-    });
-
-    return {
-      consulting: consultingItems,
-      districts: districtGroups,
-    };
-  }, [cart]);
-
-  // 상담신청 아이템들을 타입별로 분리 (상담문의가 완료된 아이템 제외)
-  const bannerConsultingItems = groupedItems.consulting.filter((item) => {
-    const inquiryStatus = inquiryStatuses[item.id];
-    // 상담문의가 완료된 아이템은 제외
-    if (inquiryStatus && inquiryStatus.status === 'answered') {
-      return false;
+    // 상담신청: LED 전자게시대 전체, 상단광고(용산구/송파구), 디지털사이니지
+    if (
+      item.type === 'led-display' ||
+      (item.type === 'banner-display' && panelType === 'top_fixed') ||
+      item.type === 'digital-signage'
+    ) {
+      consultingItems.push(item);
+      return;
     }
+
+    // 결제신청: 현수막게시대 전체 구
+    paymentItems.push(item);
+  });
+
+  // 결제신청 아이템들을 구별로 분류
+  const districtGroups: { [district: string]: CartItem[] } = {};
+
+  paymentItems.forEach((item) => {
+    const district = item.district;
+    if (!districtGroups[district]) {
+      districtGroups[district] = [];
+    }
+    districtGroups[district].push(item);
+  });
+
+  const groupedItems = {
+    consulting: consultingItems,
+    districts: districtGroups,
+  };
+
+  // 상담신청 아이템들을 타입별로 분리 (상담문의 상태 확인 로직 임시 비활성화)
+  const bannerConsultingItems = groupedItems.consulting.filter((item) => {
+    // const inquiryStatus = inquiryStatuses[item.id];
+    // if (inquiryStatus && inquiryStatus.status === 'answered') {
+    //   return false;
+    // }
     return item.type === 'banner-display';
   });
   const ledConsultingItemsOnly = groupedItems.consulting.filter((item) => {
-    const inquiryStatus = inquiryStatuses[item.id];
-    // 상담문의가 완료된 아이템은 제외
-    if (inquiryStatus && inquiryStatus.status === 'answered') {
-      return false;
-    }
+    // const inquiryStatus = inquiryStatuses[item.id];
+    // if (inquiryStatus && inquiryStatus.status === 'answered') {
+    //   return false;
+    // }
     return item.type === 'led-display';
   });
   const digitalSignageConsultingItems = groupedItems.consulting.filter(
     (item) => {
-      const inquiryStatus = inquiryStatuses[item.id];
-      // 상담문의가 완료된 아이템은 제외
-      if (inquiryStatus && inquiryStatus.status === 'answered') {
-        return false;
-      }
+      // const inquiryStatus = inquiryStatuses[item.id];
+      // if (inquiryStatus && inquiryStatus.status === 'answered') {
+      //   return false;
+      // }
       return item.type === 'digital-signage';
     }
   );
 
-  // 상담신청 아이템들의 문의 상태 확인
-  const fetchInquiryStatuses = useCallback(async () => {
-    try {
-      const statuses: InquiryStatus = {};
+  // 선택된 아이템들의 총계 계산 (무한루프 방지 - useMemo 제거)
+  const selectedCartItems = cart.filter((item) =>
+    selectedItems.has(String(item.id))
+  );
+  const totalQuantity = selectedCartItems.length;
+  const totalPrice = selectedCartItems.reduce((sum, item) => {
+    // 상담문의는 가격이 0이므로 제외
+    if (item.price === 0) return sum;
+    return sum + (item.price || 0);
+  }, 0);
 
-      // 현재 cart에서 상담신청 아이템 필터링
-      const consultingItems = cart.filter((item) => {
-        const panelType =
-          item.panel_type || item.panel_slot_snapshot?.banner_type || 'panel';
-        const district = item.district;
+  // 기업용 아이템이 선택되었는지 확인
+  const hasCompanyItems = selectedCartItems.some((item) => item.is_company);
 
-        // LED 전자게시대는 모두 상담신청
-        if (item.type === 'led-display') {
-          return true;
-        }
+  // 공공기관용 아이템이 선택되었는지 확인
+  const hasPublicInstitutionItems = selectedCartItems.some(
+    (item) => item.is_public_institution
+  );
 
-        // 디지털사이니지는 모두 상담신청
-        if (item.type === 'digital-signage') {
-          return true;
-        }
+  // 개인용 아이템이 선택되었는지 확인
+  const hasGeneralItems = selectedCartItems.some(
+    (item) => !item.is_company && !item.is_public_institution
+  );
 
-        // 현수막게시대 분류
-        if (item.type === 'banner-display') {
-          // 상단광고는 모두 상담신청 (송파구만)
-          if (panelType === 'top_fixed') {
-            return true;
-          }
+  // 공공기관용과 개인용 아이템이 함께 선택되었는지 확인
+  const hasMixedUserTypes = hasPublicInstitutionItems && hasGeneralItems;
 
-          // 결제신청 조건
-          const isPaymentEligible =
-            // 송파구의 현수막게시대
-            (district === '송파구' && panelType === 'panel') ||
-            // 용산구의 현수막게시대 (panel, with_lighting, no_lighting)
-            (district === '용산구' &&
-              (panelType === 'panel' ||
-                panelType === 'with_lighting' ||
-                panelType === 'no_lighting')) ||
-            // 마포구 연립형과 저단형
-            (district === '마포구' &&
-              (panelType === 'multi_panel' || panelType === 'lower_panel')) ||
-            // 서대문구, 관악구
-            district === '서대문구' ||
-            district === '관악구';
+  // 상세 가격 정보가 있는 아이템이 선택되었는지 확인
+  const hasDetailedPriceItems = selectedCartItems.some(
+    (item) => item.panel_slot_snapshot
+  );
 
-          return !(isPaymentEligible && item.price > 0);
-        }
-
-        return false;
-      });
-
-      for (const item of consultingItems) {
-        const response = await fetch(
-          `/api/customer-service?product_id=${item.id}`
-        );
-        const data = await response.json();
-
-        if (data.success && data.inquiries && data.inquiries.length > 0) {
-          const latestInquiry = data.inquiries[0];
-          statuses[item.id] = {
-            status: latestInquiry.status,
-            answer_content: latestInquiry.answer,
-            answered_at: latestInquiry.answered_at,
-          };
-        }
-      }
-
-      setInquiryStatuses(statuses);
-    } catch (error) {
-      console.error('문의 상태 확인 실패:', error);
-    }
-  }, [cart]);
-
-  // 페이지 로드 시 상담문의 상태 확인
-  useEffect(() => {
-    if (user && cart.length > 0) {
-      // 상담신청 아이템이 있는지 확인
-      const hasConsultingItems = cart.some((item) => {
-        const panelType =
-          item.panel_slot_snapshot?.banner_type || item.panel_type || 'panel';
-        const district = item.district;
-
-        if (item.type === 'led-display') return true;
-        if (item.type === 'digital-signage') return true;
-        if (item.type === 'banner-display' && panelType === 'top_fixed')
-          return true;
-
-        const isPaymentEligible =
-          ((district === '용산구' || district === '송파구') &&
-            panelType === 'panel') ||
-          (district === '마포구' &&
-            (panelType === 'multi-panel' || panelType === 'lower-panel')) ||
-          district === '서대문구' ||
-          district === '관악구';
-
-        return !(isPaymentEligible && item.price > 0);
-      });
-
-      if (hasConsultingItems) {
-        fetchInquiryStatuses();
-      }
-    }
-  }, [user, cart, fetchInquiryStatuses]);
-
-  // 상담문의가 완료된 아이템들을 자동으로 장바구니에서 제거
-  useEffect(() => {
-    if (Object.keys(inquiryStatuses).length > 0) {
-      const itemsToRemove = cart.filter((item) => {
-        const inquiryStatus = inquiryStatuses[item.id];
-        return inquiryStatus && inquiryStatus.status === 'answered';
-      });
-
-      if (itemsToRemove.length > 0) {
-        itemsToRemove.forEach((item) => {
-          dispatch({ type: 'REMOVE_ITEM', id: item.id });
-          // 선택된 아이템에서도 제거
-          const newSelected = new Set(selectedItems);
-          newSelected.delete(item.id);
-          setSelectedItems(newSelected);
-        });
-
-        console.log(
-          '상담문의가 완료된 아이템들을 장바구니에서 제거했습니다:',
-          itemsToRemove.map((item) => item.name)
-        );
-      }
-    }
-  }, [inquiryStatuses, cart, selectedItems, dispatch]);
-
-  // 선택된 아이템들의 총계 계산
-  const cartSummary = useMemo(() => {
-    const selectedCartItems = cart.filter((item) =>
-      selectedItems.has(String(item.id))
-    );
-    const totalQuantity = selectedCartItems.length;
-    const totalPrice = selectedCartItems.reduce((sum, item) => {
-      // 상담문의는 가격이 0이므로 제외
-      if (item.price === 0) return sum;
-      return sum + (item.price || 0);
-    }, 0);
-
-    // 기업용 아이템이 선택되었는지 확인
-    const hasCompanyItems = selectedCartItems.some((item) => item.is_company);
-
-    // 공공기관용 아이템이 선택되었는지 확인
-    const hasPublicInstitutionItems = selectedCartItems.some(
-      (item) => item.is_public_institution
-    );
-
-    // 개인용 아이템이 선택되었는지 확인
-    const hasGeneralItems = selectedCartItems.some(
-      (item) => !item.is_company && !item.is_public_institution
-    );
-
-    // 공공기관용과 개인용 아이템이 함께 선택되었는지 확인
-    const hasMixedUserTypes = hasPublicInstitutionItems && hasGeneralItems;
-
-    // 상세 가격 정보가 있는 아이템이 선택되었는지 확인
-    const hasDetailedPriceItems = selectedCartItems.some(
+  // 상세 가격 정보 계산 (모든 아이템)
+  let priceDetails = null;
+  if (hasDetailedPriceItems) {
+    const itemsWithDetails = selectedCartItems.filter(
       (item) => item.panel_slot_snapshot
     );
+    const totalAdvertisingFee = itemsWithDetails.reduce((sum, item) => {
+      return sum + (item.panel_slot_snapshot?.advertising_fee || 0);
+    }, 0);
+    const totalTaxPrice = itemsWithDetails.reduce((sum, item) => {
+      return sum + (item.panel_slot_snapshot?.tax_price || 0);
+    }, 0);
+    const totalRoadUsageFee = itemsWithDetails.reduce((sum, item) => {
+      return sum + (item.panel_slot_snapshot?.road_usage_fee || 0);
+    }, 0);
 
-    // 디버깅: 선택된 아이템들의 panel_slot_snapshot 확인
-    console.log(
-      '🔍 Cart - Selected items with panel_slot_snapshot:',
-      selectedCartItems.map((item) => ({
-        id: item.id,
-        name: item.name,
-        hasSnapshot: !!item.panel_slot_snapshot,
-        snapshot: item.panel_slot_snapshot,
-        price: item.price,
-        district: item.district,
-        panel_type: item.panel_type,
-      }))
-    );
-
-    // 상세 가격 정보 계산 (모든 아이템)
-    let priceDetails = null;
-    if (hasDetailedPriceItems) {
-      const itemsWithDetails = selectedCartItems.filter(
-        (item) => item.panel_slot_snapshot
-      );
-      const totalAdvertisingFee = itemsWithDetails.reduce((sum, item) => {
-        return sum + (item.panel_slot_snapshot?.advertising_fee || 0);
-      }, 0);
-      const totalTaxPrice = itemsWithDetails.reduce((sum, item) => {
-        return sum + (item.panel_slot_snapshot?.tax_price || 0);
-      }, 0);
-      const totalRoadUsageFee = itemsWithDetails.reduce((sum, item) => {
-        return sum + (item.panel_slot_snapshot?.road_usage_fee || 0);
-      }, 0);
-
-      priceDetails = {
-        advertising_fee: totalAdvertisingFee,
-        tax_price: totalTaxPrice,
-        road_usage_fee: totalRoadUsageFee,
-      };
-
-      console.log('🔍 Cart - Calculated price details:', priceDetails);
-    } else {
-      console.log('🔍 Cart - No items with panel_slot_snapshot found');
-    }
-
-    return {
-      quantity: totalQuantity,
-      totalAmount: totalPrice,
-      hasCompanyItems,
-      hasPublicInstitutionItems,
-      hasGeneralItems,
-      hasMixedUserTypes,
-      hasDetailedPriceItems,
-      priceDetails,
+    priceDetails = {
+      advertising_fee: totalAdvertisingFee,
+      tax_price: totalTaxPrice,
+      road_usage_fee: totalRoadUsageFee,
     };
-  }, [cart, selectedItems]);
+  }
+
+  const cartSummary = {
+    quantity: totalQuantity,
+    totalAmount: totalPrice,
+    hasCompanyItems,
+    hasPublicInstitutionItems,
+    hasGeneralItems,
+    hasMixedUserTypes,
+    hasDetailedPriceItems,
+    priceDetails,
+  };
 
   const handleItemSelect = (itemId: string, selected: boolean) => {
     const newSelected = new Set(selectedItems);
@@ -1040,8 +843,8 @@ export default function Cart() {
       );
     }
 
-    // 문의 상태 다시 확인 (기존 로직 유지)
-    fetchInquiryStatuses();
+    // 문의 상태 다시 확인 (기존 로직 유지 - 임시 비활성화)
+    // fetchInquiryStatuses(cart);
   };
 
   // 기간 변경 핸들러 추가
@@ -1674,7 +1477,7 @@ export default function Cart() {
                             handleConsultation(item.name, item.id)
                           }
                           onDelete={() => handleDelete(item)}
-                          inquiryStatus={inquiryStatuses[item.id]}
+                          inquiryStatus={undefined}
                           getPanelTypeDisplay={getPanelTypeDisplay}
                         />
                       );
@@ -1717,7 +1520,7 @@ export default function Cart() {
                             handleConsultation(item.name, item.id)
                           }
                           onDelete={() => handleDelete(item)}
-                          inquiryStatus={inquiryStatuses[item.id]}
+                          inquiryStatus={undefined}
                           getPanelTypeDisplay={getPanelTypeDisplay}
                         />
                       );
@@ -1760,7 +1563,7 @@ export default function Cart() {
                             handleConsultation(item.name, item.id)
                           }
                           onDelete={() => handleDelete(item)}
-                          inquiryStatus={inquiryStatuses[item.id]}
+                          inquiryStatus={undefined}
                           getPanelTypeDisplay={getPanelTypeDisplay}
                         />
                       );

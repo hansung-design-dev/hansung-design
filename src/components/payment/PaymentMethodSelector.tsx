@@ -31,7 +31,17 @@ export default function PaymentMethodSelector({
             onClick={() => !disabled && onMethodChange(method.id)}
           >
             <div className="flex items-center space-x-3">
-              <div className="text-2xl">{method.icon}</div>
+              <div className="text-2xl">
+                {method.icon.startsWith('/svg/') ? (
+                  <img
+                    src={method.icon}
+                    alt={method.name}
+                    className="w-6 h-6"
+                  />
+                ) : (
+                  method.icon
+                )}
+              </div>
               <div className="flex-1">
                 <div className="font-medium text-gray-900">{method.name}</div>
                 <div className="text-sm text-gray-500">
