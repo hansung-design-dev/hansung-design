@@ -49,6 +49,14 @@ export default function CustomerPage() {
   const [installationBanners, setInstallationBanners] = React.useState<
     InstallationBanner[]
   >([]);
+  const [pagination, setPagination] = React.useState({
+    current_page: 1,
+    total_pages: 1,
+    total_count: 0,
+    limit: 15,
+    has_next: false,
+    has_prev: false,
+  });
   const [loading, setLoading] = React.useState(true);
   const [faqLoading, setFaqLoading] = React.useState(false);
   const [photoLoading, setPhotoLoading] = React.useState(false);
@@ -80,10 +88,15 @@ export default function CustomerPage() {
 
       setPhotoLoading(true);
       try {
-        const response = await fetch('/api/installation-photos?limit=20');
+        const response = await fetch(
+          `/api/installation-photos?page=${pagination.current_page}&limit=15`
+        );
         const data = await response.json();
         if (data.installation_banners) {
           setInstallationBanners(data.installation_banners);
+        }
+        if (data.pagination) {
+          setPagination(data.pagination);
         }
       } catch (error) {
         console.error('게첨사진 조회 오류:', error);
@@ -93,7 +106,7 @@ export default function CustomerPage() {
     };
 
     fetchInstallationPhotos();
-  }, [activeTab]);
+  }, [activeTab, pagination.current_page]);
 
   // FAQ 데이터 가져오기
   React.useEffect(() => {
@@ -255,7 +268,7 @@ export default function CustomerPage() {
                   {installationBanners.map((banner) => (
                     <div
                       key={banner.id}
-                      className="border border-gray-200 rounded-lg overflow-hidden"
+                      className="border border-solid border-gray-200 rounded-lg overflow-hidden"
                     >
                       <div
                         className="p-4 cursor-pointer hover:bg-gray-50"
@@ -286,6 +299,7 @@ export default function CustomerPage() {
                                       <img
                                         src={photoUrl}
                                         alt={`${banner.title} - 사진 ${
+                                          banner.photo_names?.[index] ||
                                           index + 1
                                         }`}
                                         className="w-full h-auto rounded-lg shadow-sm"
@@ -296,8 +310,15 @@ export default function CustomerPage() {
                                         }}
                                       />
                                       <div className="absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
-                                        {index + 1} /{' '}
-                                        {banner.photo_urls?.length || 0}
+                                        {banner.photo_names?.[index] ||
+                                          index + 1}{' '}
+                                        / {banner.photo_urls?.length || 0}
+                                      </div>
+                                      {/* 사진 아래에 파일명 표시 */}
+                                      <div className="mt-2 text-center text-sm text-gray-600 font-medium">
+                                        {banner.photo_names?.[index] ||
+                                          `${index + 1}`}
+                                        번 게시대
                                       </div>
                                     </div>
                                   )
@@ -321,6 +342,72 @@ export default function CustomerPage() {
               ) : (
                 <div className="text-center py-8 text-gray-500">
                   게첨사진이 없습니다.
+                </div>
+              )}
+
+              {/* 페이지네이션 */}
+              {installationBanners.length > 0 && (
+                <div className="mt-8 flex justify-center items-center space-x-2">
+                  <button
+                    onClick={() =>
+                      setPagination((prev) => ({
+                        ...prev,
+                        current_page: prev.current_page - 1,
+                      }))
+                    }
+                    disabled={!pagination.has_prev}
+                    className={`px-4 py-2 rounded-lg border ${
+                      pagination.has_prev
+                        ? 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                        : 'border-gray-200 text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
+                    이전
+                  </button>
+
+                  <div className="flex items-center space-x-1">
+                    {Array.from(
+                      { length: Math.min(5, pagination.total_pages) },
+                      (_, i) => {
+                        const pageNum = i + 1;
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() =>
+                              setPagination((prev) => ({
+                                ...prev,
+                                current_page: pageNum,
+                              }))
+                            }
+                            className={`px-3 py-2 rounded-lg border ${
+                              pagination.current_page === pageNum
+                                ? 'border-blue-500 bg-blue-500 text-white'
+                                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      }
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() =>
+                      setPagination((prev) => ({
+                        ...prev,
+                        current_page: prev.current_page + 1,
+                      }))
+                    }
+                    disabled={!pagination.has_next}
+                    className={`px-4 py-2 rounded-lg border ${
+                      pagination.has_next
+                        ? 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                        : 'border-gray-200 text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
+                    다음
+                  </button>
                 </div>
               )}
             </div>

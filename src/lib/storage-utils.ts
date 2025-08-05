@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 
 export interface StorageImage {
   name: string;
+  displayName: string; // 표시용 이름 (확장자 제거)
   url: string;
   size: number;
   lastModified: string;
@@ -48,8 +49,11 @@ export async function getImagesFromFolder(
     // URL 생성
     return imageFiles.map((file) => {
       const filePath = `${folderPath}/${file.name}`;
+      // 파일명에서 확장자 제거 (예: 01.jpg → 01)
+      const displayName = file.name.replace(/\.[^/.]+$/, '');
       return {
         name: file.name,
+        displayName: displayName, // 표시용 이름 (확장자 제거)
         url: `https://eklijrstdcgsxtbjxjra.supabase.co/storage/v1/object/public/${bucketName}/${encodeURIComponent(
           filePath
         )}`,
