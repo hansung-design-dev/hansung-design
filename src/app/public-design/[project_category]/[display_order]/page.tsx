@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import ProjectCard from '@/src/components/projectCard';
-
+import ImageWithSkeleton from '@/src/components/ui/ImageWithSkeleton';
 import { PublicDesignDetailResponse } from '@/src/types/public-design';
 import PublicDesignDesktopSkeleton from '@/src/components/skeleton/PublicDesignDesktopSkeleton';
 
@@ -291,21 +291,17 @@ export default function PublicDesignDetailPage() {
           <div key={content.id} className="flex flex-col gap-6">
             {content.image_urls &&
               content.image_urls.map((imageUrl, index) => (
-                <div
+                <ImageWithSkeleton
                   key={`${content.id}-${index}`}
-                  className="relative w-full h-auto min-h-[200px]"
-                >
-                  <Image
-                    src={imageUrl}
-                    alt={`${
-                      content.alt_text || content.title || '디자인 이미지'
-                    } ${index + 1}`}
-                    width={1200}
-                    height={600}
-                    className="w-full h-auto rounded-2xl object-contain"
-                    quality={90}
-                  />
-                </div>
+                  src={imageUrl}
+                  alt={`${
+                    content.alt_text || content.title || '디자인 이미지'
+                  } ${index + 1}`}
+                  width={1200}
+                  height={600}
+                  className="w-full h-auto rounded-2xl object-contain"
+                  quality={90}
+                />
               ))}
           </div>
         ))}
