@@ -18,6 +18,7 @@ interface ProjectItem {
   displayOrder: number;
   layout?: 'largeFirst' | 'smallFirst';
   imageCount?: number;
+  listIndex?: number;
 }
 
 export default function PublicDesignDetailPage() {
@@ -32,6 +33,7 @@ export default function PublicDesignDetailPage() {
     null
   );
   const [loading, setLoading] = useState(true);
+  const [projectIndex, setProjectIndex] = useState<number>(0);
 
   useEffect(() => {
     const fetchProjectDetail = async () => {
@@ -56,6 +58,10 @@ export default function PublicDesignDetailPage() {
             };
             console.log('Setting list data from URL:', projectItem);
             setListProjectData(projectItem);
+
+            // 리스트에서의 실제 인덱스 사용
+            const projectIndex = listData.listIndex || 0;
+            setProjectIndex(projectIndex);
           } catch (parseError) {
             console.error('Error parsing URL data:', parseError);
           }
@@ -256,7 +262,10 @@ export default function PublicDesignDetailPage() {
       {/* 뒤로가기 버튼 */}
       <div className="mb-6">
         <button
-          onClick={() => router.back()}
+          onClick={() => {
+            // 해당 프로젝트 인덱스로 돌아가기
+            router.push(`/public-design?scrollTo=${projectIndex}`);
+          }}
           className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
         >
           <svg
