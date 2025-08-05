@@ -13,7 +13,7 @@ const CategoryFilter = ({
     { id: '공공디자인', name: '공공디자인' },
     { id: 'LED전자게시대', name: 'LED전자게시대' },
     { id: '현수막', name: '현수막' },
-    { id: '디지털사이니지', name: '디지털사이니지' },
+    { id: '디지털미디어', name: '디지털미디어' },
   ];
 
   return (

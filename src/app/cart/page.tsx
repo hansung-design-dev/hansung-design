@@ -512,7 +512,7 @@ export default function Cart() {
     const panelType =
       item.panel_type || item.panel_slot_snapshot?.banner_type || 'panel';
 
-    // 상담신청: LED 전자게시대 전체, 상단광고(용산구/송파구), 디지털사이니지
+    // 상담신청: LED 전자게시대 전체, 상단광고(용산구/송파구), 디지털미디어
     if (
       item.type === 'led-display' ||
       (item.type === 'banner-display' && panelType === 'top_fixed') ||
@@ -1530,14 +1530,14 @@ export default function Cart() {
 
                 {digitalSignageConsultingItems.length > 0 && (
                   <CartGroupCard
-                    title="디지털사이니지"
+                    title="디지털미디어"
                     phoneList={['1533-0570', '1899-0596', '02-719-0083']}
                     isSelected={isGroupSelected('general', '')}
                     onSelect={(selected) =>
                       handleGroupSelect('general', '', selected)
                     }
                     onDelete={() =>
-                      handleGroupDeleteClick('general', '', '디지털사이니지')
+                      handleGroupDeleteClick('general', '', '디지털미디어')
                     }
                     isConsulting={true}
                   >

@@ -2,8 +2,162 @@ import DigitalSignageDetailClient from './DigitalSignageDetailClient';
 
 // 제품 데이터 매핑
 const productDataMap = {
-  'digital-signage-1': {
-    id: 'digital-signage-1',
+  // 미디어경관디자인
+  'gansong-art-museum': {
+    id: 'gansong-art-museum',
+    title: '간송미술관',
+    image:
+      '/images/digital-sianage/media_display/간송미술관/2025_간송미술관-무기명_1.jpg',
+    images: [
+      '/images/digital-sianage/media_display/간송미술관/2025_간송미술관-무기명_1.jpg',
+      '/images/digital-sianage/media_display/간송미술관/2025_간송미술관-무기명_2.jpg',
+      '/images/digital-sianage/media_display/간송미술관/2025_간송미술관-무기명_3.jpg',
+      '/images/digital-sianage/media_display/간송미술관/2025_간송미술관-무기명_4.jpg',
+      '/images/digital-sianage/media_display/간송미술관/2025_간송미술관-무기명_5.jpg',
+    ],
+    specifications: {
+      operatingLineup: '문화시설 전용 디스플레이',
+      modelName: '간송미술관 미디어 디스플레이',
+      productSize: '상세페이지 참조',
+      resolutionBrightness: '고해상도 디스플레이 / 최적화된 밝기',
+      keyFeatures: '문화시설 맞춤형 디스플레이 / 예술작품 전시 최적화',
+      usage: '미술관 전시, 문화 콘텐츠 송출, 관람객 안내',
+      installationMethod: '전시공간 맞춤 설치, 조명 연동',
+      inquiry: '1833-9009',
+    },
+  },
+  'red-road': {
+    id: 'red-road',
+    title: '레드로드',
+    image:
+      '/images/digital-sianage/media_display/레드로드/홍대 전광판 제안서_1.jpg',
+    images: [
+      '/images/digital-sianage/media_display/레드로드/홍대 전광판 제안서_1.jpg',
+      '/images/digital-sianage/media_display/레드로드/홍대 전광판 제안서_3.jpg',
+      '/images/digital-sianage/media_display/레드로드/홍대 전광판 제안서_4.jpg',
+      '/images/digital-sianage/media_display/레드로드/홍대 전광판 제안서_5.jpg',
+    ],
+    specifications: {
+      operatingLineup: '홍대 지역 전용 전광판',
+      modelName: '홍대 레드로드 전광판',
+      productSize: '상세페이지 참조',
+      resolutionBrightness: '고휘도 디스플레이 / 야외 환경 최적화',
+      keyFeatures: '홍대 지역 특화 디스플레이 / 젊은 문화 콘텐츠',
+      usage: '홍대 지역 광고, 문화 이벤트, 지역 정보 안내',
+      installationMethod: '야외 전광판 설치, 방수/방진 처리',
+      inquiry: '1833-9009',
+    },
+  },
+  'baengnyeon-market': {
+    id: 'baengnyeon-market',
+    title: '백년시장',
+    image: '/images/digital-sianage/media_display/백년시장/백년시장01.jpg',
+    images: [
+      '/images/digital-sianage/media_display/백년시장/백년시장01.jpg',
+      '/images/digital-sianage/media_display/백년시장/백년시장02.jpg',
+      '/images/digital-sianage/media_display/백년시장/백년시장03.jpg',
+    ],
+    specifications: {
+      operatingLineup: '전통시장 맞춤형 디스플레이',
+      modelName: '백년시장 미디어 디스플레이',
+      productSize: '상세페이지 참조',
+      resolutionBrightness: '전통시장 환경 최적화 / 적절한 밝기',
+      keyFeatures: '전통시장 특화 디스플레이 / 상인과 고객 소통',
+      usage: '시장 정보 안내, 상품 홍보, 이벤트 알림',
+      installationMethod: '시장 내부 설치, 상인 접근성 고려',
+      inquiry: '1833-9009',
+    },
+  },
+  bulgwangcheon: {
+    id: 'bulgwangcheon',
+    title: '불광천 방송문화거리',
+    image:
+      '/images/digital-sianage/media_display/불광천 방송문화거리/불광천 방송문화거리_가로최종_깬것 [Repaired]_1.jpg',
+    images: [
+      '/images/digital-sianage/media_display/불광천 방송문화거리/불광천 방송문화거리_가로최종_깬것 [Repaired]_1.jpg',
+      '/images/digital-sianage/media_display/불광천 방송문화거리/불광천 방송문화거리_가로최종_깬것 [Repaired]_2.jpg',
+      '/images/digital-sianage/media_display/불광천 방송문화거리/불광천 방송문화거리_가로최종_깬것 [Repaired]_3.jpg',
+      '/images/digital-sianage/media_display/불광천 방송문화거리/불광천 방송문화거리_가로최종_깬것 [Repaired]_4.jpg',
+    ],
+    specifications: {
+      operatingLineup: '방송문화거리 전용 디스플레이',
+      modelName: '불광천 방송문화거리 미디어 디스플레이',
+      productSize: '상세페이지 참조',
+      resolutionBrightness: '문화거리 환경 최적화 / 방송 콘텐츠 전용',
+      keyFeatures: '방송문화거리 특화 디스플레이 / 문화 콘텐츠 송출',
+      usage: '문화 이벤트, 방송 콘텐츠, 지역 문화 홍보',
+      installationMethod: '문화거리 설치, 방송 연동 시스템',
+      inquiry: '1833-9009',
+    },
+  },
+  'seocho-media-pole': {
+    id: 'seocho-media-pole',
+    title: '서초구 미디어폴',
+    image:
+      '/images/digital-sianage/media_display/서초구 미디어폴/서초구 심의도서3_압축_7.jpg',
+    images: [
+      '/images/digital-sianage/media_display/서초구 미디어폴/서초구 심의도서3_압축_7.jpg',
+      '/images/digital-sianage/media_display/서초구 미디어폴/서초구 심의도서3_압축_8.jpg',
+      '/images/digital-sianage/media_display/서초구 미디어폴/서초구 심의도서3_압축_9.jpg',
+      '/images/digital-sianage/media_display/서초구 미디어폴/서초구 심의도서3_압축_10.jpg',
+    ],
+    specifications: {
+      operatingLineup: '서초구 미디어폴 시스템',
+      modelName: '서초구 미디어폴 디스플레이',
+      productSize: '상세페이지 참조',
+      resolutionBrightness: '미디어폴 전용 디스플레이 / 도시 환경 최적화',
+      keyFeatures: '서초구 특화 미디어폴 / 스마트시티 연동',
+      usage: '도시 정보 안내, 공공 서비스, 스마트시티 콘텐츠',
+      installationMethod: '미디어폴 설치, 스마트시티 인프라 연동',
+      inquiry: '1833-9009',
+    },
+  },
+  'seongdong-media-tunnel': {
+    id: 'seongdong-media-tunnel',
+    title: '성동구 미디어터널',
+    image:
+      '/images/digital-sianage/media_display/성동구 미디어터널/성동구 미디어터널01..jpg',
+    images: [
+      '/images/digital-sianage/media_display/성동구 미디어터널/성동구 미디어터널01..jpg',
+      '/images/digital-sianage/media_display/성동구 미디어터널/성동구 미디어터널02.jpg',
+      '/images/digital-sianage/media_display/성동구 미디어터널/성동구 미디어터널03.jpg',
+      '/images/digital-sianage/media_display/성동구 미디어터널/성동구 미디어터널04.jpg',
+    ],
+    specifications: {
+      operatingLineup: '성동구 미디어터널 시스템',
+      modelName: '성동구 미디어터널 디스플레이',
+      productSize: '상세페이지 참조',
+      resolutionBrightness: '터널 환경 최적화 / 연속 디스플레이',
+      keyFeatures: '성동구 특화 미디어터널 / 통행자 경험 향상',
+      usage: '터널 내 정보 안내, 광고, 통행자 안전 정보',
+      installationMethod: '터널 내 연속 설치, 안전 시스템 연동',
+      inquiry: '1833-9009',
+    },
+  },
+  'hampyeong-electronic': {
+    id: 'hampyeong-electronic',
+    title: '함평전자게시대',
+    image: '/images/digital-sianage/media_display/함평전자게시대/함평01.jpg',
+    images: [
+      '/images/digital-sianage/media_display/함평전자게시대/함평01.jpg',
+      '/images/digital-sianage/media_display/함평전자게시대/함평02.jpg',
+      '/images/digital-sianage/media_display/함평전자게시대/함평03.jpg',
+      '/images/digital-sianage/media_display/함평전자게시대/함평04.jpg',
+    ],
+    specifications: {
+      operatingLineup: '함평 전자게시대 시스템',
+      modelName: '함평전자게시대 디스플레이',
+      productSize: '상세페이지 참조',
+      resolutionBrightness: '전자게시대 전용 / 고휘도 디스플레이',
+      keyFeatures: '함평 지역 특화 전자게시대 / 지역 정보 전용',
+      usage: '지역 정보 안내, 공공 서비스, 지역 홍보',
+      installationMethod: '전자게시대 설치, 지역 시스템 연동',
+      inquiry: '1833-9009',
+    },
+  },
+  // 디지털전광판
+  'digital-billboard-1': {
+    id: 'digital-billboard-1',
     title: 'SAMSUNG QB Series',
     image: '/images/digital-signage-example.jpeg',
     specifications: {
@@ -17,8 +171,8 @@ const productDataMap = {
       inquiry: '1833-9009',
     },
   },
-  'digital-signage-2': {
-    id: 'digital-signage-2',
+  'digital-billboard-2': {
+    id: 'digital-billboard-2',
     title: 'LG LED Display',
     image: '/images/digital-signage-example.jpeg',
     specifications: {
@@ -32,8 +186,8 @@ const productDataMap = {
       inquiry: '1833-9009',
     },
   },
-  'digital-signage-3': {
-    id: 'digital-signage-3',
+  'digital-billboard-3': {
+    id: 'digital-billboard-3',
     title: 'Philips Digital Signage',
     image: '/images/digital-signage-example.jpeg',
     specifications: {
@@ -47,8 +201,9 @@ const productDataMap = {
       inquiry: '1833-9009',
     },
   },
-  'digital-signage-4': {
-    id: 'digital-signage-4',
+  // 디지털사이니지
+  'digital-signage-1': {
+    id: 'digital-signage-1',
     title: 'Sony Professional Display',
     image: '/images/digital-signage-example.jpeg',
     specifications: {
@@ -62,8 +217,8 @@ const productDataMap = {
       inquiry: '1833-9009',
     },
   },
-  'digital-signage-5': {
-    id: 'digital-signage-5',
+  'digital-signage-2': {
+    id: 'digital-signage-2',
     title: 'Panasonic Digital Signage',
     image: '/images/digital-signage-example.jpeg',
     specifications: {
@@ -77,8 +232,8 @@ const productDataMap = {
       inquiry: '1833-9009',
     },
   },
-  'digital-signage-6': {
-    id: 'digital-signage-6',
+  'digital-signage-3': {
+    id: 'digital-signage-3',
     title: 'Sharp Digital Display',
     image: '/images/digital-signage-example.jpeg',
     specifications: {
@@ -92,8 +247,8 @@ const productDataMap = {
       inquiry: '1833-9009',
     },
   },
-  'digital-signage-7': {
-    id: 'digital-signage-7',
+  'digital-signage-4': {
+    id: 'digital-signage-4',
     title: 'Toshiba Digital Signage',
     image: '/images/digital-signage-example.jpeg',
     specifications: {
@@ -107,8 +262,8 @@ const productDataMap = {
       inquiry: '1833-9009',
     },
   },
-  'digital-signage-8': {
-    id: 'digital-signage-8',
+  'digital-signage-5': {
+    id: 'digital-signage-5',
     title: 'NEC Digital Display',
     image: '/images/digital-signage-example.jpeg',
     specifications: {
@@ -122,8 +277,8 @@ const productDataMap = {
       inquiry: '1833-9009',
     },
   },
-  'digital-signage-9': {
-    id: 'digital-signage-9',
+  'digital-signage-6': {
+    id: 'digital-signage-6',
     title: 'BenQ Digital Signage',
     image: '/images/digital-signage-example.jpeg',
     specifications: {

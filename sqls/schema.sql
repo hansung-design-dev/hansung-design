@@ -364,11 +364,11 @@ CREATE TABLE public.panel_guideline (
   main_notice text,
   warning_notice text,
   show_warning boolean DEFAULT true,
-  created_at timestamp without time zone DEFAULT now(),
-  updated_at timestamp without time zone DEFAULT now(),
-  image_url ARRAY,
   region_gu_id uuid,
   guideline_type USER-DEFINED,
+  image_url ARRAY,
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now(),
   CONSTRAINT panel_guideline_pkey PRIMARY KEY (id),
   CONSTRAINT panel_guideline_display_category_id_fkey FOREIGN KEY (display_category_id) REFERENCES public.display_types(id)
 );

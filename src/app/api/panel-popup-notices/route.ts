@@ -6,6 +6,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const displayCategoryId = searchParams.get('display_category_id');
     const regionGuId = searchParams.get('region_gu_id');
+    const userId = searchParams.get('user_id');
     const limit = searchParams.get('limit')
       ? parseInt(searchParams.get('limit')!)
       : 10;
@@ -37,6 +38,37 @@ export async function GET(request: NextRequest) {
         { error: '팝업 공지사항 조회 중 오류가 발생했습니다.' },
         { status: 500 }
       );
+    }
+
+    // 사용자가 로그인한 경우 숨김 설정 필터링
+    if (userId && notices && notices.length > 0) {
+      try {
+        // 사용자의 숨김 설정 조회
+        const { data: preferences } = await supabase
+          .from('notice_user_preferences')
+          .select('notice_id, hide_until_date, hide_permanently')
+          .eq('user_id', userId);
+
+        if (preferences) {
+          const today = new Date().toISOString().split('T')[0];
+          const hiddenNoticeIds = preferences
+            .filter(
+              (pref) =>
+                pref.hide_permanently ||
+                (pref.hide_until_date && pref.hide_until_date > today)
+            )
+            .map((pref) => pref.notice_id);
+
+          // 숨겨진 공지사항 제외
+          const filteredNotices = notices.filter(
+            (notice) => !hiddenNoticeIds.includes(notice.id)
+          );
+
+          return NextResponse.json({ notices: filteredNotices });
+        }
+      } catch (error) {
+        console.error('사용자 숨김 설정 조회 오류:', error);
+      }
     }
 
     return NextResponse.json({ notices });

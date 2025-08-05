@@ -50,6 +50,11 @@ interface GroupedCartItem {
   fileSize?: number | null;
   fileType?: string | null;
   emailAddress?: string | null;
+  // 상하반기 정보 추가
+  halfPeriod?: 'first_half' | 'second_half';
+  selectedYear?: number;
+  selectedMonth?: number;
+  periodText?: string;
 }
 
 function PaymentPageContent() {
@@ -84,9 +89,9 @@ function PaymentPageContent() {
     emailMethod: false,
   });
 
-  // 구별 개별 상태 관리
+  // 구별 + 상하반기별 개별 상태 관리
   const [groupStates, setGroupStates] = useState<{
-    [district: string]: {
+    [groupKey: string]: {
       projectName: string;
       selectedFile: File | null;
       sendByEmail: boolean;
@@ -141,22 +146,22 @@ function PaymentPageContent() {
     });
   };
 
-  // 구별 상태 업데이트 핸들러들
-  const handleGroupProjectNameChange = (district: string, value: string) => {
+  // 구별 + 상하반기별 상태 업데이트 핸들러들
+  const handleGroupProjectNameChange = (groupKey: string, value: string) => {
     setGroupStates((prev) => ({
       ...prev,
-      [district]: {
-        ...prev[district],
+      [groupKey]: {
+        ...prev[groupKey],
         projectName: value,
       },
     }));
   };
 
-  const handleGroupFileSelect = (district: string, file: File) => {
+  const handleGroupFileSelect = (groupKey: string, file: File) => {
     setGroupStates((prev) => ({
       ...prev,
-      [district]: {
-        ...prev[district],
+      [groupKey]: {
+        ...prev[groupKey],
         selectedFile: file,
         fileName: file.name,
         fileSize: file.size,
@@ -166,11 +171,11 @@ function PaymentPageContent() {
     }));
   };
 
-  const handleGroupEmailSelect = (district: string, isEmail: boolean) => {
+  const handleGroupEmailSelect = (groupKey: string, isEmail: boolean) => {
     setGroupStates((prev) => ({
       ...prev,
-      [district]: {
-        ...prev[district],
+      [groupKey]: {
+        ...prev[groupKey],
         sendByEmail: isEmail,
         emailAddress: isEmail ? 'banner114@hanmail.net' : null,
         selectedFile: null,
@@ -185,21 +190,21 @@ function PaymentPageContent() {
   const applyBulkSettings = () => {
     if (bulkApply.projectName && projectName) {
       groupedItems.forEach((group) => {
-        handleGroupProjectNameChange(group.district, projectName);
+        handleGroupProjectNameChange(group.id, projectName);
       });
     }
 
     if (bulkApply.fileUpload && selectedFile) {
-      // 파일 일괄적용이 켜져있고 파일이 선택되어 있으면 모든 구에 적용
+      // 파일 일괄적용이 켜져있고 파일이 선택되어 있으면 모든 그룹에 적용
       groupedItems.forEach((group) => {
-        handleGroupFileSelect(group.district, selectedFile);
+        handleGroupFileSelect(group.id, selectedFile);
       });
     }
 
     if (bulkApply.emailMethod) {
-      // 이메일 일괄적용이 켜져있으면 모든 구에 이메일 방식 적용
+      // 이메일 일괄적용이 켜져있으면 모든 그룹에 이메일 방식 적용
       groupedItems.forEach((group) => {
-        handleGroupEmailSelect(group.district, true);
+        handleGroupEmailSelect(group.id, true);
       });
     }
   };
@@ -243,23 +248,43 @@ function PaymentPageContent() {
 
   // 묶음 결제를 위한 아이템 그룹화 함수
   const groupItemsByDistrict = (items: CartItem[]): GroupedCartItem[] => {
-    const grouped: { [district: string]: CartItem[] } = {};
+    // 구별 + 상하반기별로 그룹화
+    const grouped: { [key: string]: CartItem[] } = {};
+
     items.forEach((item) => {
-      if (!grouped[item.district]) grouped[item.district] = [];
-      grouped[item.district].push(item);
+      // 상하반기 정보 생성
+      const halfPeriod = item.halfPeriod || 'first_half';
+      const year = item.selectedYear || new Date().getFullYear();
+      const month = item.selectedMonth || new Date().getMonth() + 1;
+
+      // 그룹 키: 구_상하반기_년월
+      const groupKey = `${item.district}_${halfPeriod}_${year}_${month}`;
+
+      if (!grouped[groupKey]) grouped[groupKey] = [];
+      grouped[groupKey].push(item);
     });
-    return Object.entries(grouped).map(([district, group]) => {
+
+    return Object.entries(grouped).map(([groupKey, group]) => {
       const firstItem = group[0];
       const totalPrice = group.reduce(
         (sum, item) => sum + (item.price || 0),
         0
       );
+
+      // 상하반기 표시 텍스트 생성
+      const halfPeriod = firstItem.halfPeriod || 'first_half';
+      const year = firstItem.selectedYear || new Date().getFullYear();
+      const month = firstItem.selectedMonth || new Date().getMonth() + 1;
+      const periodText = `${year}년 ${month}월 ${
+        halfPeriod === 'first_half' ? '상반기' : '하반기'
+      }`;
+
       return {
-        id: `group_${district}`,
-        name: `${district} 현수막게시대`,
+        id: `group_${groupKey}`,
+        name: `${firstItem.district} 현수막게시대 (${periodText})`,
         items: group,
         totalPrice,
-        district,
+        district: firstItem.district,
         type: 'banner-display',
         panel_type: firstItem.panel_type || 'panel',
         is_public_institution: firstItem.is_public_institution,
@@ -269,6 +294,11 @@ function PaymentPageContent() {
         phone: firstItem.phone,
         company_name: firstItem.company_name,
         email: firstItem.email,
+        // 상하반기 정보 추가
+        halfPeriod,
+        selectedYear: year,
+        selectedMonth: month,
+        periodText,
       };
     });
   };
@@ -909,12 +939,9 @@ function PaymentPageContent() {
                     <div className="flex-1">
                       <input
                         type="text"
-                        value={groupStates[group.district]?.projectName || ''}
+                        value={groupStates[group.id]?.projectName || ''}
                         onChange={(e) =>
-                          handleGroupProjectNameChange(
-                            group.district,
-                            e.target.value
-                          )
+                          handleGroupProjectNameChange(group.id, e.target.value)
                         }
                         className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                         placeholder="작업 이름을 입력하세요"
@@ -932,35 +959,30 @@ function PaymentPageContent() {
                     <div className="flex-1 space-y-2">
                       <CustomFileUpload
                         onFileSelect={(file) =>
-                          handleGroupFileSelect(group.district, file)
+                          handleGroupFileSelect(group.id, file)
                         }
-                        disabled={groupStates[group.district]?.sendByEmail}
+                        disabled={groupStates[group.id]?.sendByEmail}
                         placeholder="시안 파일을 선택해주세요"
                         className="w-full"
                       />
                       <div className="flex items-center gap-2">
                         <input
                           type="checkbox"
-                          id={`email-${group.district}`}
-                          checked={
-                            groupStates[group.district]?.sendByEmail || false
-                          }
+                          id={`email-${group.id}`}
+                          checked={groupStates[group.id]?.sendByEmail || false}
                           onChange={(e) =>
-                            handleGroupEmailSelect(
-                              group.district,
-                              e.target.checked
-                            )
+                            handleGroupEmailSelect(group.id, e.target.checked)
                           }
                           className="w-4 h-4"
                         />
                         <label
-                          htmlFor={`email-${group.district}`}
+                          htmlFor={`email-${group.id}`}
                           className="text-sm text-gray-500"
                         >
                           이메일로 파일 보낼게요
                         </label>
                       </div>
-                      {groupStates[group.district]?.sendByEmail && (
+                      {groupStates[group.id]?.sendByEmail && (
                         <p className="text-xs text-gray-500 ml-6">
                           banner114@hanmail.net로 시안을 보내드리겠습니다.
                         </p>
@@ -976,18 +998,31 @@ function PaymentPageContent() {
                   결제할 게시대 목록:
                 </h3>
                 <div className="space-y-1">
-                  {group.items.map((item, index) => (
-                    <div
-                      key={item.id}
-                      className="text-sm text-gray-600 flex flex-col sm:flex-row sm:justify-between items-center"
-                    >
-                      <span>
-                        {index + 1}. 패널번호:{' '}
-                        {item.panel_code || item.panel_id || '-'} / 이름:{' '}
-                        {item.name || '-'} / 구: {item.district}
-                      </span>
-                    </div>
-                  ))}
+                  {group.items.map((item, index) => {
+                    // 상하반기 정보 표시
+                    const itemHalfPeriod = item.halfPeriod || 'first_half';
+                    const itemYear =
+                      item.selectedYear || new Date().getFullYear();
+                    const itemMonth =
+                      item.selectedMonth || new Date().getMonth() + 1;
+                    const itemPeriodText = `${itemYear}년 ${itemMonth}월 ${
+                      itemHalfPeriod === 'first_half' ? '상반기' : '하반기'
+                    }`;
+
+                    return (
+                      <div
+                        key={item.id}
+                        className="text-sm text-gray-600 flex flex-col sm:flex-row sm:justify-between items-center"
+                      >
+                        <span>
+                          {index + 1}. 패널번호:{' '}
+                          {item.panel_code || item.panel_id || '-'} / 이름:{' '}
+                          {item.name || '-'} / 구: {item.district} / 기간:{' '}
+                          {itemPeriodText}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
               {/* 구별 상세 가격표 */}
@@ -1052,7 +1087,7 @@ function PaymentPageContent() {
               <div className="mt-2">
                 {/* 결제 조건 확인 */}
                 {(() => {
-                  const groupState = groupStates[group.district];
+                  const groupState = groupStates[group.id];
                   const hasProjectName =
                     groupState?.projectName &&
                     groupState.projectName.trim() !== '';
@@ -1066,7 +1101,7 @@ function PaymentPageContent() {
                   return (
                     <>
                       <Button
-                        onClick={() => setPaymentModalOpen(group.district)}
+                        onClick={() => setPaymentModalOpen(group.id)}
                         disabled={!isButtonEnabled}
                         className={`w-full py-2 rounded-lg ${
                           isButtonEnabled
@@ -1074,7 +1109,7 @@ function PaymentPageContent() {
                             : 'bg-gray-400 text-gray-600 cursor-not-allowed'
                         }`}
                       >
-                        {group.district} 결제하기
+                        {group.name} 결제하기
                       </Button>
 
                       {/* 조건 미충족 시 안내 메시지 */}

@@ -1,8 +1,18 @@
 export type DesignContentsType = 'list' | 'detail';
 
+export type PublicDesignCategory =
+  | 'banner_improvement'
+  | 'env_improvement'
+  | 'public_design'
+  | 'street_furniture'
+  | 'landscape_design'
+  | 'lighting_design'
+  | 'signage_system'
+  | 'urban_art';
+
 export interface PublicDesignContent {
   id: string;
-  project_id: string;
+  project_category: PublicDesignCategory;
   design_contents_type: DesignContentsType;
   title?: string;
   subtitle?: string;
@@ -17,7 +27,7 @@ export interface PublicDesignContent {
 
 export interface PublicDesignProject {
   id: string;
-  project_id: string;
+  project_category: PublicDesignCategory;
   title: string;
   subtitle: string;
   description: string;
@@ -27,7 +37,7 @@ export interface PublicDesignProject {
 
 export interface PublicDesignDetail {
   id: string;
-  project_id: string;
+  project_category: PublicDesignCategory;
   title: string;
   alt_text: string;
   image_url: string;
@@ -35,6 +45,6 @@ export interface PublicDesignDetail {
 }
 
 export interface PublicDesignDetailResponse {
-  project: PublicDesignContent;
+  projects: PublicDesignContent[];
   detailContents: PublicDesignContent[];
 }

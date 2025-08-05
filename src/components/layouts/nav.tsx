@@ -36,7 +36,7 @@ const menuItems: MenuItem[] = [
   { name: '공공디자인', href: '/public-design' },
   { name: 'LED전자게시대', href: '/led-display' },
   { name: '현수막게시대', href: '/banner-display' },
-  { name: '디지털사이니지', href: '/digital-signage' },
+  { name: '디지털미디어', href: '/digital-signage' },
 ];
 
 const IconButton = ({

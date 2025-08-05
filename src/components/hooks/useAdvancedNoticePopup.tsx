@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { PopupNotice } from '@/src/types/popup-notice';
+import { useAuth } from '@/src/contexts/authContext';
 
 export function useAdvancedNoticePopup(
   displayTypeName?: string,
@@ -9,6 +10,7 @@ export function useAdvancedNoticePopup(
 ) {
   const [popupNotice, setPopupNotice] = useState<PopupNotice | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchPopupNotice = async () => {
@@ -36,6 +38,9 @@ export function useAdvancedNoticePopup(
         if (regionGuId) {
           params.append('region_gu_id', regionGuId);
         }
+        if (user?.id) {
+          params.append('user_id', user.id);
+        }
         params.append('limit', '1');
 
         const response = await fetch(
@@ -56,7 +61,7 @@ export function useAdvancedNoticePopup(
     };
 
     fetchPopupNotice();
-  }, [displayTypeName, regionGuId]);
+  }, [displayTypeName, regionGuId, user?.id]);
 
   const closePopup = () => {
     setPopupNotice(null);

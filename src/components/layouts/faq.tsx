@@ -31,7 +31,7 @@ const FAQ = () => {
   // 영문 카테고리를 한글로 변환하는 함수
   const translateCategory = (englishName: string): string => {
     const categoryMapping: { [key: string]: string } = {
-      digital_signage: '디지털사이니지',
+      digital_signage: '디지털미디어',
       public_design: '공공디자인',
       led_display: 'LED전자게시대',
       banner_display: '현수막게시대',
