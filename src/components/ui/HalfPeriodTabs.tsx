@@ -47,9 +47,13 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
         endDay: new Date(periods[0].period_to).getDate(),
         from: periods[0].period_from,
         to: periods[0].period_to,
-        label:
-          periods[0].year_month +
-          (periods[0].period === 'first_half' ? ' 상반기' : ' 하반기'),
+        label: (() => {
+          const year = new Date(periods[0].period_from).getFullYear();
+          const month = new Date(periods[0].period_from).getMonth() + 1;
+          return `${year}년 ${month}월${
+            periods[0].period === 'first_half' ? ' 상반기' : ' 하반기'
+          }`;
+        })(),
       };
 
       const secondPeriod = periods[1]
@@ -60,9 +64,13 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
             endDay: new Date(periods[1].period_to).getDate(),
             from: periods[1].period_from,
             to: periods[1].period_to,
-            label:
-              periods[1].year_month +
-              (periods[1].period === 'first_half' ? ' 상반기' : ' 하반기'),
+            label: (() => {
+              const year = new Date(periods[1].period_from).getFullYear();
+              const month = new Date(periods[1].period_from).getMonth() + 1;
+              return `${year}년 ${month}월${
+                periods[1].period === 'first_half' ? ' 상반기' : ' 하반기'
+              }`;
+            })(),
           }
         : null;
 
@@ -356,8 +364,7 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer'
             }`}
           >
-            {periodInfo.data.label} (0{periodInfo.data.month}.
-            {periodInfo.data.startDay}-{periodInfo.data.endDay})
+            {periodInfo.data.label}
           </button>
         ))}
 
