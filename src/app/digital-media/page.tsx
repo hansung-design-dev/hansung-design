@@ -12,7 +12,6 @@ const mediaDisplayItems = [
   {
     id: 'gansong-art-museum',
     title: '간송미술관',
-    tags: ['#미디어경관디자인', '#문화시설'],
     src: '/images/digital-sianage/media_display/간송미술관/2025_간송미술관-무기명_1.jpg',
     images: [
       '/images/digital-sianage/media_display/간송미술관/2025_간송미술관-무기명_1.jpg',
@@ -25,7 +24,6 @@ const mediaDisplayItems = [
   {
     id: 'red-road',
     title: '레드로드',
-    tags: ['#미디어경관디자인', '#홍대'],
     src: '/images/digital-sianage/media_display/레드로드/홍대 전광판 제안서_1.jpg',
     images: [
       '/images/digital-sianage/media_display/레드로드/홍대 전광판 제안서_1.jpg',
@@ -37,7 +35,6 @@ const mediaDisplayItems = [
   {
     id: 'baengnyeon-market',
     title: '백년시장',
-    tags: ['#미디어경관디자인', '#전통시장'],
     src: '/images/digital-sianage/media_display/백년시장/백년시장01.jpg',
     images: [
       '/images/digital-sianage/media_display/백년시장/백년시장01.jpg',
@@ -48,7 +45,6 @@ const mediaDisplayItems = [
   {
     id: 'bulgwangcheon',
     title: '불광천 방송문화거리',
-    tags: ['#미디어경관디자인', '#문화거리'],
     src: '/images/digital-sianage/media_display/불광천 방송문화거리/불광천 방송문화거리_가로최종_깬것 [Repaired]_1.jpg',
     images: [
       '/images/digital-sianage/media_display/불광천 방송문화거리/불광천 방송문화거리_가로최종_깬것 [Repaired]_1.jpg',
@@ -60,7 +56,6 @@ const mediaDisplayItems = [
   {
     id: 'seocho-media-pole',
     title: '서초구 미디어폴',
-    tags: ['#미디어경관디자인', '#미디어폴'],
     src: '/images/digital-sianage/media_display/서초구 미디어폴/서초구 심의도서3_압축_7.jpg',
     images: [
       '/images/digital-sianage/media_display/서초구 미디어폴/서초구 심의도서3_압축_7.jpg',
@@ -72,7 +67,6 @@ const mediaDisplayItems = [
   {
     id: 'seongdong-media-tunnel',
     title: '성동구 미디어터널',
-    tags: ['#미디어경관디자인', '#미디어터널'],
     src: '/images/digital-sianage/media_display/성동구 미디어터널/성동구 미디어터널01..jpg',
     images: [
       '/images/digital-sianage/media_display/성동구 미디어터널/성동구 미디어터널01..jpg',
@@ -84,7 +78,6 @@ const mediaDisplayItems = [
   {
     id: 'hampyeong-electronic',
     title: '함평전자게시대',
-    tags: ['#미디어경관디자인', '#전자게시대'],
     src: '/images/digital-sianage/media_display/함평전자게시대/함평01.jpg',
     images: [
       '/images/digital-sianage/media_display/함평전자게시대/함평01.jpg',
@@ -100,20 +93,17 @@ const digitalBillboardItems = [
   {
     id: 'digital-billboard-1',
     title: 'SAMSUNG QB Series',
-    tags: ['#디지털전광판', '#4K UHD'],
-    src: '/images/digital-signage-grid-example.jpeg',
+    src: '/images/digital-media-grid-example.jpeg',
   },
   {
     id: 'digital-billboard-2',
     title: 'LG LED Display',
-    tags: ['#디지털전광판', '#Full HD'],
-    src: '/images/digital-signage-grid-example.jpeg',
+    src: '/images/digital-media-grid-example.jpeg',
   },
   {
     id: 'digital-billboard-3',
     title: 'Philips Digital Signage',
-    tags: ['#디지털전광판', '#Smart Display'],
-    src: '/images/digital-signage-grid-example.jpeg',
+    src: '/images/digital-media-grid-example.jpeg',
   },
 ];
 
@@ -122,38 +112,32 @@ const digitalSignageItems = [
   {
     id: 'digital-signage-1',
     title: 'Sony Professional Display',
-    tags: ['#디지털사이니지', '#Professional'],
-    src: '/images/digital-signage-grid-example.jpeg',
+    src: '/images/digital-media-grid-example.jpeg',
   },
   {
     id: 'digital-signage-2',
     title: 'Panasonic Digital Signage',
-    tags: ['#디지털사이니지', '#Commercial'],
-    src: '/images/digital-signage-grid-example.jpeg',
+    src: '/images/digital-media-grid-example.jpeg',
   },
   {
     id: 'digital-signage-3',
     title: 'Sharp Digital Display',
-    tags: ['#디지털사이니지', '#Interactive'],
-    src: '/images/digital-signage-grid-example.jpeg',
+    src: '/images/digital-media-grid-example.jpeg',
   },
   {
     id: 'digital-signage-4',
     title: 'Toshiba Digital Signage',
-    tags: ['#디지털사이니지', '#High Brightness'],
-    src: '/images/digital-signage-grid-example.jpeg',
+    src: '/images/digital-media-grid-example.jpeg',
   },
   {
     id: 'digital-signage-5',
     title: 'NEC Digital Display',
-    tags: ['#디지털사이니지', '#Reliability'],
-    src: '/images/digital-signage-grid-example.jpeg',
+    src: '/images/digital-media-grid-example.jpeg',
   },
   {
     id: 'digital-signage-6',
     title: 'BenQ Digital Signage',
-    tags: ['#디지털사이니지', '#Energy Efficient'],
-    src: '/images/digital-signage-grid-example.jpeg',
+    src: '/images/digital-media-grid-example.jpeg',
   },
 ];
 

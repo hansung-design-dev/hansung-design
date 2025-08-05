@@ -216,12 +216,12 @@ CREATE TABLE public.homepage_notice (
   updated_at timestamp without time zone DEFAULT now(),
   CONSTRAINT homepage_notice_pkey PRIMARY KEY (id)
 );
-CREATE TABLE public.installed_photos (
+CREATE TABLE public.installed_banner (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   display_type_id uuid NOT NULL,
   title character varying NOT NULL,
   content text,
-  photo_urls ARRAY NOT NULL,
+  folder_path text NOT NULL DEFAULT '',
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT installed_photos_pkey PRIMARY KEY (id),
