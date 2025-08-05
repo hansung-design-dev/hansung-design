@@ -159,7 +159,7 @@ const productDataMap = {
   'digital-billboard-1': {
     id: 'digital-billboard-1',
     title: 'SAMSUNG QB Series',
-    image: '/images/digital-signage-example.jpeg',
+    image: '/images/digital-media-example.jpeg',
     specifications: {
       operatingLineup: '43인치, 50인치, 55인치, 65인치, 75인치, 85인치',
       modelName: 'QB Series (상세페이지 참조)',
@@ -174,7 +174,7 @@ const productDataMap = {
   'digital-billboard-2': {
     id: 'digital-billboard-2',
     title: 'LG LED Display',
-    image: '/images/digital-signage-example.jpeg',
+    image: '/images/digital-media-example.jpeg',
     specifications: {
       operatingLineup: '32인치, 43인치, 49인치, 55인치, 65인치',
       modelName: 'LG LED Series (상세페이지 참조)',
@@ -189,7 +189,7 @@ const productDataMap = {
   'digital-billboard-3': {
     id: 'digital-billboard-3',
     title: 'Philips Digital Signage',
-    image: '/images/digital-signage-example.jpeg',
+    image: '/images/digital-media-example.jpeg',
     specifications: {
       operatingLineup: '40인치, 50인치, 55인치, 65인치, 75인치',
       modelName: 'Philips BDL Series (상세페이지 참조)',
@@ -205,7 +205,7 @@ const productDataMap = {
   'digital-signage-1': {
     id: 'digital-signage-1',
     title: 'Sony Professional Display',
-    image: '/images/digital-signage-example.jpeg',
+    image: '/images/digital-media-example.jpeg',
     specifications: {
       operatingLineup: '43인치, 49인치, 55인치, 65인치, 75인치, 85인치',
       modelName: 'Sony BZ Series (상세페이지 참조)',
@@ -220,7 +220,7 @@ const productDataMap = {
   'digital-signage-2': {
     id: 'digital-signage-2',
     title: 'Panasonic Digital Signage',
-    image: '/images/digital-signage-example.jpeg',
+    image: '/images/digital-media-example.jpeg',
     specifications: {
       operatingLineup: '40인치, 50인치, 55인치, 65인치, 75인치',
       modelName: 'Panasonic TH Series (상세페이지 참조)',
@@ -235,7 +235,7 @@ const productDataMap = {
   'digital-signage-3': {
     id: 'digital-signage-3',
     title: 'Sharp Digital Display',
-    image: '/images/digital-signage-example.jpeg',
+    image: '/images/digital-media-example.jpeg',
     specifications: {
       operatingLineup: '40인치, 50인치, 55인치, 65인치, 70인치',
       modelName: 'Sharp PN Series (상세페이지 참조)',
@@ -250,7 +250,7 @@ const productDataMap = {
   'digital-signage-4': {
     id: 'digital-signage-4',
     title: 'Toshiba Digital Signage',
-    image: '/images/digital-signage-example.jpeg',
+    image: '/images/digital-media-example.jpeg',
     specifications: {
       operatingLineup: '43인치, 50인치, 55인치, 65인치, 75인치',
       modelName: 'Toshiba L Series (상세페이지 참조)',
@@ -265,7 +265,7 @@ const productDataMap = {
   'digital-signage-5': {
     id: 'digital-signage-5',
     title: 'NEC Digital Display',
-    image: '/images/digital-signage-example.jpeg',
+    image: '/images/digital-media-example.jpeg',
     specifications: {
       operatingLineup: '40인치, 46인치, 55인치, 65인치, 75인치',
       modelName: 'NEC V Series (상세페이지 참조)',
@@ -280,7 +280,7 @@ const productDataMap = {
   'digital-signage-6': {
     id: 'digital-signage-6',
     title: 'BenQ Digital Signage',
-    image: '/images/digital-signage-example.jpeg',
+    image: '/images/digital-media-example.jpeg',
     specifications: {
       operatingLineup: '32인치, 43인치, 50인치, 55인치, 65인치',
       modelName: 'BenQ RP Series (상세페이지 참조)',

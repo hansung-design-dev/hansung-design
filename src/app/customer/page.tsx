@@ -2,7 +2,7 @@
 import React from 'react';
 import FaqSkeleton from '../../components/skeleton/FaqSkeleton';
 import NoticeSkeleton from '../../components/skeleton/NoticeSkeleton';
-import { InstallationPhoto } from '../../types/installation-photo';
+import { InstallationBanner } from '../../types/installation-photo';
 
 const faqCategories = [
   '디지털미디어',
@@ -46,8 +46,8 @@ export default function CustomerPage() {
   );
   const [notices, setNotices] = React.useState<NoticeItem[]>([]);
   const [faqs, setFaqs] = React.useState<FaqItem[]>([]);
-  const [installationPhotos, setInstallationPhotos] = React.useState<
-    InstallationPhoto[]
+  const [installationBanners, setInstallationBanners] = React.useState<
+    InstallationBanner[]
   >([]);
   const [loading, setLoading] = React.useState(true);
   const [faqLoading, setFaqLoading] = React.useState(false);
@@ -82,8 +82,8 @@ export default function CustomerPage() {
       try {
         const response = await fetch('/api/installation-photos?limit=20');
         const data = await response.json();
-        if (data.installation_photos) {
-          setInstallationPhotos(data.installation_photos);
+        if (data.installation_banners) {
+          setInstallationBanners(data.installation_banners);
         }
       } catch (error) {
         console.error('게첨사진 조회 오류:', error);
@@ -250,62 +250,67 @@ export default function CustomerPage() {
                     </div>
                   ))}
                 </div>
-              ) : installationPhotos.length > 0 ? (
+              ) : installationBanners.length > 0 ? (
                 <div className="space-y-6">
-                  {installationPhotos.map((photo) => (
+                  {installationBanners.map((banner) => (
                     <div
-                      key={photo.id}
+                      key={banner.id}
                       className="border border-gray-200 rounded-lg overflow-hidden"
                     >
                       <div
                         className="p-4 cursor-pointer hover:bg-gray-50"
-                        onClick={() => handleItemClick(photo.id)}
+                        onClick={() => handleItemClick(banner.id)}
                       >
                         <div className="flex justify-between items-center">
                           <h3 className="text-lg font-medium text-gray-900">
-                            {photo.title}
+                            {banner.title}
                           </h3>
                           <span className="text-sm text-gray-500">
-                            {photo.display_types?.name}
+                            {banner.region_gu?.name}
                           </span>
                         </div>
                         <div className="text-sm text-gray-500 mt-1">
-                          {formatDate(photo.created_at)}
+                          {formatDate(banner.created_at)}
                         </div>
                       </div>
                       {/* 아코디언 상세 내용 */}
-                      {expandedItemId === photo.id && (
+                      {expandedItemId === banner.id && (
                         <div className="border-t border-gray-200 p-4 bg-gray-50">
                           <div className="bg-white rounded-lg p-4">
                             <div className="mb-4">
                               {/* 여러 사진 표시 - 일렬로 */}
                               <div className="flex flex-col space-y-4">
-                                {photo.photo_urls.map((photoUrl, index) => (
-                                  <div key={index} className="relative">
-                                    <img
-                                      src={photoUrl}
-                                      alt={`${photo.title} - 사진 ${index + 1}`}
-                                      className="w-full h-auto rounded-lg shadow-sm"
-                                      onError={(e) => {
-                                        const target =
-                                          e.target as HTMLImageElement;
-                                        target.src = '/images/no_image.png';
-                                      }}
-                                    />
-                                    <div className="absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
-                                      {index + 1} / {photo.photo_urls.length}
+                                {banner.photo_urls?.map(
+                                  (photoUrl: string, index: number) => (
+                                    <div key={index} className="relative">
+                                      <img
+                                        src={photoUrl}
+                                        alt={`${banner.title} - 사진 ${
+                                          index + 1
+                                        }`}
+                                        className="w-full h-auto rounded-lg shadow-sm"
+                                        onError={(e) => {
+                                          const target =
+                                            e.target as HTMLImageElement;
+                                          target.src = '/images/no_image.png';
+                                        }}
+                                      />
+                                      <div className="absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
+                                        {index + 1} /{' '}
+                                        {banner.photo_urls?.length || 0}
+                                      </div>
                                     </div>
-                                  </div>
-                                ))}
+                                  )
+                                )}
                               </div>
                             </div>
-                            {photo.content && (
+                            {banner.content && (
                               <div className="text-gray-600 leading-relaxed whitespace-pre-line">
-                                {photo.content}
+                                {banner.content}
                               </div>
                             )}
                             <div className="mt-4 text-sm text-gray-500">
-                              등록일: {formatDate(photo.created_at)}
+                              등록일: {formatDate(banner.created_at)}
                             </div>
                           </div>
                         </div>

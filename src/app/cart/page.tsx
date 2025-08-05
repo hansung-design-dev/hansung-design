@@ -170,7 +170,7 @@ function CartItemRow({
       case 'led-display':
         return item.photo_url || '/images/led-display.jpeg';
       case 'digital-signage':
-        return item.photo_url || '/images/digital-signage/landing.png';
+        return item.photo_url || '/images/digital-media/landing.png';
       default:
         return item.photo_url || '/images/banner-display/landing.png';
     }

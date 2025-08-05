@@ -264,7 +264,7 @@ export default function Home() {
           imageAlt="Future section image"
           reverse={true}
           buttonText="더 알아보기"
-          href="/digital-signage"
+          href="/digital-media"
           list={
             digitalSection?.description_list?.[0]?.list || [
               '-시공간의 한계를 넘는 혁신적 솔루션 구축',
