@@ -1,12 +1,10 @@
 'use client';
 
-import ProjectRow, {
-  ProjectItem as BaseProjectItem,
-} from '@/src/components/projectRow';
+
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import PublicDesignDesktopSkeleton from '@/src/components/skeleton/PublicDesignDesktopSkeleton';
 import PublicDesignSkeleton from '@/src/components/skeleton/PublicDesignSkeleton';
 import { useAdvancedNoticePopup } from '@/src/components/hooks/useAdvancedNoticePopup';
@@ -27,6 +25,9 @@ export default function PublicDesignPage() {
   const [loading, setLoading] = useState(true);
   const [homepageContent, setHomepageContent] =
     useState<HomepageContent | null>(null);
+  const [visibleCount, setVisibleCount] = useState(3);
+  const [hasMore, setHasMore] = useState(true);
+  const observerRef = useRef<IntersectionObserver | null>(null);
 
   // 팝업 공지사항 훅 사용 (고급 팝업 시스템)
   const { popupNotice } = useAdvancedNoticePopup('public_design');
@@ -36,18 +37,30 @@ export default function PublicDesignPage() {
     // 팝업이 있으면 처리할 로직을 여기에 추가할 수 있습니다
   }
 
-  // ProjectRow용 데이터로 변환하는 함수
-  const convertToProjectRowData = (
-    projects: ProjectItem[]
-  ): BaseProjectItem[] => {
-    return projects.map((project) => ({
-      id: project.id,
-      imageSrc: project.listImage,
-      title: project.name,
-      subtitle: project.description,
-      description: project.description,
-    }));
-  };
+
+
+  // 무한스크롤 콜백
+  const loadMore = useCallback(() => {
+    if (visibleCount < projects.length) {
+      setVisibleCount(prev => Math.min(prev + 3, projects.length));
+    } else {
+      setHasMore(false);
+    }
+  }, [visibleCount, projects.length]);
+
+  // Intersection Observer 설정
+  const lastElementRef = useCallback((node: HTMLDivElement) => {
+    if (loading) return;
+    if (observerRef.current) observerRef.current.disconnect();
+    
+    observerRef.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore) {
+        loadMore();
+      }
+    });
+    
+    if (node) observerRef.current.observe(node);
+  }, [loading, hasMore, loadMore]);
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -123,11 +136,8 @@ export default function PublicDesignPage() {
     fetchProjects();
   }, []);
 
-  // 줄마다 필요한 개수만큼 slice (각 줄에 2개씩, 2개 카테고리로 2줄 구성)
-  const rows = [
-    [projects[0], projects[0]], // 첫 번째 프로젝트를 2개로 복제
-    [projects[1], projects[1]], // 두 번째 프로젝트를 2개로 복제
-  ];
+  // 표시할 프로젝트들 (무한스크롤용)
+  const visibleProjects = projects.slice(0, visibleCount);
 
   return (
     <main className="min-h-screen bg-white">
@@ -161,22 +171,35 @@ export default function PublicDesignPage() {
           <PublicDesignDesktopSkeleton />
         ) : (
           <div className="flex flex-col lg:gap-[12rem] md:gap-[12rem] sm:gap-[1rem] ">
-            {rows.map((rowProjects, idx) => (
-              <div key={idx} className="h-[400px] cursor-pointer relative">
-                <Link
-                  href={`/public-design/${
-                    rowProjects[0].categoryId || rowProjects[0].id
-                  }`}
-                >
-                  <ProjectRow
-                    projects={convertToProjectRowData(rowProjects)}
-                    largeCardFirst={idx === 0}
-                    splitSmallSection={false}
-                    showTitleOnLargeOnly={true}
-                  />
+            {visibleProjects.map((project, idx) => (
+              <div 
+                key={project.id} 
+                className="h-[400px] cursor-pointer relative"
+                ref={idx === visibleProjects.length - 1 ? lastElementRef : undefined}
+              >
+                <Link href={`/public-design/${project.categoryId || project.id}`}>
+                  <div className="relative w-full h-full">
+                    <Image
+                      src={project.listImage}
+                      alt={project.name}
+                      fill
+                      className="object-cover rounded-[1rem]"
+                    />
+                    <div className="absolute bottom-8 left-8 text-white">
+                      <div className="text-1.5 font-500 pb-2">{project.name}</div>
+                      <p className="text-1 font-normal mt-1">
+                        {project.description}
+                      </p>
+                    </div>
+                  </div>
                 </Link>
               </div>
             ))}
+            {hasMore && (
+              <div className="flex justify-center py-8">
+                <div className="text-gray-500">더 많은 프로젝트를 불러오는 중...</div>
+              </div>
+            )}
           </div>
         )}
       </section>
@@ -186,10 +209,11 @@ export default function PublicDesignPage() {
           <PublicDesignSkeleton />
         ) : (
           <div className="flex flex-col gap-8">
-            {projects.map((project) => (
+            {visibleProjects.map((project, idx) => (
               <div
                 className="w-full h-[400px] cursor-pointer"
                 key={project.id}
+                ref={idx === visibleProjects.length - 1 ? lastElementRef : undefined}
                 onClick={() =>
                   router.push(
                     `/public-design/${project.categoryId || project.id}`
@@ -212,6 +236,11 @@ export default function PublicDesignPage() {
                 </div>
               </div>
             ))}
+            {hasMore && (
+              <div className="flex justify-center py-8">
+                <div className="text-gray-500">더 많은 프로젝트를 불러오는 중...</div>
+              </div>
+            )}
           </div>
         )}
       </section>

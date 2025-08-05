@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
       .select('*')
       .eq('design_contents_type', 'list')
       .eq('is_active', true)
+      .eq('project_category', 'banner_improvement')
       .order('display_order', { ascending: true });
 
     if (error) {

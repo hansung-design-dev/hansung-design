@@ -3,22 +3,26 @@ import { supabase } from '@/src/app/api/supabase';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
-    // 프로젝트 기본 정보 가져오기 (list 타입)
-    const { data: projectData, error: projectError } = await supabase
+    // 프로젝트 기본 정보 가져오기 (list 타입들)
+    const { data: projectDataList, error: projectError } = await supabase
       .from('public_design_contents')
       .select('*')
       .eq('project_category', id)
       .eq('design_contents_type', 'list')
       .eq('is_active', true)
-      .single();
+      .order('display_order', { ascending: true });
 
     if (projectError) {
       console.error('Error fetching project:', projectError);
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
+
+    if (!projectDataList || projectDataList.length === 0) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
@@ -41,7 +45,7 @@ export async function GET(
 
     // 응답 데이터 구성
     const response = {
-      project: {
+      projects: projectDataList.map((projectData) => ({
         id: projectData.id,
         project_id: projectData.project_category,
         design_contents_type: projectData.design_contents_type,
@@ -56,7 +60,7 @@ export async function GET(
         is_active: projectData.is_active,
         created_at: projectData.created_at,
         updated_at: projectData.updated_at,
-      },
+      })),
       detailContents: detailContents.map((content) => ({
         id: content.id,
         project_id: content.project_category,

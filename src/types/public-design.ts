@@ -45,6 +45,6 @@ export interface PublicDesignDetail {
 }
 
 export interface PublicDesignDetailResponse {
-  project: PublicDesignContent;
+  projects: PublicDesignContent[];
   detailContents: PublicDesignContent[];
 }

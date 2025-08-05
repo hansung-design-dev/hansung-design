@@ -47,7 +47,11 @@ export default function PublicDesignDetailPage() {
     );
   }
 
-  if (!projectData) {
+  if (
+    !projectData ||
+    !projectData.projects ||
+    projectData.projects.length === 0
+  ) {
     return (
       <main className="min-h-screen bg-white py-[6rem] lg:px-[8rem] sm:px-2 md:px-2">
         <div className="flex justify-center items-center h-64">
@@ -65,12 +69,12 @@ export default function PublicDesignDetailPage() {
           <div className="col-span-2 lg:h-[32rem] sm:h-[23rem]">
             <ProjectCard
               imageSrc={
-                projectData.project.image_url ||
+                projectData.projects?.[0]?.image_url ||
                 '/images/public-design-image2.jpeg'
               }
-              title={projectData.project.title || ''}
-              subtitle={projectData.project.subtitle || ''}
-              description={projectData.project.description || ''}
+              title={projectData.projects?.[0]?.title || ''}
+              subtitle={projectData.projects?.[0]?.subtitle || ''}
+              description={projectData.projects?.[0]?.description || ''}
               isLarge={true}
               className="h-full"
             />
@@ -78,7 +82,7 @@ export default function PublicDesignDetailPage() {
           <div className="col-span-1 lg:h-[32rem] sm:h-[23rem]">
             <ProjectCard
               imageSrc={
-                projectData.project.image_url ||
+                projectData.projects?.[0]?.image_url ||
                 '/images/public-design-image2.jpeg'
               }
               title=""
