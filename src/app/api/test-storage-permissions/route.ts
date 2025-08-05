@@ -1,9 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { supabase } from '@/src/lib/supabase';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url);
     const bucketName = 'banner-installed';
 
     console.log(`🔍 Storage 권한 테스트: ${bucketName}`);
@@ -70,7 +69,6 @@ export async function GET(request: NextRequest) {
         files: specificFile?.slice(0, 5).map((f) => f.name) || [],
       },
       debug_info: {
-        bucket_error: bucketError?.message || null,
         root_error: rootError?.message || null,
         folder_error: folderError?.message || null,
         specific_error: specificError?.message || null,

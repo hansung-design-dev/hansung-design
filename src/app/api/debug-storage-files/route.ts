@@ -1,9 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { supabase } from '@/src/lib/supabase';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url);
     const bucketName = 'banner-installed';
 
     console.log(`🔍 전체 파일 구조 확인: ${bucketName}`);
@@ -76,7 +75,6 @@ export async function GET(request: NextRequest) {
       test_urls: testUrls,
       debug_info: {
         bucket_name: bucketName,
-        root_error: rootError?.message || null,
         file_count: rootFiles?.length || 0,
       },
     });

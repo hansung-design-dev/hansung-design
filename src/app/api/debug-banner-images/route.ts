@@ -75,7 +75,6 @@ export async function GET(request: NextRequest) {
       debug_info: {
         folder_path: folderPath,
         bucket_name: bucketName,
-        storage_error: error?.message || null,
       },
     });
   } catch (error) {

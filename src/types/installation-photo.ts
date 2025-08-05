@@ -29,7 +29,3 @@ export interface InstallationBannerResponse {
   installation_banners: InstallationBanner[];
   pagination: PaginationInfo;
 }
-
-// 기존 타입과의 호환성을 위한 별칭
-export interface InstallationPhoto extends InstallationBanner {}
-export interface InstallationPhotoResponse extends InstallationBannerResponse {}
