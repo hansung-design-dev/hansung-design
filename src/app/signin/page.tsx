@@ -25,6 +25,10 @@ export default function Signin() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    console.log('=== 로그인 폼 제출 ===');
+    console.log('입력된 username:', formData.username);
+    console.log('입력된 password:', formData.password);
+
     if (!formData.username || !formData.password) {
       setError('아이디와 비밀번호를 입력해주세요.');
       return;
@@ -34,6 +38,10 @@ export default function Signin() {
     setError('');
 
     try {
+      console.log('signIn 함수 호출 전:', {
+        username: formData.username,
+        password: formData.password,
+      });
       const result = await signIn(formData.username, formData.password);
 
       if (result.success) {

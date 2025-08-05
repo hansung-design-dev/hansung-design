@@ -5,12 +5,13 @@ import { useRouter } from 'next/navigation';
 import KakaoMap from '@/src/components/kakaoMap';
 import DropdownMenu from '@/src/components/dropdown';
 import ViewTypeButton from '@/src/components/viewTypeButton';
+import GuidelineButton from '@/src/components/GuidelineButton';
 import MapPinIcon from '@/src/icons/map-pin.svg';
 import GalleryIcon from '@/src/icons/gallery.svg';
 import ListIcon from '@/src/icons/list.svg';
 import DocumentIcon from '@/public/svg/document.svg';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useCart } from '../contexts/cartContext';
 import { useProfile } from '../contexts/profileContext';
 import { useAuth } from '../contexts/authContext';
@@ -103,6 +104,7 @@ export default function DisplayDetailPage({
       return currentMonth === 12 ? currentYear + 1 : currentYear;
     }
   });
+  const [aiDownloadLoading, setAiDownloadLoading] = useState(false);
 
   const [selectedPeriodMonth, setSelectedPeriodMonth] = useState<number>(() => {
     const now = new Date();
@@ -254,6 +256,8 @@ export default function DisplayDetailPage({
       currentSetPanelTypeFilter('panel');
     }
   }, [district, currentSetPanelTypeFilter]);
+
+
 
   // 게시일 7일 전까지 신청 가능 여부 확인 (한국시간 기준)
   const isPeriodAvailable = (periodStartDate: string) => {
@@ -499,18 +503,61 @@ export default function DisplayDetailPage({
   };
 
   // AI 파일 다운로드 함수
-  const handleAIFileDownload = () => {
-    // 현재 구역에 따른 AI 파일 URL 설정
-    const districtCode = getDistrictCode(districtObj?.name || '');
-    const downloadUrl = `/uploads/ai-files/${districtCode}_ai_guideline.pdf`;
+  const handleAIFileDownload = async () => {
+    setAiDownloadLoading(true);
+    try {
+      // 데이터베이스에서 AI 파일 URL 가져오기
+      const response = await fetch(
+        `/api/get-ai-guideline?district=${encodeURIComponent(
+          district
+        )}&guideline_type=panel`
+      );
 
-    // 파일 다운로드
-    const link = document.createElement('a');
-    link.href = downloadUrl;
-    link.download = `${districtObj?.name || '가이드라인'}_AI_파일.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      if (!response.ok) {
+        throw new Error('AI 파일 정보를 가져올 수 없습니다.');
+      }
+
+      const result = await response.json();
+
+      if (!result.success) {
+        // AI 파일이 없는 경우 조용히 처리 (알림 없이)
+        console.log('AI file not available:', result.error);
+        return;
+      }
+
+      const aiFileUrl = result.data.aiFileUrl;
+      const fileName =
+        aiFileUrl.split('/').pop() ||
+        `${districtObj?.name || '가이드라인'}_AI_파일`;
+
+      // Supabase Storage URL인지 확인
+      if (aiFileUrl.includes('supabase.co')) {
+        // Supabase Storage에서 직접 다운로드
+        const fileResponse = await fetch(aiFileUrl);
+        if (!fileResponse.ok) {
+          throw new Error('파일을 다운로드할 수 없습니다.');
+        }
+
+        const blob = await fileResponse.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(downloadUrl);
+      } else {
+        // 일반 URL인 경우 새 탭에서 열기
+        window.open(aiFileUrl, '_blank');
+      }
+    } catch (error) {
+      console.error('AI 파일 다운로드 오류:', error);
+      alert('AI 파일 다운로드 중 오류가 발생했습니다.');
+    } finally {
+      setAiDownloadLoading(false);
+    }
   };
 
   const handleItemSelect = (id: string, checked?: boolean) => {
@@ -1294,38 +1341,40 @@ export default function DisplayDetailPage({
             isActive={viewType === 'list'}
             onClick={() => setViewType('list')}
           />
-          <button
-            onClick={() => {
-              const guidelineSection =
-                document.getElementById('guideline-section');
-              if (guidelineSection) {
-                guidelineSection.scrollIntoView({ behavior: 'smooth' });
-              }
-            }}
+          <GuidelineButton
+            district={district}
+            guidelineType="panel"
             className="flex items-center gap-2 px-4 py-2 hover:cursor-pointer text-gray-800 hover:text-black border-b-2 border-transparent hover:border-black"
           >
             <DocumentIcon className="w-7 h-6 text-gray-600" />
             <span className="hidden md:inline">가이드라인 보기</span>
-          </button>
+          </GuidelineButton>
           <button
             onClick={handleAIFileDownload}
-            className="flex items-center gap-2 px-4 py-2 hover:cursor-pointer text-gray-800 hover:text-black border-b-2 border-transparent hover:border-black"
+            disabled={aiDownloadLoading}
+            className="flex items-center gap-2 px-4 py-2 hover:cursor-pointer text-gray-800 hover:text-black border-b-2 border-transparent hover:border-black disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <svg
-              className="w-7 h-6 text-gray-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
-            <span className="hidden md:inline">ai파일 다운로드</span>
+            {aiDownloadLoading ? (
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-600"></div>
+            ) : (
+              <svg
+                className="w-7 h-6 text-gray-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+            )}
+            <span className="hidden md:inline">
+              {aiDownloadLoading ? '다운로드 중...' : 'ai파일 다운로드'}
+            </span>
           </button>
           <div className="ml-auto">
             <DropdownMenu

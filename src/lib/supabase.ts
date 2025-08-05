@@ -2,10 +2,12 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseServiceKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
 
 // 디버깅을 위한 로그
 console.log('🔍 Supabase URL:', supabaseUrl ? 'Set' : 'Not set');
 console.log('🔍 Supabase Key:', supabaseAnonKey ? 'Set' : 'Not set');
+console.log('🔍 Supabase Service Key:', supabaseServiceKey ? 'Set' : 'Not set');
 
 // 환경변수가 없을 때 에러 방지
 if (!supabaseUrl || !supabaseAnonKey) {
@@ -20,6 +22,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(
   supabaseUrl || 'https://placeholder.supabase.co',
   supabaseAnonKey || 'placeholder-key'
+);
+
+// Service Role Key를 사용하는 클라이언트 (관리자 권한)
+export const supabaseAdmin = createClient(
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseServiceKey || 'placeholder-service-key'
 );
 
 // 타입 정의

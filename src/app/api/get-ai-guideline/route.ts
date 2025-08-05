@@ -4,10 +4,10 @@ import { supabase } from '@/src/lib/supabase';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const districtName = searchParams.get('district');
+    const district = searchParams.get('district');
     const guidelineType = searchParams.get('guideline_type') || 'panel';
 
-    if (!districtName) {
+    if (!district) {
       return NextResponse.json(
         { success: false, error: 'District parameter is required' },
         { status: 400 }
@@ -29,35 +29,7 @@ export async function GET(request: NextRequest) {
       gangdong: '강동구',
     };
 
-    const actualDistrictName =
-      districtCodeToNameMap[districtName] || districtName;
-
-    // 구별로 적절한 가이드라인 타입을 결정합니다
-    let targetGuidelineType = guidelineType;
-
-    // 구별 가이드라인 타입 매핑
-    const districtGuidelineMap: { [key: string]: string } = {
-      서대문구: 'banner',
-      마포구: 'banner',
-      용산구: 'banner',
-      송파구: 'banner',
-      관악구: 'banner',
-      광진구: 'led',
-      도봉구: 'led',
-      동작구: 'led',
-      영등포구: 'led',
-      강북구: 'led',
-      강동구: 'led',
-    };
-
-    // 구별 매핑이 있으면 해당 타입을 사용, 없으면 요청된 타입 사용
-    if (districtGuidelineMap[actualDistrictName]) {
-      targetGuidelineType = districtGuidelineMap[actualDistrictName];
-    }
-
-    console.log('🔍 Looking for district:', districtName);
-    console.log('🔍 Actual district name:', actualDistrictName);
-    console.log('🔍 Target guideline type:', targetGuidelineType);
+    const actualDistrictName = districtCodeToNameMap[district] || district;
 
     // 먼저 display_types 테이블에서 banner_display의 ID를 찾습니다
     const { data: displayTypeData, error: displayTypeError } = await supabase
@@ -74,7 +46,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // region_gu 테이블에서 현수막게시대이고 활성화된 구를 조회
+    // region_gu 테이블에서 해당 구를 조회
     const { data: regionData, error: regionError } = await supabase
       .from('region_gu')
       .select('id')
@@ -91,29 +63,37 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // region_gu_guideline 테이블에서 가이드라인 데이터를 가져옵니다
+    // region_gu_guideline 테이블에서 AI 파일 URL을 가져옵니다
     const { data: guidelineData, error: guidelineError } = await supabase
       .from('region_gu_guideline')
-      .select('*')
+      .select('ai_image_url')
       .eq('region_gu_id', regionData.id)
-      .eq('guideline_type', targetGuidelineType)
-      .single();
+      .eq('guideline_type', guidelineType)
+      .maybeSingle();
 
-    if (guidelineError || !guidelineData) {
-      console.error('Guideline fetch error:', guidelineError);
-      console.error('Looking for:', {
-        region_gu_id: regionData.id,
-        guideline_type: targetGuidelineType,
-      });
+    // 데이터가 없거나 AI 파일 URL이 없는 경우
+    if (guidelineError || !guidelineData || !guidelineData.ai_image_url) {
+      console.log(
+        `No AI guideline found for ${actualDistrictName} - ${guidelineType}`
+      );
       return NextResponse.json(
-        { success: false, error: 'Guideline not found' },
-        { status: 404 }
+        {
+          success: false,
+          error: 'AI 가이드라인 파일이 준비되지 않았습니다.',
+          district: actualDistrictName,
+          guidelineType,
+        },
+        { status: 200 } // 404 대신 200으로 반환하여 에러가 아닌 정상 응답으로 처리
       );
     }
 
     return NextResponse.json({
       success: true,
-      data: guidelineData,
+      data: {
+        aiFileUrl: guidelineData.ai_image_url,
+        district: actualDistrictName,
+        guidelineType,
+      },
     });
   } catch (error) {
     console.error('API Error:', error);

@@ -908,28 +908,6 @@ function PaymentPageContent() {
               </div>
               {/* 구별 개별 입력 필드들 */}
               <div className="space-y-4 mb-4">
-                {/* 일괄적용 정보 표시 */}
-                {(bulkApply.projectName ||
-                  bulkApply.fileUpload ||
-                  bulkApply.emailMethod) && (
-                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <h4 className="text-sm font-semibold text-blue-800 mb-2">
-                      일괄적용 설정
-                    </h4>
-                    <div className="space-y-1 text-sm text-blue-700">
-                      {bulkApply.projectName && projectName && (
-                        <div> 작업이름: {projectName}</div>
-                      )}
-                      {bulkApply.fileUpload && selectedFile && (
-                        <div>📎 파일: {selectedFile.name}</div>
-                      )}
-                      {bulkApply.emailMethod && (
-                        <div>📧 이메일: banner114@hanmail.net</div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
                 {/* 구별 작업이름 - 일괄적용이 꺼져있을 때만 표시 */}
                 {!bulkApply.projectName && (
                   <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
