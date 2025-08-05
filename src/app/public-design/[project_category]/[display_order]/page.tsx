@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import ProjectCard from '@/src/components/projectCard';

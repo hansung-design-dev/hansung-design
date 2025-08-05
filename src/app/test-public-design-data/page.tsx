@@ -2,8 +2,26 @@
 
 import { useEffect, useState } from 'react';
 
+interface TestDataItem {
+  id: string;
+  project_category: string;
+  display_order: number;
+  title: string;
+  location: string;
+  image_urls?: string[];
+}
+
+interface TestData {
+  summary: {
+    totalProjects: number;
+    categories: string[];
+    [key: string]: unknown;
+  };
+  listData: TestDataItem[];
+}
+
 export default function TestPublicDesignDataPage() {
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<TestData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -43,7 +61,7 @@ export default function TestPublicDesignDataPage() {
 
           <h2 className="text-xl font-semibold mb-2">List 데이터</h2>
           <div className="space-y-2">
-            {data.listData?.map((item: any, index: number) => (
+            {data.listData?.map((item: TestDataItem, index: number) => (
               <div key={index} className="border p-4 rounded">
                 <p>
                   <strong>ID:</strong> {item.id}

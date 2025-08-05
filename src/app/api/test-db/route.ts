@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { supabase } from '@/src/lib/supabase';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     console.log('=== 데이터베이스 연결 테스트 ===');
 
@@ -23,14 +23,11 @@ export async function GET(request: NextRequest) {
 
     // 3. 다른 테이블들 확인
     const tables = ['panels', 'orders', 'customer_service', 'region_gu'];
-    const tableResults: any = {};
+    const tableResults: Record<string, { data: unknown; error: unknown }> = {};
 
     for (const table of tables) {
-      const { data, error } = await supabase
-        .from(table)
-        .select('id')
-        .limit(1);
-      
+      const { data, error } = await supabase.from(table).select('id').limit(1);
+
       tableResults[table] = { data, error };
     }
 
@@ -49,4 +46,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}
