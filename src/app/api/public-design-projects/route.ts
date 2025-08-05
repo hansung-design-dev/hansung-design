@@ -26,10 +26,16 @@ export async function GET(request: NextRequest) {
       name: project.title || '',
       description: project.description || '',
       location: project.location || '',
-      listImage:
-        project.image_urls && project.image_urls.length > 0
-          ? project.image_urls[0]
-          : '/images/public-design-image2.jpeg',
+      listImages: (
+        project.image_urls || ['/images/public-design-image2.jpeg']
+      ).map((url) => {
+        // 상대 경로를 Supabase Storage URL로 변환
+        if (url.startsWith('/images/')) {
+          const storagePath = url.replace('/images/', '');
+          return `https://eklijrstdcgsxtbjxjra.supabase.co/storage/v1/object/public/public-design-items/${storagePath}`;
+        }
+        return url;
+      }),
       categoryId: project.project_category,
     }));
 

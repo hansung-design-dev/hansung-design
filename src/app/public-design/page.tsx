@@ -1,6 +1,8 @@
 'use client';
 
-
+import ProjectRow, {
+  ProjectItem as BaseProjectItem,
+} from '@/src/components/projectRow';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -15,7 +17,7 @@ interface ProjectItem {
   name: string;
   description: string;
   location: string;
-  listImage: string;
+  listImages: string[];
   categoryId: string;
 }
 
@@ -25,7 +27,7 @@ export default function PublicDesignPage() {
   const [loading, setLoading] = useState(true);
   const [homepageContent, setHomepageContent] =
     useState<HomepageContent | null>(null);
-  const [visibleCount, setVisibleCount] = useState(3);
+  const [visibleCount, setVisibleCount] = useState(5);
   const [hasMore, setHasMore] = useState(true);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
@@ -37,30 +39,42 @@ export default function PublicDesignPage() {
     // 팝업이 있으면 처리할 로직을 여기에 추가할 수 있습니다
   }
 
-
-
   // 무한스크롤 콜백
   const loadMore = useCallback(() => {
+    console.log('loadMore called:', {
+      visibleCount,
+      projectsLength: projects.length,
+      hasMore,
+    });
     if (visibleCount < projects.length) {
-      setVisibleCount(prev => Math.min(prev + 3, projects.length));
+      const newCount = Math.min(visibleCount + 5, projects.length);
+      console.log('Setting visibleCount to:', newCount);
+      setVisibleCount(newCount);
+      if (newCount >= projects.length) {
+        setHasMore(false);
+      }
     } else {
+      console.log('No more projects to load');
       setHasMore(false);
     }
   }, [visibleCount, projects.length]);
 
   // Intersection Observer 설정
-  const lastElementRef = useCallback((node: HTMLDivElement) => {
-    if (loading) return;
-    if (observerRef.current) observerRef.current.disconnect();
-    
-    observerRef.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && hasMore) {
-        loadMore();
-      }
-    });
-    
-    if (node) observerRef.current.observe(node);
-  }, [loading, hasMore, loadMore]);
+  const lastElementRef = useCallback(
+    (node: HTMLDivElement) => {
+      if (loading) return;
+      if (observerRef.current) observerRef.current.disconnect();
+
+      observerRef.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && hasMore) {
+          loadMore();
+        }
+      });
+
+      if (node) observerRef.current.observe(node);
+    },
+    [loading, hasMore, loadMore]
+  );
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -81,6 +95,8 @@ export default function PublicDesignPage() {
         if (projectsResponse.ok) {
           const projectsData = await projectsResponse.json();
           setProjects(projectsData);
+          // hasMore 상태 업데이트
+          setHasMore(projectsData.length > 5);
         } else {
           console.error('Failed to fetch projects from API');
           // 에러 시 기본 데이터 사용
@@ -90,8 +106,9 @@ export default function PublicDesignPage() {
               name: '간판개선사업',
               description: '도시 경관을 아름답게 만드는 간판 개선 프로젝트',
               location: '서울시',
-              listImage:
+              listImages: [
                 '/images/public-design/banner_improvment/2018/당진/list/02.jpg',
+              ],
               categoryId: '1',
             },
             {
@@ -99,11 +116,13 @@ export default function PublicDesignPage() {
               name: '환경개선사업',
               description: '도시 환경을 개선하는 공공디자인 프로젝트',
               location: '서울시',
-              listImage:
+              listImages: [
                 '/images/public-design/env_improvememt/사당4동 가로환경개선/03.jpg',
+              ],
               categoryId: '2',
             },
           ]);
+          setHasMore(false); // 기본 데이터는 2개뿐이므로 더 이상 없음
         }
       } catch (error) {
         console.error('Error fetching projects:', error);
@@ -114,8 +133,9 @@ export default function PublicDesignPage() {
             name: '간판개선사업',
             description: '도시 경관을 아름답게 만드는 간판 개선 프로젝트',
             location: '서울시',
-            listImage:
+            listImages: [
               '/images/public-design/banner_improvment/2018/당진/list/02.jpg',
+            ],
             categoryId: '1',
           },
           {
@@ -123,11 +143,13 @@ export default function PublicDesignPage() {
             name: '환경개선사업',
             description: '도시 환경을 개선하는 공공디자인 프로젝트',
             location: '서울시',
-            listImage:
+            listImages: [
               '/images/public-design/env_improvememt/사당4동 가로환경개선/03.jpg',
+            ],
             categoryId: '2',
           },
         ]);
+        setHasMore(false); // 기본 데이터는 2개뿐이므로 더 이상 없음
       } finally {
         setLoading(false);
       }
@@ -136,8 +158,25 @@ export default function PublicDesignPage() {
     fetchProjects();
   }, []);
 
+  // ProjectRow용 데이터로 변환하는 함수
+  const convertToProjectRowData = (project: ProjectItem): BaseProjectItem[] => {
+    return project.listImages.map((imageSrc) => ({
+      id: parseInt(project.id) || 0,
+      imageSrc: imageSrc,
+      title: project.name,
+      subtitle: project.location, // location을 subtitle로 전달
+      description: project.description,
+    }));
+  };
+
   // 표시할 프로젝트들 (무한스크롤용)
   const visibleProjects = projects.slice(0, visibleCount);
+  console.log('Current state:', {
+    projectsLength: projects.length,
+    visibleCount,
+    visibleProjectsLength: visibleProjects.length,
+    hasMore,
+  });
 
   return (
     <main className="min-h-screen bg-white">
@@ -172,32 +211,32 @@ export default function PublicDesignPage() {
         ) : (
           <div className="flex flex-col lg:gap-[12rem] md:gap-[12rem] sm:gap-[1rem] ">
             {visibleProjects.map((project, idx) => (
-              <div 
-                key={project.id} 
+              <div
+                key={project.id}
                 className="h-[400px] cursor-pointer relative"
-                ref={idx === visibleProjects.length - 1 ? lastElementRef : undefined}
+                ref={
+                  idx === visibleProjects.length - 1 && hasMore
+                    ? lastElementRef
+                    : undefined
+                }
               >
-                <Link href={`/public-design/${project.categoryId || project.id}`}>
-                  <div className="relative w-full h-full">
-                    <Image
-                      src={project.listImage}
-                      alt={project.name}
-                      fill
-                      className="object-cover rounded-[1rem]"
-                    />
-                    <div className="absolute bottom-8 left-8 text-white">
-                      <div className="text-1.5 font-500 pb-2">{project.name}</div>
-                      <p className="text-1 font-normal mt-1">
-                        {project.description}
-                      </p>
-                    </div>
-                  </div>
+                <Link
+                  href={`/public-design/${project.categoryId || project.id}`}
+                >
+                  <ProjectRow
+                    projects={convertToProjectRowData(project)}
+                    largeCardFirst={idx % 2 === 0} // 짝수 인덱스는 큰 카드 먼저
+                    splitSmallSection={project.listImages.length >= 3}
+                    showTitleOnLargeOnly={true}
+                  />
                 </Link>
               </div>
             ))}
             {hasMore && (
               <div className="flex justify-center py-8">
-                <div className="text-gray-500">더 많은 프로젝트를 불러오는 중...</div>
+                <div className="text-gray-500">
+                  더 많은 프로젝트를 불러오는 중...
+                </div>
               </div>
             )}
           </div>
@@ -213,7 +252,11 @@ export default function PublicDesignPage() {
               <div
                 className="w-full h-[400px] cursor-pointer"
                 key={project.id}
-                ref={idx === visibleProjects.length - 1 ? lastElementRef : undefined}
+                ref={
+                  idx === visibleProjects.length - 1
+                    ? lastElementRef
+                    : undefined
+                }
                 onClick={() =>
                   router.push(
                     `/public-design/${project.categoryId || project.id}`
@@ -222,7 +265,7 @@ export default function PublicDesignPage() {
               >
                 <div className="relative w-full h-full">
                   <Image
-                    src={project.listImage}
+                    src={project.listImages[0]}
                     alt={project.name}
                     fill
                     className="object-cover rounded-[1rem]"
@@ -238,7 +281,9 @@ export default function PublicDesignPage() {
             ))}
             {hasMore && (
               <div className="flex justify-center py-8">
-                <div className="text-gray-500">더 많은 프로젝트를 불러오는 중...</div>
+                <div className="text-gray-500">
+                  더 많은 프로젝트를 불러오는 중...
+                </div>
               </div>
             )}
           </div>
