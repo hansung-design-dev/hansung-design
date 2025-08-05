@@ -3,19 +3,31 @@ import { supabase } from '@/src/app/api/supabase';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  {
+    params,
+  }: { params: Promise<{ project_category: string; display_order: string }> }
 ) {
   try {
-    const { id } = await params;
+    const { project_category, display_order } = await params;
+    const displayOrderNum = parseInt(display_order);
+
+    console.log('API params:', {
+      project_category,
+      display_order,
+      displayOrderNum,
+    });
 
     // 프로젝트 기본 정보 가져오기 (list 타입들)
     const { data: projectDataList, error: projectError } = await supabase
       .from('public_design_contents')
       .select('*')
-      .eq('project_category', id)
+      .eq('project_category', project_category)
       .eq('design_contents_type', 'list')
+      .eq('display_order', displayOrderNum)
       .eq('is_active', true)
       .order('display_order', { ascending: true });
+
+    console.log('Project data found:', projectDataList);
 
     if (projectError) {
       console.error('Error fetching project:', projectError);
@@ -26,12 +38,13 @@ export async function GET(
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
-    // 상세 이미지들 가져오기 (detail 타입)
+    // 상세 이미지들 가져오기 (detail 타입) - 해당 display_order의 프로젝트만
     const { data: detailContents, error: detailError } = await supabase
       .from('public_design_contents')
       .select('*')
-      .eq('project_category', id)
+      .eq('project_category', project_category)
       .eq('design_contents_type', 'detail')
+      .eq('display_order', displayOrderNum)
       .eq('is_active', true)
       .order('display_order', { ascending: true });
 
@@ -67,15 +80,32 @@ export async function GET(
         design_contents_type: content.design_contents_type,
         title: content.title || '',
         alt_text: content.alt_text || '',
-        image_url:
-          content.image_urls && content.image_urls.length > 0
-            ? content.image_urls[0]
-            : '/images/public-design-image2.jpeg',
+        image_urls: content.image_urls || ['/images/public-design-image2.jpeg'],
         display_order: content.display_order,
         is_active: content.is_active,
         created_at: content.created_at,
         updated_at: content.updated_at,
       })),
+      listData: {
+        id: projectDataList[0]?.id || '',
+        name: projectDataList[0]?.title || '',
+        description: projectDataList[0]?.description || '',
+        location: projectDataList[0]?.location || '',
+        listImages: (
+          projectDataList[0]?.image_urls || [
+            '/images/public-design-image2.jpeg',
+          ]
+        ).map((url: string) => {
+          // 상대 경로를 Supabase Storage URL로 변환
+          if (url.startsWith('/images/')) {
+            const storagePath = url.replace('/images/', '');
+            return `https://eklijrstdcgsxtbjxjra.supabase.co/storage/v1/object/public/public-design-items/${storagePath}`;
+          }
+          return url;
+        }),
+        categoryId: projectDataList[0]?.project_category || '',
+        displayOrder: projectDataList[0]?.display_order || 1,
+      },
     };
 
     return NextResponse.json(response);

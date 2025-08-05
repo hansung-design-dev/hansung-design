@@ -19,6 +19,8 @@ interface ProjectItem {
   location: string;
   listImages: string[];
   categoryId: string;
+  displayOrder: number;
+  uniqueId: string;
 }
 
 export default function PublicDesignPage() {
@@ -106,6 +108,7 @@ export default function PublicDesignPage() {
         const projectsResponse = await fetch('/api/public-design-projects');
         if (projectsResponse.ok) {
           const projectsData = await projectsResponse.json();
+          console.log('Fetched projects:', projectsData);
           setProjects(projectsData);
           // hasMore 상태 업데이트
           setHasMore(projectsData.length > 5);
@@ -122,6 +125,8 @@ export default function PublicDesignPage() {
                 '/images/public-design/banner_improvment/2018/당진/list/02.jpg',
               ],
               categoryId: '1',
+              displayOrder: 1,
+              uniqueId: '1-1',
             },
             {
               id: '2',
@@ -132,6 +137,8 @@ export default function PublicDesignPage() {
                 '/images/public-design/env_improvememt/사당4동 가로환경개선/03.jpg',
               ],
               categoryId: '2',
+              displayOrder: 2,
+              uniqueId: '2-2',
             },
           ]);
           setHasMore(false); // 기본 데이터는 2개뿐이므로 더 이상 없음
@@ -149,6 +156,8 @@ export default function PublicDesignPage() {
               '/images/public-design/banner_improvment/2018/당진/list/02.jpg',
             ],
             categoryId: '1',
+            displayOrder: 1,
+            uniqueId: '1-1',
           },
           {
             id: '2',
@@ -159,6 +168,8 @@ export default function PublicDesignPage() {
               '/images/public-design/env_improvememt/사당4동 가로환경개선/03.jpg',
             ],
             categoryId: '2',
+            displayOrder: 2,
+            uniqueId: '2-2',
           },
         ]);
         setHasMore(false); // 기본 데이터는 2개뿐이므로 더 이상 없음
@@ -233,7 +244,18 @@ export default function PublicDesignPage() {
                 }
               >
                 <Link
-                  href={`/public-design/${project.categoryId || project.id}`}
+                  href={`/public-design/${project.categoryId}/${
+                    project.displayOrder || 1
+                  }?data=${encodeURIComponent(
+                    JSON.stringify({
+                      name: project.name,
+                      description: project.description,
+                      location: project.location,
+                      images: project.listImages,
+                      layout: idx % 2 === 0 ? 'largeFirst' : 'smallFirst',
+                      imageCount: project.listImages.length,
+                    })
+                  )}`}
                 >
                   <ProjectRow
                     projects={convertToProjectRowData(project)}
@@ -277,7 +299,18 @@ export default function PublicDesignPage() {
                 }
                 onClick={() =>
                   router.push(
-                    `/public-design/${project.categoryId || project.id}`
+                    `/public-design/${project.categoryId}/${
+                      project.displayOrder || 1
+                    }?data=${encodeURIComponent(
+                      JSON.stringify({
+                        name: project.name,
+                        description: project.description,
+                        location: project.location,
+                        images: project.listImages,
+                        layout: idx % 2 === 0 ? 'largeFirst' : 'smallFirst',
+                        imageCount: project.listImages.length,
+                      })
+                    )}`
                   )
                 }
               >
@@ -287,6 +320,7 @@ export default function PublicDesignPage() {
                     alt={project.name}
                     fill
                     className="object-cover rounded-[1rem]"
+                    quality={85}
                   />
                   <div className="absolute bottom-8 left-8 text-white">
                     <div className="text-1.5 font-500 pb-2">{project.name}</div>

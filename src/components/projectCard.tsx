@@ -38,11 +38,12 @@ export default function ProjectCard({
           sizes={isLarge ? '66vw' : '33vw'}
           priority={isLarge}
           className="object-cover"
+          quality={85}
         />
         <div className="absolute inset-0 bg-black bg-opacity-30 transition-opacity">
           <div className="absolute bottom-8 left-8 text-white">
             {subtitle && (
-              <span className="text-sm mb-2 block opacity-80">{subtitle}</span>
+              <span className="text-1.25 mb-2 block">{subtitle}</span>
             )}
             <h3
               className={`${
