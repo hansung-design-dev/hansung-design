@@ -4,11 +4,11 @@ import { supabase } from '@/src/lib/supabase';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const category = searchParams.get('category'); // 디지털사이니지, 공공디자인, LED전자게시대, 현수막게시대
+    const category = searchParams.get('category'); // 디지털미디어, 공공디자인, LED전자게시대, 현수막게시대
 
     // 카테고리별 homepage_menu_type 매핑
     const categoryMapping: { [key: string]: string } = {
-      디지털사이니지: 'digital_signage',
+      디지털미디어: 'digital_signage',
       공공디자인: 'public_design',
       LED전자게시대: 'led_display',
       현수막게시대: 'banner_display',

@@ -41,16 +41,19 @@ export default function PublicDesignPage() {
 
   // 무한스크롤 콜백
   const loadMore = useCallback(() => {
-    console.log('loadMore called:', {
+    console.log('=== loadMore called ===');
+    console.log('Current state:', {
       visibleCount,
       projectsLength: projects.length,
       hasMore,
     });
+
     if (visibleCount < projects.length) {
       const newCount = Math.min(visibleCount + 5, projects.length);
       console.log('Setting visibleCount to:', newCount);
       setVisibleCount(newCount);
       if (newCount >= projects.length) {
+        console.log('Setting hasMore to false - all projects loaded');
         setHasMore(false);
       }
     } else {
@@ -62,16 +65,25 @@ export default function PublicDesignPage() {
   // Intersection Observer 설정
   const lastElementRef = useCallback(
     (node: HTMLDivElement) => {
+      console.log('lastElementRef called:', { node, loading, hasMore });
       if (loading) return;
       if (observerRef.current) observerRef.current.disconnect();
 
       observerRef.current = new IntersectionObserver((entries) => {
+        console.log(
+          'Intersection Observer triggered:',
+          entries[0].isIntersecting
+        );
         if (entries[0].isIntersecting && hasMore) {
+          console.log('Calling loadMore from Intersection Observer');
           loadMore();
         }
       });
 
-      if (node) observerRef.current.observe(node);
+      if (node) {
+        console.log('Observing node:', node);
+        observerRef.current.observe(node);
+      }
     },
     [loading, hasMore, loadMore]
   );
@@ -225,18 +237,24 @@ export default function PublicDesignPage() {
                 >
                   <ProjectRow
                     projects={convertToProjectRowData(project)}
-                    largeCardFirst={idx % 2 === 0} // 짝수 인덱스는 큰 카드 먼저
                     splitSmallSection={project.listImages.length >= 3}
                     showTitleOnLargeOnly={true}
+                    rowIndex={idx}
                   />
                 </Link>
               </div>
             ))}
             {hasMore && (
-              <div className="flex justify-center py-8">
-                <div className="text-gray-500">
-                  더 많은 프로젝트를 불러오는 중...
-                </div>
+              <div className="flex justify-center items-center py-8">
+                <button
+                  onClick={() => {
+                    console.log('Manual loadMore button clicked');
+                    loadMore();
+                  }}
+                  className="ml-4 px-4 py-2 bg-blue-500 text-white rounded"
+                >
+                  프로젝트 더보기
+                </button>
               </div>
             )}
           </div>

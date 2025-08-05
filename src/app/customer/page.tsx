@@ -5,7 +5,7 @@ import NoticeSkeleton from '../../components/skeleton/NoticeSkeleton';
 import { InstallationPhoto } from '../../types/installation-photo';
 
 const faqCategories = [
-  '디지털사이니지',
+  '디지털미디어',
   '공공디자인',
   'LED전자게시대',
   '현수막게시대',

@@ -254,7 +254,7 @@ export default function Home() {
               )}
             </div>
           }
-          subtitle={digitalSection?.subtitle || '디지털사이니지'}
+          subtitle={digitalSection?.subtitle || '디지털미디어'}
           description={
             digitalSection?.description || '광고를 혁신하다, 공간을 스마트하게'
           }

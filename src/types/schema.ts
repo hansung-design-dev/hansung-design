@@ -6,7 +6,7 @@ export type Category =
   | '공공디자인'
   | 'LED전자게시대'
   | '현수막'
-  | '디지털사이니지';
+  | '디지털미디어';
 
 export type PublicDesignCategory = '간판개선' | '공공디자인' | '환경개선';
 

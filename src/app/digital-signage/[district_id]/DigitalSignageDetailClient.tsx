@@ -9,6 +9,7 @@ interface ProductData {
   id: string;
   title: string;
   image: string;
+  images?: string[];
   specifications: {
     operatingLineup: string;
     modelName: string;
@@ -39,7 +40,7 @@ export default function DigitalSignageDetailClient({
       id: productData.id,
       type: 'digital-signage' as const,
       name: productData.title,
-      district: '디지털사이니지',
+      district: '디지털미디어',
       price: 0, // 상담신청용
     };
 
@@ -49,19 +50,32 @@ export default function DigitalSignageDetailClient({
     setIsAddingToCart(false);
   };
 
+  const allImages = productData.images || [productData.image];
+  const galleryImages = allImages.slice(1); // 대표이미지 제외
+
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-white pb-[10rem]">
       {/* Header Section */}
       <section className="lg:container lg:mx-auto lg:px-[8rem] sm:px-[1.5rem] pt-[6rem] pb-[3rem]">
         <div className="flex items-center text-sm text-gray-600 mb-4">
           <span>홈</span>
           <span className="mx-2">&gt;</span>
-          <span>디지털 사이니지</span>
-          <span className="mx-2">&gt;</span>
-          <span>싱글 사이니지</span>
+          <span>디지털미디어</span>
           <span className="mx-2">&gt;</span>
           <span className="text-black font-medium">{productData.title}</span>
         </div>
+        <button
+          onClick={() => window.history.back()}
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
+        >
+          <Image
+            src="/svg/arrow-left.svg"
+            alt="뒤로 가기"
+            width={16}
+            height={16}
+          />
+          <span>목록으로 가기</span>
+        </button>
       </section>
 
       {/* Product Detail Section */}
@@ -142,6 +156,23 @@ export default function DigitalSignageDetailClient({
           </div>
         </div>
       </section>
+
+      {/* Image Gallery Section - 스크롤 형태 */}
+      {galleryImages.length > 0 && (
+        <section className="container mx-auto px-4 flex flex-col gap-12 lg:px-[8rem] sm:px-[1.5rem]">
+          {galleryImages.map((image, index) => (
+            <div key={index} className="relative w-full h-auto min-h-[200px]">
+              <Image
+                src={image}
+                alt={`${productData.title} ${index + 2}`}
+                width={1200}
+                height={600}
+                className="w-full h-auto rounded-2xl object-contain"
+              />
+            </div>
+          ))}
+        </section>
+      )}
     </main>
   );
 }
