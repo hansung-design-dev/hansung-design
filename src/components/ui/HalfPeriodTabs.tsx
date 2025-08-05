@@ -70,8 +70,10 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
     }
 
     // API 데이터가 없으면 기존 동적 계산 사용
-    const now = new Date();
-    const koreaTime = new Date(now.getTime() + 9 * 60 * 60 * 1000); // UTC+9 (한국시간)
+    // 테스트용: 8월 6일로 고정 (실제 배포 시에는 제거)
+    const testDate = new Date('2025-08-06T00:00:00+09:00');
+    const koreaTime = testDate; // UTC+9 (한국시간)
+
     const currentYear = koreaTime.getFullYear();
     const currentMonth = koreaTime.getMonth() + 1; // getMonth()는 0부터 시작
 
@@ -112,7 +114,7 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
           label: `${currentYear}년 ${currentMonth}월 하반기`,
         };
       } else if (currentDay <= 26) {
-        // 13일-26일까지는 이번달 하반기 신청 가능
+        // 13일-26일까지는 이번달 하반기와 다음달 상반기 신청 가능
         const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
         const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
 
@@ -125,7 +127,17 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
           to: `${nextYear}-${nextMonth.toString().padStart(2, '0')}-04`,
           label: `${currentYear}년 ${currentMonth}월 하반기`,
         };
-        secondPeriod = null; // 하반기만 표시
+
+        // 다음달 상반기도 표시
+        secondPeriod = {
+          year: nextYear,
+          month: nextMonth,
+          startDay: 5,
+          endDay: 19,
+          from: `${nextYear}-${nextMonth.toString().padStart(2, '0')}-05`,
+          to: `${nextYear}-${nextMonth.toString().padStart(2, '0')}-19`,
+          label: `${nextYear}년 ${nextMonth}월 상반기`,
+        };
       } else {
         // 27일 이후면 다음달 상반기 신청 가능
         const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
@@ -160,6 +172,14 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
 
       const currentDay = koreaTime.getDate();
 
+      // 디버그 로그 추가
+      console.log('🔍 Current day calculation:', {
+        currentDay,
+        currentYear,
+        currentMonth,
+        koreaTime: koreaTime.toISOString(),
+      });
+
       // 8월 6일이면 8월 하반기(16일-31일) 신청 가능
       // 8월 15일 이후면 9월 상반기(1일-15일) 신청 가능
 
@@ -190,7 +210,7 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
           label: `${currentYear}년 ${currentMonth}월 하반기`,
         };
       } else if (currentDay <= 22) {
-        // 9일-22일까지는 이번달 하반기 신청 가능
+        // 9일-22일까지는 이번달 하반기와 다음달 상반기 신청 가능
         firstPeriod = {
           year: currentYear,
           month: currentMonth,
@@ -206,7 +226,20 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
           ).getDate()}`,
           label: `${currentYear}년 ${currentMonth}월 하반기`,
         };
-        secondPeriod = null; // 하반기만 표시
+
+        // 다음달 상반기도 표시
+        const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+        const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+
+        secondPeriod = {
+          year: nextYear,
+          month: nextMonth,
+          startDay: 1,
+          endDay: 15,
+          from: `${nextYear}-${nextMonth.toString().padStart(2, '0')}-01`,
+          to: `${nextYear}-${nextMonth.toString().padStart(2, '0')}-15`,
+          label: `${nextYear}년 ${nextMonth}월 상반기`,
+        };
       } else {
         // 23일 이후면 다음달 상반기 신청 가능
         const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
@@ -252,6 +285,14 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
     const daysUntilPeriod = Math.ceil(
       (periodStart.getTime() - koreaTime.getTime()) / (1000 * 60 * 60 * 24)
     );
+
+    // 디버그 로그 추가
+    console.log('🔍 isPeriodAvailable Debug:', {
+      periodStartDate,
+      daysUntilPeriod,
+      isAvailable: daysUntilPeriod >= 7,
+    });
+
     return daysUntilPeriod >= 7; // 7일 이상 남았으면 신청 가능
   };
 
@@ -269,6 +310,17 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
   if (isSecondPeriodAvailable && secondPeriod) {
     availablePeriods.push({ period: 'second_half', data: secondPeriod });
   }
+
+  // 디버그 로그 추가
+  console.log('🔍 HalfPeriodTabs Debug:', {
+    districtName,
+    periodData,
+    firstPeriod,
+    secondPeriod,
+    availablePeriods: availablePeriods.length,
+    isFirstPeriodAvailable,
+    isSecondPeriodAvailable,
+  });
 
   const handlePeriodChange = (period: 'first_half' | 'second_half') => {
     if (period === 'first_half' && isFirstPeriodAvailable && firstPeriod) {

@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     const filePath = `${district}/${safeFileName}`;
 
     // Supabase Storage에 파일 업로드
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from(bucketName)
       .upload(filePath, file, {
         cacheControl: '3600',
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 기존 가이드라인 레코드 확인
-    const { data: existingGuideline, error: existingError } = await supabase
+    const { data: existingGuideline } = await supabase
       .from('region_gu_guideline')
       .select('id')
       .eq('region_gu_id', regionData.id)

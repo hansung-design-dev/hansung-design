@@ -1144,24 +1144,25 @@ export default function DisplayDetailPage({
       districtObj?.code === 'seodaemun' ||
       // 마포구: 모든 탭에서 상하반기 탭 표시
       isMapoDistrict) &&
-    ((period && !isAllDistrictsView) ||
+    // period가 없어도 탭 표시 (동적 계산 사용)
+    (!isAllDistrictsView ||
       (isAllDistrictsView &&
         selectedOption &&
         selectedOption.option !== '전체' &&
         selectedDistrictPeriod));
 
-  // // 디버그 로그 추가
-  // console.log('🔍 showHalfPeriodTabs Debug:', {
-  //   district: districtObj?.code,
-  //   isSongpaOrYongsan,
-  //   currentPanelTypeFilter,
-  //   isMapoDistrict,
-  //   period,
-  //   isAllDistrictsView,
-  //   selectedOption,
-  //   selectedDistrictPeriod,
-  //   showHalfPeriodTabs,
-  // });
+  // 디버그 로그 추가
+  console.log('🔍 showHalfPeriodTabs Debug:', {
+    district: districtObj?.code,
+    isSongpaOrYongsan,
+    currentPanelTypeFilter,
+    isMapoDistrict,
+    period,
+    isAllDistrictsView,
+    selectedOption,
+    selectedDistrictPeriod,
+    showHalfPeriodTabs,
+  });
 
   return (
     <main className="min-h-screen flex flex-col bg-white pb-10">
