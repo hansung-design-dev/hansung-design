@@ -11,12 +11,12 @@ import PublicDesignDesktopSkeleton from '@/src/components/skeleton/PublicDesignD
 import PublicDesignSkeleton from '@/src/components/skeleton/PublicDesignSkeleton';
 import { useAdvancedNoticePopup } from '@/src/components/hooks/useAdvancedNoticePopup';
 import { HomepageContent } from '@/src/types/homepage-content';
-import { publicDesignCategories } from '@/src/mock/public-design';
 
 interface ProjectItem {
-  id: number;
+  id: string;
   name: string;
   description: string;
+  location: string;
   listImage: string;
   categoryId: string;
 }
@@ -63,34 +63,53 @@ export default function PublicDesignPage() {
           }
         }
 
-        // 로컬 데이터 사용 - 카테고리별로 프로젝트 변환
-        const transformedProjects: ProjectItem[] = publicDesignCategories.map(
-          (category, index) => ({
-            id: index + 1,
-            name: category.name,
-            description: category.description,
-            listImage: category.listImage[0], // 첫 번째 이미지 사용
-            categoryId: category.id.toString(),
-          })
-        );
-
-        setProjects(transformedProjects);
+        // DB에서 공공디자인 프로젝트 가져오기
+        const projectsResponse = await fetch('/api/public-design-projects');
+        if (projectsResponse.ok) {
+          const projectsData = await projectsResponse.json();
+          setProjects(projectsData);
+        } else {
+          console.error('Failed to fetch projects from API');
+          // 에러 시 기본 데이터 사용
+          setProjects([
+            {
+              id: '1',
+              name: '간판개선사업',
+              description: '도시 경관을 아름답게 만드는 간판 개선 프로젝트',
+              location: '서울시',
+              listImage:
+                '/images/public-design/banner_improvment/2018/당진/list/02.jpg',
+              categoryId: '1',
+            },
+            {
+              id: '2',
+              name: '환경개선사업',
+              description: '도시 환경을 개선하는 공공디자인 프로젝트',
+              location: '서울시',
+              listImage:
+                '/images/public-design/env_improvememt/사당4동 가로환경개선/03.jpg',
+              categoryId: '2',
+            },
+          ]);
+        }
       } catch (error) {
         console.error('Error fetching projects:', error);
         // 에러 시 기본 데이터 사용
         setProjects([
           {
-            id: 1,
+            id: '1',
             name: '간판개선사업',
             description: '도시 경관을 아름답게 만드는 간판 개선 프로젝트',
+            location: '서울시',
             listImage:
               '/images/public-design/banner_improvment/2018/당진/list/02.jpg',
             categoryId: '1',
           },
           {
-            id: 2,
+            id: '2',
             name: '환경개선사업',
             description: '도시 환경을 개선하는 공공디자인 프로젝트',
+            location: '서울시',
             listImage:
               '/images/public-design/env_improvememt/사당4동 가로환경개선/03.jpg',
             categoryId: '2',
@@ -106,8 +125,8 @@ export default function PublicDesignPage() {
 
   // 줄마다 필요한 개수만큼 slice (각 줄에 2개씩, 2개 카테고리로 2줄 구성)
   const rows = [
-    [projects[0], projects[0]], // 간판개선사업을 2개로 복제
-    [projects[1], projects[1]], // 환경개선사업을 2개로 복제
+    [projects[0], projects[0]], // 첫 번째 프로젝트를 2개로 복제
+    [projects[1], projects[1]], // 두 번째 프로젝트를 2개로 복제
   ];
 
   return (

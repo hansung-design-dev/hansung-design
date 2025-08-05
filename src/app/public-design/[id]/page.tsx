@@ -6,7 +6,6 @@ import { useEffect, useState } from 'react';
 import ProjectCard from '@/src/components/projectCard';
 import { PublicDesignDetailResponse } from '@/src/types/public-design';
 import PublicDesignDesktopSkeleton from '@/src/components/skeleton/PublicDesignDesktopSkeleton';
-import { getCategoryById } from '@/src/mock/public-design';
 
 export default function PublicDesignDetailPage() {
   const params = useParams();
@@ -18,44 +17,15 @@ export default function PublicDesignDetailPage() {
   useEffect(() => {
     const fetchProjectDetail = async () => {
       try {
-        // 로컬 데이터에서 카테고리 정보 가져오기
-        const category = getCategoryById(id);
-        if (!category) {
-          console.error('Category not found');
+        // DB에서 프로젝트 상세 정보 가져오기
+        const response = await fetch(`/api/public-design-projects/${id}`);
+        if (response.ok) {
+          const data = await response.json();
+          setProjectData(data);
+        } else {
+          console.error('Failed to fetch project detail');
           setProjectData(null);
-          return;
         }
-
-        // PublicDesignDetailResponse 형식으로 변환
-        const transformedData: PublicDesignDetailResponse = {
-          project: {
-            id: category.id.toString(),
-            project_id: category.id.toString(),
-            design_contents_type: 'list',
-            title: category.name,
-            subtitle: category.description,
-            description: category.description,
-            image_url: category.listImage[0], // 첫 번째 이미지 사용
-            display_order: 1,
-            is_active: true,
-            created_at: '',
-            updated_at: '',
-          },
-          detailContents: category.detailImages.map((imageUrl, index) => ({
-            id: `${category.id}-${index + 1}`,
-            project_id: category.id.toString(),
-            design_contents_type: 'detail',
-            title: `${category.name} 상세 이미지 ${index + 1}`,
-            alt_text: `${category.name} 상세 이미지 ${index + 1}`,
-            image_url: imageUrl,
-            display_order: index + 1,
-            is_active: true,
-            created_at: '',
-            updated_at: '',
-          })),
-        };
-
-        setProjectData(transformedData);
       } catch (error) {
         console.error('Error fetching project detail:', error);
         setProjectData(null);
