@@ -5,7 +5,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const district = searchParams.get('district');
-    const guidelineType = searchParams.get('guideline_type') || 'panel';
+    const guidelineType = searchParams.get('guideline_type') || 'banner';
 
     if (!district) {
       return NextResponse.json(

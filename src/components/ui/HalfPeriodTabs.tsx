@@ -80,17 +80,15 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
     // 마포구 특별 처리
     if (districtName === '마포구') {
       // 마포구: 5일-19일 상반기, 20일-다음달 4일 하반기
-      // 7일 전까지 신청 가능하므로 7일 전부터는 다음 기간 표시
+      // 각 기간 시작 7일 전부터는 다음 기간 신청 가능
 
-      // 이번달 5일까지 남은 일수 계산
-      const thisMonthPeriodStart = new Date(currentYear, currentMonth - 1, 5);
-      const daysUntilThisMonth = Math.ceil(
-        (thisMonthPeriodStart.getTime() - koreaTime.getTime()) /
-          (1000 * 60 * 60 * 24)
-      );
+      const currentDay = koreaTime.getDate();
 
-      if (daysUntilThisMonth >= 7) {
-        // 7일 이상 남았으면 이번달 기간 신청 가능
+      // 8월 6일이면 8월 하반기(20일-9월 4일) 신청 가능
+      // 8월 12일 이후면 9월 상반기(5일-19일) 신청 가능
+
+      if (currentDay <= 12) {
+        // 12일까지는 이번달 상반기 신청 가능
         firstPeriod = {
           year: currentYear,
           month: currentMonth,
@@ -113,8 +111,23 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
           to: `${nextYear}-${nextMonth.toString().padStart(2, '0')}-04`,
           label: `${currentYear}년 ${currentMonth}월 하반기`,
         };
+      } else if (currentDay <= 26) {
+        // 13일-26일까지는 이번달 하반기 신청 가능
+        const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+        const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+
+        firstPeriod = {
+          year: currentYear,
+          month: currentMonth,
+          startDay: 20,
+          endDay: 31, // 이번달 마지막날까지
+          from: `${currentYear}-${currentMonth.toString().padStart(2, '0')}-20`,
+          to: `${nextYear}-${nextMonth.toString().padStart(2, '0')}-04`,
+          label: `${currentYear}년 ${currentMonth}월 하반기`,
+        };
+        secondPeriod = null; // 하반기만 표시
       } else {
-        // 7일 미만이면 다음달 기간 신청 가능
+        // 27일 이후면 다음달 상반기 신청 가능
         const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
         const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
 
@@ -143,17 +156,15 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
       }
     } else {
       // 송파, 관악, 용산, 서대문: 일반적인 1일-15일 상반기, 16일-31일 하반기
-      // 7일 전까지 신청 가능하므로 7일 전부터는 다음 기간 표시
+      // 각 기간 시작 7일 전부터는 다음 기간 신청 가능
 
-      // 이번달 1일까지 남은 일수 계산
-      const thisMonthPeriodStart = new Date(currentYear, currentMonth - 1, 1);
-      const daysUntilThisMonth = Math.ceil(
-        (thisMonthPeriodStart.getTime() - koreaTime.getTime()) /
-          (1000 * 60 * 60 * 24)
-      );
+      const currentDay = koreaTime.getDate();
 
-      if (daysUntilThisMonth >= 7) {
-        // 7일 이상 남았으면 이번달 상하반기 신청 가능
+      // 8월 6일이면 8월 하반기(16일-31일) 신청 가능
+      // 8월 15일 이후면 9월 상반기(1일-15일) 신청 가능
+
+      if (currentDay <= 8) {
+        // 8일까지는 이번달 상반기 신청 가능
         firstPeriod = {
           year: currentYear,
           month: currentMonth,
@@ -178,8 +189,26 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
           ).getDate()}`,
           label: `${currentYear}년 ${currentMonth}월 하반기`,
         };
+      } else if (currentDay <= 22) {
+        // 9일-22일까지는 이번달 하반기 신청 가능
+        firstPeriod = {
+          year: currentYear,
+          month: currentMonth,
+          startDay: 16,
+          endDay: new Date(currentYear, currentMonth, 0).getDate(),
+          from: `${currentYear}-${currentMonth.toString().padStart(2, '0')}-16`,
+          to: `${currentYear}-${currentMonth
+            .toString()
+            .padStart(2, '0')}-${new Date(
+            currentYear,
+            currentMonth,
+            0
+          ).getDate()}`,
+          label: `${currentYear}년 ${currentMonth}월 하반기`,
+        };
+        secondPeriod = null; // 하반기만 표시
       } else {
-        // 7일 미만이면 다음달 상하반기 신청 가능
+        // 23일 이후면 다음달 상반기 신청 가능
         const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
         const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
 

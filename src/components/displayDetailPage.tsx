@@ -11,7 +11,7 @@ import GalleryIcon from '@/src/icons/gallery.svg';
 import ListIcon from '@/src/icons/list.svg';
 import DocumentIcon from '@/public/svg/document.svg';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useCart } from '../contexts/cartContext';
 import { useProfile } from '../contexts/profileContext';
 import { useAuth } from '../contexts/authContext';
@@ -256,8 +256,6 @@ export default function DisplayDetailPage({
       currentSetPanelTypeFilter('panel');
     }
   }, [district, currentSetPanelTypeFilter]);
-
-
 
   // 게시일 7일 전까지 신청 가능 여부 확인 (한국시간 기준)
   const isPeriodAvailable = (periodStartDate: string) => {
@@ -506,52 +504,32 @@ export default function DisplayDetailPage({
   const handleAIFileDownload = async () => {
     setAiDownloadLoading(true);
     try {
-      // 데이터베이스에서 AI 파일 URL 가져오기
+      // DB에서 AI 파일 URL 가져오기
       const response = await fetch(
         `/api/get-ai-guideline?district=${encodeURIComponent(
           district
-        )}&guideline_type=panel`
+        )}&guideline_type=banner`
       );
-
-      if (!response.ok) {
-        throw new Error('AI 파일 정보를 가져올 수 없습니다.');
-      }
-
       const result = await response.json();
 
       if (!result.success) {
-        // AI 파일이 없는 경우 조용히 처리 (알림 없이)
-        console.log('AI file not available:', result.error);
+        alert(result.error || 'AI 파일을 찾을 수 없습니다.');
         return;
       }
 
       const aiFileUrl = result.data.aiFileUrl;
       const fileName =
-        aiFileUrl.split('/').pop() ||
+        aiFileUrl.split('/').pop()?.split('?')[0] ||
         `${districtObj?.name || '가이드라인'}_AI_파일`;
 
-      // Supabase Storage URL인지 확인
-      if (aiFileUrl.includes('supabase.co')) {
-        // Supabase Storage에서 직접 다운로드
-        const fileResponse = await fetch(aiFileUrl);
-        if (!fileResponse.ok) {
-          throw new Error('파일을 다운로드할 수 없습니다.');
-        }
-
-        const blob = await fileResponse.blob();
-        const downloadUrl = window.URL.createObjectURL(blob);
-
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(downloadUrl);
-      } else {
-        // 일반 URL인 경우 새 탭에서 열기
-        window.open(aiFileUrl, '_blank');
-      }
+      // 파일 다운로드
+      const link = document.createElement('a');
+      link.href = aiFileUrl;
+      link.download = fileName;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     } catch (error) {
       console.error('AI 파일 다운로드 오류:', error);
       alert('AI 파일 다운로드 중 오류가 발생했습니다.');
@@ -1343,11 +1321,13 @@ export default function DisplayDetailPage({
           />
           <GuidelineButton
             district={district}
-            guidelineType="panel"
-            className="flex items-center gap-2 px-4 py-2 hover:cursor-pointer text-gray-800 hover:text-black border-b-2 border-transparent hover:border-black"
+            guidelineType="banner"
+            className="flex items-center gap-2 px-4 py-2 hover:cursor-pointer text-gray-800 hover:text-black border-b-2 border-transparent "
           >
             <DocumentIcon className="w-7 h-6 text-gray-600" />
-            <span className="hidden md:inline">가이드라인 보기</span>
+            <span className="hidden md:inline text-0.875 text-gray-600 font-500">
+              가이드라인 보기
+            </span>
           </GuidelineButton>
           <button
             onClick={handleAIFileDownload}
@@ -1372,7 +1352,7 @@ export default function DisplayDetailPage({
                 />
               </svg>
             )}
-            <span className="hidden md:inline">
+            <span className="hidden md:inline text-0.875">
               {aiDownloadLoading ? '다운로드 중...' : 'ai파일 다운로드'}
             </span>
           </button>

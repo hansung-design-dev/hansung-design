@@ -22,7 +22,7 @@ export default function GuidelineModal({
   isOpen,
   onClose,
   district,
-  guidelineType = 'panel',
+  guidelineType = 'banner',
 }: GuidelineModalProps) {
   const [guidelineData, setGuidelineData] = useState<GuidelineData | null>(
     null
