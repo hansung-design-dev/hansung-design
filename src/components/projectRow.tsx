@@ -24,7 +24,7 @@ export interface ProjectRowProps {
 
 export default function ProjectRow({
   projects,
-  largeCardFirst = true, // 이 prop은 더 이상 사용하지 않음
+
   splitSmallSection = false,
   className = '',
   showTitleOnLargeOnly = false,

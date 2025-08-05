@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { supabase } from '@/src/app/api/supabase';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // 공공디자인 프로젝트 리스트 가져오기 (design_contents_type이 'list'인 것들)
     const { data: projects, error } = await supabase
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       location: project.location || '',
       listImages: (
         project.image_urls || ['/images/public-design-image2.jpeg']
-      ).map((url) => {
+      ).map((url: string) => {
         // 상대 경로를 Supabase Storage URL로 변환
         if (url.startsWith('/images/')) {
           const storagePath = url.replace('/images/', '');
