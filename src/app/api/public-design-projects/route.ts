@@ -37,6 +37,8 @@ export async function GET() {
         return url;
       }),
       categoryId: project.project_category,
+      displayOrder: project.display_order,
+      uniqueId: `${project.project_category}-${project.display_order}`,
     }));
 
     return NextResponse.json(transformedProjects);

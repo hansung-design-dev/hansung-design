@@ -18,6 +18,7 @@ export interface PublicDesignContent {
   subtitle?: string;
   description?: string;
   image_url?: string;
+  image_urls?: string[];
   alt_text?: string;
   display_order: number;
   is_active: boolean;
@@ -47,4 +48,13 @@ export interface PublicDesignDetail {
 export interface PublicDesignDetailResponse {
   projects: PublicDesignContent[];
   detailContents: PublicDesignContent[];
+  listData?: {
+    id: string;
+    name: string;
+    description: string;
+    location: string;
+    listImages: string[];
+    categoryId: string;
+    displayOrder: number;
+  };
 }
