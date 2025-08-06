@@ -40,8 +40,6 @@ export async function GET() {
 
     console.log('✅ 관악구 found:', guData);
 
-
-
     // 3. 관악구의 모든 기간 데이터 조회 (필터 없이)
     const { data: allPeriods, error: periodError } = await supabase
       .from('region_gu_display_periods')
@@ -63,8 +61,10 @@ export async function GET() {
     // 4. 현재 날짜 기준으로 7일 후 계산
     const now = new Date();
     const koreaTime = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-    const sevenDaysLater = new Date(koreaTime.getTime() + 7 * 24 * 60 * 60 * 1000);
-    
+    const sevenDaysLater = new Date(
+      koreaTime.getTime() + 7 * 24 * 60 * 60 * 1000
+    );
+
     const formatDate = (date: Date) => {
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -76,9 +76,10 @@ export async function GET() {
     console.log('🔍 7 days later:', formatDate(sevenDaysLater));
 
     // 5. 7일 후부터 시작하는 기간들만 필터링
-    const availablePeriods = allPeriods?.filter(period => 
-      period.period_from >= formatDate(sevenDaysLater)
-    ) || [];
+    const availablePeriods =
+      allPeriods?.filter(
+        (period) => period.period_from >= formatDate(sevenDaysLater)
+      ) || [];
 
     console.log('🔍 Available periods (7+ days away):', availablePeriods);
 
@@ -100,4 +101,4 @@ export async function GET() {
       { status: 500 }
     );
   }
-} 
+}

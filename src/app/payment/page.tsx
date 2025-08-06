@@ -288,11 +288,12 @@ function PaymentPageContent() {
         panel_type: firstItem.panel_type || 'panel',
         is_public_institution: firstItem.is_public_institution,
         is_company: firstItem.is_company,
-        user_profile_id: firstItem.user_profile_id,
-        contact_person_name: firstItem.contact_person_name,
-        phone: firstItem.phone,
-        company_name: firstItem.company_name,
-        email: firstItem.email,
+        user_profile_id: firstItem.user_profile_id || defaultProfile?.id,
+        contact_person_name:
+          firstItem.contact_person_name || defaultProfile?.contact_person_name,
+        phone: firstItem.phone || defaultProfile?.phone,
+        company_name: firstItem.company_name || defaultProfile?.company_name,
+        email: firstItem.email || defaultProfile?.email,
         // 상하반기 정보 추가
         halfPeriod,
         selectedYear: year,
@@ -694,20 +695,57 @@ function PaymentPageContent() {
         throw new Error('사용자 정보가 없습니다. 다시 로그인해주세요.');
       }
 
-      if (!group.user_profile_id) {
-        throw new Error('사용자 프로필 정보가 없습니다.');
+      // 사용자 프로필 ID가 없으면 기본 프로필 사용
+      let userProfileId = group.user_profile_id || defaultProfile?.id;
+
+      // 여전히 프로필 ID가 없으면 더 강력한 검색
+      if (!userProfileId) {
+        // userProfiles에서 기본 프로필 찾기
+        const fallbackProfile =
+          userProfiles?.find((profile) => profile.is_default) ||
+          userProfiles?.[0] ||
+          profiles?.find((profile) => profile.is_default) ||
+          profiles?.[0];
+
+        if (fallbackProfile) {
+          userProfileId = fallbackProfile.id;
+          console.log('🔍 Fallback profile found:', fallbackProfile);
+        }
       }
+
+      if (!userProfileId) {
+        console.error(
+          '🔍 No profile found. userProfiles:',
+          userProfiles,
+          'profiles:',
+          profiles
+        );
+        throw new Error(
+          '사용자 프로필 정보가 없습니다. 프로필을 먼저 설정해주세요.'
+        );
+      }
+
+      // 그룹의 사용자 정보가 없으면 기본 프로필 정보로 업데이트
+      const updatedGroup = {
+        ...group,
+        user_profile_id: userProfileId,
+        contact_person_name:
+          group.contact_person_name || defaultProfile?.contact_person_name,
+        phone: group.phone || defaultProfile?.phone,
+        company_name: group.company_name || defaultProfile?.company_name,
+        email: group.email || defaultProfile?.email,
+      };
 
       const orderData = {
         userAuthId: user.id,
-        userProfileId: group.user_profile_id,
-        projectName: groupStates[group.id]?.projectName || '',
-        draftDeliveryMethod: groupStates[group.id]?.selectedFile
+        userProfileId: userProfileId,
+        projectName: groupStates[updatedGroup.id]?.projectName || '',
+        draftDeliveryMethod: groupStates[updatedGroup.id]?.selectedFile
           ? 'upload'
-          : groupStates[group.id]?.sendByEmail
+          : groupStates[updatedGroup.id]?.sendByEmail
           ? 'email'
           : 'upload',
-        items: group.items.map((item) => ({
+        items: updatedGroup.items.map((item) => ({
           panel_id: item.panel_id,
           price: item.price,
           quantity: 1,
@@ -742,11 +780,11 @@ function PaymentPageContent() {
       // 2. 결제 요청 데이터 생성
       const paymentRequest = {
         orderId: orderResult.order_number,
-        amount: group.totalPrice,
-        orderName: `${group.district} ${group.type} 광고`,
-        customerName: group.contact_person_name || '고객',
-        customerEmail: group.email || 'customer@example.com',
-        customerPhone: group.phone || '010-0000-0000',
+        amount: updatedGroup.totalPrice,
+        orderName: `${updatedGroup.district} ${updatedGroup.type} 광고`,
+        customerName: updatedGroup.contact_person_name || '고객',
+        customerEmail: updatedGroup.email || 'customer@example.com',
+        customerPhone: updatedGroup.phone || '010-0000-0000',
         successUrl: `${window.location.origin}/payment/success?orderId=${orderResult.order_number}`,
         failUrl: `${window.location.origin}/payment/fail?orderId=${orderResult.order_number}`,
         cancelUrl: `${window.location.origin}/payment/cancel?orderId=${orderResult.order_number}`,
@@ -757,8 +795,8 @@ function PaymentPageContent() {
 
       if (result.success) {
         // 결제 성공
-        setCompletedDistricts((prev) => [...prev, group.district]);
-        setSuccessDistrict(group.district);
+        setCompletedDistricts((prev) => [...prev, updatedGroup.district]);
+        setSuccessDistrict(updatedGroup.district);
         setSuccessModalOpen(true);
         setPaymentModalOpen(null);
 

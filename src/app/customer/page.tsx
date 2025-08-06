@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import Image from 'next/image';
 import FaqSkeleton from '../../components/skeleton/FaqSkeleton';
 import NoticeSkeleton from '../../components/skeleton/NoticeSkeleton';
 import { InstallationBanner } from '../../types/installation-photo';
@@ -296,12 +297,14 @@ export default function CustomerPage() {
                                 {banner.photo_urls?.map(
                                   (photoUrl: string, index: number) => (
                                     <div key={index} className="relative">
-                                      <img
+                                      <Image
                                         src={photoUrl}
                                         alt={`${banner.title} - 사진 ${
                                           banner.photo_names?.[index] ||
                                           index + 1
                                         }`}
+                                        width={400}
+                                        height={300}
                                         className="w-full h-auto rounded-lg shadow-sm"
                                         onError={(e) => {
                                           const target =

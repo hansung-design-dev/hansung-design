@@ -1,10 +1,20 @@
 import { useState, useRef } from 'react';
 import { Button } from '../button/button';
 
+interface UploadResponseData {
+  success: boolean;
+  data?: {
+    fileName: string;
+    fileUrl: string;
+    uploadedAt: string;
+  };
+  error?: string;
+}
+
 interface AIGuidelineUploadProps {
   district: string;
   guidelineType: string;
-  onUploadSuccess?: (data: any) => void;
+  onUploadSuccess?: (data: UploadResponseData) => void;
   onUploadError?: (error: string) => void;
 }
 
