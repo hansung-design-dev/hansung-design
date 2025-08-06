@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/src/lib/supabase';
+import { supabaseAdmin } from '@/src/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,8 +53,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 사용자 생성 (비밀번호 평문 저장)
-    const { data: user, error: createError } = await supabase
+    // 사용자 생성 (Service Role Key 사용)
+    const { data: user, error: createError } = await supabaseAdmin
       .from('user_auth')
       .insert({
         username,

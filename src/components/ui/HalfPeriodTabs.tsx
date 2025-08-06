@@ -47,9 +47,13 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
         endDay: new Date(periods[0].period_to).getDate(),
         from: periods[0].period_from,
         to: periods[0].period_to,
-        label:
-          periods[0].year_month +
-          (periods[0].period === 'first_half' ? ' 상반기' : ' 하반기'),
+        label: (() => {
+          const year = new Date(periods[0].period_from).getFullYear();
+          const month = new Date(periods[0].period_from).getMonth() + 1;
+          return `${year}년 ${month}월${
+            periods[0].period === 'first_half' ? ' 상반기' : ' 하반기'
+          }`;
+        })(),
       };
 
       const secondPeriod = periods[1]
@@ -60,9 +64,13 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
             endDay: new Date(periods[1].period_to).getDate(),
             from: periods[1].period_from,
             to: periods[1].period_to,
-            label:
-              periods[1].year_month +
-              (periods[1].period === 'first_half' ? ' 상반기' : ' 하반기'),
+            label: (() => {
+              const year = new Date(periods[1].period_from).getFullYear();
+              const month = new Date(periods[1].period_from).getMonth() + 1;
+              return `${year}년 ${month}월${
+                periods[1].period === 'first_half' ? ' 상반기' : ' 하반기'
+              }`;
+            })(),
           }
         : null;
 
@@ -70,8 +78,10 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
     }
 
     // API 데이터가 없으면 기존 동적 계산 사용
-    const now = new Date();
-    const koreaTime = new Date(now.getTime() + 9 * 60 * 60 * 1000); // UTC+9 (한국시간)
+    // 테스트용: 8월 6일로 고정 (실제 배포 시에는 제거)
+    const testDate = new Date('2025-08-06T00:00:00+09:00');
+    const koreaTime = testDate; // UTC+9 (한국시간)
+
     const currentYear = koreaTime.getFullYear();
     const currentMonth = koreaTime.getMonth() + 1; // getMonth()는 0부터 시작
 
@@ -80,17 +90,15 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
     // 마포구 특별 처리
     if (districtName === '마포구') {
       // 마포구: 5일-19일 상반기, 20일-다음달 4일 하반기
-      // 7일 전까지 신청 가능하므로 7일 전부터는 다음 기간 표시
+      // 각 기간 시작 7일 전부터는 다음 기간 신청 가능
 
-      // 이번달 5일까지 남은 일수 계산
-      const thisMonthPeriodStart = new Date(currentYear, currentMonth - 1, 5);
-      const daysUntilThisMonth = Math.ceil(
-        (thisMonthPeriodStart.getTime() - koreaTime.getTime()) /
-          (1000 * 60 * 60 * 24)
-      );
+      const currentDay = koreaTime.getDate();
 
-      if (daysUntilThisMonth >= 7) {
-        // 7일 이상 남았으면 이번달 기간 신청 가능
+      // 8월 6일이면 8월 하반기(20일-9월 4일) 신청 가능
+      // 8월 12일 이후면 9월 상반기(5일-19일) 신청 가능
+
+      if (currentDay <= 12) {
+        // 12일까지는 이번달 상반기 신청 가능
         firstPeriod = {
           year: currentYear,
           month: currentMonth,
@@ -113,8 +121,33 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
           to: `${nextYear}-${nextMonth.toString().padStart(2, '0')}-04`,
           label: `${currentYear}년 ${currentMonth}월 하반기`,
         };
+      } else if (currentDay <= 26) {
+        // 13일-26일까지는 이번달 하반기와 다음달 상반기 신청 가능
+        const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+        const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+
+        firstPeriod = {
+          year: currentYear,
+          month: currentMonth,
+          startDay: 20,
+          endDay: 31, // 이번달 마지막날까지
+          from: `${currentYear}-${currentMonth.toString().padStart(2, '0')}-20`,
+          to: `${nextYear}-${nextMonth.toString().padStart(2, '0')}-04`,
+          label: `${currentYear}년 ${currentMonth}월 하반기`,
+        };
+
+        // 다음달 상반기도 표시
+        secondPeriod = {
+          year: nextYear,
+          month: nextMonth,
+          startDay: 5,
+          endDay: 19,
+          from: `${nextYear}-${nextMonth.toString().padStart(2, '0')}-05`,
+          to: `${nextYear}-${nextMonth.toString().padStart(2, '0')}-19`,
+          label: `${nextYear}년 ${nextMonth}월 상반기`,
+        };
       } else {
-        // 7일 미만이면 다음달 기간 신청 가능
+        // 27일 이후면 다음달 상반기 신청 가능
         const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
         const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
 
@@ -143,17 +176,23 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
       }
     } else {
       // 송파, 관악, 용산, 서대문: 일반적인 1일-15일 상반기, 16일-31일 하반기
-      // 7일 전까지 신청 가능하므로 7일 전부터는 다음 기간 표시
+      // 각 기간 시작 7일 전부터는 다음 기간 신청 가능
 
-      // 이번달 1일까지 남은 일수 계산
-      const thisMonthPeriodStart = new Date(currentYear, currentMonth - 1, 1);
-      const daysUntilThisMonth = Math.ceil(
-        (thisMonthPeriodStart.getTime() - koreaTime.getTime()) /
-          (1000 * 60 * 60 * 24)
-      );
+      const currentDay = koreaTime.getDate();
 
-      if (daysUntilThisMonth >= 7) {
-        // 7일 이상 남았으면 이번달 상하반기 신청 가능
+      // 디버그 로그 추가
+      console.log('🔍 Current day calculation:', {
+        currentDay,
+        currentYear,
+        currentMonth,
+        koreaTime: koreaTime.toISOString(),
+      });
+
+      // 8월 6일이면 8월 하반기(16일-31일) 신청 가능
+      // 8월 15일 이후면 9월 상반기(1일-15일) 신청 가능
+
+      if (currentDay <= 8) {
+        // 8일까지는 이번달 상반기 신청 가능
         firstPeriod = {
           year: currentYear,
           month: currentMonth,
@@ -178,8 +217,39 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
           ).getDate()}`,
           label: `${currentYear}년 ${currentMonth}월 하반기`,
         };
+      } else if (currentDay <= 22) {
+        // 9일-22일까지는 이번달 하반기와 다음달 상반기 신청 가능
+        firstPeriod = {
+          year: currentYear,
+          month: currentMonth,
+          startDay: 16,
+          endDay: new Date(currentYear, currentMonth, 0).getDate(),
+          from: `${currentYear}-${currentMonth.toString().padStart(2, '0')}-16`,
+          to: `${currentYear}-${currentMonth
+            .toString()
+            .padStart(2, '0')}-${new Date(
+            currentYear,
+            currentMonth,
+            0
+          ).getDate()}`,
+          label: `${currentYear}년 ${currentMonth}월 하반기`,
+        };
+
+        // 다음달 상반기도 표시
+        const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+        const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+
+        secondPeriod = {
+          year: nextYear,
+          month: nextMonth,
+          startDay: 1,
+          endDay: 15,
+          from: `${nextYear}-${nextMonth.toString().padStart(2, '0')}-01`,
+          to: `${nextYear}-${nextMonth.toString().padStart(2, '0')}-15`,
+          label: `${nextYear}년 ${nextMonth}월 상반기`,
+        };
       } else {
-        // 7일 미만이면 다음달 상하반기 신청 가능
+        // 23일 이후면 다음달 상반기 신청 가능
         const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
         const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
 
@@ -223,6 +293,14 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
     const daysUntilPeriod = Math.ceil(
       (periodStart.getTime() - koreaTime.getTime()) / (1000 * 60 * 60 * 24)
     );
+
+    // 디버그 로그 추가
+    console.log('🔍 isPeriodAvailable Debug:', {
+      periodStartDate,
+      daysUntilPeriod,
+      isAvailable: daysUntilPeriod >= 7,
+    });
+
     return daysUntilPeriod >= 7; // 7일 이상 남았으면 신청 가능
   };
 
@@ -240,6 +318,17 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
   if (isSecondPeriodAvailable && secondPeriod) {
     availablePeriods.push({ period: 'second_half', data: secondPeriod });
   }
+
+  // 디버그 로그 추가
+  console.log('🔍 HalfPeriodTabs Debug:', {
+    districtName,
+    periodData,
+    firstPeriod,
+    secondPeriod,
+    availablePeriods: availablePeriods.length,
+    isFirstPeriodAvailable,
+    isSecondPeriodAvailable,
+  });
 
   const handlePeriodChange = (period: 'first_half' | 'second_half') => {
     if (period === 'first_half' && isFirstPeriodAvailable && firstPeriod) {
@@ -275,8 +364,7 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer'
             }`}
           >
-            {periodInfo.data.label} (0{periodInfo.data.month}.
-            {periodInfo.data.startDay}-{periodInfo.data.endDay})
+            {periodInfo.data.label}
           </button>
         ))}
 

@@ -115,7 +115,6 @@ function PaymentPageContent() {
   const [completedDistricts, setCompletedDistricts] = useState<string[]>([]);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
   const [successDistrict, setSuccessDistrict] = useState<string | null>(null);
-  const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
 
   // 일괄적용 핸들러들
   const handleBulkProjectNameToggle = () => {
@@ -281,7 +280,7 @@ function PaymentPageContent() {
 
       return {
         id: `group_${groupKey}`,
-        name: `${firstItem.district} 현수막게시대 (${periodText})`,
+        name: `${firstItem.district} 현수막게시대`,
         items: group,
         totalPrice,
         district: firstItem.district,
@@ -289,11 +288,12 @@ function PaymentPageContent() {
         panel_type: firstItem.panel_type || 'panel',
         is_public_institution: firstItem.is_public_institution,
         is_company: firstItem.is_company,
-        user_profile_id: firstItem.user_profile_id,
-        contact_person_name: firstItem.contact_person_name,
-        phone: firstItem.phone,
-        company_name: firstItem.company_name,
-        email: firstItem.email,
+        user_profile_id: firstItem.user_profile_id || defaultProfile?.id,
+        contact_person_name:
+          firstItem.contact_person_name || defaultProfile?.contact_person_name,
+        phone: firstItem.phone || defaultProfile?.phone,
+        company_name: firstItem.company_name || defaultProfile?.company_name,
+        email: firstItem.email || defaultProfile?.email,
         // 상하반기 정보 추가
         halfPeriod,
         selectedYear: year,
@@ -319,7 +319,6 @@ function PaymentPageContent() {
 
     // 주문 ID가 있는 경우 (결제대기 주문)
     if (orderIdParam) {
-      setPendingOrderId(orderIdParam);
       fetchPendingOrder(orderIdParam);
       return;
     }
@@ -691,55 +690,154 @@ function PaymentPageContent() {
     try {
       setIsProcessingPayment(true);
 
-      // 결제 요청 데이터 생성
-      const paymentRequest = {
-        orderId: `order_${Date.now()}_${group.district}`,
-        amount: group.totalPrice,
-        orderName: `${group.district} ${group.type} 광고`,
-        customerName: group.contact_person_name || '고객',
-        customerEmail: group.email || 'customer@example.com',
-        customerPhone: group.phone || '010-0000-0000',
-        successUrl: `${window.location.origin}/payment/success`,
-        failUrl: `${window.location.origin}/payment/fail`,
-        cancelUrl: `${window.location.origin}/payment/cancel`,
+      // 1. 먼저 주문을 생성
+      if (!user?.id) {
+        throw new Error('사용자 정보가 없습니다. 다시 로그인해주세요.');
+      }
+
+      // 사용자 프로필 ID가 없으면 기본 프로필 사용
+      let userProfileId = group.user_profile_id || defaultProfile?.id;
+
+      // 여전히 프로필 ID가 없으면 더 강력한 검색
+      if (!userProfileId) {
+        // userProfiles에서 기본 프로필 찾기
+        const fallbackProfile =
+          userProfiles?.find((profile) => profile.is_default) ||
+          userProfiles?.[0] ||
+          profiles?.find((profile) => profile.is_default) ||
+          profiles?.[0];
+
+        if (fallbackProfile) {
+          userProfileId = fallbackProfile.id;
+          console.log('🔍 Fallback profile found:', fallbackProfile);
+        }
+      }
+
+      if (!userProfileId) {
+        console.error(
+          '🔍 No profile found. userProfiles:',
+          userProfiles,
+          'profiles:',
+          profiles
+        );
+        throw new Error(
+          '사용자 프로필 정보가 없습니다. 프로필을 먼저 설정해주세요.'
+        );
+      }
+
+      // 그룹의 사용자 정보가 없으면 기본 프로필 정보로 업데이트
+      const updatedGroup = {
+        ...group,
+        user_profile_id: userProfileId,
+        contact_person_name:
+          group.contact_person_name || defaultProfile?.contact_person_name,
+        phone: group.phone || defaultProfile?.phone,
+        company_name: group.company_name || defaultProfile?.company_name,
+        email: group.email || defaultProfile?.email,
       };
 
-      // 결제 처리
+      const orderData = {
+        userAuthId: user.id,
+        userProfileId: userProfileId,
+        projectName: groupStates[updatedGroup.id]?.projectName || '',
+        draftDeliveryMethod: groupStates[updatedGroup.id]?.selectedFile
+          ? 'upload'
+          : groupStates[updatedGroup.id]?.sendByEmail
+          ? 'email'
+          : 'upload',
+        items: updatedGroup.items.map((item) => ({
+          panel_id: item.panel_id,
+          price: item.price,
+          quantity: 1,
+          halfPeriod: item.halfPeriod,
+          selectedYear: item.selectedYear,
+          selectedMonth: item.selectedMonth,
+          selectedPeriodFrom: item.selectedPeriodFrom,
+          selectedPeriodTo: item.selectedPeriodTo,
+        })),
+      };
+
+      console.log('🔍 Creating order with data:', orderData);
+
+      const orderResponse = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderData),
+      });
+
+      if (!orderResponse.ok) {
+        const errorData = await orderResponse.json();
+        throw new Error(
+          `주문 생성 실패: ${errorData.error || '알 수 없는 오류'}`
+        );
+      }
+
+      const orderResult = await orderResponse.json();
+      console.log('🔍 Order created successfully:', orderResult);
+
+      // 2. 결제 요청 데이터 생성
+      const paymentRequest = {
+        orderId: orderResult.order_number,
+        amount: updatedGroup.totalPrice,
+        orderName: `${updatedGroup.district} ${updatedGroup.type} 광고`,
+        customerName: updatedGroup.contact_person_name || '고객',
+        customerEmail: updatedGroup.email || 'customer@example.com',
+        customerPhone: updatedGroup.phone || '010-0000-0000',
+        successUrl: `${window.location.origin}/payment/success?orderId=${orderResult.order_number}`,
+        failUrl: `${window.location.origin}/payment/fail?orderId=${orderResult.order_number}`,
+        cancelUrl: `${window.location.origin}/payment/cancel?orderId=${orderResult.order_number}`,
+      };
+
+      // 3. 결제 처리
       const result = await processPayment(modalPaymentMethod, paymentRequest);
 
       if (result.success) {
         // 결제 성공
-        setCompletedDistricts((prev) => [...prev, group.district]);
-        setSuccessDistrict(group.district);
+        setCompletedDistricts((prev) => [...prev, updatedGroup.district]);
+        setSuccessDistrict(updatedGroup.district);
         setSuccessModalOpen(true);
         setPaymentModalOpen(null);
 
-        // 결제대기 주문의 경우 상태 업데이트
-        if (pendingOrderId) {
-          try {
-            await fetch(`/api/orders/${pendingOrderId}/update-status`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                payment_status:
-                  modalPaymentMethod === 'bank_transfer'
-                    ? 'pending_deposit'
-                    : 'completed',
-              }),
-            });
-          } catch (error) {
-            console.error('주문 상태 업데이트 실패:', error);
-          }
+        // 4. 주문 상태 업데이트
+        try {
+          await fetch(`/api/orders/${orderResult.order_number}/update-status`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              payment_status:
+                modalPaymentMethod === 'bank_transfer'
+                  ? 'pending_deposit'
+                  : 'completed',
+            }),
+          });
+        } catch (error) {
+          console.error('주문 상태 업데이트 실패:', error);
         }
 
-        // 계좌이체의 경우 리다이렉트 URL로 이동
+        // 5. 계좌이체의 경우 리다이렉트 URL로 이동
         if (modalPaymentMethod === 'bank_transfer' && result.redirectUrl) {
           window.location.href = result.redirectUrl;
         }
       } else {
-        // 결제 실패
+        // 결제 실패 - 주문 상태를 failed로 업데이트
+        try {
+          await fetch(`/api/orders/${orderResult.order_number}/update-status`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              payment_status: 'failed',
+            }),
+          });
+        } catch (error) {
+          console.error('주문 상태 업데이트 실패:', error);
+        }
+
         alert(`결제 실패: ${result.errorMessage}`);
       }
     } catch (error) {
@@ -908,28 +1006,6 @@ function PaymentPageContent() {
               </div>
               {/* 구별 개별 입력 필드들 */}
               <div className="space-y-4 mb-4">
-                {/* 일괄적용 정보 표시 */}
-                {(bulkApply.projectName ||
-                  bulkApply.fileUpload ||
-                  bulkApply.emailMethod) && (
-                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <h4 className="text-sm font-semibold text-blue-800 mb-2">
-                      일괄적용 설정
-                    </h4>
-                    <div className="space-y-1 text-sm text-blue-700">
-                      {bulkApply.projectName && projectName && (
-                        <div> 작업이름: {projectName}</div>
-                      )}
-                      {bulkApply.fileUpload && selectedFile && (
-                        <div>📎 파일: {selectedFile.name}</div>
-                      )}
-                      {bulkApply.emailMethod && (
-                        <div>📧 이메일: banner114@hanmail.net</div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
                 {/* 구별 작업이름 - 일괄적용이 꺼져있을 때만 표시 */}
                 {!bulkApply.projectName && (
                   <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
@@ -1260,8 +1336,6 @@ function PaymentPageContent() {
       {paymentModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-bold mb-4">{paymentModalOpen} 결제</h3>
-
             {/* 결제 방법 선택 */}
             <div className="mb-4">
               <PaymentMethodSelector
@@ -1291,7 +1365,7 @@ function PaymentPageContent() {
                 <span>결제 금액:</span>
                 <span>
                   {groupedItems
-                    .find((g) => g.district === paymentModalOpen)
+                    .find((g) => g.id === paymentModalOpen)
                     ?.totalPrice.toLocaleString()}
                   원
                 </span>
@@ -1309,7 +1383,7 @@ function PaymentPageContent() {
               <Button
                 onClick={async () => {
                   const group = groupedItems.find(
-                    (g) => g.district === paymentModalOpen
+                    (g) => g.id === paymentModalOpen
                   );
                   if (group) {
                     await handleSingleGroupPayment(group);

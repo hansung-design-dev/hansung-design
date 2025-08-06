@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/src/lib/supabase';
+import { supabaseAdmin } from '@/src/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,9 +18,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 사용자 조회 (이메일로 조회)
+    // 사용자 조회 (Service Role Key 사용)
     console.log('DB에서 사용자 조회 중...');
-    const { data: user, error: fetchError } = await supabase
+    const { data: user, error: fetchError } = await supabaseAdmin
       .from('user_auth')
       .select(
         'id, username, email, name, phone, password, is_active, is_verified'
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
     console.log('로그인 성공!');
 
     // 마지막 로그인 시간 업데이트
-    await supabase
+    await supabaseAdmin
       .from('user_auth')
       .update({
         last_login: new Date().toISOString(),

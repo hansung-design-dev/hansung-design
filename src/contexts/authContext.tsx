@@ -58,15 +58,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (username: string, password: string) => {
     try {
+      console.log('=== AuthContext signIn ===');
+      console.log('받은 username:', username);
+      console.log('받은 password:', password);
+
+      const requestBody = { username, password };
+      console.log('API 요청 body:', requestBody);
+
       const response = await fetch('/api/auth/signin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await response.json();
+      console.log('API 응답:', data);
 
       if (data.success) {
         setUser(data.user);

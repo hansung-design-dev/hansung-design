@@ -41,9 +41,12 @@ export default function GuidelineSection({
     try {
       for (let i = 0; i < guidelines.length; i++) {
         const guideline = guidelines[i];
-        if (guideline.image_url && guideline.image_url.length > 0) {
-          for (let j = 0; j < guideline.image_url.length; j++) {
-            const imageUrl = guideline.image_url[j];
+        if (
+          guideline.guideline_image_url &&
+          guideline.guideline_image_url.length > 0
+        ) {
+          for (let j = 0; j < guideline.guideline_image_url.length; j++) {
+            const imageUrl = guideline.guideline_image_url[j];
             const fileName = `${districtName}_가이드라인_${i + 1}_${j + 1}.jpg`;
             await downloadImage(imageUrl, fileName);
             // 다운로드 간격을 두어 브라우저가 처리할 시간을 줍니다
@@ -103,26 +106,29 @@ export default function GuidelineSection({
       {guidelines.map((guideline) => (
         <div key={guideline.id} className="mb-8">
           {/* 가이드라인 이미지들 */}
-          {guideline.image_url && guideline.image_url.length > 0 && (
-            <div className="mb-6">
-              <div className="flex flex-col gap-4">
-                {guideline.image_url.map((imageUrl: string, index: number) => (
-                  <div key={index} className="w-full">
-                    <Image
-                      src={imageUrl}
-                      alt={`가이드라인 이미지 ${index + 1}`}
-                      width={4500}
-                      height={4500}
-                      className="w-full max-w-full"
-                      style={{
-                        objectFit: 'contain',
-                      }}
-                    />
-                  </div>
-                ))}
+          {guideline.guideline_image_url &&
+            guideline.guideline_image_url.length > 0 && (
+              <div className="mb-6">
+                <div className="flex flex-col gap-4">
+                  {guideline.guideline_image_url.map(
+                    (imageUrl: string, index: number) => (
+                      <div key={index} className="w-full">
+                        <Image
+                          src={imageUrl}
+                          alt={`가이드라인 이미지 ${index + 1}`}
+                          width={4500}
+                          height={4500}
+                          className="w-full max-w-full"
+                          style={{
+                            objectFit: 'contain',
+                          }}
+                        />
+                      </div>
+                    )
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
         </div>
       ))}
     </div>

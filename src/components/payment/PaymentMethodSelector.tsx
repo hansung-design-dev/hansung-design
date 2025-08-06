@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { PAYMENT_METHODS } from '@/src/types/payment';
 
 interface PaymentMethodSelectorProps {
@@ -33,9 +34,11 @@ export default function PaymentMethodSelector({
             <div className="flex items-center space-x-3">
               <div className="text-2xl">
                 {method.icon.startsWith('/svg/') ? (
-                  <img
+                  <Image
                     src={method.icon}
                     alt={method.name}
+                    width={24}
+                    height={24}
                     className="w-6 h-6"
                   />
                 ) : (
