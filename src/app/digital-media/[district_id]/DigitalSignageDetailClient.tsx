@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { useState } from 'react';
 import { Button } from '@/src/components/button/button';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useCart } from '@/src/contexts/cartContext';
 
 interface DigitalSignageDetailClientProps {
   productData: {
@@ -55,6 +56,7 @@ export default function DigitalSignageDetailClient({
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { addToCart } = useCart();
 
   const handleBack = () => {
     const tab = searchParams.get('tab') || 'digital-signage';
@@ -63,10 +65,21 @@ export default function DigitalSignageDetailClient({
 
   const handleAddToCart = async () => {
     setIsAddingToCart(true);
-    // 상담신청 로직 구현
-    setTimeout(() => {
+
+    try {
+      // 디지털사이니지 상품을 장바구니에 추가 (price: 0으로 설정하여 상담신청 아이템으로 분류)
+      addToCart({
+        type: 'digital-signage',
+        name: productData.title,
+        district: '디지털사이니지',
+        price: 0, // 상담신청 아이템
+        photo_url: productData.image,
+      });
+    } catch (error) {
+      console.error('장바구니 추가 중 오류:', error);
+    } finally {
       setIsAddingToCart(false);
-    }, 1000);
+    }
   };
 
   // 디지털사이니지가 아닌 경우 기존 레이아웃 사용
@@ -74,14 +87,7 @@ export default function DigitalSignageDetailClient({
     return (
       <main className="min-h-screen bg-white">
         {/* Header Section */}
-        <section className="lg:container lg:mx-auto lg:px-[8rem] sm:px-[1.5rem] pt-[6rem] pb-[3rem]">
-          <div className="flex items-center text-sm text-gray-600 mb-4">
-            <span>홈</span>
-            <span className="mx-2">&gt;</span>
-            <span>디지털미디어</span>
-            <span className="mx-2">&gt;</span>
-            <span className="text-black font-medium">{productData.title}</span>
-          </div>
+        <section className="lg:container lg:mx-auto lg:px-[8rem] sm:px-[1.5rem] pt-[10rem] pb-[6rem]">
           <button
             onClick={handleBack}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
@@ -92,7 +98,7 @@ export default function DigitalSignageDetailClient({
               width={16}
               height={16}
             />
-            <span>목록으로 가기</span>
+            <span className="text-lg">목록으로 가기</span>
           </button>
           <h1 className="text-3.75 sm:text-2.5 font-[700] mb-4 font-gmarket">
             {productData.title}
@@ -190,7 +196,7 @@ export default function DigitalSignageDetailClient({
   return (
     <main className="min-h-screen bg-white">
       {/* Header Section */}
-      <section className="lg:container lg:mx-auto lg:px-[8rem] sm:px-[1.5rem] pt-[6rem] pb-[3rem]">
+      <section className="lg:container lg:mx-auto lg:px-[8rem] sm:px-[1.5rem] pt-[10rem] pb-[6rem]">
         <button
           onClick={handleBack}
           className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors mb-4"
@@ -201,7 +207,7 @@ export default function DigitalSignageDetailClient({
             width={16}
             height={16}
           />
-          <span>목록으로 가기</span>
+          <span className="text-lg">목록으로 가기</span>
         </button>
         <h1 className="text-3.75 sm:text-2.5 font-[700] mb-4 font-gmarket">
           {productData.title}

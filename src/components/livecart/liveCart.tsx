@@ -110,8 +110,15 @@ export default function LiveCart() {
       return;
     }
 
-    // 로그인된 경우 장바구니 페이지로 이동
-    router.push('/cart');
+    // 상담신청 아이템이 있는지 확인
+    const hasConsultingItems = cart.some((item) => item.price === 0);
+
+    // 상담신청 아이템이 있으면 상담신청 탭으로, 없으면 기본 결제신청 탭으로 이동
+    if (hasConsultingItems) {
+      router.push('/cart?tab=consulting');
+    } else {
+      router.push('/cart');
+    }
   };
 
   const handleDirectApply = () => {
@@ -161,17 +168,25 @@ export default function LiveCart() {
                 >
                   <div className="flex flex-col gap-2">
                     <div>
-                      <span className="mr-2 text-gray-600 font-medium text-sm">
-                        no.{item.panel_code}
-                      </span>
+                      {/* 디지털사이니지와 공공디자인이 아닌 경우에만 no. 표시 */}
+                      {item.type !== 'digital-signage' &&
+                        item.type !== 'public-design' && (
+                          <span className="mr-2 text-gray-600 font-medium text-sm">
+                            no.{item.panel_code}
+                          </span>
+                        )}
                       <span className="mr-2">{item.name}</span>
-                      <span className="font-bold mr-2">
-                        ({getPanelTypeLabel(item.panel_type)}
-                        {item.district === '서대문구' &&
-                          item.is_for_admin &&
-                          '-행정용패널'}
-                        )
-                      </span>
+                      {/* 디지털사이니지와 공공디자인이 아닌 경우에만 패널 타입 표시 */}
+                      {item.type !== 'digital-signage' &&
+                        item.type !== 'public-design' && (
+                          <span className="font-bold mr-2">
+                            ({getPanelTypeLabel(item.panel_type)}
+                            {item.district === '서대문구' &&
+                              item.is_for_admin &&
+                              '-행정용패널'}
+                            )
+                          </span>
+                        )}
                       {/* LED 전자게시대가 아닌 경우에만 상하반기 정보 표시 */}
                       {item.halfPeriod && item.type !== 'led-display' && (
                         <span className="ml-2 text-sm text-blue-600 font-medium">
