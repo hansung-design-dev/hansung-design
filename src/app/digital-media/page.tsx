@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ItemCard from '../../components/itemCard';
 import DraggableNoticePopup from '@/src/components/DraggableNoticePopup';
@@ -204,7 +204,7 @@ const digitalSignageItems = [
 
 type TabType = 'media-display' | 'digital-billboard' | 'digital-signage';
 
-export default function DigitalSignagePage() {
+function DigitalSignagePageContent() {
   const [homepageContent, setHomepageContent] =
     useState<HomepageContent | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('media-display');
@@ -339,5 +339,13 @@ export default function DigitalSignagePage() {
         <DraggableNoticePopup notice={popupNotice} onClose={closePopup} />
       )}
     </main>
+  );
+}
+
+export default function DigitalSignagePage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <DigitalSignagePageContent />
+    </Suspense>
   );
 }

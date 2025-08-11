@@ -6,6 +6,7 @@ import { useProfile } from '@/src/contexts/profileContext';
 import Image from 'next/image';
 import { Button } from '@/src/components/button/button';
 import { CartItem } from '@/src/contexts/cartContext';
+import { Suspense } from 'react';
 
 // interface UserProfile {
 //   id: string;
@@ -436,7 +437,7 @@ function SuccessModal({
   );
 }
 
-export default function Cart() {
+function CartContent() {
   const { cart, dispatch } = useCart();
   const { user } = useAuth();
   const { profiles } = useProfile();
@@ -1780,5 +1781,13 @@ export default function Cart() {
         message={errorMessage}
       />
     </main>
+  );
+}
+
+export default function Cart() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <CartContent />
+    </Suspense>
   );
 }
