@@ -183,6 +183,15 @@ export default function BannerDisplayPage() {
           });
         });
 
+        // 은행 정보 디버깅 로그 추가
+        processedDistricts.forEach((district) => {
+          console.log(`🏦 ${district.name} 은행 정보:`, {
+            name: district.name,
+            bankInfo: district.bankInfo,
+            bankInfoExists: !!district.bankInfo,
+          });
+        });
+
         setDistricts(processedDistricts);
       } catch (err) {
         console.error('Error fetching optimized data:', err);
