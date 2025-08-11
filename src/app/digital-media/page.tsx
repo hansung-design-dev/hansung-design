@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import ItemCard from '../../components/itemCard';
 import DraggableNoticePopup from '@/src/components/DraggableNoticePopup';
 import { useAdvancedNoticePopup } from '@/src/components/hooks/useAdvancedNoticePopup';
@@ -107,37 +108,97 @@ const digitalBillboardItems = [
   },
 ];
 
-// 디지털사이니지 데이터 (기존 데이터 활용)
+// 디지털사이니지 데이터 (실제 제품 정보 포함)
 const digitalSignageItems = [
   {
-    id: 'digital-signage-1',
-    title: 'Sony Professional Display',
-    src: '/images/digital-media-grid-example.jpeg',
+    id: 'samsung-single',
+    title: '싱글 사이니지(삼성)',
+    src: '/images/digital-sianage/digital_signage/1_삼성 싱글사이니지.jpg',
   },
   {
-    id: 'digital-signage-2',
-    title: 'Panasonic Digital Signage',
-    src: '/images/digital-media-grid-example.jpeg',
+    id: 'lg-single',
+    title: '싱글 사이니지(LG)',
+    src: '/images/digital-sianage/digital_signage/4_LG사이니지.jpg',
   },
   {
-    id: 'digital-signage-3',
-    title: 'Sharp Digital Display',
-    src: '/images/digital-media-grid-example.jpeg',
+    id: 'samsung-multivision',
+    title: '멀티비전',
+    src: '/images/digital-sianage/digital_signage/2_삼성멀티비전.jpg',
   },
   {
-    id: 'digital-signage-4',
-    title: 'Toshiba Digital Signage',
-    src: '/images/digital-media-grid-example.jpeg',
+    id: 'electronic-whiteboard',
+    title: '전자칠판',
+    src: '/images/digital-sianage/digital_signage/3_삼성전지칠판.jpg',
   },
   {
-    id: 'digital-signage-5',
-    title: 'NEC Digital Display',
-    src: '/images/digital-media-grid-example.jpeg',
+    id: 'stand-signage',
+    title: '스탠다드 사이니지',
+    src: '/images/digital-sianage/digital_signage/5_중국산 스탠드.jpg',
   },
   {
-    id: 'digital-signage-6',
-    title: 'BenQ Digital Signage',
-    src: '/images/digital-media-grid-example.jpeg',
+    id: 'kiosk',
+    title: '결제키오스크(삼성)',
+    src: '/images/digital-sianage/digital_signage/6_삼성전자결제-키오스크.jpg',
+  },
+  {
+    id: 'multivision-videowall',
+    title: '멀티비전(비디오월)',
+    src: '/images/digital-sianage/digital_signage/7_멀티비전 이미지1.jpg',
+  },
+  {
+    id: 'aida-digital-frame',
+    title: '디지털액자',
+    src: '/images/digital-sianage/digital_signage/8_AIDA 디지털액자.jpg',
+  },
+  {
+    id: 'standard-signage',
+    title: '스탠다드 사이니지',
+    src: '/images/digital-sianage/digital_signage/9_스탠드사이니지(피벗타입).jpg',
+  },
+  {
+    id: 'the-gallery',
+    title: '더갤러리(삼성)',
+    src: '/images/digital-sianage/digital_signage/10_더갤러리.png',
+  },
+  {
+    id: 'q-series-stand',
+    title: '스탠드 사이니지(Q시리즈)',
+    src: '/images/digital-sianage/digital_signage/11_Q시리즈 스탠드사이니지.jpg',
+  },
+  {
+    id: 'q-series-touch',
+    title: '터치모니터(Q시리즈)',
+    src: '/images/digital-sianage/digital_signage/12_Q시리즈 터치모니터.jpg',
+  },
+  {
+    id: 'bracket',
+    title: '브라켓',
+    src: '/images/digital-sianage/digital_signage/13_브라켓 NSV-01.jpg',
+  },
+  {
+    id: 'outdoor-wall',
+    title: '옥외형 벽부타입',
+    src: '/images/digital-sianage/digital_signage/14_옥외형 벽부형.jpg',
+  },
+  {
+    id: 'outdoor-stand',
+    title: '옥외형 스탠드타입',
+    src: '/images/digital-sianage/digital_signage/15_옥외형 스탠드형1.jpg',
+  },
+  {
+    id: 'led-display',
+    title: 'LED 디스플레이 시리즈',
+    src: '/images/digital-sianage/digital_signage/16_LED디스플레이.jpg',
+  },
+  {
+    id: 'led-controller',
+    title: 'LED 디스플레이 컨트롤러',
+    src: '/images/digital-sianage/digital_signage/17_1-컨트롤러-PC형.jpg',
+  },
+  {
+    id: 'led-installation',
+    title: 'LED 디스플레이 설치비',
+    src: '/images/digital-sianage/digital_signage/18_LED 디스플레이 설치비.png',
   },
 ];
 
@@ -147,6 +208,8 @@ export default function DigitalSignagePage() {
   const [homepageContent, setHomepageContent] =
     useState<HomepageContent | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('media-display');
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   // 팝업 공지사항 훅 사용 (고급 팝업 시스템)
   const { popupNotice, closePopup } = useAdvancedNoticePopup('digital_signage');
@@ -170,6 +233,13 @@ export default function DigitalSignagePage() {
 
     fetchHomepageContent();
   }, []);
+
+  useEffect(() => {
+    const initialTab = searchParams.get('tab') as TabType;
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [searchParams]);
 
   const getCurrentItems = () => {
     switch (activeTab) {
@@ -215,7 +285,10 @@ export default function DigitalSignagePage() {
       <section className="lg:container lg:mx-auto lg:px-[8rem] sm:px-[1.5rem] mb-8">
         <div className="flex border-b border-gray-200">
           <button
-            onClick={() => setActiveTab('media-display')}
+            onClick={() => {
+              setActiveTab('media-display');
+              router.push(`/digital-media?tab=media-display`);
+            }}
             className={`px-6 py-3 text-lg font-medium transition-colors ${
               activeTab === 'media-display'
                 ? 'text-blue-600 border-b-2 border-blue-600'
@@ -225,7 +298,10 @@ export default function DigitalSignagePage() {
             미디어경관디자인
           </button>
           <button
-            onClick={() => setActiveTab('digital-billboard')}
+            onClick={() => {
+              setActiveTab('digital-billboard');
+              router.push(`/digital-media?tab=digital-billboard`);
+            }}
             className={`px-6 py-3 text-lg font-medium transition-colors ${
               activeTab === 'digital-billboard'
                 ? 'text-blue-600 border-b-2 border-blue-600'
@@ -235,7 +311,10 @@ export default function DigitalSignagePage() {
             디지털전광판
           </button>
           <button
-            onClick={() => setActiveTab('digital-signage')}
+            onClick={() => {
+              setActiveTab('digital-signage');
+              router.push(`/digital-media?tab=digital-signage`);
+            }}
             className={`px-6 py-3 text-lg font-medium transition-colors ${
               activeTab === 'digital-signage'
                 ? 'text-blue-600 border-b-2 border-blue-600'
@@ -248,7 +327,7 @@ export default function DigitalSignagePage() {
       </section>
 
       <div className="lg:mx-[2rem] px-[8rem] py-12 md:px-2 sm:mx-[0.5rem] md:mx-[2rem]">
-        <div className="grid lg:grid-cols-3 sm:grid-cols-1 lg:gap-[2rem] sm:gap-[2rem] md:gap-[6rem] ">
+        <div className="grid lg:grid-cols-3 sm:grid-cols-1 lg:gap-[3rem] sm:gap-[2rem] md:gap-[3rem]">
           {getCurrentItems().map((item) => (
             <ItemCard item={item} key={item.id} />
           ))}
