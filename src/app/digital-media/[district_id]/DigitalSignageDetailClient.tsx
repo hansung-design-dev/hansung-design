@@ -40,7 +40,7 @@ interface DigitalSignageDetailClientProps {
         size: string;
         vesaHole: string;
         price: string;
-        stock: string;
+        stock?: string;
         brand?: string;
         inch?: string;
       }>;

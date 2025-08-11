@@ -1,7 +1,55 @@
 import DigitalSignageDetailClient from './DigitalSignageDetailClient';
 
+// 제품 데이터 타입 정의
+interface ProductData {
+  id: string;
+  title: string;
+  image: string;
+  images?: string[];
+  modelName?: string;
+  pixelPitchOptions?: string[];
+  specifications?: {
+    operatingLineup?: string;
+    modelName?: string;
+    productSize?: string;
+    resolutionBrightness?: string;
+    keyFeatures?: string;
+    usage?: string;
+    installationMethod?: string;
+    inquiry?: string;
+    moduleSize?: string;
+    moduleResolution?: string;
+    pixelDensity?: string;
+    optimalViewingDistance?: string;
+    screenBrightness?: string;
+    pixelConfiguration?: string;
+    refreshRate?: string;
+    viewingAngle?: string;
+    flatness?: string;
+    operatingTemperature?: string;
+    operatingHumidity?: string;
+    ratedInput?: string;
+    maintenance?: string;
+  };
+  description?: string;
+  type?: string;
+  models?: {
+    [key: string]: Array<{
+      modelName: string;
+      resolution: string;
+      brightness: string;
+      size: string;
+      vesaHole: string;
+      price: string;
+      stock?: string;
+      brand?: string;
+      inch?: string;
+    }>;
+  };
+}
+
 // 제품 데이터 매핑
-const productDataMap = {
+const productDataMap: Record<string, ProductData> = {
   // 미디어경관디자인
   'gansong-art-museum': {
     id: 'gansong-art-museum',
@@ -1537,7 +1585,7 @@ export default async function DigitalSignageDetailPage({
 
   return (
     <DigitalSignageDetailClient
-      productData={productData as any}
+      productData={productData}
       isDigitalSignage={isDigitalSignageItem}
     />
   );
