@@ -11,6 +11,7 @@ interface DigitalSignageDetailClientProps {
     id: string;
     title: string;
     image: string;
+    images?: string[];
     modelName?: string;
     pixelPitchOptions?: string[];
     specifications?: {
@@ -29,6 +30,12 @@ interface DigitalSignageDetailClientProps {
       maintenance?: string;
       modelName?: string;
       productSize?: string;
+      operatingLineup?: string;
+      resolutionBrightness?: string;
+      keyFeatures?: string;
+      usage?: string;
+      installationMethod?: string;
+      inquiry?: string;
     };
     description?: string;
     type?: string;
@@ -47,11 +54,13 @@ interface DigitalSignageDetailClientProps {
     };
   };
   isDigitalSignage?: boolean;
+  isDigitalBillboard?: boolean;
 }
 
 export default function DigitalSignageDetailClient({
   productData,
   isDigitalSignage = false,
+  isDigitalBillboard = false,
 }: DigitalSignageDetailClientProps) {
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const router = useRouter();
@@ -82,8 +91,8 @@ export default function DigitalSignageDetailClient({
     }
   };
 
-  // 디지털사이니지가 아닌 경우 기존 레이아웃 사용
-  if (!isDigitalSignage) {
+  // 디지털사이니지가 아닌 경우 기존 레이아웃 사용 (미디어경관디자인, 디지털전광판)
+  if (!isDigitalSignage && !isDigitalBillboard) {
     return (
       <main className="min-h-screen bg-white">
         {/* Header Section */}
@@ -138,9 +147,8 @@ export default function DigitalSignageDetailClient({
                         width={24}
                         height={24}
                       />
-                      <span className="text-gray-600 font-medium">모델명</span>
                     </div>
-                    <span className="text-black">
+                    <span className="text-black pl-2">
                       {productData.specifications?.modelName ||
                         '상세페이지 참조'}
                     </span>
@@ -187,6 +195,27 @@ export default function DigitalSignageDetailClient({
               </div>
             </div>
           </div>
+
+          {/* Additional Images Gallery */}
+          {productData.images && productData.images.length > 1 && (
+            <div className="py-[10rem]">
+              <div className="flex flex-col gap-10">
+                {productData.images.slice(1).map((image, index) => (
+                  <div
+                    key={index}
+                    className="relative aspect-[4/3] overflow-hidden rounded-lg"
+                  >
+                    <Image
+                      src={image}
+                      alt={`${productData.title} - 이미지 ${index + 2}`}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </section>
       </main>
     );
@@ -351,6 +380,28 @@ export default function DigitalSignageDetailClient({
             </div>
           </div>
         </div>
+
+        {/* Additional Images Gallery */}
+        {productData.images && productData.images.length > 1 && (
+          <div className="mt-12">
+            <h3 className="text-2xl font-bold mb-6">추가 이미지</h3>
+            <div className="flex flex-col gap-6">
+              {productData.images.slice(1).map((image, index) => (
+                <div
+                  key={index}
+                  className="relative aspect-[4/3] overflow-hidden rounded-lg"
+                >
+                  <Image
+                    src={image}
+                    alt={`${productData.title} - 이미지 ${index + 2}`}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
     </main>
   );

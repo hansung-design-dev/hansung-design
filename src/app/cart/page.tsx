@@ -33,7 +33,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 
 const fadeInUp = {
   initial: { y: 60, opacity: 0 },
-  animate: { y: 0, opacity: 1, transition: { duration: 0.6, ease: 'easeOut' } },
+  animate: { y: 0, opacity: 1, transition: { duration: 0.6 } },
 };
 const dividerVertical = (
   <svg
