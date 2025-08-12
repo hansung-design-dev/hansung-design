@@ -479,14 +479,6 @@ export default function LEDDisplayDetailPage({
               />
             </div>
             <div className="mt-4">
-              <div className="flex gap-2 mb-2">
-                <span className="px-2 py-1 bg-black text-white text-0.875 rounded-[5rem]">
-                  {getLEDPanelTypeLabel(item.panel_type)}
-                </span>
-                <span className="px-2 py-1 bg-black text-white text-0.875 rounded-[5rem]">
-                  {item.district}
-                </span>
-              </div>
               <h3 className="text-1 font-medium">{item.name}</h3>
               <p className="text-0.875 text-gray-600">{item.neighborhood}</p>
             </div>
@@ -598,14 +590,7 @@ export default function LEDDisplayDetailPage({
                     />
                   </div>
                   <div className="p-4">
-                    <div className="flex gap-2 mb-2">
-                      <span className="px-2 py-1 bg-gray-100 text-gray-600 text-0.875 rounded">
-                        {getLEDPanelTypeLabel(item.panel_type)}
-                      </span>
-                      <span className="px-2 py-1 bg-gray-100 text-gray-600 text-0.875 rounded">
-                        {item.district}
-                      </span>
-                    </div>
+                    <div className="flex gap-2 mb-2"></div>
                     <h3 className="text-1 font-medium">{item.name}</h3>
                     <p className="text-0.875 text-gray-600">
                       {item.neighborhood}
@@ -666,6 +651,7 @@ export default function LEDDisplayDetailPage({
                   districtObj?.name === '전체보기'
                     ? '/svg/all.svg'
                     : districtData?.logo_image_url ||
+                      districtObj?.logo ||
                       `/images/district-icon/${district}-gu.png`
                 }
                 alt={

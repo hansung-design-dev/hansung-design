@@ -42,6 +42,7 @@ export default function DisplayDetailPage({
   bankInfo,
   panelTypeFilter,
   setPanelTypeFilter,
+  districtData,
 }: {
   district: string;
   districtObj: District | undefined;
@@ -72,6 +73,14 @@ export default function DisplayDetailPage({
   setPanelTypeFilter?: React.Dispatch<
     React.SetStateAction<'panel' | 'top_fixed' | 'semi_auto'>
   >;
+  districtData?: {
+    id: string;
+    name: string;
+    code: string;
+    logo_image_url?: string;
+    panel_status?: string;
+    phone_number?: string;
+  } | null;
 }) {
   const [selectedOption, setSelectedOption] = useState<{
     id: number;
@@ -313,7 +322,7 @@ export default function DisplayDetailPage({
         } else if (mapoFilter === 'simin') {
           return (
             item.panel_type === 'bulletin_board' ||
-            item.panel_type === 'citizen_board'
+            item.panel_type === 'cultural_board'
           );
         }
         return true;
@@ -431,7 +440,7 @@ export default function DisplayDetailPage({
         return '현수막게시대';
       case 'bulletin_board':
         return '시민게시대';
-      case 'citizen_board':
+      case 'cultural_board':
         return '시민/문화게시대';
       case 'with_lighting':
         return '패널형게시대';
@@ -954,14 +963,6 @@ export default function DisplayDetailPage({
               />
             </div>
             <div className="mt-4">
-              <div className="flex gap-2 mb-2">
-                <span className="px-2 py-1 bg-black text-white text-0.875 rounded-[5rem]">
-                  {getPanelTypeLabel(item)}
-                </span>
-                <span className="px-2 py-1 bg-black text-white text-0.875 rounded-[5rem]">
-                  {item.district}
-                </span>
-              </div>
               <div className="text-sm text-gray-500 mb-1">
                 No. {item.panel_code || item.id}
               </div>
@@ -1081,14 +1082,6 @@ export default function DisplayDetailPage({
                     />
                   </div>
                   <div className="p-4">
-                    <div className="flex gap-2 mb-2">
-                      <span className="px-2 py-1 bg-gray-100 text-gray-600 text-0.875 rounded">
-                        {getPanelTypeLabel(item)}
-                      </span>
-                      <span className="px-2 py-1 bg-gray-100 text-gray-600 text-0.875 rounded">
-                        {item.district}
-                      </span>
-                    </div>
                     <div className="text-sm text-gray-500 mb-1">
                       No. {item.panel_code || item.id}
                     </div>
@@ -1182,16 +1175,25 @@ export default function DisplayDetailPage({
         </button>
         <div className="mb-8">
           <div className="flex gap-2 items-center">
-            {districtObj && (
+            {(districtObj || districtData) && (
               <Image
                 src={
                   selectedOption?.option && selectedOption.option !== '전체'
-                    ? `/images/district-icon/${getDistrictCode(
+                    ? districtData?.logo_image_url ||
+                      districtObj?.logo ||
+                      `/images/district-icon/${getDistrictCode(
                         selectedOption.option
                       )}-gu.png`
-                    : districtObj.logo
+                    : districtData?.logo_image_url ||
+                      districtObj?.logo ||
+                      `/images/district-icon/${district}-gu.png`
                 }
-                alt={selectedOption?.option || districtObj.name}
+                alt={
+                  selectedOption?.option ||
+                  districtData?.name ||
+                  districtObj?.name ||
+                  '구 로고'
+                }
                 width={50}
                 height={50}
                 className="inline-block align-middle mr-2"
@@ -1218,7 +1220,7 @@ export default function DisplayDetailPage({
                 onClick={() => setMapoFilter('yeollip')}
                 className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-6 font-medium ${
                   mapoFilter === 'yeollip'
-                    ? 'text-white bg-black rounded-full '
+                    ? 'text-white bg-pink-500 rounded-full '
                     : 'text-gray-600 hover:text-gray-800'
                 }`}
               >
@@ -1228,7 +1230,7 @@ export default function DisplayDetailPage({
                 onClick={() => setMapoFilter('jeodan')}
                 className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-6 font-medium ${
                   mapoFilter === 'jeodan'
-                    ? 'text-white bg-black rounded-full '
+                    ? 'text-white bg-pink-500 rounded-full '
                     : 'text-gray-600 hover:text-gray-800'
                 }`}
               >
@@ -1238,7 +1240,7 @@ export default function DisplayDetailPage({
                 onClick={() => setMapoFilter('simin')}
                 className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-6 font-medium ${
                   mapoFilter === 'simin'
-                    ? 'text-white bg-black rounded-full '
+                    ? 'text-white bg-pink-500 rounded-full '
                     : 'text-gray-600 hover:text-gray-800'
                 }`}
               >
@@ -1250,8 +1252,10 @@ export default function DisplayDetailPage({
         {mapoFilter === 'simin' && (
           <div className="mb-8">
             <div className="flex items-center gap-4  pb-4 text-blue-700 text-1 line-height-[1.5rem]">
-              시민 게시대는 게첨일기준 매월1일에 포스터 직접 가지고 사무실로
-              직접내방하여 신청해주세요. <br /> 아래 가이드라인을 참고해주세요
+              시민 게시대는 게첨일기준 5일이며 <br /> 전월 매월 1일에 포스터를
+              직접 가지고 사무실로 내방하여 선착순으로 신청해주세요.
+              <br /> 포스터 사이즈: 370mm x 50mm <br /> 중앙광고: 별도 상담문의{' '}
+              <br /> 중앙광고 사이즈 : 840mm x 1650mm
             </div>
           </div>
         )}
@@ -1285,7 +1289,8 @@ export default function DisplayDetailPage({
         )}
         {/* 상하반기 탭 - 개별 구 페이지에서만 표시하거나, 전체보기에서 특정 구를 선택했을 때만 표시 */}
         {/* 상단광고 탭에서는 상하반기 탭 숨김 */}
-        {showHalfPeriodTabs && (
+        {/* 시민게시대 탭에서는 신청기간 섹션 숨김 */}
+        {showHalfPeriodTabs && !(isMapoDistrict && mapoFilter === 'simin') && (
           <HalfPeriodTabs
             selectedPeriod={selectedHalfPeriod}
             onPeriodChange={(newPeriod, year, month) => {
@@ -1320,43 +1325,48 @@ export default function DisplayDetailPage({
             isActive={viewType === 'list'}
             onClick={() => setViewType('list')}
           />
-          <GuidelineButton
-            district={district}
-            guidelineType="banner"
-            className="flex items-center gap-2 px-4 py-2 hover:cursor-pointer text-gray-800 hover:text-black border-b-2 border-transparent "
-          >
-            <DocumentIcon className="w-7 h-6 text-gray-600" />
-            <span className="hidden md:inline text-0.875 text-gray-600 font-500">
-              가이드라인 보기
-            </span>
-          </GuidelineButton>
-          <button
-            onClick={handleAIFileDownload}
-            disabled={aiDownloadLoading}
-            className="flex items-center gap-2 px-4 py-2 hover:cursor-pointer text-gray-800 hover:text-black border-b-2 border-transparent hover:border-black disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {aiDownloadLoading ? (
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-600"></div>
-            ) : (
-              <svg
-                className="w-7 h-6 text-gray-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
+          {/* 시민게시대 탭에서는 가이드라인보기와 AI파일다운로드 버튼 숨김 */}
+          {!(isMapoDistrict && mapoFilter === 'simin') && (
+            <>
+              <GuidelineButton
+                district={district}
+                guidelineType="banner"
+                className="flex items-center gap-2 px-4 py-2 hover:cursor-pointer text-gray-800 hover:text-black border-b-2 border-transparent "
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-            )}
-            <span className="hidden md:inline text-0.875">
-              {aiDownloadLoading ? '다운로드 중...' : 'ai파일 다운로드'}
-            </span>
-          </button>
+                <DocumentIcon className="w-7 h-6 text-gray-600" />
+                <span className="hidden md:inline text-0.875 text-gray-600 font-500">
+                  가이드라인 보기
+                </span>
+              </GuidelineButton>
+              <button
+                onClick={handleAIFileDownload}
+                disabled={aiDownloadLoading}
+                className="flex items-center gap-2 px-4 py-2 hover:cursor-pointer text-gray-800 hover:text-black border-b-2 border-transparent hover:border-black disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {aiDownloadLoading ? (
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-600"></div>
+                ) : (
+                  <svg
+                    className="w-7 h-6 text-gray-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                )}
+                <span className="hidden md:inline text-0.875">
+                  {aiDownloadLoading ? '다운로드 중...' : 'ai파일 다운로드'}
+                </span>
+              </button>
+            </>
+          )}
           <div className="ml-auto">
             <DropdownMenu
               data={dropdownOptions}
@@ -1394,8 +1404,11 @@ export default function DisplayDetailPage({
                 onItemSelect={(id, checked) => handleItemSelect(id, checked)}
                 enableRowClick={false}
                 hideQuantityColumns={
-                  isSongpaOrYongsan && currentPanelTypeFilter === 'top_fixed'
+                  (isSongpaOrYongsan &&
+                    currentPanelTypeFilter === 'top_fixed') ||
+                  (isMapoDistrict && mapoFilter === 'simin')
                 }
+                hideStatusColumn={isMapoDistrict && mapoFilter === 'simin'}
                 district={districtObj?.name}
               />
 

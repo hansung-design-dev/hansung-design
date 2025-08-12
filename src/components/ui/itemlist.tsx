@@ -36,6 +36,7 @@ interface ItemTableProps {
   selectedIds?: string[];
   enableRowClick?: boolean;
   hideQuantityColumns?: boolean; // 상단광고 탭에서 면수/수량 컬럼 숨김
+  hideStatusColumn?: boolean; // 시민게시대 탭에서 상태 컬럼 숨김
   district?: string; // 구 이름 추가
 }
 
@@ -50,6 +51,7 @@ const ItemList: React.FC<ItemTableProps> = ({
   selectedIds = [],
   enableRowClick = true,
   hideQuantityColumns = false,
+  hideStatusColumn = false,
   district,
 }) => {
   const [page, setPage] = useState(1);
@@ -132,7 +134,7 @@ const ItemList: React.FC<ItemTableProps> = ({
         return '현수막게시대';
       case 'bulletin_board':
         return '시민게시대';
-      case 'citizen_board':
+      case 'cultural_board':
         return '시민/문화게시대';
       case 'with_lighting':
         return '패널형게시대';
@@ -195,7 +197,9 @@ const ItemList: React.FC<ItemTableProps> = ({
                 {!hideQuantityColumns && (
                   <th className="text-center pl-4">수량</th>
                 )}
-                <th className="text-center pl-4">상태</th>
+                {!hideStatusColumn && (
+                  <th className="text-center pl-4">상태</th>
+                )}
                 {renderAction && <th className="text-center">작업</th>}
               </tr>
             </thead>
@@ -228,7 +232,7 @@ const ItemList: React.FC<ItemTableProps> = ({
                     >
                       {item.district === '마포구' &&
                       (item.panel_type === 'bulletin_board' ||
-                        item.panel_type === 'citizen_board') ? (
+                        item.panel_type === 'cultural_board') ? (
                         <span></span>
                       ) : (
                         <input
@@ -299,13 +303,15 @@ const ItemList: React.FC<ItemTableProps> = ({
                       {item.faces ? `${item.faces}` : '-'}
                     </td>
                   )}
-                  <td
-                    className={`text-center font-semibold pl-4 ${getStatusClass(
-                      displayStatus
-                    )}`}
-                  >
-                    {displayStatus}
-                  </td>
+                  {!hideStatusColumn && (
+                    <td
+                      className={`text-center font-semibold pl-4 ${getStatusClass(
+                        displayStatus
+                      )}`}
+                    >
+                      {displayStatus}
+                    </td>
+                  )}
                   {renderAction && (
                     <td className="text-center">{renderAction(item)}</td>
                   )}
@@ -316,7 +322,7 @@ const ItemList: React.FC<ItemTableProps> = ({
             {Array.from({ length: itemsPerPage - paginatedItems.length }).map(
               (_, i) => {
                 const baseCols = showCheckbox ? 1 : 0; // checkbox
-                const dataCols = 8; // No, 게시대명, 아이콘, 규격, 가격, 구분, 상태
+                const dataCols = hideStatusColumn ? 7 : 8; // No, 게시대명, 아이콘, 규격, 가격, 구분, 상태 (상태 컬럼 숨김 시 7개)
                 const quantityCols = hideQuantityColumns ? 0 : 2; // 면수, 수량
                 const actionCols = renderAction ? 1 : 0; // 작업
                 const totalCols =
@@ -354,7 +360,7 @@ const ItemList: React.FC<ItemTableProps> = ({
                 {showCheckbox &&
                   (item.district === '마포구' &&
                   (item.panel_type === 'bulletin_board' ||
-                    item.panel_type === 'citizen_board') ? (
+                    item.panel_type === 'cultural_board') ? (
                     <span className="mr-2"></span>
                   ) : (
                     <input
@@ -426,20 +432,34 @@ const ItemList: React.FC<ItemTableProps> = ({
                 <div className="text-gray-500">{item.neighborhood}</div>
               )}
               <div className="text-0.875">행정동: {item.neighborhood}</div>
-              <div className="text-0.875">
-                상태:&nbsp;
-                <span
-                  className={`text-0.875 ${getStatusClass(
-                    displayStatus
-                  )} font-medium`}
-                >
-                  {displayStatus}
-                </span>
-              </div>
+              {!hideStatusColumn && (
+                <div className="text-0.875">
+                  상태:&nbsp;
+                  <span
+                    className={`text-0.875 ${getStatusClass(
+                      displayStatus
+                    )} font-medium`}
+                  >
+                    {displayStatus}
+                  </span>
+                </div>
+              )}
 
               <div className="text-0.875">구분: {categoryDisplay}</div>
               {!hideQuantityColumns && (
                 <div className="text-0.875">수량: {item.faces ?? '-'}</div>
+              )}
+              {!hideStatusColumn && (
+                <div className="text-0.875">
+                  상태:&nbsp;
+                  <span
+                    className={`text-0.875 ${getStatusClass(
+                      displayStatus
+                    )} font-medium`}
+                  >
+                    {displayStatus}
+                  </span>
+                </div>
               )}
               {renderAction && <div>{renderAction(item)}</div>}
             </div>

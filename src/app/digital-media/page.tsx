@@ -342,7 +342,7 @@ function DigitalSignagePageContent() {
       </section>
 
       <div className="lg:container lg:mx-auto lg:px-[8rem] sm:px-[1.5rem] py-12">
-        <div className="grid lg:grid-cols-3 md:grid-cols-2 sm:grid-cols-1 gap-8 justify-items-center">
+        <div className="grid lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-1 gap-8 justify-items-center">
           {getCurrentItems().map((item) => (
             <ItemCard item={item} key={item.id} />
           ))}

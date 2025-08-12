@@ -34,9 +34,9 @@ interface NavProps {
 const menuItems: MenuItem[] = [
   { name: '회사소개', href: '/about' },
   { name: '공공디자인', href: '/public-design' },
+  { name: '디지털미디어', href: '/digital-media' },
   { name: 'LED전자게시대', href: '/led-display' },
   { name: '현수막게시대', href: '/banner-display' },
-  { name: '디지털미디어', href: '/digital-media' },
 ];
 
 const IconButton = ({
@@ -258,7 +258,7 @@ const Nav = ({ className = 'sm:px-[1.5rem]', isbg, TextInvert }: NavProps) => {
               alt="로고"
               width={150}
               height={150}
-              className={`lg:w-[12.375rem] lg:h-10 md:w-[5rem] md:h-8 ${
+              className={`lg:w-[12.375rem] lg:h-10 md:w-[10rem] md:h-8 ${
                 TextInvert && !isScrolled ? 'invert' : ''
               }`}
             />
