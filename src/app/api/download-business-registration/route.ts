@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
       'Content-Length': fileBuffer.length.toString(),
     };
 
-    return new NextResponse(fileBuffer, { headers });
+    return new NextResponse(new Uint8Array(fileBuffer), { headers });
   } catch (error) {
     console.error('파일 다운로드 오류:', error);
     return NextResponse.json(
