@@ -254,11 +254,11 @@ const Nav = ({ className = 'sm:px-[1.5rem]', isbg, TextInvert }: NavProps) => {
             className="flex items-center sm:hidden lg:inline md:inline"
           >
             <Image
-              src="/svg/logo.svg"
+              src="/svg/main-logo.svg"
               alt="로고"
               width={150}
-              height={40}
-              className={`lg:w-[9.375rem] lg:h-10 md:w-[5rem] md:h-8 ${
+              height={150}
+              className={`lg:w-[12.375rem] lg:h-10 md:w-[5rem] md:h-8 ${
                 TextInvert && !isScrolled ? 'invert' : ''
               }`}
             />
