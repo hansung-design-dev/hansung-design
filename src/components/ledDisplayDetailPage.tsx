@@ -239,12 +239,6 @@ export default function LEDDisplayDetailPage({
 
   console.log('🔍 filteredBillboards:', filteredBillboards);
 
-  // LED 전용 구분 컬럼에 표시할 값 계산 함수
-  const getLEDPanelTypeLabel = (panelType?: string) => {
-    if (!panelType) return 'LED전자게시대';
-    return 'LED전자게시대';
-  };
-
   const getCartItemName = (item: {
     nickname?: string | null;
     address?: string;
@@ -749,6 +743,7 @@ export default function LEDDisplayDetailPage({
               selectedIds={selectedIds}
               onItemSelect={(id, checked) => handleItemSelect(id, checked)}
               enableRowClick={false}
+              isAllDistrictsView={isAllDistrictsView}
             />
           ) : (
             renderGalleryView()

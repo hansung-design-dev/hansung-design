@@ -13,7 +13,7 @@ export default function Navigation({
     { id: 'greetings', label: '인사말' },
     { id: 'strengths', label: '업무강점' },
     { id: 'patents', label: '특허' },
-    { id: 'certifications', label: '가입인증 및 허가증' },
+    { id: 'certifications', label: '기업인증 및 허가증' },
     { id: 'performance', label: '실적내역' },
     { id: 'organization', label: '조직도' },
     { id: 'directions', label: '찾아오시는 길' },

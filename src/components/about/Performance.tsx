@@ -49,11 +49,11 @@ export default function Performance() {
         </div>
 
         {/* 카드 그리드 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+        <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
           {performanceData.map((item, index) => (
             <div
               key={index}
-              className="flex w-[13rem] h-[3rem] p-[3.4375rem_2.3125rem] flex-col justify-center items-start gap-[0.625rem] bg-white rounded-[1.25rem] shadow-lg"
+              className="flex w-[14rem] h-[3rem] p-[3.4375rem_2.3125rem] flex-col justify-center items-start gap-[0.625rem] bg-white rounded-[1.25rem] shadow-lg"
             >
               <h3
                 className="text-[1.125rem] font-700 text-start"
