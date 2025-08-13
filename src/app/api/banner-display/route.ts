@@ -1395,18 +1395,21 @@ async function getUltraFastDistrictsData() {
         : [];
 
       // 송파구, 용산구에 상단광고 추가
-      let pricePolicies = [...basePricePolicies];
-      if (item.region_name === '송파구' || item.region_name === '용산구') {
-        pricePolicies.push({
-          id: `cache_상단광고_${item.region_name}`,
-          price_usage_type: 'default' as const,
-          tax_price: 0,
-          road_usage_fee: 0,
-          advertising_fee: 0,
-          total_price: 0,
-          displayName: '상단광고: 상담문의',
-        });
-      }
+      const pricePolicies =
+        item.region_name === '송파구' || item.region_name === '용산구'
+          ? [
+              ...basePricePolicies,
+              {
+                id: `cache_상단광고_${item.region_name}`,
+                price_usage_type: 'default' as const,
+                tax_price: 0,
+                road_usage_fee: 0,
+                advertising_fee: 0,
+                total_price: 0,
+                displayName: '상단광고: 상담문의',
+              },
+            ]
+          : basePricePolicies;
 
       // 기간 정보 파싱
       let periodData = null;

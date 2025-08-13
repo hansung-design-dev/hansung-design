@@ -41,7 +41,7 @@ const LEDItemList: React.FC<LEDItemTableProps> = ({
   onItemSelect,
   selectedIds = [],
   enableRowClick = true,
-  isAllDistrictsView = false,
+  // isAllDistrictsView = false,
 }) => {
   const [page, setPage] = useState(1);
   const totalPages = Math.ceil(items.length / ITEMS_PER_PAGE);
@@ -71,11 +71,11 @@ const LEDItemList: React.FC<LEDItemTableProps> = ({
     handleItemClick(itemId.toString());
   };
 
-  // LED 전용 구분 컬럼에 표시할 값 계산 함수
-  const getLEDPanelTypeLabel = (panelType?: string) => {
-    if (!panelType) return 'LED전자게시대';
-    return 'LED전자게시대';
-  };
+  // // LED 전용 구분 컬럼에 표시할 값 계산 함수
+  // const getLEDPanelTypeLabel = (panelType?: string) => {
+  //   if (!panelType) return 'LED전자게시대';
+  //   return 'LED전자게시대';
+  // };
 
   return (
     <>
@@ -100,7 +100,7 @@ const LEDItemList: React.FC<LEDItemTableProps> = ({
             {paginatedItems.map((item, index) => {
               const displayStatus =
                 statusDisplayMap[item.status] || item.status;
-              const categoryDisplay = getLEDPanelTypeLabel(item.panel_type);
+              // const categoryDisplay = getLEDPanelTypeLabel(item.panel_type);
               const uniqueKey = item.id || `led-${index}`; // fallback key
               return (
                 <tr
@@ -207,7 +207,7 @@ const LEDItemList: React.FC<LEDItemTableProps> = ({
       <div className="lg:hidden">
         {paginatedItems.map((item, index) => {
           const displayStatus = statusDisplayMap[item.status] || item.status;
-          const categoryDisplay = getLEDPanelTypeLabel(item.panel_type);
+          // const categoryDisplay = getLEDPanelTypeLabel(item.panel_type);
           const uniqueKey = item.id || `led-mobile-${index}`; // fallback key
           return (
             <div

@@ -402,61 +402,61 @@ export default function DisplayDetailPage({
       )
     : filteredByHalfPeriod;
 
-  // 구분 컬럼에 표시할 값 계산 함수 (탭에 따라 다른 로직 적용)
-  const getPanelTypeLabel = (item: DisplayBillboard) => {
-    // 송파구, 용산구, 서대문구의 경우 탭에 따라 다른 로직 적용
-    if (isSongpaOrYongsan && item.type === 'banner') {
-      if (currentPanelTypeFilter === 'top_fixed') {
-        return '상단광고';
-      } else if (currentPanelTypeFilter === 'semi_auto') {
-        return '현수막게시대';
-      } else {
-        // 현수막게시대 탭: panel_type에서 값 가져오기
-        const panelType = item.panel_type;
-        if (!panelType) return '현수막게시대';
+  // // 구분 컬럼에 표시할 값 계산 함수 (탭에 따라 다른 로직 적용)
+  // const getPanelTypeLabel = (item: DisplayBillboard) => {
+  //   // 송파구, 용산구, 서대문구의 경우 탭에 따라 다른 로직 적용
+  //   if (isSongpaOrYongsan && item.type === 'banner') {
+  //     if (currentPanelTypeFilter === 'top_fixed') {
+  //       return '상단광고';
+  //     } else if (currentPanelTypeFilter === 'semi_auto') {
+  //       return '현수막게시대';
+  //     } else {
+  //       // 현수막게시대 탭: panel_type에서 값 가져오기
+  //       const panelType = item.panel_type;
+  //       if (!panelType) return '현수막게시대';
 
-        switch (panelType) {
-          case 'with_lighting':
-            return '패널형게시대';
-          case 'no_lighting':
-            return '현수막게시대';
-          case 'panel':
-            // 관악구의 패널형은 현수막게시대로, 나머지는 패널형게시대로
-            return item.district === '관악구' ? '현수막게시대' : '패널형게시대';
-          default:
-            return '현수막게시대';
-        }
-      }
-    }
+  //       switch (panelType) {
+  //         case 'with_lighting':
+  //           return '패널형게시대';
+  //         case 'no_lighting':
+  //           return '현수막게시대';
+  //         case 'panel':
+  //           // 관악구의 패널형은 현수막게시대로, 나머지는 패널형게시대로
+  //           return item.district === '관악구' ? '현수막게시대' : '패널형게시대';
+  //         default:
+  //           return '현수막게시대';
+  //       }
+  //     }
+  //   }
 
-    // 다른 구들은 기존 panel_type 사용
-    const panelType = item.panel_type;
-    if (!panelType) return '현수막게시대';
+  //   // 다른 구들은 기존 panel_type 사용
+  //   const panelType = item.panel_type;
+  //   if (!panelType) return '현수막게시대';
 
-    switch (panelType) {
-      case 'multi_panel':
-        return '패널형게시대';
-      case 'lower_panel':
-        return '현수막게시대';
-      case 'bulletin_board':
-        return '시민게시대';
-      case 'cultural_board':
-        return '시민/문화게시대';
-      case 'with_lighting':
-        return '패널형게시대';
-      case 'no_lighting':
-        return '현수막게시대';
-      case 'semi_auto':
-        return '현수막게시대';
-      case 'panel':
-        // 관악구의 패널형은 현수막게시대로, 나머지는 패널형게시대로
-        return item.district === '관악구' ? '현수막게시대' : '패널형게시대';
-      case 'top_fixed':
-        return '상단광고';
-      default:
-        return '현수막게시대';
-    }
-  };
+  //   switch (panelType) {
+  //     case 'multi_panel':
+  //       return '패널형게시대';
+  //     case 'lower_panel':
+  //       return '현수막게시대';
+  //     case 'bulletin_board':
+  //       return '시민게시대';
+  //     case 'cultural_board':
+  //       return '시민/문화게시대';
+  //     case 'with_lighting':
+  //       return '패널형게시대';
+  //     case 'no_lighting':
+  //       return '현수막게시대';
+  //     case 'semi_auto':
+  //       return '현수막게시대';
+  //     case 'panel':
+  //       // 관악구의 패널형은 현수막게시대로, 나머지는 패널형게시대로
+  //       return item.district === '관악구' ? '현수막게시대' : '패널형게시대';
+  //     case 'top_fixed':
+  //       return '상단광고';
+  //     default:
+  //       return '현수막게시대';
+  //   }
+  // };
 
   const getCartItemName = (item: {
     nickname?: string | null;
