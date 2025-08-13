@@ -64,6 +64,12 @@ export async function GET(request: NextRequest) {
     }
 
     if (action === 'getByDistrict' && districtName) {
+      console.log(
+        '🔍 🔍 🔍 API - Fetching district data for:',
+        districtName,
+        'displayType:',
+        displayType
+      );
       // 특정 구의 전체 정보 가져오기 (로고 + 계좌번호 + 전화번호)
       const { data: regionData, error: regionError } = await supabase
         .from('region_gu')
@@ -71,6 +77,9 @@ export async function GET(request: NextRequest) {
         .eq('name', districtName)
         .limit(1)
         .single();
+
+      console.log('🔍 🔍 🔍 API - Region data result:', regionData);
+      console.log('🔍 🔍 🔍 API - Region error:', regionError);
 
       if (regionError) {
         console.error('Error fetching region data:', regionError);

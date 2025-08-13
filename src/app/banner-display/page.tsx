@@ -55,6 +55,7 @@ interface District {
     road_usage_fee: number;
     advertising_fee: number;
     total_price: number;
+    displayName?: string; // 한글 표시명 추가
   }[];
 }
 
@@ -100,6 +101,16 @@ export default function BannerDisplayPage() {
 
         const data = result.data;
         console.log('🔍 Optimized data received:', data);
+        console.log(
+          '🔍 🔍 🔍 BANNER LIST - Districts with logo data:',
+          data.districts.map(
+            (d: { name: string; logo_image_url?: string; code: string }) => ({
+              name: d.name,
+              logo_image_url: d.logo_image_url,
+              code: d.code,
+            })
+          )
+        );
 
         // 데이터 변환 및 처리
         const processedDistricts: District[] = data.districts.map(
@@ -144,6 +155,7 @@ export default function BannerDisplayPage() {
               road_usage_fee: number;
               advertising_fee: number;
               total_price: number;
+              displayName?: string; // 한글 표시명 추가
             }[];
           }) => {
             // panel_status가 maintenance인지 확인
@@ -158,7 +170,9 @@ export default function BannerDisplayPage() {
                 : `${district.name} 현수막게시대`,
               count:
                 (data.counts as Record<string, number>)[district.name] || 0,
-              logo: `/images/district-icon/${district.code}-gu.png`,
+              logo:
+                district.logo_image_url ||
+                `/images/district-icon/${district.code}-gu.png`,
               src: '/images/banner-display/landing.png',
               panel_status: district.panel_status,
               period: district.period || null,

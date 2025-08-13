@@ -92,7 +92,11 @@ export default function PriceInfo({
         <div className="text-sm text-gray-600 space-y-1">
           {pricePolicies.map((policy, index) => (
             <div key={`${policy.id || policy.price_usage_type}_${index}`}>
-              {policy.displayName}: {policy.total_price?.toLocaleString()}원
+              {policy.displayName === '상단광고: 상담문의'
+                ? policy.displayName
+                : `${
+                    policy.displayName
+                  }: ${policy.total_price?.toLocaleString()}원`}
             </div>
           ))}
         </div>

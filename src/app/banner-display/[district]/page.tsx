@@ -160,6 +160,14 @@ export default function BannerDisplayPage({
     second_half_to: string;
   } | null>(null);
   const [bankInfo, setBankInfo] = useState<BankInfo | null>(null);
+  const [districtData, setDistrictData] = useState<{
+    id: string;
+    name: string;
+    code: string;
+    logo_image_url?: string;
+    panel_status?: string;
+    phone_number?: string;
+  } | null>(null);
 
   // 송파구, 용산구 탭 필터 추가 (DisplayDetailPage에서 사용)
   const [panelTypeFilter, setPanelTypeFilter] = useState<
@@ -559,8 +567,29 @@ export default function BannerDisplayPage({
 
         // 3. 구 정보와 계좌번호 정보 가져오기
         if (districtObj?.name) {
+          console.log(
+            '🔍 🔍 🔍 BANNER - Fetching district data for:',
+            districtObj.name
+          );
           const districtDataResult = await getDistrictData(districtObj.name);
+          console.log(
+            '🔍 🔍 🔍 BANNER - District data result:',
+            districtDataResult
+          );
+
           if (districtDataResult) {
+            console.log(
+              '🔍 🔍 🔍 BANNER - Setting district data with logo:',
+              districtDataResult.logo_image_url
+            );
+            setDistrictData({
+              id: districtDataResult.id,
+              name: districtDataResult.name,
+              code: districtDataResult.code,
+              logo_image_url: districtDataResult.logo_image_url,
+              panel_status: 'active',
+              phone_number: districtDataResult.phone_number,
+            });
             setBankInfo(districtDataResult.bank_accounts);
           }
         }
@@ -634,6 +663,7 @@ export default function BannerDisplayPage({
       bankInfo={bankInfo}
       panelTypeFilter={panelTypeFilter}
       setPanelTypeFilter={setPanelTypeFilter}
+      districtData={districtData}
     />
   );
 }

@@ -28,6 +28,7 @@ interface LEDItemTableProps {
   onItemSelect?: (id: string, checked: boolean) => void;
   selectedIds?: string[];
   enableRowClick?: boolean;
+  isAllDistrictsView?: boolean;
 }
 
 const ITEMS_PER_PAGE = 20;
@@ -40,6 +41,7 @@ const LEDItemList: React.FC<LEDItemTableProps> = ({
   onItemSelect,
   selectedIds = [],
   enableRowClick = true,
+  // isAllDistrictsView = false,
 }) => {
   const [page, setPage] = useState(1);
   const totalPages = Math.ceil(items.length / ITEMS_PER_PAGE);
@@ -69,11 +71,11 @@ const LEDItemList: React.FC<LEDItemTableProps> = ({
     handleItemClick(itemId.toString());
   };
 
-  // LED 전용 구분 컬럼에 표시할 값 계산 함수
-  const getLEDPanelTypeLabel = (panelType?: string) => {
-    if (!panelType) return 'LED전자게시대';
-    return 'LED전자게시대';
-  };
+  // // LED 전용 구분 컬럼에 표시할 값 계산 함수
+  // const getLEDPanelTypeLabel = (panelType?: string) => {
+  //   if (!panelType) return 'LED전자게시대';
+  //   return 'LED전자게시대';
+  // };
 
   return (
     <>
@@ -89,9 +91,6 @@ const LEDItemList: React.FC<LEDItemTableProps> = ({
                 <th className="text-center pl-4"></th>
                 <th className="text-center pl-4">규격(px)</th>
                 <th className="text-center pl-4">최대배너수</th>
-                <th className="text-center pl-4">가격</th>
-                <th className="text-center pl-4">구분</th>
-                <th className="text-center pl-4">수량</th>
                 <th className="text-center pl-4">상태</th>
                 {renderAction && <th className="text-center">작업</th>}
               </tr>
@@ -101,7 +100,7 @@ const LEDItemList: React.FC<LEDItemTableProps> = ({
             {paginatedItems.map((item, index) => {
               const displayStatus =
                 statusDisplayMap[item.status] || item.status;
-              const categoryDisplay = getLEDPanelTypeLabel(item.panel_type);
+              // const categoryDisplay = getLEDPanelTypeLabel(item.panel_type);
               const uniqueKey = item.id || `led-${index}`; // fallback key
               return (
                 <tr
@@ -187,11 +186,6 @@ const LEDItemList: React.FC<LEDItemTableProps> = ({
                     {item.slot_width_px} x {item.slot_height_px}
                   </td>
                   <td className="text-center pl-4">{item.max_banners}</td>
-                  <td className="text-center pl-4">
-                    {item.total_price?.toLocaleString()}원
-                  </td>
-                  <td className="text-center pl-4">{categoryDisplay}</td>
-                  <td className="text-center pl-4">1</td>
                   <td
                     className={`text-center pl-4 ${getStatusClass(
                       displayStatus
@@ -213,7 +207,7 @@ const LEDItemList: React.FC<LEDItemTableProps> = ({
       <div className="lg:hidden">
         {paginatedItems.map((item, index) => {
           const displayStatus = statusDisplayMap[item.status] || item.status;
-          const categoryDisplay = getLEDPanelTypeLabel(item.panel_type);
+          // const categoryDisplay = getLEDPanelTypeLabel(item.panel_type);
           const uniqueKey = item.id || `led-mobile-${index}`; // fallback key
           return (
             <div
@@ -257,8 +251,6 @@ const LEDItemList: React.FC<LEDItemTableProps> = ({
                   규격: {item.slot_width_px} x {item.slot_height_px}px
                 </div>
                 <div>최대배너수: {item.max_banners}</div>
-                <div>가격: {item.total_price?.toLocaleString()}원</div>
-                <div>구분: {categoryDisplay}</div>
                 <div>
                   상태:{' '}
                   <span className={getStatusClass(displayStatus)}>

@@ -1370,27 +1370,46 @@ async function getUltraFastDistrictsData() {
 
     // 캐시 데이터를 프론트엔드 형식으로 변환
     const processedDistricts = (cacheData || []).map((item) => {
-      // 가격 정책 파싱 (영어로 받아서 프론트엔드에서 한글 변환)
-      const pricePolicies = item.price_summary
-        ? item.price_summary.split(', ').map((priceStr: string) => {
-            const [priceUsageType, totalPrice] = priceStr.split(':');
-            return {
-              id: `cache_${priceUsageType}`,
-              price_usage_type: priceUsageType.trim() as
-                | 'default'
-                | 'public_institution'
-                | 're_order'
-                | 'self_install'
-                | 'reduction_by_admin'
-                | 'rent-place',
-              tax_price: 0,
-              road_usage_fee: 0,
-              advertising_fee: 0,
-              total_price: parseInt(totalPrice) || 0,
-              // displayName 제거 - 프론트엔드에서 getUsageDisplayName() 사용
-            };
-          })
+      // 가격 정책 파싱 (한글로 받아서 프론트엔드에서 표시)
+      const basePricePolicies = item.price_summary
+        ? item.price_summary
+            .split(', ')
+            .map((priceStr: string) => {
+              // "상업용: 100000원" 형태에서 가격 추출
+              const priceMatch = priceStr.match(/(.+):\s*(\d+)원/);
+              if (priceMatch) {
+                const [, displayName, priceStr] = priceMatch;
+                return {
+                  id: `cache_${displayName}`,
+                  price_usage_type: 'default' as const, // 임시값
+                  tax_price: 0,
+                  road_usage_fee: 0,
+                  advertising_fee: 0,
+                  total_price: parseInt(priceStr) || 0,
+                  displayName: displayName.trim(), // 한글 표시명 추가
+                };
+              }
+              return null;
+            })
+            .filter(Boolean) // null 값 제거
         : [];
+
+      // 송파구, 용산구에 상단광고 추가
+      const pricePolicies =
+        item.region_name === '송파구' || item.region_name === '용산구'
+          ? [
+              ...basePricePolicies,
+              {
+                id: `cache_상단광고_${item.region_name}`,
+                price_usage_type: 'default' as const,
+                tax_price: 0,
+                road_usage_fee: 0,
+                advertising_fee: 0,
+                total_price: 0,
+                displayName: '상단광고: 상담문의',
+              },
+            ]
+          : basePricePolicies;
 
       // 기간 정보 파싱
       let periodData = null;
@@ -1431,6 +1450,7 @@ async function getUltraFastDistrictsData() {
         id: item.region_id,
         name: item.region_name,
         code: item.region_code,
+        logo_image_url: item.logo_image_url,
         phone_number: item.phone_number,
         display_type_id: '8178084e-1f13-40bc-8b90-7b8ddc58bf64',
         panel_status: 'active',

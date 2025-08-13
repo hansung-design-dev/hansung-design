@@ -23,7 +23,7 @@ export default function ItemCard({ item }: ItemCardProps) {
     <div>
       <Link
         href={`/digital-media/${item.id}?tab=${currentTab}`}
-        className={`bg-white border-solid border-gray-200 border-1 flex flex-col items-center justify-center hover:opacity-80 transition-opacity h-full ${
+        className={`bg-white border-solid border-gray-200 border-1 flex flex-col items-center justify-center hover:opacity-80 transition-opacity w-[23rem] h-full ${
           isMediaDisplayTab ? 'rounded-lg' : ''
         }`}
       >

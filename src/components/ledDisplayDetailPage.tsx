@@ -239,12 +239,6 @@ export default function LEDDisplayDetailPage({
 
   console.log('🔍 filteredBillboards:', filteredBillboards);
 
-  // LED 전용 구분 컬럼에 표시할 값 계산 함수
-  const getLEDPanelTypeLabel = (panelType?: string) => {
-    if (!panelType) return 'LED전자게시대';
-    return 'LED전자게시대';
-  };
-
   const getCartItemName = (item: {
     nickname?: string | null;
     address?: string;
@@ -479,14 +473,6 @@ export default function LEDDisplayDetailPage({
               />
             </div>
             <div className="mt-4">
-              <div className="flex gap-2 mb-2">
-                <span className="px-2 py-1 bg-black text-white text-0.875 rounded-[5rem]">
-                  {getLEDPanelTypeLabel(item.panel_type)}
-                </span>
-                <span className="px-2 py-1 bg-black text-white text-0.875 rounded-[5rem]">
-                  {item.district}
-                </span>
-              </div>
               <h3 className="text-1 font-medium">{item.name}</h3>
               <p className="text-0.875 text-gray-600">{item.neighborhood}</p>
             </div>
@@ -598,14 +584,7 @@ export default function LEDDisplayDetailPage({
                     />
                   </div>
                   <div className="p-4">
-                    <div className="flex gap-2 mb-2">
-                      <span className="px-2 py-1 bg-gray-100 text-gray-600 text-0.875 rounded">
-                        {getLEDPanelTypeLabel(item.panel_type)}
-                      </span>
-                      <span className="px-2 py-1 bg-gray-100 text-gray-600 text-0.875 rounded">
-                        {item.district}
-                      </span>
-                    </div>
+                    <div className="flex gap-2 mb-2"></div>
                     <h3 className="text-1 font-medium">{item.name}</h3>
                     <p className="text-0.875 text-gray-600">
                       {item.neighborhood}
@@ -666,6 +645,7 @@ export default function LEDDisplayDetailPage({
                   districtObj?.name === '전체보기'
                     ? '/svg/all.svg'
                     : districtData?.logo_image_url ||
+                      districtObj?.logo ||
                       `/images/district-icon/${district}-gu.png`
                 }
                 alt={
@@ -763,6 +743,7 @@ export default function LEDDisplayDetailPage({
               selectedIds={selectedIds}
               onItemSelect={(id, checked) => handleItemSelect(id, checked)}
               enableRowClick={false}
+              isAllDistrictsView={isAllDistrictsView}
             />
           ) : (
             renderGalleryView()

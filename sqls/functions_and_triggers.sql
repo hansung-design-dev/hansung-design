@@ -1774,6 +1774,175 @@ SELECT update_led_display_cache();
 
 
 
+update_banner_display_cache
+
+BEGIN
+  -- 기존 캐시 삭제
+  DELETE FROM banner_display_cache;
+  
+  -- 새로운 캐시 데이터 삽입
+  INSERT INTO banner_display_cache (
+    region_id,
+    region_name,
+    region_code,
+    logo_image_url,
+    phone_number,
+    panel_count,
+    price_summary,
+    period_summary,
+    bank_name,
+    account_number,
+    depositor,
+    display_order
+  )
+  WITH district_summary AS (
+    SELECT 
+      rg.id as region_id,
+      rg.name as region_name,
+      rg.code as region_code,
+      rg.logo_image_url,
+      rg.phone_number,
+      COUNT(p.id) as panel_count,
+      CASE 
+        -- 마포구는 별도로 순서 지정하여 처리
+        WHEN rg.name = '마포구' THEN (
+          SELECT STRING_AGG(price_item, ', ' ORDER BY sort_order)
+          FROM (
+            SELECT DISTINCT
+              CASE 
+                WHEN p2.panel_type = 'multi_panel' AND bsp2.price_usage_type = 'default' THEN '상업용(패널형)'
+                WHEN p2.panel_type = 'multi_panel' AND bsp2.price_usage_type = 'public_institution' THEN '행정용(패널형)'
+                WHEN p2.panel_type = 'lower_panel' AND bsp2.price_usage_type = 'default' THEN '저단형상업용(현수막)'
+                WHEN p2.panel_type = 'lower_panel' AND bsp2.price_usage_type = 'public_institution' THEN '저단형행정용(현수막)'
+                ELSE NULL
+              END || ':' || bsp2.total_price::text || '원' as price_item,
+              CASE 
+                WHEN p2.panel_type = 'multi_panel' AND bsp2.price_usage_type = 'default' THEN 1
+                WHEN p2.panel_type = 'multi_panel' AND bsp2.price_usage_type = 'public_institution' THEN 2
+                WHEN p2.panel_type = 'lower_panel' AND bsp2.price_usage_type = 'default' THEN 3
+                WHEN p2.panel_type = 'lower_panel' AND bsp2.price_usage_type = 'public_institution' THEN 4
+                ELSE 999
+              END as sort_order
+            FROM region_gu rg2
+            LEFT JOIN panels p2 ON rg2.id = p2.region_gu_id AND p2.panel_status = 'active'
+            LEFT JOIN banner_slots bs2 ON p2.id = bs2.panel_id AND bs2.slot_number = 1
+            LEFT JOIN banner_slot_price_policy bsp2 ON bs2.id = bsp2.banner_slot_id
+            WHERE rg2.id = rg.id
+              AND bsp2.price_usage_type != 'rent_place'
+              AND (
+                (p2.panel_type = 'multi_panel' AND bsp2.price_usage_type = 'default') OR
+                (p2.panel_type = 'multi_panel' AND bsp2.price_usage_type = 'public_institution') OR
+                (p2.panel_type = 'lower_panel' AND bsp2.price_usage_type = 'default') OR
+                (p2.panel_type = 'lower_panel' AND bsp2.price_usage_type = 'public_institution')
+              )
+          ) sorted_prices
+        )
+        -- 다른 구들은 기존 방식
+        ELSE STRING_AGG(
+          DISTINCT 
+          CASE 
+            -- 강북구
+            WHEN rg.name = '강북구' AND bsp.price_usage_type = 'default' THEN '상업용'
+            WHEN rg.name = '강북구' AND bsp.price_usage_type = 'public_institution' THEN '행정용'
+            
+            -- 관악구
+            WHEN rg.name = '관악구' AND bsp.price_usage_type = 'default' THEN '상업용'
+            WHEN rg.name = '관악구' AND bsp.price_usage_type = 'self_install' THEN '자체제작・1회재사용'
+            WHEN rg.name = '관악구' AND bsp.price_usage_type = 're_order' THEN '자체제작・1회재사용'
+            
+            -- 서대문구
+            WHEN rg.name = '서대문구' AND bsp.price_usage_type = 'default' THEN '상업용(패널형)'
+            WHEN rg.name = '서대문구' AND p.panel_type = 'panel' AND bsp.price_usage_type = 'public_institution' THEN '행정용(패널형)'
+            WHEN rg.name = '서대문구' AND p.panel_type = 'semi_auto' AND bsp.price_usage_type = 'public_institution' THEN '행정용(현수막)'
+            
+            -- 송파구
+            WHEN rg.name = '송파구' AND bsp.price_usage_type = 'default' THEN '상업용'
+            WHEN rg.name = '송파구' AND bsp.price_usage_type = 'public_institution' THEN '행정용'
+            
+            -- 용산구
+            WHEN rg.name = '용산구' AND p.panel_type = 'panel' AND bsp.price_usage_type = 'default' THEN '상업용(패널형)'
+            WHEN rg.name = '용산구' AND p.panel_type = 'semi_auto' AND bsp.price_usage_type = 'default' THEN '상업용(현수막)'
+            WHEN rg.name = '용산구' AND p.panel_type = 'panel' AND bsp.price_usage_type = 'public_institution' THEN '행정용(패널형)'
+            WHEN rg.name = '용산구' AND p.panel_type = 'semi_auto' AND bsp.price_usage_type = 'public_institution' THEN '행정용(현수막)'
+            
+            -- rent_place는 제외
+            WHEN bsp.price_usage_type = 'rent_place' THEN NULL
+            -- 기본값 (필요한 경우만)
+            ELSE NULL
+          END || ':' || bsp.total_price::text || '원',
+          ', '
+        )
+      END as price_summary
+    FROM region_gu rg
+    LEFT JOIN panels p ON rg.id = p.region_gu_id AND p.panel_status = 'active'
+    LEFT JOIN banner_slots bs ON p.id = bs.panel_id AND bs.slot_number = 1
+    LEFT JOIN banner_slot_price_policy bsp ON bs.id = bsp.banner_slot_id
+    WHERE rg.display_type_id = '8178084e-1f13-40bc-8b90-7b8ddc58bf64'
+      AND rg.is_active = 'true'
+      -- 불필요한 가격 정책 제외 (rent_place는 NULL로 처리하여 표시되지 않음)
+    GROUP BY rg.id, rg.name, rg.code, rg.logo_image_url, rg.phone_number
+  ),
+  period_summary AS (
+    SELECT 
+      rgdp.region_gu_id,
+      STRING_AGG(
+        rgdp.period_from || '~' || rgdp.period_to,
+        ', '
+        ORDER BY rgdp.period_from
+      ) as period_summary
+    FROM region_gu_display_periods rgdp
+    JOIN region_gu rg ON rgdp.region_gu_id = rg.id
+    WHERE rgdp.display_type_id = '8178084e-1f13-40bc-8b90-7b8ddc58bf64'
+      AND rgdp.year_month = (
+        -- 모든 구 동일하게 다음 달 데이터 사용
+        CASE 
+          WHEN EXTRACT(MONTH FROM NOW() AT TIME ZONE 'Asia/Seoul') = 12 THEN
+            (EXTRACT(YEAR FROM NOW() AT TIME ZONE 'Asia/Seoul') + 1) || '년 1월'
+          ELSE
+            EXTRACT(YEAR FROM NOW() AT TIME ZONE 'Asia/Seoul') || '년 ' || (EXTRACT(MONTH FROM NOW() AT TIME ZONE 'Asia/Seoul') + 1) || '월'
+        END
+      )
+    GROUP BY rgdp.region_gu_id
+  ),
+  bank_summary AS (
+    SELECT 
+      ba.region_gu_id,
+      ba.bank_name,
+      ba.account_number,
+      ba.depositor
+    FROM bank_accounts ba
+    WHERE ba.display_type_id = '8178084e-1f13-40bc-8b90-7b8ddc58bf64'
+  )
+  SELECT 
+    ds.region_id,
+    ds.region_name,
+    ds.region_code,
+    ds.logo_image_url,
+    ds.phone_number,
+    ds.panel_count,
+    ds.price_summary,
+    ps.period_summary,
+    bs.bank_name,
+    bs.account_number,
+    bs.depositor,
+    CASE ds.region_name
+      WHEN '관악구' THEN 1
+      WHEN '마포구' THEN 2
+      WHEN '서대문구' THEN 3
+      WHEN '송파구' THEN 4
+      WHEN '용산구' THEN 5
+      WHEN '강북구' THEN 6
+      ELSE 999
+    END as display_order
+  FROM district_summary ds
+  LEFT JOIN period_summary ps ON ds.region_id = ps.region_gu_id
+  LEFT JOIN bank_summary bs ON ds.region_id = bs.region_gu_id;
+
+  -- 업데이트 시간 기록
+  UPDATE banner_display_cache SET last_updated = NOW();
+END;
+
+
 
 ------------------
 -------트리거-------
