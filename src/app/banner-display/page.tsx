@@ -55,6 +55,7 @@ interface District {
     road_usage_fee: number;
     advertising_fee: number;
     total_price: number;
+    displayName?: string; // 한글 표시명 추가
   }[];
 }
 
@@ -154,6 +155,7 @@ export default function BannerDisplayPage() {
               road_usage_fee: number;
               advertising_fee: number;
               total_price: number;
+              displayName?: string; // 한글 표시명 추가
             }[];
           }) => {
             // panel_status가 maintenance인지 확인
