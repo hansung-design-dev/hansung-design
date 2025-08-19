@@ -157,8 +157,8 @@ export default function GuidelineModal({
                                   <Image
                                     src={imageUrl}
                                     alt={`가이드라인 이미지 ${index + 1}`}
-                                    width={2400}
-                                    height={3200}
+                                    width={4800}
+                                    height={6000}
                                     className={`w-full h-auto ${
                                       isLoading ? 'hidden' : 'block'
                                     }`}

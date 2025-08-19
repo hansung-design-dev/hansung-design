@@ -673,6 +673,8 @@ export async function GET(request: NextRequest) {
         return await getAllBannerDisplays();
       case 'getPricePolicies':
         return await getBannerDisplayPricePolicies();
+      case 'getDistrictData':
+        return await getDistrictDataFromCache(district!);
       default:
         return NextResponse.json(
           { success: false, error: 'Invalid action' },
@@ -1482,5 +1484,114 @@ async function getUltraFastDistrictsData() {
   } catch (error) {
     console.error('❌ Error in getUltraFastDistrictsData:', error);
     throw error;
+  }
+}
+
+// 특정 구의 데이터를 캐시 테이블에서 가져오기
+async function getDistrictDataFromCache(districtName: string) {
+  try {
+    console.log('🔍 Fetching district data from cache for:', districtName);
+
+    // banner_display_cache 테이블에서 해당 구의 정보 가져오기
+    const { data: cacheData, error: cacheError } = await supabase
+      .from('banner_display_cache')
+      .select('*')
+      .eq('region_name', districtName)
+      .single();
+
+    if (cacheError) {
+      console.error('❌ Error fetching cache data:', cacheError);
+      return NextResponse.json(
+        { success: false, error: 'District not found in cache' },
+        { status: 404 }
+      );
+    }
+
+    if (!cacheData) {
+      return NextResponse.json(
+        { success: false, error: 'District not found' },
+        { status: 404 }
+      );
+    }
+
+    // 가격 정책 정보 변환
+    const pricePolicies = cacheData.price_summary
+      ? cacheData.price_summary
+          .split(', ')
+          .map((priceStr: string, index: number) => {
+            const [displayName, price] = priceStr.split(': ');
+            if (displayName && price) {
+              return {
+                id: `cache_${index}_${cacheData.region_id}`,
+                price_usage_type: 'default' as const,
+                tax_price: 0,
+                road_usage_fee: 0,
+                advertising_fee: 0,
+                total_price: parseInt(price) || 0,
+                displayName: displayName.trim(),
+              };
+            }
+            return null;
+          })
+          .filter(Boolean)
+      : [];
+
+    // 기간 정보 파싱
+    let periodData = null;
+    if (cacheData.period_summary) {
+      const periods = cacheData.period_summary.split(', ');
+      if (periods.length >= 1) {
+        const [firstFrom, firstTo] = periods[0].split('~');
+        periodData = {
+          first_half_from: firstFrom,
+          first_half_to: firstTo,
+          second_half_from:
+            periods.length >= 2 ? periods[1].split('~')[0] : null,
+          second_half_to: periods.length >= 2 ? periods[1].split('~')[1] : null,
+        };
+      }
+    }
+
+    // 은행 정보
+    const bankData = cacheData.bank_name
+      ? {
+          id: `cache_bank_${cacheData.region_id}`,
+          bank_name: cacheData.bank_name,
+          account_number: cacheData.account_number,
+          depositor: cacheData.depositor,
+          region_gu: {
+            id: cacheData.region_id,
+            name: cacheData.region_name,
+          },
+          display_types: {
+            id: '8178084e-1f13-40bc-8b90-7b8ddc58bf64',
+            name: 'banner_display',
+          },
+        }
+      : null;
+
+    const responseData = {
+      id: cacheData.region_id,
+      name: cacheData.region_name,
+      code: cacheData.region_code,
+      logo_image_url: cacheData.logo_image_url,
+      phone_number: cacheData.phone_number,
+      bank_accounts: bankData,
+      period: periodData,
+      pricePolicies: pricePolicies,
+    };
+
+    console.log('🔍 District data from cache:', responseData);
+
+    return NextResponse.json({
+      success: true,
+      data: responseData,
+    });
+  } catch (error) {
+    console.error('❌ Error in getDistrictDataFromCache:', error);
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }

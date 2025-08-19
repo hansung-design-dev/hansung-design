@@ -226,13 +226,14 @@ export default function BannerDisplayPage({
   console.log('🔍 District object found:', districtObj);
   console.log('🔍 District name to pass to API:', districtObj?.name);
 
-  // 구 정보 가져오기 함수 (로고 + 계좌번호 포함)
+  // 구 정보 가져오기 함수 (로고 + 계좌번호 포함) - 캐시 테이블 사용
   async function getDistrictData(districtName: string) {
     try {
+      // banner_display_cache 테이블에서 해당 구의 정보 가져오기
       const response = await fetch(
-        `/api/region-gu?action=getByDistrict&district=${encodeURIComponent(
+        `/api/banner-display?action=getDistrictData&district=${encodeURIComponent(
           districtName
-        )}&displayType=banner_display`
+        )}`
       );
       const result = await response.json();
       return result.success ? result.data : null;

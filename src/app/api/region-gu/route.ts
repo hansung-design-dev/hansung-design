@@ -92,6 +92,8 @@ export async function GET(request: NextRequest) {
       // displayType이 있으면 계좌번호 정보도 함께 가져오기
       let bankData = null;
       if (displayType) {
+        console.log('🔍 🔍 🔍 API - Looking for display type:', displayType);
+
         const { data: displayTypeData, error: displayTypeError } =
           await supabase
             .from('display_types')
@@ -99,7 +101,17 @@ export async function GET(request: NextRequest) {
             .eq('name', displayType)
             .single();
 
+        console.log('🔍 🔍 🔍 API - Display type result:', displayTypeData);
+        console.log('🔍 🔍 🔍 API - Display type error:', displayTypeError);
+
         if (!displayTypeError) {
+          console.log(
+            '🔍 🔍 🔍 API - Looking for bank account with region_gu_id:',
+            regionData.id,
+            'display_type_id:',
+            displayTypeData.id
+          );
+
           const { data: bankAccountData, error: bankError } = await supabase
             .from('bank_accounts')
             .select(
@@ -117,6 +129,9 @@ export async function GET(request: NextRequest) {
             .limit(1)
             .single();
 
+          console.log('🔍 🔍 🔍 API - Bank account result:', bankAccountData);
+          console.log('🔍 🔍 🔍 API - Bank account error:', bankError);
+
           if (!bankError && bankAccountData) {
             bankData = {
               id: bankAccountData.id,
@@ -132,7 +147,40 @@ export async function GET(request: NextRequest) {
                 name: displayTypeData.name,
               },
             };
+            console.log('🔍 🔍 🔍 API - Created bank data:', bankData);
+          } else {
+            console.log(
+              '🔍 🔍 🔍 API - No bank account found or error occurred'
+            );
+
+            // 디버깅을 위해 해당 구의 모든 bank_accounts 확인
+            const { data: allBankAccounts, error: allBankError } =
+              await supabase
+                .from('bank_accounts')
+                .select('*')
+                .eq('region_gu_id', regionData.id);
+
+            console.log(
+              '🔍 🔍 🔍 API - All bank accounts for this region:',
+              allBankAccounts
+            );
+            console.log(
+              '🔍 🔍 🔍 API - All bank accounts error:',
+              allBankError
+            );
           }
+        } else {
+          console.log('🔍 🔍 🔍 API - Display type not found');
+
+          // 디버깅을 위해 모든 display_types 확인
+          const { data: allDisplayTypes, error: allDisplayTypesError } =
+            await supabase.from('display_types').select('*');
+
+          console.log('🔍 🔍 🔍 API - All display types:', allDisplayTypes);
+          console.log(
+            '🔍 🔍 🔍 API - All display types error:',
+            allDisplayTypesError
+          );
         }
       }
 
