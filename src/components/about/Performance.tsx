@@ -1,3 +1,5 @@
+import SectionTitle from './SectionTitle';
+
 // 실적내역 데이터
 const performanceData = [
   // 2025년 프로젝트들
@@ -149,21 +151,17 @@ export default function Performance() {
     <section id="performance" className="py-20 ">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* 섹션 제목 */}
-        <div className="flex justify-center mb-16">
-          <div className="text-[#7D7D7D] text-[1.5rem] font-500 w-[11.125rem] rounded-full border-solid border-[0.1rem] border-[#D9D9D9] text-center py-2">
-            실적내역
-          </div>
-        </div>
+        <SectionTitle title="실적내역" />
 
         {/* 카드 그리드 */}
-        <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+        <div className="grid sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3  gap-4 lg:gap-6 md:gap-8 lg:mx-[2rem] md:mx-[1rem] sm:mx-[0.5rem]">
           {performanceData.map((item, index) => (
             <div
               key={index}
-              className="flex w-[14rem] h-[3rem] p-[3.4375rem_2.3125rem] flex-col justify-center items-start gap-[0.625rem] bg-white rounded-[1.25rem] shadow-lg"
+              className="flex lg:w-[14rem] md:w-[14rem] sm:w-[14rem] lg:h-[3rem] md:h-[3rem] sm:h-[4rem] p-[2rem_1.5rem] lg:p-[2.5rem_2rem] flex-col justify-center items-center gap-[0.625rem] bg-white rounded-[1.25rem] shadow-lg"
             >
               <h3
-                className="text-[1.125rem] font-700 text-start"
+                className="text-[1.125rem] font-700 text-center"
                 dangerouslySetInnerHTML={{ __html: item.title }}
               />
               <p className="text-[0.875rem] font-500 text-[#2187FF]">

@@ -1,15 +1,12 @@
 import Image from 'next/image';
+import SectionTitle from './SectionTitle';
 
 export default function Directions() {
   return (
     <section id="directions" className="py-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* 섹션 제목 */}
-        <div className="flex justify-center mb-16">
-          <div className="text-[#7D7D7D] text-[1.5rem] font-500 w-[11.125rem] rounded-full border-solid border-[0.1rem] border-[#D9D9D9] text-center py-2">
-            찾아오시는 길
-          </div>
-        </div>
+        <SectionTitle title="찾아오시는 길" />
 
         {/* 지도 */}
         <div className="mb-12">

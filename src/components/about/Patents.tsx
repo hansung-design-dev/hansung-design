@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import SectionTitle from './SectionTitle';
 
 // 특허 데이터
 const patentData = [
@@ -93,11 +94,7 @@ export default function Patents() {
     <section id="patents" className="py-20 bg-white">
       <div className="w-full px-4 sm:px-6 lg:px-8">
         {/* 섹션 제목 */}
-        <div className="flex justify-center mb-8">
-          <div className="text-[#7D7D7D] text-[1.5rem] font-500 w-[15.125rem] rounded-full border-solid border-[0.1rem] border-[#D9D9D9] text-center py-2">
-            특허·기업인증·허가증
-          </div>
-        </div>
+        <SectionTitle title="특허·인증·허가" />
 
         {/* 부제목 */}
         <div className="text-center mb-12">
