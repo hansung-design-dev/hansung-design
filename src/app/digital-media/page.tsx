@@ -323,7 +323,7 @@ function DigitalSignagePageContent() {
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            미디어경관디자인
+            디지털사이니지
           </button>
           <button
             onClick={() => {
@@ -336,7 +336,7 @@ function DigitalSignagePageContent() {
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            디지털사이니지
+            쇼핑몰
           </button>
         </div>
       </section>

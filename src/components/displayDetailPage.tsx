@@ -557,6 +557,14 @@ export default function DisplayDetailPage({
       return;
     }
 
+    // 마포구 시민게시대 탭에서는 클릭해도 장바구니에 추가하지 않음 (방문접수)
+    if (isMapoDistrict && mapoFilter === 'simin') {
+      console.log(
+        '🔍 Mapo simin tab - no cart addition (visit application only)'
+      );
+      return;
+    }
+
     // 아이템이 선택 가능한지 확인
     if (!isItemSelectable(item)) {
       console.log('🔍 Item is not selectable:', {
@@ -1252,10 +1260,15 @@ export default function DisplayDetailPage({
         {mapoFilter === 'simin' && (
           <div className="mb-8">
             <div className="flex items-center gap-4  pb-4 text-blue-700 text-1 line-height-[1.5rem]">
-              시민 게시대는 게첨일기준 5일이며 <br /> 전월 매월 1일에 포스터를
-              직접 가지고 사무실로 내방하여 선착순으로 신청해주세요.
-              <br /> 포스터 사이즈: 370mm x 50mm <br /> 중앙광고: 별도 상담문의{' '}
-              <br /> 중앙광고 사이즈 : 840mm x 1650mm
+              *시민.문화게시대 게첨일은 매월 5일 <br /> *시민게시판은 1개 업체가
+              1회당 최대11개소(22먄)에 신청할수 있습니다. <br /> *포스터 신청은
+              게첨일기준 전달인 매월 1일에 선착순 접수이며,방문제출입니다.{' '}
+              <br />
+              예)3월5일게첨일 신청분은 2월1일에 접수 <br /> *포스터는 신청자가
+              제작하여 한성디자인기획에 제출합니다.
+              <br /> 포스터 사이즈: 370mm x 500mm
+              <br /> 중앙광고: 별도 상담문의 <br />
+              중앙광고 사이즈 : 840mm x 1650mm
             </div>
           </div>
         )}
