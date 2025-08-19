@@ -24,6 +24,16 @@ interface HalfPeriodTabsProps {
   } | null;
 }
 
+interface PeriodInfo {
+  year: number;
+  month: number;
+  startDay: number;
+  endDay: number;
+  from: string;
+  to: string;
+  label: string;
+}
+
 const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
   selectedPeriod,
   onPeriodChange,
@@ -32,70 +42,64 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
 }) => {
   // API에서 받은 데이터를 사용하거나, 없으면 동적으로 계산
   const getCurrentPeriods = () => {
-    // API 데이터가 있으면 사용
+    let firstPeriod: PeriodInfo | null = null;
+    let secondPeriod: PeriodInfo | null = null;
+
+    // API에서 받은 데이터가 있으면 우선 사용
     if (
       periodData &&
-      periodData.available_periods &&
-      periodData.available_periods.length > 0
+      periodData.first_half_from &&
+      periodData.second_half_from
     ) {
-      const periods = periodData.available_periods;
+      console.log('🔍 Using API period data:', periodData);
 
-      const firstPeriod = {
-        year: new Date(periods[0].period_from).getFullYear(),
-        month: new Date(periods[0].period_from).getMonth() + 1,
-        startDay: new Date(periods[0].period_from).getDate(),
-        endDay: new Date(periods[0].period_to).getDate(),
-        from: periods[0].period_from,
-        to: periods[0].period_to,
-        label: (() => {
-          const year = new Date(periods[0].period_from).getFullYear();
-          const month = new Date(periods[0].period_from).getMonth() + 1;
-          return `${year}년 ${month}월${
-            periods[0].period === 'first_half' ? ' 상반기' : ' 하반기'
-          }`;
-        })(),
+      // 첫 번째 기간 (first_half)
+      const firstFrom = new Date(periodData.first_half_from);
+      const firstTo = new Date(periodData.first_half_to);
+
+      firstPeriod = {
+        year: firstFrom.getFullYear(),
+        month: firstFrom.getMonth() + 1,
+        startDay: firstFrom.getDate(),
+        endDay: firstTo.getDate(),
+        from: periodData.first_half_from,
+        to: periodData.first_half_to,
+        label: `${firstFrom.getFullYear()}년 ${
+          firstFrom.getMonth() + 1
+        }월 상반기`,
       };
 
-      const secondPeriod = periods[1]
-        ? {
-            year: new Date(periods[1].period_from).getFullYear(),
-            month: new Date(periods[1].period_from).getMonth() + 1,
-            startDay: new Date(periods[1].period_from).getDate(),
-            endDay: new Date(periods[1].period_to).getDate(),
-            from: periods[1].period_from,
-            to: periods[1].period_to,
-            label: (() => {
-              const year = new Date(periods[1].period_from).getFullYear();
-              const month = new Date(periods[1].period_from).getMonth() + 1;
-              return `${year}년 ${month}월${
-                periods[1].period === 'first_half' ? ' 상반기' : ' 하반기'
-              }`;
-            })(),
-          }
-        : null;
+      // 두 번째 기간 (second_half)
+      const secondFrom = new Date(periodData.second_half_from);
+      const secondTo = new Date(periodData.second_half_to);
+
+      secondPeriod = {
+        year: secondFrom.getFullYear(),
+        month: secondFrom.getMonth() + 1,
+        startDay: secondFrom.getDate(),
+        endDay: secondTo.getDate(),
+        from: periodData.second_half_from,
+        to: periodData.second_half_to,
+        label: `${secondFrom.getFullYear()}년 ${
+          secondFrom.getMonth() + 1
+        }월 하반기`,
+      };
 
       return { firstPeriod, secondPeriod };
     }
 
-    // API 데이터가 없으면 기존 동적 계산 사용
-    // 테스트용: 8월 6일로 고정 (실제 배포 시에는 제거)
-    const testDate = new Date('2025-08-06T00:00:00+09:00');
-    const koreaTime = testDate; // UTC+9 (한국시간)
+    // API 데이터가 없을 때만 현재 날짜 기준으로 계산 (fallback)
+    console.log('🔍 No API data, using fallback calculation');
+
+    const now = new Date();
+    const koreaTime = new Date(now.getTime() + 9 * 60 * 60 * 1000); // UTC+9 (한국시간)
 
     const currentYear = koreaTime.getFullYear();
-    const currentMonth = koreaTime.getMonth() + 1; // getMonth()는 0부터 시작
+    const currentMonth = koreaTime.getMonth() + 1;
 
-    let firstPeriod, secondPeriod;
-
-    // 마포구 특별 처리
-    if (districtName === '마포구') {
-      // 마포구: 5일-19일 상반기, 20일-다음달 4일 하반기
-      // 각 기간 시작 7일 전부터는 다음 기간 신청 가능
-
+    // 마포구, 강북구: 특별한 기간 (5일-19일 상반기, 20일-다음달 4일 하반기)
+    if (districtName === '마포구' || districtName === '강북구') {
       const currentDay = koreaTime.getDate();
-
-      // 8월 6일이면 8월 하반기(20일-9월 4일) 신청 가능
-      // 8월 12일 이후면 9월 상반기(5일-19일) 신청 가능
 
       if (currentDay <= 12) {
         // 12일까지는 이번달 상반기 신청 가능
@@ -108,35 +112,35 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
           to: `${currentYear}-${currentMonth.toString().padStart(2, '0')}-19`,
           label: `${currentYear}년 ${currentMonth}월 상반기`,
         };
-
-        const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
-        const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
-
         secondPeriod = {
           year: currentYear,
           month: currentMonth,
           startDay: 20,
-          endDay: 31, // 이번달 마지막날까지
+          endDay: 31, // 다음달 마지막날까지
           from: `${currentYear}-${currentMonth.toString().padStart(2, '0')}-20`,
-          to: `${nextYear}-${nextMonth.toString().padStart(2, '0')}-04`,
+          to: `${currentYear}-${(currentMonth + 1)
+            .toString()
+            .padStart(2, '0')}-04`,
           label: `${currentYear}년 ${currentMonth}월 하반기`,
         };
-      } else if (currentDay <= 26) {
-        // 13일-26일까지는 이번달 하반기와 다음달 상반기 신청 가능
-        const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
-        const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
-
+      } else if (currentDay <= 27) {
+        // 13일-27일까지는 이번달 하반기와 다음달 상반기 신청 가능
         firstPeriod = {
           year: currentYear,
           month: currentMonth,
           startDay: 20,
-          endDay: 31, // 이번달 마지막날까지
+          endDay: 31,
           from: `${currentYear}-${currentMonth.toString().padStart(2, '0')}-20`,
-          to: `${nextYear}-${nextMonth.toString().padStart(2, '0')}-04`,
+          to: `${currentYear}-${(currentMonth + 1)
+            .toString()
+            .padStart(2, '0')}-04`,
           label: `${currentYear}년 ${currentMonth}월 하반기`,
         };
 
         // 다음달 상반기도 표시
+        const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+        const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+
         secondPeriod = {
           year: nextYear,
           month: nextMonth,

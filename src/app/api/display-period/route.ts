@@ -41,16 +41,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 현재 날짜 기준으로 신청 가능한 모든 기간 조회
+    // 현재 날짜 기준으로 신청 가능한 기간 조회
     const now = new Date();
     const koreaTime = new Date(now.getTime() + 9 * 60 * 60 * 1000); // UTC+9 (한국시간)
 
     console.log('🔍 Current date (Korea time):', koreaTime);
-
-    // 7일 후 날짜 계산 (7일 전부터는 신청 불가)
-    const sevenDaysLater = new Date(
-      koreaTime.getTime() + 7 * 24 * 60 * 60 * 1000
-    );
 
     // 날짜를 YYYY-MM-DD 형식으로 변환
     const formatDate = (date: Date) => {
@@ -60,23 +55,38 @@ export async function GET(request: NextRequest) {
       return `${year}-${month}-${day}`;
     };
 
-    // 7일 후부터 시작하는 기간들만 조회 (7일 전부터는 신청 불가)
+    // 현재 날짜 이후의 모든 기간 조회
     const { data: allPeriods, error: periodError } = await supabase
       .from('region_gu_display_periods')
       .select('period_from, period_to, period, year_month')
       .eq('region_gu_id', guData.id)
       .eq('display_type_id', typeData.id)
-      .gte('period_from', formatDate(sevenDaysLater)) // 7일 후부터 시작하는 기간들만
+      .gte('period_from', formatDate(koreaTime)) // 현재 날짜 이후부터 시작하는 기간들
       .order('period_from', { ascending: true });
 
-    console.log(`🔍 All available periods for ${district} (7+ days away):`, {
+    console.log(`🔍 All available periods for ${district}:`, {
       allPeriods,
       periodError,
-      sevenDaysLater: formatDate(sevenDaysLater),
+      currentDate: formatDate(koreaTime),
+    });
+
+    // 7일 제한을 적용하여 신청 가능한 기간만 필터링
+    const sevenDaysLater = new Date(
+      koreaTime.getTime() + 7 * 24 * 60 * 60 * 1000
+    );
+    const sevenDaysLaterStr = formatDate(sevenDaysLater);
+
+    const availablePeriods =
+      allPeriods?.filter((period) => period.period_from >= sevenDaysLaterStr) ||
+      [];
+
+    console.log(`🔍 Available periods after 7-day filter:`, {
+      availablePeriods,
+      sevenDaysLater: sevenDaysLaterStr,
     });
 
     // 최대 2개의 신청 가능한 기간만 반환
-    const selectedPeriods = allPeriods?.slice(0, 2) || [];
+    const selectedPeriods = availablePeriods.slice(0, 2);
 
     if (selectedPeriods.length === 0) {
       // 신청 가능한 기간이 없으면 빈 데이터 반환
