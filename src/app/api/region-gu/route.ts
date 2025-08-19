@@ -94,93 +94,134 @@ export async function GET(request: NextRequest) {
       if (displayType) {
         console.log('🔍 🔍 🔍 API - Looking for display type:', displayType);
 
-        const { data: displayTypeData, error: displayTypeError } =
-          await supabase
-            .from('display_types')
-            .select('id, name')
-            .eq('name', displayType)
-            .single();
-
-        console.log('🔍 🔍 🔍 API - Display type result:', displayTypeData);
-        console.log('🔍 🔍 🔍 API - Display type error:', displayTypeError);
-
-        if (!displayTypeError) {
+        // LED 전자게시대의 경우 led_display_cache 테이블에서 계좌정보 가져오기
+        if (displayType === 'led_display') {
           console.log(
-            '🔍 🔍 🔍 API - Looking for bank account with region_gu_id:',
-            regionData.id,
-            'display_type_id:',
-            displayTypeData.id
+            '🔍 🔍 🔍 API - LED display detected, checking cache table'
           );
 
-          const { data: bankAccountData, error: bankError } = await supabase
-            .from('bank_accounts')
-            .select(
-              `
-              id,
-              bank_name,
-              account_number,
-              depositor,
-              region_gu_id,
-              display_type_id
-            `
-            )
-            .eq('region_gu_id', regionData.id)
-            .eq('display_type_id', displayTypeData.id)
+          const { data: cacheData, error: cacheError } = await supabase
+            .from('led_display_cache')
+            .select('bank_name, account_number, depositor')
+            .eq('region_name', regionData.name)
             .limit(1)
             .single();
 
-          console.log('🔍 🔍 🔍 API - Bank account result:', bankAccountData);
-          console.log('🔍 🔍 🔍 API - Bank account error:', bankError);
+          console.log('🔍 🔍 🔍 API - Cache data result:', cacheData);
+          console.log('🔍 🔍 🔍 API - Cache error:', cacheError);
 
-          if (!bankError && bankAccountData) {
+          if (!cacheError && cacheData && cacheData.bank_name) {
             bankData = {
-              id: bankAccountData.id,
-              bank_name: bankAccountData.bank_name,
-              account_number: bankAccountData.account_number,
-              depositor: bankAccountData.depositor,
+              id: `cache-${regionData.id}`,
+              bank_name: cacheData.bank_name,
+              account_number: cacheData.account_number,
+              depositor: cacheData.depositor,
               region_gu: {
                 id: regionData.id,
                 name: regionData.name,
               },
               display_types: {
-                id: displayTypeData.id,
-                name: displayTypeData.name,
+                id: '3119f6ed-81e4-4d62-b785-6a33bc7928f9', // LED display type ID
+                name: 'led_display',
               },
             };
-            console.log('🔍 🔍 🔍 API - Created bank data:', bankData);
+            console.log(
+              '🔍 🔍 🔍 API - Created bank data from cache:',
+              bankData
+            );
           } else {
-            console.log(
-              '🔍 🔍 🔍 API - No bank account found or error occurred'
-            );
-
-            // 디버깅을 위해 해당 구의 모든 bank_accounts 확인
-            const { data: allBankAccounts, error: allBankError } =
-              await supabase
-                .from('bank_accounts')
-                .select('*')
-                .eq('region_gu_id', regionData.id);
-
-            console.log(
-              '🔍 🔍 🔍 API - All bank accounts for this region:',
-              allBankAccounts
-            );
-            console.log(
-              '🔍 🔍 🔍 API - All bank accounts error:',
-              allBankError
-            );
+            console.log('🔍 🔍 🔍 API - No cache data found for LED display');
           }
         } else {
-          console.log('🔍 🔍 🔍 API - Display type not found');
+          // 기존 로직: bank_accounts 테이블에서 계좌정보 가져오기
+          const { data: displayTypeData, error: displayTypeError } =
+            await supabase
+              .from('display_types')
+              .select('id, name')
+              .eq('name', displayType)
+              .single();
 
-          // 디버깅을 위해 모든 display_types 확인
-          const { data: allDisplayTypes, error: allDisplayTypesError } =
-            await supabase.from('display_types').select('*');
+          console.log('🔍 🔍 🔍 API - Display type result:', displayTypeData);
+          console.log('🔍 🔍 🔍 API - Display type error:', displayTypeError);
 
-          console.log('🔍 🔍 🔍 API - All display types:', allDisplayTypes);
-          console.log(
-            '🔍 🔍 🔍 API - All display types error:',
-            allDisplayTypesError
-          );
+          if (!displayTypeError) {
+            console.log(
+              '🔍 🔍 🔍 API - Looking for bank account with region_gu_id:',
+              regionData.id,
+              'display_type_id:',
+              displayTypeData.id
+            );
+
+            const { data: bankAccountData, error: bankError } = await supabase
+              .from('bank_accounts')
+              .select(
+                `
+                id,
+                bank_name,
+                account_number,
+                depositor,
+                region_gu_id,
+                display_type_id
+              `
+              )
+              .eq('region_gu_id', regionData.id)
+              .eq('display_type_id', displayTypeData.id)
+              .limit(1)
+              .single();
+
+            console.log('🔍 🔍 🔍 API - Bank account result:', bankAccountData);
+            console.log('🔍 🔍 🔍 API - Bank account error:', bankError);
+
+            if (!bankError && bankAccountData) {
+              bankData = {
+                id: bankAccountData.id,
+                bank_name: bankAccountData.bank_name,
+                account_number: bankAccountData.account_number,
+                depositor: bankAccountData.depositor,
+                region_gu: {
+                  id: regionData.id,
+                  name: regionData.name,
+                },
+                display_types: {
+                  id: displayTypeData.id,
+                  name: displayTypeData.name,
+                },
+              };
+              console.log('🔍 🔍 🔍 API - Created bank data:', bankData);
+            } else {
+              console.log(
+                '🔍 🔍 🔍 API - No bank account found or error occurred'
+              );
+
+              // 디버깅을 위해 해당 구의 모든 bank_accounts 확인
+              const { data: allBankAccounts, error: allBankError } =
+                await supabase
+                  .from('bank_accounts')
+                  .select('*')
+                  .eq('region_gu_id', regionData.id);
+
+              console.log(
+                '🔍 🔍 🔍 API - All bank accounts for this region:',
+                allBankAccounts
+              );
+              console.log(
+                '🔍 🔍 🔍 API - All bank accounts error:',
+                allBankError
+              );
+            }
+          } else {
+            console.log('🔍 🔍 🔍 API - Display type not found');
+
+            // 디버깅을 위해 모든 display_types 확인
+            const { data: allDisplayTypes, error: allDisplayTypesError } =
+              await supabase.from('display_types').select('*');
+
+            console.log('🔍 🔍 🔍 API - All display types:', allDisplayTypes);
+            console.log(
+              '🔍 🔍 🔍 API - All display types error:',
+              allDisplayTypesError
+            );
+          }
         }
       }
 

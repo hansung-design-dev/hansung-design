@@ -19,6 +19,7 @@ export interface LEDDisplayData {
   latitude: number;
   longitude: number;
   photo_url?: string | null;
+  maintenance_notes?: string; // 유지보수 노트 추가
   region_gu: {
     id: string;
     name: string;
@@ -221,6 +222,7 @@ export default function LEDDisplayPage() {
         price_unit: firstSlot?.price_unit || '',
         panel_slot_status: firstSlot?.panel_slot_status || '',
         panel_id: item.id, // 원본 panels UUID
+        maintenance_notes: item.maintenance_notes, // 유지보수 노트 추가
       };
     });
   }

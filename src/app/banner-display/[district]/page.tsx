@@ -23,6 +23,7 @@ interface BannerDisplayData {
   photo_url?: string; // 사진 URL 추가
   latitude?: number; // 위도 추가
   longitude?: number; // 경도 추가
+  maintenance_notes?: string; // 유지보수 노트 추가
   created_at: string;
   updated_at: string;
   banner_panel_details: {
@@ -484,6 +485,7 @@ export default function BannerDisplayPage({
                 second_half_closure_quantity: secondHalfClosureQuantity,
                 panel_id: item.id, // 원본 panels UUID
                 photo_url: item.photo_url, // 사진 URL 추가
+                maintenance_notes: item.maintenance_notes, // 유지보수 노트 추가
                 banner_slots: item.banner_slots, // banner_slots 보존
                 inventory_info: item.inventory_info, // 실시간 재고 정보 추가
               };
