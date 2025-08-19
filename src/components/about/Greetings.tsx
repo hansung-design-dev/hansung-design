@@ -16,30 +16,33 @@ export default function Greetings() {
           <Image
             src="/images/company-intro/logo/logo.png"
             alt="한성도시환경디자인 로고"
-            width={200}
-            height={100}
-            className="w-auto h-auto"
+            width={60}
+            height={60}
+            className="sm:w-[3rem] sm:h-[5rem] md:w-[5rem] md:h-[7rem] lg:w-[5rem] lg:h-[7rem]"
           />
         </div>
 
-        {/* 제목 */}
-        <div className="text-center">
-          <h2 className="text-[2rem] text-black">
-            안녕하십니까, 도시의 미래를 디자인하는 기업
-          </h2>
-        </div>
+        <div className="flex flex-col items-center justify-center gap-0">
+          <div className="text-center">
+            <h2 className="lg:text-[1.7rem] md:text-[1.5rem] sm:text-[1rem] text-black font-300 mb-2 lg:mb-0">
+              안녕하십니까, 도시의 미래를 디자인하는 기업
+            </h2>
+          </div>
 
-        {/* 부제목 */}
-        <div className="text-center mb-20">
-          <h3 className="text-[3.125rem] font-gmarket text-black">
-            한성도시환경디자인
-          </h3>
+          {/* 부제목 */}
+          <div className="text-center mb-15">
+            <div className="lg:text-[2rem] md:text-[1.5rem] sm:text-[1rem]  text-black font-700">
+              한성도시환경디자인
+              <span className="lg:text-[1.5rem] md:text-[1rem] sm:text-[0.8rem] text-black font-500">
+                입니다.
+              </span>
+            </div>
+          </div>
         </div>
-
         {/* 내용 박스 */}
-        <div className="max-w-4xl mx-auto mb-12">
+        <div className="lg:max-w-4xl md:max-w-2xl sm:max-w-xl mx-auto mb-12">
           <div className="bg-[#F8F8F8] rounded-[1.25rem] p-14">
-            <div className="text-black text-lg leading-relaxed text-center space-y-6">
+            <div className="text-black lg:text-lg md:text-base sm:text-sm leading-relaxed text-center space-y-6">
               <p>
                 도시경관디자인 분야에서 수많은 프로젝트를 성공적으로 수행하며,{' '}
                 <br />
