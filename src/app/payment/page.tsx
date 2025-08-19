@@ -474,6 +474,7 @@ function PaymentPageContent() {
 
   // 승인된 주문의 아이템 정보 가져오기
   const fetchApprovedOrderItems = async (orderNumber: string) => {
+    const directParam = searchParams.get('direct');
     try {
       const response = await fetch(`/api/orders/${orderNumber}`);
       const data = await response.json();
