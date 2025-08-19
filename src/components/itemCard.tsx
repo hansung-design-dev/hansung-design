@@ -3,12 +3,14 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import ImageSlider from './ImageSlider';
 
 interface ItemCardProps {
   item: {
     id: string;
     title: string;
     src: string;
+    images?: string[];
   };
 }
 
@@ -29,13 +31,17 @@ export default function ItemCard({ item }: ItemCardProps) {
       >
         <div className="flex flex-col items-start justify-center w-full h-full">
           <div className="object-cover flex-1 w-full flex items-center justify-center">
-            <Image
-              src={item.src}
-              alt={item.title}
-              width={1400}
-              height={1400}
-              className="lg:w-full lg:h-full object-cover md:w-[15rem] md:h-[15rem] sm:w-[15rem] sm:h-[15rem] flex items-center justify-center"
-            />
+            {item.images ? (
+              <ImageSlider images={item.images} alt={item.title} />
+            ) : (
+              <Image
+                src={item.src}
+                alt={item.title}
+                width={1400}
+                height={1400}
+                className="lg:w-full lg:h-full object-cover md:w-[15rem] md:h-[15rem] sm:w-[15rem] sm:h-[15rem] flex items-center justify-center"
+              />
+            )}
           </div>
           <div className="text-xl font-bold text-black line-clamp-2 pl-10 py-7">
             {item.title}

@@ -46,6 +46,7 @@ export interface BaseBillboard {
   panel_id?: string; // panels 테이블의 실제 ID
   photo_url?: string; // 사진 URL 추가
   is_closed?: boolean; // 게시대 마감 여부
+  maintenance_notes?: string; // 유지보수 노트 추가
   inventory_info?: {
     current_period: {
       total_slots: number;

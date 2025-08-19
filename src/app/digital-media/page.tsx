@@ -124,7 +124,14 @@ const digitalBillboardItems = [
 ];
 
 // 디지털사이니지 데이터 (실제 제품 정보 포함)
-const digitalSignageItems = [
+interface DigitalSignageItem {
+  id: string;
+  title: string;
+  src: string;
+  images?: string[];
+}
+
+const digitalSignageItems: DigitalSignageItem[] = [
   {
     id: 'samsung-single',
     title: '싱글 사이니지(삼성)',
@@ -141,13 +148,13 @@ const digitalSignageItems = [
     src: '/images/digital-media/digital_signage/2_삼성멀티비전.jpg',
   },
   {
-    id: 'electronic-whiteboard',
+    id: 'samsung-electronic-board',
     title: '전자칠판',
     src: '/images/digital-media/digital_signage/3_삼성전지칠판.jpg',
   },
   {
     id: 'stand-signage',
-    title: '스탠다드 사이니지',
+    title: '스탠드 사이니지',
     src: '/images/digital-media/digital_signage/5_중국산 스탠드.jpg',
   },
   {
@@ -156,18 +163,23 @@ const digitalSignageItems = [
     src: '/images/digital-media/digital_signage/6_삼성전자결제-키오스크.jpg',
   },
   {
-    id: 'multivision-videowall',
+    id: 'multivision-cismate',
     title: '멀티비전(비디오월)',
     src: '/images/digital-media/digital_signage/7_멀티비전 이미지1.jpg',
+    images: [
+      '/images/digital-media/digital_signage/7_멀티비전 이미지1.jpg',
+      '/images/digital-media/digital_signage/7_멀티비전 이미지2.jpg',
+      '/images/digital-media/digital_signage/7_멀티비전 이미지3.jpg',
+    ],
   },
   {
-    id: 'aida-digital-frame',
+    id: 'digital-frame',
     title: '디지털액자',
     src: '/images/digital-media/digital_signage/8_AIDA 디지털액자.jpg',
   },
   {
-    id: 'standard-signage',
-    title: '스탠다드 사이니지',
+    id: 'q-series-stand',
+    title: 'Q시리즈 스탠드 사이니지',
     src: '/images/digital-media/digital_signage/9_스탠드사이니지(피벗타입).jpg',
   },
   {
@@ -189,11 +201,19 @@ const digitalSignageItems = [
     id: 'bracket',
     title: '브라켓',
     src: '/images/digital-media/digital_signage/13_브라켓 NSV-01.jpg',
+    images: [
+      '/images/digital-media/digital_signage/13_브라켓 NSV-01.jpg',
+      '/images/digital-media/digital_signage/13_브라켓 PV-70.jpg',
+    ],
   },
   {
     id: 'outdoor-wall',
     title: '옥외형 벽부타입',
     src: '/images/digital-media/digital_signage/14_옥외형 벽부형.jpg',
+    images: [
+      '/images/digital-media/digital_signage/14_옥외형 벽부형.jpg',
+      '/images/digital-media/digital_signage/14_옥외형 스탠드형2.png',
+    ],
   },
   {
     id: 'outdoor-stand',
@@ -209,6 +229,12 @@ const digitalSignageItems = [
     id: 'led-controller',
     title: 'LED 디스플레이 컨트롤러',
     src: '/images/digital-media/digital_signage/17_1-컨트롤러-PC형.jpg',
+    images: [
+      '/images/digital-media/digital_signage/17_1-컨트롤러-PC형.jpg',
+      '/images/digital-media/digital_signage/17_2 컨트롤러 HD용.jpg',
+      '/images/digital-media/digital_signage/17_3-컨트롤러-FHD용.jpg',
+      '/images/digital-media/digital_signage/17_4-컨트롤러-FHD용.jpg',
+    ],
   },
   {
     id: 'led-installation',
@@ -286,7 +312,7 @@ function DigitalSignagePageContent() {
           <Image
             src={
               homepageContent?.main_image_url ||
-              '/images/digital-sianage/landing.png'
+              '/images/digital-media/landing.png'
             }
             alt={homepageContent?.title || '디지털 사이니지 메인 이미지'}
             fill

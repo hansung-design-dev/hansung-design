@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
+import DetailImageSlider from '@/src/components/DetailImageSlider';
 
 interface Model {
   modelName: string;
@@ -246,15 +247,22 @@ export default function DigitalSignageDetailClient({
         <div className="grid lg:grid-cols-2 gap-12 sm:grid-cols-1">
           {/* Product Image */}
           <div className="flex flex-col gap-2">
-            <div className="relative aspect-[4/3] overflow-hidden rounded-lg">
-              <Image
-                src={productData.image}
+            {productData.images && productData.images.length > 1 ? (
+              <DetailImageSlider
+                images={productData.images}
                 alt={productData.title}
-                fill
-                className="object-cover"
-                priority
               />
-            </div>
+            ) : (
+              <div className="relative aspect-[4/3] overflow-hidden rounded-lg">
+                <Image
+                  src={productData.image}
+                  alt={productData.title}
+                  fill
+                  className="object-contain"
+                  priority
+                />
+              </div>
+            )}
             <div className="text-red text-sm">
               * 제품 이미지는 제조공정으로 인해 약간의 차이는 있습니다.
             </div>
@@ -415,6 +423,16 @@ export default function DigitalSignageDetailClient({
                                         {model.vesaHole} mm
                                       </span>
                                     </div>
+                                    {model.specialFeatures && (
+                                      <div className="flex items-start">
+                                        <span className=" w-24 font-700">
+                                          기타 특이사항:
+                                        </span>
+                                        <span className="font-medium">
+                                          {model.specialFeatures}
+                                        </span>
+                                      </div>
+                                    )}
                                     <div className="flex items-start">
                                       <span className=" w-24 font-700">
                                         제품문의:
@@ -541,28 +559,6 @@ export default function DigitalSignageDetailClient({
             {/* Call to Action - Removed for portfolio purposes */}
           </div>
         </div>
-
-        {/* Additional Images Gallery */}
-        {productData.images && productData.images.length > 1 && (
-          <div className="mt-12">
-            <h3 className="text-2xl font-bold mb-6">추가 이미지</h3>
-            <div className="flex flex-col gap-6">
-              {productData.images.slice(1).map((image, index) => (
-                <div
-                  key={index}
-                  className="relative aspect-[4/3] overflow-hidden rounded-lg"
-                >
-                  <Image
-                    src={image}
-                    alt={`${productData.title} - 이미지 ${index + 2}`}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </section>
     </main>
   );

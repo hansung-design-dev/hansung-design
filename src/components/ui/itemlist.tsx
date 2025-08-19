@@ -187,7 +187,7 @@ const ItemList: React.FC<ItemTableProps> = ({
                 {showCheckbox && <th className="w-10"></th>}
                 <th className="text-center pl-4">No</th>
                 <th className="text-left pl-4">게시대 명</th>
-
+                <th className="text-center pl-4"></th>
                 <th className="text-center pl-4">규격(cm)</th>
                 {!hideQuantityColumns && (
                   <th className="text-center pl-4">면수</th>
@@ -268,6 +268,7 @@ const ItemList: React.FC<ItemTableProps> = ({
                     >
                       {item.nickname && <span> {item.nickname} - </span>}
                       {item.address ? <span>{item.address}</span> : <></>}
+
                       {item.neighborhood && (
                         <span
                           className={`ml-1 ${
@@ -275,6 +276,11 @@ const ItemList: React.FC<ItemTableProps> = ({
                           }`}
                         >
                           {item.neighborhood}
+                        </span>
+                      )}
+                      {item.maintenance_notes && (
+                        <span className="text-pink-500 text-sm ml-2">
+                          ({item.maintenance_notes})
                         </span>
                       )}
                     </div>
@@ -396,6 +402,7 @@ const ItemList: React.FC<ItemTableProps> = ({
                   >
                     {item.nickname && <span>{item.nickname} - </span>}
                     {item.address ? <span>{item.address}</span> : <></>}
+
                     {item.neighborhood && (
                       <span
                         className={`ml-1 ${
@@ -403,6 +410,11 @@ const ItemList: React.FC<ItemTableProps> = ({
                         }`}
                       >
                         {item.neighborhood}
+                      </span>
+                    )}
+                    {item.maintenance_notes && (
+                      <span className="text-pink-500 text-sm ml-2">
+                        ({item.maintenance_notes})
                       </span>
                     )}
                   </div>
@@ -423,6 +435,11 @@ const ItemList: React.FC<ItemTableProps> = ({
                       }`}
                     >
                       {item.neighborhood}
+                    </span>
+                  )}
+                  {item.maintenance_notes && (
+                    <span className="text-pink-500 text-sm ml-2">
+                      ({item.maintenance_notes})
                     </span>
                   )}
                 </div>

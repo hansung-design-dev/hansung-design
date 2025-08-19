@@ -245,8 +245,46 @@ function PaymentPageContent() {
     fetchUserProfiles();
   }, [user?.id]);
 
+  // Direct 모드일 때 프로필 정보가 로드된 후 그룹화 다시 수행
+  useEffect(() => {
+    const directParam = searchParams.get('direct');
+    if (
+      directParam === 'true' &&
+      selectedItems.length > 0 &&
+      userProfiles.length > 0
+    ) {
+      console.log('🔍 Direct mode: re-grouping items with loaded profiles');
+      const grouped = groupItemsByDistrict(selectedItems, true);
+      setGroupedItems(grouped);
+
+      // 기본 프로젝트 이름 설정 (현재 날짜 + 기본 프로필 회사명)
+      const defaultProfile =
+        userProfiles.find((profile) => profile.is_default) || userProfiles[0];
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}년 ${
+        today.getMonth() + 1
+      }월 ${today.getDate()}일`;
+      const defaultProjectName = `${
+        defaultProfile?.company_name || '광고'
+      } ${dateStr}`;
+
+      setProjectName(defaultProjectName);
+      setTempProjectName(defaultProjectName);
+
+      // 일괄적용 활성화
+      setBulkApply((prev) => ({
+        ...prev,
+        projectName: true,
+        fileUpload: true,
+      }));
+    }
+  }, [userProfiles, selectedItems, searchParams]);
+
   // 묶음 결제를 위한 아이템 그룹화 함수
-  const groupItemsByDistrict = (items: CartItem[]): GroupedCartItem[] => {
+  const groupItemsByDistrict = (
+    items: CartItem[],
+    isDirectMode = false
+  ): GroupedCartItem[] => {
     // 구별 + 상하반기별로 그룹화
     const grouped: { [key: string]: CartItem[] } = {};
 
@@ -278,6 +316,9 @@ function PaymentPageContent() {
         halfPeriod === 'first_half' ? '상반기' : '하반기'
       }`;
 
+      // Direct 모드인 경우 기본 프로필 정보를 우선적으로 사용
+      const profileToUse = isDirectMode ? defaultProfile : null;
+
       return {
         id: `group_${groupKey}`,
         name: `${firstItem.district} 현수막게시대`,
@@ -286,14 +327,22 @@ function PaymentPageContent() {
         district: firstItem.district,
         type: 'banner-display',
         panel_type: firstItem.panel_type || 'panel',
-        is_public_institution: firstItem.is_public_institution,
-        is_company: firstItem.is_company,
-        user_profile_id: firstItem.user_profile_id || defaultProfile?.id,
+        is_public_institution:
+          firstItem.is_public_institution ||
+          profileToUse?.is_public_institution,
+        is_company: firstItem.is_company || profileToUse?.is_company,
+        user_profile_id:
+          firstItem.user_profile_id || profileToUse?.id || defaultProfile?.id,
         contact_person_name:
-          firstItem.contact_person_name || defaultProfile?.contact_person_name,
-        phone: firstItem.phone || defaultProfile?.phone,
-        company_name: firstItem.company_name || defaultProfile?.company_name,
-        email: firstItem.email || defaultProfile?.email,
+          firstItem.contact_person_name ||
+          profileToUse?.contact_person_name ||
+          defaultProfile?.contact_person_name,
+        phone: firstItem.phone || profileToUse?.phone || defaultProfile?.phone,
+        company_name:
+          firstItem.company_name ||
+          profileToUse?.company_name ||
+          defaultProfile?.company_name,
+        email: firstItem.email || profileToUse?.email || defaultProfile?.email,
         // 상하반기 정보 추가
         halfPeriod,
         selectedYear: year,
@@ -308,9 +357,11 @@ function PaymentPageContent() {
     const itemsParam = searchParams.get('items');
     const approvedParam = searchParams.get('approved');
     const orderIdParam = searchParams.get('orderId');
+    const directParam = searchParams.get('direct');
     console.log('🔍 Payment page - itemsParam:', itemsParam);
     console.log('🔍 Payment page - approvedParam:', approvedParam);
     console.log('🔍 Payment page - orderIdParam:', orderIdParam);
+    console.log('🔍 Payment page - directParam:', directParam);
     console.log('🔍 Payment page - cart:', cart);
 
     if (approvedParam === 'true') {
@@ -341,9 +392,14 @@ function PaymentPageContent() {
           console.log('🔍 Payment page - filtered items:', items);
           setSelectedItems(items);
 
-          // 묶음 결제를 위한 그룹화
-          const grouped = groupItemsByDistrict(items);
+          // 묶음 결제를 위한 그룹화 (direct 모드 여부 전달)
+          const grouped = groupItemsByDistrict(items, directParam === 'true');
           setGroupedItems(grouped);
+
+          // direct=true인 경우 기본 프로필 정보를 아이템들에 자동 설정
+          if (directParam === 'true') {
+            console.log('🔍 Direct mode: applying default profile to items');
+          }
         }
       } catch (error) {
         console.error('Error parsing selected items:', error);
@@ -475,8 +531,11 @@ function PaymentPageContent() {
 
         setSelectedItems(orderItems);
 
-        // 묶음 결제를 위한 그룹화
-        const grouped = groupItemsByDistrict(orderItems);
+        // 묶음 결제를 위한 그룹화 (direct 모드 여부 전달)
+        const grouped = groupItemsByDistrict(
+          orderItems,
+          directParam === 'true'
+        );
         setGroupedItems(grouped);
       }
     } catch (error) {
@@ -858,6 +917,29 @@ function PaymentPageContent() {
       <Nav variant="default" className="bg-white" />
 
       <div className="container mx-auto px-4 sm:px-1 py-8 grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-8">
+        {/* Direct 모드 안내 메시지 */}
+        {searchParams.get('direct') === 'true' && (
+          <div className="col-span-full mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center">
+              <svg
+                className="w-5 h-5 text-blue-500 mr-2"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <span className="text-blue-800 font-medium">
+                빠른 신청 모드: 기본 프로필 정보가 자동으로 설정되었습니다.
+                필요시 수정해주세요.
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* 좌측 - 작업이름, 시안 업로드 및 구별 카드 */}
         <div className="space-y-8 border border-solid border-gray-3 rounded-[0.375rem] p-[2.5rem] sm:p-[1.5rem]">
           {/* 작업이름 입력 */}

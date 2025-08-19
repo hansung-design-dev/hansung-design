@@ -30,4 +30,5 @@ export interface LEDBillboard {
   price_unit: string;
   panel_slot_status: string;
   panel_id?: string;
+  maintenance_notes?: string;
 }

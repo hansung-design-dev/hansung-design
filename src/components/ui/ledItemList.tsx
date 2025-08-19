@@ -137,6 +137,11 @@ const LEDItemList: React.FC<LEDItemTableProps> = ({
                     >
                       {item.nickname && <span> {item.nickname} - </span>}
                       {item.address ? <span>{item.address}</span> : <></>}
+                      {item.maintenance_notes && (
+                        <span className="text-pink-500 text-sm ml-2">
+                          ({item.maintenance_notes})
+                        </span>
+                      )}
                       {item.neighborhood && (
                         <span className="ml-1 text-gray-500">
                           {item.neighborhood}
@@ -238,6 +243,11 @@ const LEDItemList: React.FC<LEDItemTableProps> = ({
                   <div className="font-medium text-black">
                     {item.nickname && <span> {item.nickname} - </span>}
                     {item.address ? <span>{item.address}</span> : <></>}
+                    {item.maintenance_notes && (
+                      <span className="text-pink-500 text-sm ml-2">
+                        ({item.maintenance_notes})
+                      </span>
+                    )}
                     {item.neighborhood && (
                       <span className="ml-1 text-gray-500">
                         {item.neighborhood}

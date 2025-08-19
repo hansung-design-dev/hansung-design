@@ -122,9 +122,34 @@ export default function LiveCart() {
   };
 
   const handleDirectApply = () => {
-    // 바로 신청하기 로직
-    console.log('바로 신청하기:', cart);
-    // 여기에 신청 로직 구현
+    // 로그인하지 않은 경우 로그인 페이지로 이동
+    if (!user) {
+      router.push('/signin');
+      return;
+    }
+
+    // 상담신청 아이템이 있는지 확인
+    const hasConsultingItems = cart.some((item) => item.price === 0);
+
+    // 상담신청 아이템이 있으면 상담신청 탭으로, 없으면 바로 결제페이지로 이동
+    if (hasConsultingItems) {
+      router.push('/cart?tab=consulting');
+    } else {
+      // 일반 아이템들만 필터링
+      const regularItems = cart.filter((item) => item.price !== 0);
+
+      if (regularItems.length === 0) {
+        alert('결제할 수 있는 아이템이 없습니다.');
+        return;
+      }
+
+      // 선택된 아이템들의 ID를 URL 파라미터로 전달
+      const selectedItemIds = regularItems.map((item) => item.id);
+      const itemsParam = encodeURIComponent(JSON.stringify(selectedItemIds));
+
+      // 바로 결제페이지로 이동 (direct=true 파라미터 추가)
+      router.push(`/payment?items=${itemsParam}&direct=true`);
+    }
   };
 
   return (
@@ -249,7 +274,7 @@ export default function LiveCart() {
             className=""
             onClick={handleDirectApply}
           >
-            게시대 바로 신청하기
+            바로 결제하기
           </Button>
         </div>
       </div>
