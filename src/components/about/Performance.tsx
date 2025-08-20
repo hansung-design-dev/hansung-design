@@ -154,11 +154,11 @@ export default function Performance() {
         <SectionTitle title="실적내역" />
 
         {/* 카드 그리드 */}
-        <div className="grid sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 md:gap-8 lg:mx-[2rem] md:mx-[1rem] sm:mx-[0.5rem] place-items-center">
+        <div className="grid gap-4 lg:gap-6 md:gap-8 mx-auto place-items-center sm:grid-cols-2 md:grid-cols-[repeat(3,minmax(0,1fr))] lg:grid-cols-[repeat(3,minmax(0,1fr))] max-w-4xl">
           {performanceData.map((item, index) => (
             <div
               key={index}
-              className="flex lg:w-[14rem] md:w-[14rem] sm:w-[14rem] lg:h-[3rem] md:h-[3rem] sm:h-[4rem] p-[2rem_1.5rem] lg:p-[2.5rem_2rem] flex-col justify-center items-center gap-[0.625rem] bg-white rounded-[1.25rem] shadow-lg"
+              className="flex lg:w-[14rem] md:w-[14rem] sm:w-[14rem] h-[4rem] sm:h-[4rem] md:h-[3rem] lg:h-[3rem] p-[1rem_0.5rem] sm:p-[1.5rem_1rem] md:p-[2rem_1.5rem] lg:p-[2.5rem_2rem] flex-col justify-center items-center gap-[0.625rem] bg-white rounded-[1.25rem] shadow-lg"
             >
               <h3
                 className="text-[1.125rem] font-700 text-center"
