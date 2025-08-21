@@ -325,25 +325,28 @@ export default function BannerDisplayPage({
                   }))
                 );
 
-                // 상단광고 슬롯 찾기 (banner_type으로만 구분)
+                // 상단광고 슬롯 찾기 (slot_number로 구분)
                 const topFixedSlot = item.banner_slots.find(
-                  (slot) => slot.banner_type === 'top_fixed'
+                  (slot) => slot.slot_number === 0
                 );
 
-                // 현수막게시대 슬롯 찾기 (banner_type으로만 구분)
+                // 현수막게시대 슬롯 찾기 (slot_number로 구분)
                 const panelSlot = item.banner_slots.find(
-                  (slot) =>
-                    slot.banner_type === 'panel' ||
-                    slot.banner_type === 'semi_auto'
+                  (slot) => slot.slot_number > 0
                 );
 
                 return { topFixedSlot, panelSlot };
               };
 
               const slots = findSlotByType();
-              // panelTypeFilter가 'top_fixed'인 경우 상단광고로 처리
-              const isTopFixed = panelTypeFilter === 'top_fixed';
-              console.log('isTopFixed', isTopFixed);
+              // 실제 슬롯 데이터를 기반으로 상단광고 여부 판단
+              const isTopFixed = slots?.topFixedSlot !== undefined;
+              console.log(
+                'isTopFixed',
+                isTopFixed,
+                'panelTypeFilter',
+                panelTypeFilter
+              );
 
               // 디버깅 로그 추가
               console.log('🔍 슬롯 정보:', {
@@ -367,10 +370,12 @@ export default function BannerDisplayPage({
               let price = '문의';
               let totalPrice = 0;
 
-              if (isTopFixed) {
+              if (isTopFixed && slots?.topFixedSlot) {
+                // 상단광고인 경우
                 price = '상담문의';
                 totalPrice = 0; // 상단광고는 상담신청으로 처리
               } else if (slots?.panelSlot) {
+                // 현수막게시대인 경우
                 // banner_slot_price_policy에서 가격 정보 가져오기
                 const pricePolicies = slots.panelSlot.banner_slot_price_policy;
                 if (pricePolicies && pricePolicies.length > 0) {
@@ -418,7 +423,7 @@ export default function BannerDisplayPage({
 
               const bannerType = isTopFixed
                 ? 'top_fixed'
-                : slots?.panelSlot?.banner_type || undefined;
+                : slots?.panelSlot?.banner_type || 'panel';
 
               // 상하반기별 마감수 정보 (panels에서 가져오기)
               const firstHalfClosureQuantity = item.first_half_closure_quantity;
@@ -607,7 +612,7 @@ export default function BannerDisplayPage({
     if (district) {
       fetchBannerData();
     }
-  }, [district, districtObj, panelTypeFilter]);
+  }, [district, districtObj]);
 
   if (loading) {
     return (
