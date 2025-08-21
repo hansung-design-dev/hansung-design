@@ -130,9 +130,9 @@ export default function CustomerPage() {
 
           const selectedCategory = categoryMapping[activeFaq];
           const filteredFaqs = data.faqs.filter(
-            (faq: any) => faq.homepage_menu_types.name === selectedCategory
+            (faq: FaqItem) => faq.homepage_menu_types.name === selectedCategory
           );
-          
+
           setFaqs(filteredFaqs);
         }
       } catch (error) {

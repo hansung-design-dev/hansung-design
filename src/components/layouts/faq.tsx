@@ -61,7 +61,7 @@ const FAQ = () => {
         if (data.faqs) {
           // 카테고리별로 그룹화
           const groupedData = data.faqs.reduce(
-            (acc: FAQItem[], faq: any) => {
+            (acc: FAQItem[], faq: FaqDataItem) => {
               const categoryName = translateCategory(
                 faq.homepage_menu_types.name
               );

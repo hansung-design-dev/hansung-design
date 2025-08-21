@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { supabase } from '@/src/lib/supabase';
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     console.log('=== 마이그레이션 시작 ===');
 
