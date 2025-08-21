@@ -28,8 +28,8 @@ CREATE TABLE public.admin_order_verifications (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT admin_order_verifications_pkey PRIMARY KEY (id),
-  CONSTRAINT admin_order_verifications_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
-  CONSTRAINT admin_order_verifications_verified_by_fkey FOREIGN KEY (verified_by) REFERENCES public.admin_profiles(id)
+  CONSTRAINT admin_order_verifications_verified_by_fkey FOREIGN KEY (verified_by) REFERENCES public.admin_profiles(id),
+  CONSTRAINT admin_order_verifications_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id)
 );
 CREATE TABLE public.admin_profiles (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -57,8 +57,8 @@ CREATE TABLE public.bank_accounts (
   updated_at timestamp without time zone DEFAULT now(),
   contact text,
   CONSTRAINT bank_accounts_pkey PRIMARY KEY (id),
-  CONSTRAINT bank_accounts_display_type_id_fkey FOREIGN KEY (display_type_id) REFERENCES public.display_types(id),
-  CONSTRAINT bank_accounts_region_gu_id_fkey FOREIGN KEY (region_gu_id) REFERENCES public.region_gu(id)
+  CONSTRAINT bank_accounts_region_gu_id_fkey FOREIGN KEY (region_gu_id) REFERENCES public.region_gu(id),
+  CONSTRAINT bank_accounts_display_type_id_fkey FOREIGN KEY (display_type_id) REFERENCES public.display_types(id)
 );
 CREATE TABLE public.banner_display_cache (
   id integer NOT NULL DEFAULT nextval('banner_display_cache_id_seq'::regclass),
@@ -143,22 +143,6 @@ CREATE TABLE public.customer_inquiries (
   closed_at timestamp with time zone,
   CONSTRAINT customer_inquiries_pkey PRIMARY KEY (id)
 );
-CREATE TABLE public.customer_service (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  user_id uuid,
-  title character varying NOT NULL,
-  content text NOT NULL,
-  status character varying NOT NULL DEFAULT 'pending'::character varying,
-  answer text,
-  answered_at timestamp with time zone,
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now(),
-  homepage_menu_type uuid,
-  cs_categories USER-DEFINED,
-  CONSTRAINT customer_service_pkey PRIMARY KEY (id),
-  CONSTRAINT customer_service_homepage_menu_type_fkey FOREIGN KEY (homepage_menu_type) REFERENCES public.homepage_menu_types(id),
-  CONSTRAINT customer_service_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.user_auth(id)
-);
 CREATE TABLE public.design_drafts (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_profile_id uuid,
@@ -174,15 +158,30 @@ CREATE TABLE public.design_drafts (
   updated_at timestamp with time zone DEFAULT now(),
   project_name text,
   CONSTRAINT design_drafts_pkey PRIMARY KEY (id),
-  CONSTRAINT design_drafts_admin_profile_id_fkey FOREIGN KEY (admin_profile_id) REFERENCES public.admin_profiles(id),
-  CONSTRAINT design_drafts_user_profile_id_fkey FOREIGN KEY (user_profile_id) REFERENCES public.user_profiles(id)
+  CONSTRAINT design_drafts_user_profile_id_fkey FOREIGN KEY (user_profile_id) REFERENCES public.user_profiles(id),
+  CONSTRAINT design_drafts_admin_profile_id_fkey FOREIGN KEY (admin_profile_id) REFERENCES public.admin_profiles(id)
 );
 CREATE TABLE public.display_types (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   name USER-DEFINED NOT NULL,
   description text,
   created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT display_types_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.frequent_questions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  title character varying NOT NULL,
+  content text NOT NULL,
+  status character varying NOT NULL DEFAULT 'pending'::character varying,
+  answer text,
+  answered_at timestamp with time zone,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  homepage_menu_type uuid,
+  cs_categories USER-DEFINED,
+  CONSTRAINT frequent_questions_pkey PRIMARY KEY (id),
+  CONSTRAINT customer_service_homepage_menu_type_fkey FOREIGN KEY (homepage_menu_type) REFERENCES public.homepage_menu_types(id)
 );
 CREATE TABLE public.homepage_contents (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -335,8 +334,8 @@ CREATE TABLE public.order_details (
   panel_slot_usage_id uuid,
   CONSTRAINT order_details_pkey PRIMARY KEY (id),
   CONSTRAINT order_details_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
-  CONSTRAINT order_details_panel_info_id_fkey FOREIGN KEY (panel_id) REFERENCES public.panels(id),
-  CONSTRAINT order_details_panel_slot_usage_id_fkey FOREIGN KEY (panel_slot_usage_id) REFERENCES public.panel_slot_usage(id)
+  CONSTRAINT order_details_panel_slot_usage_id_fkey FOREIGN KEY (panel_slot_usage_id) REFERENCES public.panel_slot_usage(id),
+  CONSTRAINT order_details_panel_info_id_fkey FOREIGN KEY (panel_id) REFERENCES public.panels(id)
 );
 CREATE TABLE public.orders (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -353,11 +352,11 @@ CREATE TABLE public.orders (
   draft_delivery_method text CHECK (draft_delivery_method = ANY (ARRAY['email'::text, 'upload'::text])),
   order_status USER-DEFINED DEFAULT 'pending'::order_status_enum,
   CONSTRAINT orders_pkey PRIMARY KEY (id),
-  CONSTRAINT orders_design_drafts_id_fkey FOREIGN KEY (design_drafts_id) REFERENCES public.design_drafts(id),
   CONSTRAINT orders_auth_user_id_fkey FOREIGN KEY (auth_user_id) REFERENCES public.user_auth(id),
+  CONSTRAINT fk_orders_user_auth_id FOREIGN KEY (user_auth_id) REFERENCES public.user_auth(id),
   CONSTRAINT orders_payment_method_id_fkey FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id),
-  CONSTRAINT orders_user_profile_id_fkey FOREIGN KEY (user_profile_id) REFERENCES public.user_profiles(id),
-  CONSTRAINT fk_orders_user_auth_id FOREIGN KEY (user_auth_id) REFERENCES public.user_auth(id)
+  CONSTRAINT orders_design_drafts_id_fkey FOREIGN KEY (design_drafts_id) REFERENCES public.design_drafts(id),
+  CONSTRAINT orders_user_profile_id_fkey FOREIGN KEY (user_profile_id) REFERENCES public.user_profiles(id)
 );
 CREATE TABLE public.panel_popup_notices (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -393,20 +392,17 @@ CREATE TABLE public.panel_slot_usage (
   CONSTRAINT panel_slot_usage_pkey PRIMARY KEY (id),
   CONSTRAINT panel_slot_usage_banner_slot_info_id_fkey FOREIGN KEY (banner_slot_id) REFERENCES public.banner_slots(id),
   CONSTRAINT panel_slot_usage_panel_info_id_fkey FOREIGN KEY (panel_id) REFERENCES public.panels(id),
-  CONSTRAINT panel_slot_usage_display_type_id_fkey FOREIGN KEY (display_type_id) REFERENCES public.display_types(id),
-  CONSTRAINT panel_slot_usage_banner_slot_id_fkey FOREIGN KEY (banner_slot_id) REFERENCES public.banner_slots(id)
+  CONSTRAINT panel_slot_usage_banner_slot_id_fkey FOREIGN KEY (banner_slot_id) REFERENCES public.banner_slots(id),
+  CONSTRAINT panel_slot_usage_display_type_id_fkey FOREIGN KEY (display_type_id) REFERENCES public.display_types(id)
 );
 CREATE TABLE public.panels (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   display_type_id uuid,
-  post_code text UNIQUE,
   region_gu_id uuid,
   region_dong_id uuid,
   nickname text NOT NULL,
   address text,
   photo_url text,
-  location_url text,
-  map_url text,
   latitude numeric,
   longitude numeric,
   panel_status USER-DEFINED DEFAULT 'active'::panel_status_enum,
@@ -418,9 +414,9 @@ CREATE TABLE public.panels (
   max_banner integer DEFAULT 1,
   notes text,
   CONSTRAINT panels_pkey PRIMARY KEY (id),
-  CONSTRAINT panels_region_dong_id_fkey FOREIGN KEY (region_dong_id) REFERENCES public.region_dong(id),
+  CONSTRAINT panels_display_type_id_fkey FOREIGN KEY (display_type_id) REFERENCES public.display_types(id),
   CONSTRAINT panels_region_gu_id_fkey FOREIGN KEY (region_gu_id) REFERENCES public.region_gu(id),
-  CONSTRAINT panels_display_type_id_fkey FOREIGN KEY (display_type_id) REFERENCES public.display_types(id)
+  CONSTRAINT panels_region_dong_id_fkey FOREIGN KEY (region_dong_id) REFERENCES public.region_dong(id)
 );
 CREATE TABLE public.panels_backup (
   id uuid,
@@ -475,8 +471,8 @@ CREATE TABLE public.payments (
   is_require_tax_filing boolean,
   is_agreed_caution boolean,
   CONSTRAINT payments_pkey PRIMARY KEY (id),
-  CONSTRAINT payments_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
-  CONSTRAINT payments_payment_method_id_fkey FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id)
+  CONSTRAINT payments_payment_method_id_fkey FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id),
+  CONSTRAINT payments_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id)
 );
 CREATE TABLE public.public_design_contents (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -526,8 +522,8 @@ CREATE TABLE public.region_gu_display_periods (
   year_month character varying NOT NULL,
   period USER-DEFINED,
   CONSTRAINT region_gu_display_periods_pkey PRIMARY KEY (id),
-  CONSTRAINT region_gu_display_periods_region_gu_id_fkey FOREIGN KEY (region_gu_id) REFERENCES public.region_gu(id),
-  CONSTRAINT region_gu_display_periods_display_type_id_fkey FOREIGN KEY (display_type_id) REFERENCES public.display_types(id)
+  CONSTRAINT region_gu_display_periods_display_type_id_fkey FOREIGN KEY (display_type_id) REFERENCES public.display_types(id),
+  CONSTRAINT region_gu_display_periods_region_gu_id_fkey FOREIGN KEY (region_gu_id) REFERENCES public.region_gu(id)
 );
 CREATE TABLE public.region_gu_guideline (
   id uuid NOT NULL DEFAULT gen_random_uuid(),

@@ -55,13 +55,13 @@ const FAQ = () => {
   useEffect(() => {
     const fetchFaqData = async () => {
       try {
-        const response = await fetch('/api/customer-service/faq');
+        const response = await fetch('/api/frequent-questions');
         const data = await response.json();
 
         if (data.faqs) {
           // 카테고리별로 그룹화
           const groupedData = data.faqs.reduce(
-            (acc: FAQItem[], faq: FaqDataItem) => {
+            (acc: FAQItem[], faq: any) => {
               const categoryName = translateCategory(
                 faq.homepage_menu_types.name
               );

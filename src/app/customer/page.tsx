@@ -116,12 +116,24 @@ export default function CustomerPage() {
 
       setFaqLoading(true);
       try {
-        const response = await fetch(
-          `/api/customer-service/faq?category=${encodeURIComponent(activeFaq)}`
-        );
+        // 모든 FAQ 데이터를 가져와서 클라이언트에서 카테고리별로 필터링
+        const response = await fetch('/api/frequent-questions');
         const data = await response.json();
         if (data.faqs) {
-          setFaqs(data.faqs);
+          // 선택된 카테고리에 해당하는 FAQ만 필터링
+          const categoryMapping: { [key: string]: string } = {
+            디지털미디어: 'digital_signage',
+            공공디자인: 'public_design',
+            LED전자게시대: 'led_display',
+            현수막게시대: 'banner_display',
+          };
+
+          const selectedCategory = categoryMapping[activeFaq];
+          const filteredFaqs = data.faqs.filter(
+            (faq: any) => faq.homepage_menu_types.name === selectedCategory
+          );
+          
+          setFaqs(filteredFaqs);
         }
       } catch (error) {
         console.error('FAQ 조회 오류:', error);
