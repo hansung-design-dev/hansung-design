@@ -169,6 +169,14 @@ export default function DisplayDetailPage({
   const currentSetPanelTypeFilter =
     setPanelTypeFilter || setInternalPanelTypeFilter;
 
+  console.log('🔍 탭 상태 확인:', {
+    panelTypeFilter,
+    internalPanelTypeFilter,
+    currentPanelTypeFilter,
+    hasSetPanelTypeFilter: !!setPanelTypeFilter,
+    hasSetInternalPanelTypeFilter: !!setInternalPanelTypeFilter,
+  });
+
   const { dispatch } = useCart();
   const { profiles } = useProfile();
   const { user } = useAuth();
@@ -332,18 +340,14 @@ export default function DisplayDetailPage({
   // 송파구, 용산구 필터에 따른 데이터 필터링 (banner_slots의 banner_type 사용)
   const filteredByPanelType = isSongpaOrYongsan
     ? filteredByMapo.filter((item) => {
-        // banner_slots에서 banner_type 확인
+        // banner_slots에서 slot_number 확인
         if (item.type === 'banner' && item.banner_slots) {
           if (currentPanelTypeFilter === 'top_fixed') {
-            // 상단광고 탭: banner_type이 'top_fixed'인 슬롯이 있는 아이템만 (송파구만)
-            return item.banner_slots.some(
-              (slot) => slot.banner_type === 'top_fixed'
-            );
+            // 상단광고 탭: slot_number가 0인 슬롯이 있는 아이템만
+            return item.banner_slots.some((slot) => slot.slot_number === 0);
           } else if (currentPanelTypeFilter === 'panel') {
-            // 현수막게시대 탭: banner_type이 'panel'인 슬롯이 있는 아이템
-            return item.banner_slots.some(
-              (slot) => slot.banner_type === 'panel'
-            );
+            // 현수막게시대 탭: slot_number가 0보다 큰 슬롯이 있는 아이템
+            return item.banner_slots.some((slot) => slot.slot_number > 0);
           } else if (currentPanelTypeFilter === 'semi_auto') {
             // 반자동 탭: banner_type이 'semi_auto'인 슬롯이 있는 아이템 (용산구만)
             return item.banner_slots.some(
@@ -1226,7 +1230,7 @@ export default function DisplayDetailPage({
             <div className="flex items-center gap-4 border-b border-gray-200 pb-4">
               <button
                 onClick={() => setMapoFilter('yeollip')}
-                className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-6 font-medium ${
+                className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-6 font-medium cursor-pointer ${
                   mapoFilter === 'yeollip'
                     ? 'text-white bg-pink-500 rounded-full '
                     : 'text-gray-600 hover:text-gray-800'
@@ -1236,7 +1240,7 @@ export default function DisplayDetailPage({
               </button>
               <button
                 onClick={() => setMapoFilter('jeodan')}
-                className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-6 font-medium ${
+                className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-6 font-medium cursor-pointer ${
                   mapoFilter === 'jeodan'
                     ? 'text-white bg-pink-500 rounded-full '
                     : 'text-gray-600 hover:text-gray-800'
@@ -1246,7 +1250,7 @@ export default function DisplayDetailPage({
               </button>
               <button
                 onClick={() => setMapoFilter('simin')}
-                className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-6 font-medium ${
+                className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-6 font-medium cursor-pointer ${
                   mapoFilter === 'simin'
                     ? 'text-white bg-pink-500 rounded-full '
                     : 'text-gray-600 hover:text-gray-800'
@@ -1278,8 +1282,15 @@ export default function DisplayDetailPage({
           <div className="mb-8">
             <div className="flex items-center gap-4 border-b border-gray-200 pb-4">
               <button
-                onClick={() => currentSetPanelTypeFilter('panel')}
-                className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-6 font-medium ${
+                onClick={() => {
+                  console.log(
+                    '🔍 현수막게시대 탭 클릭 - 변경 전:',
+                    currentPanelTypeFilter
+                  );
+                  currentSetPanelTypeFilter('panel');
+                  console.log('🔍 현수막게시대 탭 클릭 - 변경 후 요청됨');
+                }}
+                className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-6 font-medium cursor-pointer ${
                   currentPanelTypeFilter === 'panel'
                     ? 'text-white bg-black rounded-full '
                     : 'text-gray-600 hover:text-gray-800'
@@ -1288,8 +1299,15 @@ export default function DisplayDetailPage({
                 현수막게시대
               </button>
               <button
-                onClick={() => currentSetPanelTypeFilter('top_fixed')}
-                className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-6 font-medium ${
+                onClick={() => {
+                  console.log(
+                    '🔍 상단광고 탭 클릭 - 변경 전:',
+                    currentPanelTypeFilter
+                  );
+                  currentSetPanelTypeFilter('top_fixed');
+                  console.log('🔍 상단광고 탭 클릭 - 변경 후 요청됨');
+                }}
+                className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-6 font-medium cursor-pointer ${
                   currentPanelTypeFilter === 'top_fixed'
                     ? 'text-white bg-black rounded-full '
                     : 'text-gray-600 hover:text-gray-800'

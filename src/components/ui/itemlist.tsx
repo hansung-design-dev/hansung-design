@@ -187,7 +187,7 @@ const ItemList: React.FC<ItemTableProps> = ({
                 {showCheckbox && <th className="w-10"></th>}
                 <th className="text-center pl-4">No</th>
                 <th className="text-left pl-4">게시대 명</th>
-                <th className="text-center pl-4"></th>
+
                 <th className="text-center pl-4">규격(cm)</th>
                 {!hideQuantityColumns && (
                   <th className="text-center pl-4">면수</th>
