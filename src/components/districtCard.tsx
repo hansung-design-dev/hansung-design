@@ -105,8 +105,8 @@ export default function DistrictCard({
                 <Image
                   src={logoUrl}
                   alt={district.name}
-                  width={300}
-                  height={300}
+                  width={600}
+                  height={600}
                   className="w-[2.375rem] h-[2.375rem] bg-white rounded-md"
                   onError={() => setImageError(true)}
                 />
@@ -166,8 +166,8 @@ export default function DistrictCard({
               <Image
                 src={logoUrl}
                 alt={district.name}
-                width={300}
-                height={300}
+                width={600}
+                height={600}
                 className="w-[2.375rem] h-[2.375rem] bg-white rounded-md"
                 onError={() => setImageError(true)}
               />
