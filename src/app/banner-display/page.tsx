@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import DistrictCard from '@/src/components/districtCard';
 import DistrictCardSkeleton from '@/src/components/skeleton/DistrictCardSkeleton';
 import DraggableNoticePopup from '@/src/components/DraggableNoticePopup';
@@ -250,12 +251,22 @@ export default function BannerDisplayPage() {
     <main className="min-h-screen bg-white">
       {/* Fixed Header - Always visible */}
       <section className="lg:container lg:mx-auto lg:px-[8rem] sm:px-[1.5rem] pt-[6rem] pb-[3rem]">
-        <h1 className="text-3.75 sm:text-2.5 font-[700] mb-4 font-gmarket">
-          현수막게시대
-        </h1>
-        <p className="text-1.25 font-[500] sm:text-1 text-gray-600">
-          지역상권 활성화, 합리적인 광고
-        </p>
+        <div className="flex items-start gap-4">
+          <div>
+            <h1 className="text-3.75 sm:text-2.5 font-[700] mb-4 font-gmarket">
+              현수막게시대
+            </h1>
+            <p className="text-1.25 font-[500] sm:text-1 text-gray-600">
+              지역상권 활성화, 합리적인 광고
+            </p>
+          </div>
+          <Link
+            href="/installation-photos"
+            className="inline-flex items-center whitespace-nowrap rounded-md border-solid border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 mt-8"
+          >
+            게첨사진 보기
+          </Link>
+        </div>
       </section>
 
       <section className=" mx-auto  mb-12">
