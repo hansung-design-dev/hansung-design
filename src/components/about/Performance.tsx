@@ -149,16 +149,16 @@ const performanceData = [
 export default function Performance() {
   return (
     <section id="performance" className="py-20 ">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-4 px-4 sm:px-6 lg:px-8">
         {/* 섹션 제목 */}
         <SectionTitle title="실적내역" />
 
         {/* 카드 그리드 */}
-        <div className="grid gap-4 lg:gap-6 md:gap-8 mx-auto place-items-center sm:grid-cols-2 md:grid-cols-[repeat(3,minmax(0,1fr))] lg:grid-cols-[repeat(3,minmax(0,1fr))] max-w-4xl">
+        <div className="grid gap-4 lg:gap-6 md:gap-8 mx-auto place-items-center sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 max-w-6xl">
           {performanceData.map((item, index) => (
             <div
               key={index}
-              className="flex lg:w-[14rem] md:w-[14rem] sm:w-[14rem] h-[4rem] sm:h-[4rem] md:h-[3rem] lg:h-[3rem] p-[1rem_0.5rem] sm:p-[1.5rem_1rem] md:p-[2rem_1.5rem] lg:p-[2.5rem_2rem] flex-col justify-center items-center gap-[0.625rem] bg-white rounded-[1.25rem] shadow-lg"
+              className="flex lg:w-[13rem] md:w-[12.5rem] sm:w-[12.3rem] h-[4rem] sm:h-[4rem] md:h-[3rem] lg:h-[3rem] p-[1rem_0.5rem] sm:p-[1.5rem_1rem] md:p-[2rem_1.5rem] lg:p-[2.5rem_2rem] flex-col justify-center items-center gap-[0.625rem] bg-white rounded-[1.25rem] shadow-lg"
             >
               <h3
                 className="text-[1.125rem] font-700 text-center"
