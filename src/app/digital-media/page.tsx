@@ -210,15 +210,16 @@ const digitalSignageItems: DigitalSignageItem[] = [
     id: 'outdoor-wall',
     title: '옥외형 벽부타입',
     src: '/images/digital-media/digital_signage/14_옥외형 벽부형.jpg',
-    images: [
-      '/images/digital-media/digital_signage/14_옥외형 벽부형.jpg',
-      '/images/digital-media/digital_signage/14_옥외형 스탠드형2.png',
-    ],
+    images: ['/images/digital-media/digital_signage/14_옥외형 벽부형.jpg'],
   },
   {
     id: 'outdoor-stand',
     title: '옥외형 스탠드타입',
     src: '/images/digital-media/digital_signage/15_옥외형 스탠드형1.jpg',
+    images: [
+      '/images/digital-media/digital_signage/15_옥외형 스탠드형1.jpg',
+      '/images/digital-media/digital_signage/14_옥외형 스탠드형2.png',
+    ],
   },
   {
     id: 'led-display',

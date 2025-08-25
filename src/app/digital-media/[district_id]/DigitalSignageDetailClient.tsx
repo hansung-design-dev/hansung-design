@@ -246,7 +246,7 @@ export default function DigitalSignageDetailClient({
       <section className="lg:container lg:mx-auto lg:px-[8rem] sm:px-[1.5rem] pb-[6rem]">
         <div className="grid lg:grid-cols-2 gap-12 sm:grid-cols-1">
           {/* Product Image */}
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 ">
             {productData.images && productData.images.length > 1 ? (
               <DetailImageSlider
                 images={productData.images}
@@ -263,7 +263,7 @@ export default function DigitalSignageDetailClient({
                 />
               </div>
             )}
-            <div className="text-red text-sm">
+            <div className="text-red text-sm text-center">
               * 제품 이미지는 제조공정으로 인해 약간의 차이는 있습니다.
             </div>
           </div>

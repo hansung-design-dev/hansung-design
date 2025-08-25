@@ -118,7 +118,7 @@ export default function InstallationPhotosPage() {
                                     }`}
                                     width={400}
                                     height={300}
-                                    className="w-[20rem] h-auto rounded-lg shadow-sm"
+                                    className="w-[30rem] h-auto rounded-lg shadow-sm"
                                     onError={(e) => {
                                       const target =
                                         e.target as HTMLImageElement;

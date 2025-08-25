@@ -262,7 +262,7 @@ export default function BannerDisplayPage() {
           </div>
           <Link
             href="/installation-photos"
-            className="inline-flex items-center whitespace-nowrap rounded-md border-solid border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 mt-8"
+            className="inline-flex items-center whitespace-nowrap rounded-md border-solid border-black px-4 py-2 text-sm font-medium text-white bg-black hover:bg-gray-700 mt-8 hover:border-gray-600"
           >
             게첨사진 보기
           </Link>
