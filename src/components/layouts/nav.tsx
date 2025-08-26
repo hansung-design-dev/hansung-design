@@ -232,8 +232,8 @@ const Nav = ({ className = 'sm:px-[1.5rem]', isbg, TextInvert }: NavProps) => {
   }, []);
 
   const getMenuItemStyles = (isSelected: boolean) => {
-    if (isSelected) return 'bg-black text-white rounded-full px-4 py-2';
-    return 'bg-white text-black rounded-full px-4 py-2';
+    if (isSelected) return 'bg-black text-white rounded-full px-3 py-2';
+    return 'bg-white text-black rounded-full px-0 py-2';
   };
 
   useEffect(() => {
@@ -266,7 +266,7 @@ const Nav = ({ className = 'sm:px-[1.5rem]', isbg, TextInvert }: NavProps) => {
 
           {/* ✅ 데스크탑/태블릿 메뉴 (md 이상부터) */}
           <div className="hidden md:flex items-center space-x-8">
-            <div className="flex items-center lg:gap-[4rem] md:gap-[2rem] ">
+            <div className="flex items-center lg:gap-[3rem] md:gap-[1rem]">
               {menuItems.map((item) => {
                 const isSelected =
                   pathname === item.href ||
@@ -275,7 +275,7 @@ const Nav = ({ className = 'sm:px-[1.5rem]', isbg, TextInvert }: NavProps) => {
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`lg:text-0.85 md:text-0.75 sm:text-0.75  transition-colors duration-100  ${getMenuItemStyles(
+                    className={`lg:text-[1rem] md:text-[0.8rem] sm:text-0.75  transition-colors duration-100  ${getMenuItemStyles(
                       isSelected
                     )}`}
                   >

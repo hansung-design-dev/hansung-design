@@ -17,12 +17,14 @@ interface KakaoMapProps {
   markers: MarkerType[];
   selectedIds: string[];
   center?: { lat: number; lng: number };
+  onMarkerClick?: (markerId: string) => void; // 마커 클릭 이벤트 추가
 }
 
 const KakaoMap: React.FC<KakaoMapProps> = ({
   markers,
   selectedIds,
   center,
+  onMarkerClick,
 }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +38,7 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
     lat: number;
     lng: number;
   } | null>(null);
+  const [roadviewError, setRoadviewError] = useState<string | null>(null);
 
   useKakaoLoader();
 
@@ -81,13 +84,39 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
 
   // 로드뷰 오버레이 열기
   const openRoadview = (lat: number, lng: number) => {
+    console.log('🔍 로드뷰 열기 시도:', { lat, lng });
+    setRoadviewError(null);
     setRoadviewPosition({ lat, lng });
     setRoadviewVisible(true);
   };
+
   // 로드뷰 오버레이 닫기
   const closeRoadview = () => {
+    console.log('🔍 로드뷰 닫기');
     setRoadviewVisible(false);
     setRoadviewPosition(null);
+    setRoadviewError(null);
+  };
+
+  // 마커 클릭 핸들러
+  const handleMarkerClick = (markerId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    console.log('🔍 마커 클릭:', markerId);
+    if (onMarkerClick) {
+      onMarkerClick(markerId);
+    }
+  };
+
+  // 로드뷰 버튼 클릭 핸들러
+  const handleRoadviewClick = (
+    lat: number,
+    lng: number,
+    e: React.MouseEvent
+  ) => {
+    e.stopPropagation();
+    e.preventDefault();
+    console.log('🔍 로드뷰 버튼 클릭:', { lat, lng });
+    openRoadview(lat, lng);
   };
 
   // 중심점 계산
@@ -176,6 +205,7 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
               position={{ lat: marker.lat, lng: marker.lng }}
             >
               <div
+                onClick={(e) => handleMarkerClick(marker.id, e)}
                 style={{
                   padding: '8px 12px',
                   backgroundColor: isSelected ? '#238CFA' : '#666',
@@ -187,6 +217,7 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
                   boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
                   minWidth: '60px',
                   textAlign: 'center',
+                  cursor: 'pointer',
                 }}
               >
                 {marker.title.length > 10
@@ -194,32 +225,34 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
                   : marker.title}
                 {isSelected && (
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openRoadview(marker.lat, marker.lng);
-                    }}
+                    onClick={(e) =>
+                      handleRoadviewClick(marker.lat, marker.lng, e)
+                    }
                     style={{
                       display: 'block',
-                      marginTop: '4px',
-                      padding: '2px 6px',
-                      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                      marginTop: '6px',
+                      padding: '4px 8px',
+                      backgroundColor: 'rgba(255, 255, 255, 0.9)',
                       border: '1px solid rgba(255, 255, 255, 0.3)',
-                      borderRadius: '3px',
-                      color: 'white',
-                      fontSize: '10px',
+                      borderRadius: '4px',
+                      color: '#238CFA',
+                      fontSize: '11px',
+                      fontWeight: 'bold',
                       cursor: 'pointer',
                       width: '100%',
+                      transition: 'all 0.2s ease',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor =
-                        'rgba(255, 255, 255, 0.3)';
+                      e.currentTarget.style.backgroundColor = 'white';
+                      e.currentTarget.style.transform = 'scale(1.05)';
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.backgroundColor =
-                        'rgba(255, 255, 255, 0.2)';
+                        'rgba(255, 255, 255, 0.9)';
+                      e.currentTarget.style.transform = 'scale(1)';
                     }}
                   >
-                    로드뷰 보기
+                    🚗 로드뷰 보기
                   </button>
                 )}
               </div>
@@ -229,7 +262,25 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
       </Map>
       {/* 로드뷰 오버레이 */}
       {roadviewVisible && roadviewPosition && (
-        <RoadviewOverlay position={roadviewPosition} onClose={closeRoadview} />
+        <RoadviewOverlay
+          position={roadviewPosition}
+          onClose={closeRoadview}
+          onError={setRoadviewError}
+        />
+      )}
+      {/* 로드뷰 에러 메시지 */}
+      {roadviewError && (
+        <div className="absolute top-4 left-4 right-4 z-40 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          <div className="flex justify-between items-center">
+            <span>{roadviewError}</span>
+            <button
+              onClick={() => setRoadviewError(null)}
+              className="text-red-700 hover:text-red-900"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -239,70 +290,117 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
 interface RoadviewOverlayProps {
   position: { lat: number; lng: number };
   onClose: () => void;
+  onError: (error: string | null) => void;
 }
 
 const RoadviewOverlay: React.FC<RoadviewOverlayProps> = ({
   position,
   onClose,
+  onError,
 }) => {
   const roadviewRef = useRef<HTMLDivElement>(null);
-  const roadviewInstanceRef = useRef<{ destroy: () => void } | null>(null);
+  const roadviewInstanceRef = useRef<kakao.maps.Roadview | null>(null);
 
   useEffect(() => {
-    if (!roadviewRef.current || !window.kakao || !window.kakao.maps) return;
-    // 기존 인스턴스 제거
-    if (
-      roadviewInstanceRef.current &&
-      typeof roadviewInstanceRef.current.destroy === 'function'
-    ) {
-      roadviewInstanceRef.current.destroy();
+    if (!roadviewRef.current || !window.kakao || !window.kakao.maps) {
+      console.error('❌ 로드뷰 초기화 실패: 필수 조건 불충족');
+      onError('로드뷰를 초기화할 수 없습니다.');
+      return;
     }
-    // 새 인스턴스 생성
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const roadview = new (window.kakao.maps.Roadview as any)(
-      roadviewRef.current,
-      {
+
+    console.log('🔍 로드뷰 인스턴스 생성 시작:', position);
+
+    try {
+      // 기존 인스턴스 제거
+      if (roadviewInstanceRef.current) {
+        console.log('🔍 기존 로드뷰 인스턴스 제거');
+        roadviewInstanceRef.current = null;
+      }
+
+      // 새 인스턴스 생성
+      const roadview = new window.kakao.maps.Roadview(roadviewRef.current, {
         position: new window.kakao.maps.LatLng(position.lat, position.lng),
         pov: { pan: 0, tilt: 0, zoom: 1 },
-      } as kakao.maps.RoadviewOptions
-    );
-    roadviewInstanceRef.current = roadview as { destroy: () => void };
+      } as kakao.maps.RoadviewOptions);
+
+      roadviewInstanceRef.current = roadview;
+      onError(null);
+      console.log('✅ 로드뷰 인스턴스 생성 성공');
+
+      // 로드뷰 로드 완료 이벤트
+      window.kakao.maps.event.addListener(roadview, 'init', () => {
+        console.log('✅ 로드뷰 초기화 완료');
+      });
+
+      // 로드뷰 에러 이벤트
+      window.kakao.maps.event.addListener(
+        roadview,
+        'error',
+        (error: unknown) => {
+          console.error('❌ 로드뷰 에러:', error);
+          onError(
+            '로드뷰를 불러올 수 없습니다. 해당 위치에서 로드뷰가 제공되지 않을 수 있습니다.'
+          );
+        }
+      );
+    } catch (error) {
+      console.error('❌ 로드뷰 인스턴스 생성 실패:', error);
+      onError('로드뷰를 생성할 수 없습니다.');
+    }
+
     return () => {
-      if (
-        roadviewInstanceRef.current &&
-        typeof roadviewInstanceRef.current.destroy === 'function'
-      ) {
-        roadviewInstanceRef.current.destroy();
+      if (roadviewInstanceRef.current) {
+        console.log('🔍 로드뷰 인스턴스 정리');
         roadviewInstanceRef.current = null;
       }
     };
-  }, [position]);
+  }, [position, onError]);
 
   return (
     <div
       className="absolute inset-0 z-20 bg-white shadow-xl flex flex-col"
-      style={{ minWidth: 0, minHeight: 0 }}
+      style={{
+        minWidth: 0,
+        minHeight: 0,
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+      }}
     >
-      <button
-        onClick={onClose}
-        className="absolute top-4 right-4 z-30 bg-white rounded-full p-2 shadow-lg hover:bg-gray-100 transition-colors"
-        style={{ width: '40px', height: '40px' }}
-      >
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+      <div className="flex items-center justify-between p-3 border-b bg-gray-50">
+        <h3 className="text-sm font-semibold text-gray-800">
+          로드뷰 - {position.lat.toFixed(6)}, {position.lng.toFixed(6)}
+        </h3>
+        <button
+          onClick={onClose}
+          className="bg-white rounded-full p-1.5 shadow-lg hover:bg-gray-100 transition-colors"
+          style={{ width: '32px', height: '32px' }}
         >
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
-      <div ref={roadviewRef} style={{ width: '100%', height: '100%' }} />
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div
+        ref={roadviewRef}
+        style={{
+          width: '100%',
+          height: 'calc(100% - 60px)',
+          flex: 1,
+        }}
+      />
     </div>
   );
 };

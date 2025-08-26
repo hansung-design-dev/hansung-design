@@ -473,7 +473,14 @@ export default function LEDDisplayDetailPage({
               />
             </div>
             <div className="mt-4">
-              <h3 className="text-1 font-medium">{item.name}</h3>
+              <h3 className="text-1 font-medium">
+                {item.name}
+                {item.maintenance_notes && (
+                  <span className="text-pink-500 text-sm ml-2">
+                    ({item.maintenance_notes})
+                  </span>
+                )}
+              </h3>
               <p className="text-0.875 text-gray-600">{item.neighborhood}</p>
             </div>
           </div>
@@ -585,7 +592,14 @@ export default function LEDDisplayDetailPage({
                   </div>
                   <div className="p-4">
                     <div className="flex gap-2 mb-2"></div>
-                    <h3 className="text-1 font-medium">{item.name}</h3>
+                    <h3 className="text-1 font-medium">
+                      {item.name}
+                      {item.maintenance_notes && (
+                        <span className="text-pink-500 text-sm ml-2">
+                          ({item.maintenance_notes})
+                        </span>
+                      )}
+                    </h3>
                     <p className="text-0.875 text-gray-600">
                       {item.neighborhood}
                     </p>

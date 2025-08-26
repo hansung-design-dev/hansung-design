@@ -986,6 +986,11 @@ export default function DisplayDetailPage({
                     {item.neighborhood}
                   </span>
                 )}
+                {item.maintenance_notes && (
+                  <span className="text-pink-500 text-sm ml-2">
+                    ({item.maintenance_notes})
+                  </span>
+                )}
               </h3>
               <p className="text-0.875 text-gray-600">{item.neighborhood}</p>
             </div>
@@ -1105,6 +1110,11 @@ export default function DisplayDetailPage({
                           {item.neighborhood}
                         </span>
                       )}
+                      {item.maintenance_notes && (
+                        <span className="text-pink-500 text-sm ml-2">
+                          ({item.maintenance_notes})
+                        </span>
+                      )}
                     </h3>
                     <p className="text-0.875 text-gray-600">
                       {item.neighborhood}
@@ -1132,6 +1142,18 @@ export default function DisplayDetailPage({
                 markers={mapMarkers}
                 selectedIds={selectedIds}
                 center={mapCenter}
+                onMarkerClick={(markerId) => {
+                  console.log('🔍 지도 마커 클릭:', markerId);
+                  // 지도 뷰에서는 단일 선택만 가능
+                  const alreadySelected = selectedIds.includes(markerId);
+                  if (alreadySelected) {
+                    // 이미 선택된 아이템을 클릭하면 선택 해제
+                    setSelectedIds([]);
+                  } else {
+                    // 새로운 아이템을 선택하면 이전 선택을 모두 해제하고 새 아이템만 선택
+                    setSelectedIds([markerId]);
+                  }
+                }}
               />
             </div>
           </div>

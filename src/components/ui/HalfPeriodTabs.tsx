@@ -151,7 +151,7 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
           label: `${nextYear}년 ${nextMonth}월 상반기`,
         };
       } else {
-        // 27일 이후면 다음달 상반기 신청 가능
+        // 27일 이후면 다음달 상반기와 하반기 신청 가능
         const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
         const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
 
@@ -253,7 +253,7 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
           label: `${nextYear}년 ${nextMonth}월 상반기`,
         };
       } else {
-        // 23일 이후면 다음달 상반기 신청 가능
+        // 23일 이후면 다음달 상반기와 하반기 신청 가능
         const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
         const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
 
