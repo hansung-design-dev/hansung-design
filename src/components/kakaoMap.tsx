@@ -302,53 +302,100 @@ const RoadviewOverlay: React.FC<RoadviewOverlayProps> = ({
   const roadviewInstanceRef = useRef<kakao.maps.Roadview | null>(null);
 
   useEffect(() => {
-    if (!roadviewRef.current || !window.kakao || !window.kakao.maps) {
-      console.error('❌ 로드뷰 초기화 실패: 필수 조건 불충족');
-      onError('로드뷰를 초기화할 수 없습니다.');
-      return;
-    }
-
-    console.log('🔍 로드뷰 인스턴스 생성 시작:', position);
-
-    try {
-      // 기존 인스턴스 제거
-      if (roadviewInstanceRef.current) {
-        console.log('🔍 기존 로드뷰 인스턴스 제거');
-        roadviewInstanceRef.current = null;
+    // DOM이 준비될 때까지 대기
+    const initRoadview = () => {
+      if (!roadviewRef.current || !window.kakao || !window.kakao.maps) {
+        console.error('❌ 로드뷰 초기화 실패: 필수 조건 불충족');
+        onError('로드뷰를 초기화할 수 없습니다.');
+        return;
       }
 
-      // 새 인스턴스 생성
-      const roadview = new window.kakao.maps.Roadview(roadviewRef.current, {
-        position: new window.kakao.maps.LatLng(position.lat, position.lng),
-        pov: { pan: 0, tilt: 0, zoom: 1 },
-      } as kakao.maps.RoadviewOptions);
+      console.log('🔍 로드뷰 인스턴스 생성 시작:', position);
 
-      roadviewInstanceRef.current = roadview;
-      onError(null);
-      console.log('✅ 로드뷰 인스턴스 생성 성공');
-
-      // 로드뷰 로드 완료 이벤트
-      window.kakao.maps.event.addListener(roadview, 'init', () => {
-        console.log('✅ 로드뷰 초기화 완료');
-      });
-
-      // 로드뷰 에러 이벤트
-      window.kakao.maps.event.addListener(
-        roadview,
-        'error',
-        (error: unknown) => {
-          console.error('❌ 로드뷰 에러:', error);
-          onError(
-            '로드뷰를 불러올 수 없습니다. 해당 위치에서 로드뷰가 제공되지 않을 수 있습니다.'
-          );
+      try {
+        // 기존 인스턴스 제거
+        if (roadviewInstanceRef.current) {
+          console.log('🔍 기존 로드뷰 인스턴스 제거');
+          roadviewInstanceRef.current = null;
         }
-      );
-    } catch (error) {
-      console.error('❌ 로드뷰 인스턴스 생성 실패:', error);
-      onError('로드뷰를 생성할 수 없습니다.');
-    }
+
+        // 새 인스턴스 생성
+        const roadview = new window.kakao.maps.Roadview(roadviewRef.current, {
+          position: new window.kakao.maps.LatLng(position.lat, position.lng),
+          pov: { pan: 0, tilt: 0, zoom: 1 },
+        } as kakao.maps.RoadviewOptions);
+
+        roadviewInstanceRef.current = roadview;
+        onError(null);
+        console.log('✅ 로드뷰 인스턴스 생성 성공');
+
+        // 로드뷰가 제대로 로드되었는지 확인
+        setTimeout(() => {
+          if (roadviewInstanceRef.current) {
+            try {
+              const roadviewElement =
+                roadviewRef.current?.querySelector('iframe');
+              if (!roadviewElement) {
+                console.warn(
+                  '⚠️ 로드뷰 iframe이 생성되지 않았습니다. 재시도 중...'
+                );
+                // 로드뷰 재생성 시도
+                roadviewInstanceRef.current = null;
+                setTimeout(() => {
+                  initRoadview();
+                }, 500);
+              } else {
+                console.log('✅ 로드뷰 iframe 생성 확인됨');
+              }
+            } catch (error) {
+              console.error('❌ 로드뷰 상태 확인 실패:', error);
+            }
+          }
+        }, 2000);
+
+        // 로드뷰 로드 완료 이벤트
+        window.kakao.maps.event.addListener(roadview, 'init', () => {
+          console.log('✅ 로드뷰 초기화 완료');
+        });
+
+        // 로드뷰 에러 이벤트
+        window.kakao.maps.event.addListener(
+          roadview,
+          'error',
+          (error: unknown) => {
+            console.error('❌ 로드뷰 에러:', error);
+            onError(
+              '로드뷰를 불러올 수 없습니다. 해당 위치에서 로드뷰가 제공되지 않거나 네트워크 문제가 있을 수 있습니다.'
+            );
+          }
+        );
+
+        // 로드뷰 로드 타임아웃 설정
+        setTimeout(() => {
+          if (roadviewInstanceRef.current) {
+            const roadviewElement =
+              roadviewRef.current?.querySelector('iframe');
+            if (!roadviewElement) {
+              console.warn('⚠️ 로드뷰 로드 타임아웃');
+              onError(
+                '로드뷰 로딩이 시간 초과되었습니다. 잠시 후 다시 시도해주세요.'
+              );
+            }
+          }
+        }, 10000);
+      } catch (error) {
+        console.error('❌ 로드뷰 인스턴스 생성 실패:', error);
+        onError('로드뷰를 생성할 수 없습니다.');
+      }
+    };
+
+    // DOM이 준비될 때까지 대기
+    const timer = setTimeout(() => {
+      initRoadview();
+    }, 100);
 
     return () => {
+      clearTimeout(timer);
       if (roadviewInstanceRef.current) {
         console.log('🔍 로드뷰 인스턴스 정리');
         roadviewInstanceRef.current = null;
@@ -358,7 +405,7 @@ const RoadviewOverlay: React.FC<RoadviewOverlayProps> = ({
 
   return (
     <div
-      className="absolute inset-0 z-20 bg-white shadow-xl flex flex-col"
+      className="absolute inset-0 z-50 bg-white shadow-xl flex flex-col"
       style={{
         minWidth: 0,
         minHeight: 0,
@@ -370,9 +417,6 @@ const RoadviewOverlay: React.FC<RoadviewOverlayProps> = ({
       }}
     >
       <div className="flex items-center justify-between p-3 border-b bg-gray-50">
-        <h3 className="text-sm font-semibold text-gray-800">
-          로드뷰 - {position.lat.toFixed(6)}, {position.lng.toFixed(6)}
-        </h3>
         <button
           onClick={onClose}
           className="bg-white rounded-full p-1.5 shadow-lg hover:bg-gray-100 transition-colors"

@@ -54,7 +54,7 @@ export default function useKakaoLoader() {
 
     // 스크립트 태그 생성
     const script = document.createElement('script');
-    script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${appkey}&autoload=false&libraries=clusterer,drawing,services`;
+    script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${appkey}&autoload=false&libraries=clusterer,drawing,services,roadview`;
     script.async = true;
     script.defer = true;
 
@@ -82,7 +82,7 @@ export default function useKakaoLoader() {
   try {
     useKakaoLoaderOrigin({
       appkey: appkey,
-      libraries: ['clusterer', 'drawing', 'services'],
+      libraries: ['clusterer', 'drawing', 'services', 'roadview'],
     });
   } catch (error) {
     console.error('❌ react-kakao-maps-sdk 로더 실패:', error);

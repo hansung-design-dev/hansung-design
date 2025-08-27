@@ -3,7 +3,7 @@ import { supabase } from '@/src/lib/supabase';
 
 export async function GET() {
   try {
-    console.log('🔍 Checking all periods for 관악구...');
+    console.log('🔍 Checking all periods for 마포구...');
 
     // 1. banner_display의 display_type_id 찾기
     const { data: typeData, error: typeError } = await supabase
@@ -22,25 +22,25 @@ export async function GET() {
 
     console.log('✅ banner_display type found:', typeData);
 
-    // 2. 관악구의 region_gu_id 찾기 (banner_display용)
+    // 2. 마포구의 region_gu_id 찾기 (banner_display용)
     const { data: guData, error: guError } = await supabase
       .from('region_gu')
       .select('id, name')
-      .eq('name', '관악구')
+      .eq('name', '마포구')
       .eq('display_type_id', typeData.id)
       .single();
 
     if (guError || !guData) {
-      console.error('❌ Error finding 관악구:', guError);
+      console.error('❌ Error finding 마포구:', guError);
       return NextResponse.json(
-        { success: false, error: '관악구를 찾을 수 없습니다.' },
+        { success: false, error: '마포구를 찾을 수 없습니다.' },
         { status: 404 }
       );
     }
 
-    console.log('✅ 관악구 found:', guData);
+    console.log('✅ 마포구 found:', guData);
 
-    // 3. 관악구의 모든 기간 데이터 조회 (필터 없이)
+    // 3. 마포구의 모든 기간 데이터 조회 (필터 없이)
     const { data: allPeriods, error: periodError } = await supabase
       .from('region_gu_display_periods')
       .select('*')
@@ -56,7 +56,7 @@ export async function GET() {
       );
     }
 
-    console.log('✅ All periods for 관악구:', allPeriods);
+    console.log('✅ All periods for 마포구:', allPeriods);
 
     // 4. 현재 날짜 기준으로 7일 후 계산
     const now = new Date();
@@ -106,7 +106,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error('❌ Error in test-periods API:', error);
+    console.error('❌ Error in test-mapo-periods API:', error);
     return NextResponse.json(
       {
         success: false,

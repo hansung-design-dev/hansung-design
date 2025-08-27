@@ -92,11 +92,6 @@ export default function Patents() {
         {/* 섹션 제목 */}
         <SectionTitle title="특허·인증·허가" />
 
-        {/* 부제목 */}
-        <div className="text-center mb-12">
-          <h3 className="text-[3.125rem]  text-black">업계 내 최고의 전문성</h3>
-        </div>
-
         {/* 이미지 스크롤 영역 */}
         <div className="w-full">
           <div className="flex pb-4 gap-4 overflow-x-auto px-4">
@@ -108,7 +103,7 @@ export default function Patents() {
                 alt={item.alt}
                 width={262}
                 height={368}
-                className="w-[15rem] h-[20rem] object-cover rounded-lg"
+                className="w-[20rem] h-[25rem] object-cover rounded-lg"
               />
             ))}
           </div>

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/src/app/api/supabase';
+import { supabase } from '@/src/lib/supabase';
 
 export async function GET(request: NextRequest) {
   try {
@@ -70,19 +70,34 @@ export async function GET(request: NextRequest) {
       currentDate: formatDate(koreaTime),
     });
 
-    // 7일 제한을 적용하여 신청 가능한 기간만 필터링
-    const sevenDaysLater = new Date(
-      koreaTime.getTime() + 7 * 24 * 60 * 60 * 1000
-    );
-    const sevenDaysLaterStr = formatDate(sevenDaysLater);
+    if (periodError || !allPeriods) {
+      return NextResponse.json(
+        { success: false, error: '기간 데이터를 가져올 수 없습니다.' },
+        { status: 500 }
+      );
+    }
 
-    const availablePeriods =
-      allPeriods?.filter((period) => period.period_from >= sevenDaysLaterStr) ||
-      [];
+    // 구별 기간 설정에 따른 신청 가능 기간 계산
+    const isMapoOrGangbuk = district === '마포구' || district === '강북구';
+
+    // 7일 전 마감 로직: 게시 시작일 기준 7일 전까지 신청 가능
+    const availablePeriods = allPeriods.filter((period) => {
+      const periodStart = new Date(period.period_from);
+      const daysUntilPeriod = Math.ceil(
+        (periodStart.getTime() - koreaTime.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      console.log(
+        `🔍 Period ${period.period_from} - ${period.period_to}: ${daysUntilPeriod} days until start`
+      );
+
+      // 7일 이상 남았으면 신청 가능
+      return daysUntilPeriod >= 7;
+    });
 
     console.log(`🔍 Available periods after 7-day filter:`, {
       availablePeriods,
-      sevenDaysLater: sevenDaysLaterStr,
+      currentDate: formatDate(koreaTime),
     });
 
     // 최대 2개의 신청 가능한 기간만 반환
@@ -101,6 +116,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 기존 형식과 호환되도록 데이터 변환
+    // 첫 번째 기간을 first_half로, 두 번째 기간을 second_half로 매핑
     const currentPeriodData = {
       first_half_from: selectedPeriods[0]?.period_from || '',
       first_half_to: selectedPeriods[0]?.period_to || '',
@@ -115,8 +131,11 @@ export async function GET(request: NextRequest) {
       })),
     };
 
+    console.log(`🔍 Final period data for ${district}:`, currentPeriodData);
+
     return NextResponse.json({ success: true, data: currentPeriodData });
-  } catch {
+  } catch (error) {
+    console.error('❌ Error in display-period API:', error);
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
