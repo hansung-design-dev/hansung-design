@@ -85,20 +85,13 @@ export default function useKakaoLoader() {
     document.head.appendChild(script);
   }, [appkey, isManualLoading]);
 
-  // 기본 Hook 사용 (react-kakao-maps-sdk) - 하지만 실패할 경우를 대비
-  try {
-    console.log('🔍 react-kakao-maps-sdk 로더 사용 시도');
-    useKakaoLoaderOrigin({
-      appkey: appkey,
-      libraries: ['clusterer', 'drawing', 'services'],
-    });
-    console.log('✅ react-kakao-maps-sdk 로더 설정 완료');
-  } catch (error) {
-    console.error('❌ react-kakao-maps-sdk 로더 실패:', error);
-    // 실패 시 수동 로딩 시도
-    console.log('🔍 수동 로딩으로 전환...');
-    loadKakaoMapSDK();
-  }
+  // 기본 Hook 사용 (react-kakao-maps-sdk) - 항상 호출하되, 에러 처리는 useEffect에서
+  console.log('🔍 react-kakao-maps-sdk 로더 사용 시도');
+  useKakaoLoaderOrigin({
+    appkey: appkey,
+    libraries: ['clusterer', 'drawing', 'services'],
+  });
+  console.log('✅ react-kakao-maps-sdk 로더 설정 완료');
 
   useEffect(() => {
     // SSR 환경에서는 추가 로직 스킵

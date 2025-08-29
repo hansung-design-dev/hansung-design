@@ -77,9 +77,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 구별 기간 설정에 따른 신청 가능 기간 계산
-    const isMapoOrGangbuk = district === '마포구' || district === '강북구';
-
     // 7일 전 마감 로직: 게시 시작일 기준 7일 전까지 신청 가능
     const availablePeriods = allPeriods.filter((period) => {
       const periodStart = new Date(period.period_from);
