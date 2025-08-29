@@ -1295,7 +1295,7 @@ export default function DisplayDetailPage({
           <div className="mb-8">
             <div className="flex items-center gap-4  pb-4 text-blue-700 text-1 line-height-[1.5rem]">
               *시민.문화게시대 게첨일은 매월 5일 <br /> *시민게시판은 1개 업체가
-              1회당 최대11개소(22먄)에 신청할수 있습니다. <br /> *포스터 신청은
+              1회당 최대11개소에 신청할수 있습니다. <br /> *포스터 신청은
               게첨일기준 전달인 매월 1일에 선착순 접수이며,방문제출입니다.{' '}
               <br />
               예)3월5일게첨일 신청분은 2월1일에 접수 <br /> *포스터는 신청자가
