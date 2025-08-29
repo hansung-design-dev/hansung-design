@@ -20,9 +20,9 @@ export default function Navigation({
 
   return (
     <nav className="sticky top-0 z-50 bg-[#302625] shadow-lg mt-10">
-      <div className="max-w-7xl px-2 sm:px-4 md:px-6 lg:px-8">
+      <div className="px-2 sm:px-4 md:px-6 lg:px-8">
         {/* 데스크톱 레이아웃 */}
-        <div className="hidden lg:flex items-center justify-between h-16 lg:gap-12 sm:gap-4 md:gap-8">
+        <div className="hidden  lg:flex  h-16  lg:gap-[10rem] xl:gap-[12rem] 2xl:gap-[15rem]">
           {/* 로고와 회사명 */}
           <div className="flex items-center space-x-2 xl:space-x-3 flex-shrink-0">
             <Image
@@ -38,12 +38,12 @@ export default function Navigation({
           </div>
 
           {/* 네비게이션 메뉴 */}
-          <div className="flex items-center justify-between  flex-1">
+          <div className="flex items-center lg:gap-[6rem] xl:gap-[10rem] 2xl:gap-[12rem]">
             {navItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => scrollToSection(item.id)}
-                className={`text-white px-2 xl:px-3 2xl:px-4 py-2 rounded-md text-[0.8rem] xl:text-[0.9rem] 2xl:text-[1rem] font-500 transition-colors duration-200 hover:text-blue-300 whitespace-nowrap ${
+                className={`text-white px-2 lg:px-4 xl:px-6 2xl:px-8 py-2 rounded-md text-[0.8rem] xl:text-[0.9rem] 2xl:text-[1rem] font-500 transition-colors duration-200 hover:text-blue-300 whitespace-nowrap ${
                   activeSection === item.id
                     ? 'text-blue-300 border-b-2 border-blue-300'
                     : ''

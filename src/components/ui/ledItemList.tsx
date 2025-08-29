@@ -149,44 +149,7 @@ const LEDItemList: React.FC<LEDItemTableProps> = ({
                       )}
                     </div>
                   </td>
-                  <td className="">
-                    <div className="flex gap-1">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          console.log('camera');
-                        }}
-                        title={`${item.nickname && item.nickname + ' - '}${
-                          item.address || ''
-                        }${item.neighborhood ? ' ' + item.neighborhood : ''}`}
-                      >
-                        <Image
-                          src={'/svg/list/camera.svg'}
-                          alt="camera"
-                          width={300}
-                          height={300}
-                          className="w-[0.7rem] h-[0.7rem] rounded-md bg-black p-1"
-                        />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          console.log('map');
-                        }}
-                        title={`${item.nickname && item.nickname + ' - '}${
-                          item.address || ''
-                        }${item.neighborhood ? ' ' + item.neighborhood : ''}`}
-                      >
-                        <Image
-                          src={'/svg/list/map.svg'}
-                          alt="map"
-                          width={300}
-                          height={300}
-                          className="w-[0.7rem] h-[0.7rem] rounded-md bg-black p-1"
-                        />
-                      </button>
-                    </div>
-                  </td>
+
                   <td className="text-center pl-4">
                     {item.slot_width_px} x {item.slot_height_px}
                   </td>

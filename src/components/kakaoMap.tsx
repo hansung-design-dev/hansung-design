@@ -26,11 +26,8 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
   center,
   onMarkerClick,
 }) => {
-  const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
-  const maxRetries = 100;
-  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   // 로드뷰 오버레이 상태
   const [roadviewVisible, setRoadviewVisible] = useState(false);
@@ -42,49 +39,62 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
 
   useKakaoLoader();
 
+  // 카카오맵 로딩 체크 개선
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const checkKakaoMapLoaded = () => {
+
+    const checkKakaoMapLoading = () => {
       if (window.kakao && window.kakao.maps) {
-        setIsLoaded(true);
+        console.log('✅ 카카오맵 SDK 로딩 완료');
+        setIsLoading(false);
         setError(null);
-        return;
-      }
-      if (retryCount < maxRetries) {
-        retryTimeoutRef.current = setTimeout(() => {
-          setRetryCount((prev) => prev + 1);
-        }, 200);
       } else {
+        console.log('⏳ 카카오맵 SDK 로딩 중...');
+        // 3초 후에도 로딩되지 않으면 에러 표시
         setTimeout(() => {
           if (!window.kakao || !window.kakao.maps) {
-            setError(
-              '카카오맵을 로딩할 수 없습니다. API 키와 도메인 설정을 확인해주세요.'
-            );
+            console.error('❌ 카카오맵 SDK 로딩 실패');
+            setError('카카오맵을 불러올 수 없습니다. API 키를 확인해주세요.');
+            setIsLoading(false);
           }
-        }, 30000);
+        }, 3000);
       }
     };
-    checkKakaoMapLoaded();
+
+    // 초기 체크
+    checkKakaoMapLoading();
+
+    // 주기적으로 체크 (최대 10초)
+    const interval = setInterval(() => {
+      if (window.kakao && window.kakao.maps) {
+        clearInterval(interval);
+        setIsLoading(false);
+        setError(null);
+      }
+    }, 1000);
+
+    // 10초 후 타임아웃
     const timeout = setTimeout(() => {
+      clearInterval(interval);
       if (!window.kakao || !window.kakao.maps) {
-        setTimeout(() => {
-          if (!window.kakao || !window.kakao.maps) {
-            setError(
-              '카카오맵을 로딩할 수 없습니다. API 키와 도메인 설정을 확인해주세요.'
-            );
-          }
-        }, 30000);
+        setError('카카오맵 로딩 시간이 초과되었습니다.');
+        setIsLoading(false);
       }
-    }, 30000);
+    }, 10000);
+
     return () => {
+      clearInterval(interval);
       clearTimeout(timeout);
-      if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
     };
-  }, [retryCount, maxRetries]);
+  }, []);
 
   // 로드뷰 오버레이 열기
   const openRoadview = (lat: number, lng: number) => {
     console.log('🔍 로드뷰 열기 시도:', { lat, lng });
+    console.log(
+      '🔍 카카오맵 API 키 확인:',
+      process.env.NEXT_PUBLIC_KAKAO_KEY ? '설정됨' : '설정되지 않음'
+    );
     setRoadviewError(null);
     setRoadviewPosition({ lat, lng });
     setRoadviewVisible(true);
@@ -141,12 +151,44 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
           <p className="text-sm text-gray-600 mb-4">
             개발자 도구의 콘솔을 확인하여 자세한 오류 정보를 확인하세요.
           </p>
+          <div className="text-xs text-gray-600 mb-4 text-left">
+            <p>🔍 디버그 정보:</p>
+            <p>
+              • API 키:{' '}
+              {process.env.NEXT_PUBLIC_KAKAO_KEY ? '설정됨' : '설정되지 않음'}
+            </p>
+            <p>
+              • 도메인:{' '}
+              {typeof window !== 'undefined' ? window.location.hostname : 'SSR'}
+            </p>
+            <p>• 환경: {process.env.NODE_ENV}</p>
+            <p>
+              • kakao 객체:{' '}
+              {typeof window !== 'undefined'
+                ? window.kakao
+                  ? '존재'
+                  : '없음'
+                : 'SSR'}
+            </p>
+            <p>
+              • kakao.maps:{' '}
+              {typeof window !== 'undefined'
+                ? window.kakao?.maps
+                  ? '존재'
+                  : '없음'
+                : 'SSR'}
+            </p>
+          </div>
+          <p className="text-xs text-orange-600 mb-4">
+            💡 카카오맵 API 키가 설정되지 않았을 수 있습니다.
+            <br />
+            .env.local 파일에 NEXT_PUBLIC_KAKAO_KEY를 추가해주세요.
+          </p>
           <div className="space-y-2">
             <button
               onClick={() => {
                 setError(null);
-                setIsLoaded(false);
-                setRetryCount(0);
+                window.location.reload();
               }}
               className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors mr-2"
             >
@@ -171,20 +213,13 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
     );
   }
 
-  if (!isLoaded) {
+  // 로딩 중일 때 스켈레톤 표시
+  if (isLoading) {
     return (
-      <div className="w-full h-80 flex items-center justify-center bg-gray-100 rounded-lg">
+      <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-lg">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
-          <p className="text-gray-600 mb-1">카카오맵을 로딩 중입니다...</p>
-          <p className="text-xs text-gray-500">
-            재시도 횟수: {retryCount}/{maxRetries}
-          </p>
-          {retryCount > 50 && (
-            <p className="text-xs text-orange-500 mt-2">
-              로딩이 오래 걸리고 있습니다. 잠시만 기다려주세요...
-            </p>
-          )}
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">카카오맵 로딩 중...</p>
         </div>
       </div>
     );
@@ -300,6 +335,7 @@ const RoadviewOverlay: React.FC<RoadviewOverlayProps> = ({
 }) => {
   const roadviewRef = useRef<HTMLDivElement>(null);
   const roadviewInstanceRef = useRef<kakao.maps.Roadview | null>(null);
+  const retryCountRef = useRef(0);
 
   useEffect(() => {
     // DOM이 준비될 때까지 대기
@@ -310,6 +346,9 @@ const RoadviewOverlay: React.FC<RoadviewOverlayProps> = ({
         return;
       }
 
+      // 재시도 카운터 리셋
+      retryCountRef.current = 0;
+
       console.log('🔍 로드뷰 인스턴스 생성 시작:', position);
 
       try {
@@ -317,6 +356,11 @@ const RoadviewOverlay: React.FC<RoadviewOverlayProps> = ({
         if (roadviewInstanceRef.current) {
           console.log('🔍 기존 로드뷰 인스턴스 제거');
           roadviewInstanceRef.current = null;
+        }
+
+        // 로드뷰 컨테이너 초기화
+        if (roadviewRef.current) {
+          roadviewRef.current.innerHTML = '';
         }
 
         // 새 인스턴스 생성
@@ -329,33 +373,27 @@ const RoadviewOverlay: React.FC<RoadviewOverlayProps> = ({
         onError(null);
         console.log('✅ 로드뷰 인스턴스 생성 성공');
 
-        // 로드뷰가 제대로 로드되었는지 확인
+        // 로드뷰 로드 상태 확인 (단순화된 버전)
         setTimeout(() => {
           if (roadviewInstanceRef.current) {
-            try {
-              const roadviewElement =
-                roadviewRef.current?.querySelector('iframe');
-              if (!roadviewElement) {
-                console.warn(
-                  '⚠️ 로드뷰 iframe이 생성되지 않았습니다. 재시도 중...'
-                );
-                // 로드뷰 재생성 시도
-                roadviewInstanceRef.current = null;
-                setTimeout(() => {
-                  initRoadview();
-                }, 500);
-              } else {
-                console.log('✅ 로드뷰 iframe 생성 확인됨');
-              }
-            } catch (error) {
-              console.error('❌ 로드뷰 상태 확인 실패:', error);
+            const roadviewElement =
+              roadviewRef.current?.querySelector('iframe');
+            if (!roadviewElement) {
+              console.warn('⚠️ 로드뷰 iframe이 생성되지 않았습니다.');
+              // 에러 메시지를 더 구체적으로 표시
+              onError(
+                '로드뷰를 불러올 수 없습니다. 해당 위치에서 로드뷰가 제공되지 않거나 카카오맵 API 키에 문제가 있을 수 있습니다.'
+              );
+            } else {
+              console.log('✅ 로드뷰 iframe 생성 확인됨');
             }
           }
-        }, 2000);
+        }, 8000); // 8초로 조정
 
         // 로드뷰 로드 완료 이벤트
         window.kakao.maps.event.addListener(roadview, 'init', () => {
           console.log('✅ 로드뷰 초기화 완료');
+          onError(null); // 에러 상태 초기화
         });
 
         // 로드뷰 에러 이벤트
@@ -370,6 +408,15 @@ const RoadviewOverlay: React.FC<RoadviewOverlayProps> = ({
           }
         );
 
+        // 로드뷰 위치 변경 이벤트
+        window.kakao.maps.event.addListener(
+          roadview,
+          'position_changed',
+          () => {
+            console.log('🔍 로드뷰 위치 변경됨');
+          }
+        );
+
         // 로드뷰 로드 타임아웃 설정
         setTimeout(() => {
           if (roadviewInstanceRef.current) {
@@ -380,12 +427,23 @@ const RoadviewOverlay: React.FC<RoadviewOverlayProps> = ({
               onError(
                 '로드뷰 로딩이 시간 초과되었습니다. 잠시 후 다시 시도해주세요.'
               );
+            } else {
+              console.log('✅ 로드뷰 iframe 확인됨');
             }
           }
-        }, 10000);
+        }, 10000); // 타임아웃을 10초로 설정
       } catch (error) {
         console.error('❌ 로드뷰 인스턴스 생성 실패:', error);
-        onError('로드뷰를 생성할 수 없습니다.');
+        console.error('❌ 에러 상세 정보:', {
+          error: error,
+          kakaoExists: !!window.kakao,
+          kakaoMapsExists: !!(window.kakao && window.kakao.maps),
+          roadviewRefExists: !!roadviewRef.current,
+          position: position,
+        });
+        onError(
+          '로드뷰를 생성할 수 없습니다. 카카오맵 API 키를 확인하거나 잠시 후 다시 시도해주세요.'
+        );
       }
     };
 

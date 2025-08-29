@@ -156,6 +156,14 @@ export default function DisplayDetailPage({
     second_half_to: string;
   } | null>(null);
 
+  // period prop이 변경될 때 selectedDistrictPeriod 업데이트
+  useEffect(() => {
+    if (period) {
+      setSelectedDistrictPeriod(period);
+      console.log('🔍 Period prop updated selectedDistrictPeriod:', period);
+    }
+  }, [period]);
+
   // 송파구, 용산구 탭 필터 추가
   const [internalPanelTypeFilter, setInternalPanelTypeFilter] = useState<
     'panel' | 'top_fixed' | 'semi_auto'

@@ -23,6 +23,13 @@ export default function useKakaoLoader() {
     typeof window !== 'undefined' ? window.navigator.userAgent : 'SSR'
   );
 
+  // API 키 유효성 검사
+  if (appkey && appkey.length < 10) {
+    console.warn(
+      '⚠️ 카카오맵 API 키가 너무 짧습니다. 올바른 키인지 확인해주세요.'
+    );
+  }
+
   // 수동으로 카카오맵 SDK 로드하는 함수
   const loadKakaoMapSDK = useCallback(() => {
     if (
@@ -80,12 +87,17 @@ export default function useKakaoLoader() {
 
   // 기본 Hook 사용 (react-kakao-maps-sdk) - 하지만 실패할 경우를 대비
   try {
+    console.log('🔍 react-kakao-maps-sdk 로더 사용 시도');
     useKakaoLoaderOrigin({
       appkey: appkey,
-      libraries: ['clusterer', 'drawing', 'services', 'roadview'],
+      libraries: ['clusterer', 'drawing', 'services'],
     });
+    console.log('✅ react-kakao-maps-sdk 로더 설정 완료');
   } catch (error) {
     console.error('❌ react-kakao-maps-sdk 로더 실패:', error);
+    // 실패 시 수동 로딩 시도
+    console.log('🔍 수동 로딩으로 전환...');
+    loadKakaoMapSDK();
   }
 
   useEffect(() => {

@@ -363,16 +363,22 @@ export default function LEDDisplayPage() {
                 '🔍 Bank info from API:',
                 districtDataResult.bank_accounts
               );
+              console.log(
+                '🔍 District logo URL:',
+                districtDataResult.logo_image_url
+              );
               setBankInfo(districtDataResult.bank_accounts);
             } else {
               // API에서 데이터를 가져오지 못한 경우에도 기본 정보 생성
+              const defaultLogoUrl = isAllDistricts
+                ? '/svg/all.svg'
+                : `/images/district-icon/${district}-gu.png`;
+              console.log('🔍 Using default logo URL:', defaultLogoUrl);
               setDistrictData({
                 id: '0',
                 name: districtName,
                 code: district,
-                logo_image_url: isAllDistricts
-                  ? '/svg/all.svg'
-                  : `/images/district-icon/${district}-gu.png`,
+                logo_image_url: defaultLogoUrl,
                 panel_status: 'active', // 임시로 active 설정
               });
             }

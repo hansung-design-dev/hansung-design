@@ -683,6 +683,23 @@ export default function LEDDisplayDetailPage({
                 width={50}
                 height={50}
                 className="inline-block align-middle mr-2"
+                onError={(e) => {
+                  console.error('로고 이미지 로드 실패:', e.currentTarget.src);
+                  // 로고 로드 실패 시 기본 이미지로 대체
+                  e.currentTarget.src = '/images/no_image.png';
+                }}
+                onLoad={() => {
+                  console.log('✅ 로고 이미지 로드 성공:', {
+                    district: district,
+                    districtObj: districtObj,
+                    selectedOption: selectedOption,
+                    districtData: districtData,
+                    logoUrl:
+                      districtData?.logo_image_url ||
+                      districtObj?.logo ||
+                      `/images/district-icon/${district}-gu.png`,
+                  });
+                }}
               />
             )}
             <h2 className="text-2.25 font-900 font-gmarket inline-block align-middle">

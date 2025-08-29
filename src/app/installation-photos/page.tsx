@@ -63,7 +63,7 @@ export default function InstallationPhotosPage() {
         게첨사진
       </section>
 
-      <main className="w-[40rem] ">
+      <main className="w-[45crem] ">
         <div>
           {photoLoading ? (
             <div className="space-y-4">
@@ -118,7 +118,7 @@ export default function InstallationPhotosPage() {
                                     }`}
                                     width={400}
                                     height={300}
-                                    className="w-[30rem] h-auto rounded-lg shadow-sm"
+                                    className="w-[40rem] h-auto rounded-lg shadow-sm"
                                     onError={(e) => {
                                       const target =
                                         e.target as HTMLImageElement;
