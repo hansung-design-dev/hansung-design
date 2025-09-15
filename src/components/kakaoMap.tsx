@@ -46,6 +46,7 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
     const checkKakaoMapLoading = () => {
       if (window.kakao && window.kakao.maps) {
         console.log('✅ 카카오맵 SDK 로딩 완료');
+        console.log('🔍 로드뷰 라이브러리 확인:', !!window.kakao.maps.Roadview);
         setIsLoading(false);
         setError(null);
       } else {

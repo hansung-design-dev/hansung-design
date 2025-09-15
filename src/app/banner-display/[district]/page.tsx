@@ -191,15 +191,21 @@ export default function BannerDisplayPage({
 
       setDistrict(decodedDistrict);
 
-      // URL 파라미터에서 기간 데이터 파싱
+      // URL 파라미터에서 기간 데이터 파싱 - 디버깅 로그 추가
       if (periodParam) {
         try {
-          const periodData = JSON.parse(decodeURIComponent(periodParam));
+          console.log('🔍 Raw period param:', periodParam);
+          const decodedPeriodParam = decodeURIComponent(periodParam);
+          console.log('🔍 Decoded period param:', decodedPeriodParam);
+          const periodData = JSON.parse(decodedPeriodParam);
           setPeriod(periodData);
-          console.log('🔍 Period data from URL:', periodData);
+          console.log('🔍 Period data from URL (parsed):', periodData);
         } catch (error) {
           console.error('Failed to parse period data from URL:', error);
+          console.error('Raw period param:', periodParam);
         }
+      } else {
+        console.log('🔍 No period param in URL');
       }
 
       const obj = districts.find((d) => d.code === decodedDistrict);
@@ -259,6 +265,10 @@ export default function BannerDisplayPage({
 
         // 2. 기간 데이터 가져오기 (URL 파라미터에 없으면 API에서 가져오기)
         if (!period && districtObj?.name) {
+          console.log(
+            '🔍 Period not found in URL, fetching from API for:',
+            districtObj.name
+          );
           try {
             const response = await fetch(
               `/api/display-period?district=${encodeURIComponent(
@@ -269,10 +279,42 @@ export default function BannerDisplayPage({
             if (result.success) {
               setPeriod(result.data);
               console.log('🔍 Period data from API:', result.data);
+            } else {
+              console.warn('🔍 Failed to fetch period data:', result.error);
             }
           } catch (err) {
             console.warn(
               `Failed to fetch period for ${districtObj.name}:`,
+              err
+            );
+          }
+        } else if (period) {
+          console.log('🔍 Period data already available from URL:', period);
+        } else {
+          // URL 파라미터에도 없고, districtObj도 없는 경우에도 API에서 가져오기 시도
+          console.log(
+            '🔍 No period data available, attempting to fetch from API for district:',
+            district
+          );
+          try {
+            const response = await fetch(
+              `/api/display-period?district=${encodeURIComponent(
+                district
+              )}&display_type=banner_display`
+            );
+            const result = await response.json();
+            if (result.success) {
+              setPeriod(result.data);
+              console.log('🔍 Period data from API (fallback):', result.data);
+            } else {
+              console.warn(
+                '🔍 Failed to fetch period data (fallback):',
+                result.error
+              );
+            }
+          } catch (err) {
+            console.warn(
+              `Failed to fetch period for ${district} (fallback):`,
               err
             );
           }

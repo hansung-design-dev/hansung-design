@@ -291,7 +291,16 @@ export default function DisplayDetailPage({
     const daysUntilPeriod = Math.ceil(
       (periodStart.getTime() - koreaTime.getTime()) / (1000 * 60 * 60 * 24)
     );
-    return daysUntilPeriod >= 7; // 7일 이상 남았으면 신청 가능
+
+    // 디버그 로그 추가
+    console.log('🔍 displayDetailPage isPeriodAvailable Debug:', {
+      periodStartDate,
+      daysUntilPeriod,
+      isAvailable: daysUntilPeriod >= 7,
+    });
+
+    // 임시로 모든 기간을 신청 가능하도록 설정 (테스트용)
+    return true; // daysUntilPeriod >= 7; // 7일 이상 남았으면 신청 가능
   };
 
   // 아이템이 선택 가능한지 확인하는 함수
@@ -310,6 +319,9 @@ export default function DisplayDetailPage({
         isPeriodValid = isPeriodAvailable(period.second_half_from);
       }
     }
+
+    // 임시로 기간 검증을 비활성화 (테스트용)
+    isPeriodValid = true;
 
     // 2. 재고 확인: 선택된 기간의 재고가 0인지 확인
     let hasStock = true;
@@ -562,10 +574,22 @@ export default function DisplayDetailPage({
   const handleItemSelect = (id: string, checked?: boolean) => {
     console.log('🔍 handleItemSelect called with id:', id, 'checked:', checked);
 
-    // 아이템 찾기
-    const item = billboards.find((item) => item.id === id);
+    // 아이템 찾기 - filteredBillboards에서 찾기
+    const item = filteredBillboards.find((item) => item.id === id);
     if (!item) {
-      console.log('🔍 Item not found:', id);
+      console.log('🔍 Item not found in filteredBillboards:', id);
+      // 원본 billboards에서도 찾아보기
+      const originalItem = billboards.find((item) => item.id === id);
+      if (!originalItem) {
+        console.log('🔍 Item not found in original billboards either:', id);
+        return;
+      }
+      console.log('🔍 Found item in original billboards, using it');
+    }
+
+    const targetItem = item || billboards.find((item) => item.id === id);
+    if (!targetItem) {
+      console.log('🔍 Item not found anywhere:', id);
       return;
     }
 
@@ -577,17 +601,22 @@ export default function DisplayDetailPage({
       return;
     }
 
-    // 아이템이 선택 가능한지 확인
-    if (!isItemSelectable(item)) {
-      console.log('🔍 Item is not selectable:', {
-        id: item.id,
-        name: item.name,
-        selectedHalfPeriod,
-        period,
-        firstHalfClosureQuantity: item.first_half_closure_quantity,
-        secondHalfClosureQuantity: item.second_half_closure_quantity,
-        faces: item.faces,
-      });
+    // 아이템이 선택 가능한지 확인 - 더 자세한 로그 추가
+    const isSelectable = isItemSelectable(targetItem);
+    console.log('🔍 Item selectability check:', {
+      id: targetItem.id,
+      name: targetItem.name,
+      isSelectable,
+      selectedHalfPeriod,
+      period,
+      firstHalfClosureQuantity: targetItem.first_half_closure_quantity,
+      secondHalfClosureQuantity: targetItem.second_half_closure_quantity,
+      faces: targetItem.faces,
+      is_closed: targetItem.is_closed,
+    });
+
+    if (!isSelectable) {
+      console.log('🔍 Item is not selectable, returning early');
       return; // 선택 불가능한 경우 선택을 막음
     }
 
@@ -623,28 +652,28 @@ export default function DisplayDetailPage({
     } else {
       newSelectedIds = [...selectedIds, id];
       // 리스트에 표시된 가격 그대로 사용
-      const priceForCart = item.total_price || 0;
+      const priceForCart = targetItem.total_price || 0;
       let panelSlotSnapshot = null;
 
       console.log('🔍 Item selected:', {
-        district: item.district,
-        itemId: item.id,
-        itemName: item.name,
-        itemTotalPrice: item.total_price,
-        itemPrice: item.price,
+        district: targetItem.district,
+        itemId: targetItem.id,
+        itemName: targetItem.name,
+        itemTotalPrice: targetItem.total_price,
+        itemPrice: targetItem.price,
       });
 
       // banner_slots에서 가격 정보 가져오기 (snapshot용) - BannerBillboard 타입인 경우만
       if (
-        item.type === 'banner' &&
-        'banner_slots' in item &&
-        item.banner_slots &&
-        item.banner_slots.length > 0
+        targetItem.type === 'banner' &&
+        'banner_slots' in targetItem &&
+        targetItem.banner_slots &&
+        targetItem.banner_slots.length > 0
       ) {
         console.log('🔍 Creating panel_slot_snapshot for item:', {
-          itemId: item.id,
-          itemName: item.name,
-          bannerSlotInfo: item.banner_slots.map((slot) => ({
+          itemId: targetItem.id,
+          itemName: targetItem.name,
+          bannerSlotInfo: targetItem.banner_slots.map((slot) => ({
             banner_type: slot.banner_type,
             slot_number: slot.slot_number,
             total_price: slot.total_price,
@@ -664,12 +693,12 @@ export default function DisplayDetailPage({
 
         if (currentPanelTypeFilter === 'top_fixed') {
           // 상단광고 탭: banner_type이 'top_fixed'인 슬롯 찾기
-          slotInfo = item.banner_slots.find(
+          slotInfo = targetItem.banner_slots.find(
             (slot) => slot.banner_type === 'top_fixed'
           );
           console.log('🔍 Looking for top_fixed slot:', {
             foundTopFixedSlot: !!slotInfo,
-            allSlots: item.banner_slots.map((slot) => ({
+            allSlots: targetItem.banner_slots.map((slot) => ({
               banner_type: slot.banner_type,
               slot_number: slot.slot_number,
               hasPricePolicy: !!slot.banner_slot_price_policy?.length,
@@ -677,12 +706,12 @@ export default function DisplayDetailPage({
           });
         } else if (currentPanelTypeFilter === 'semi_auto') {
           // 반자동 탭: banner_type이 'semi_auto'인 슬롯 찾기
-          slotInfo = item.banner_slots.find(
+          slotInfo = targetItem.banner_slots.find(
             (slot) => slot.banner_type === 'semi_auto'
           );
           console.log('🔍 Looking for semi_auto slot:', {
             foundSemiAutoSlot: !!slotInfo,
-            allSlots: item.banner_slots.map((slot) => ({
+            allSlots: targetItem.banner_slots.map((slot) => ({
               banner_type: slot.banner_type,
               slot_number: slot.slot_number,
               hasPricePolicy: !!slot.banner_slot_price_policy?.length,
@@ -690,12 +719,12 @@ export default function DisplayDetailPage({
           });
         } else {
           // 현수막게시대 탭: banner_type이 'panel'인 슬롯 찾기
-          slotInfo = item.banner_slots.find(
+          slotInfo = targetItem.banner_slots.find(
             (slot) => slot.banner_type === 'panel' && slot.slot_number > 0
           );
           console.log('🔍 Looking for panel slot:', {
             foundPanelSlot: !!slotInfo,
-            allSlots: item.banner_slots.map((slot) => ({
+            allSlots: targetItem.banner_slots.map((slot) => ({
               banner_type: slot.banner_type,
               slot_number: slot.slot_number,
               hasPricePolicy: !!slot.banner_slot_price_policy?.length,
@@ -705,7 +734,7 @@ export default function DisplayDetailPage({
 
         if (!slotInfo) {
           // 적절한 슬롯이 없으면 첫 번째 슬롯 사용
-          slotInfo = item.banner_slots[0];
+          slotInfo = targetItem.banner_slots[0];
           console.log('🔍 No appropriate slot found, using first slot');
         } else {
           console.log('🔍 Found appropriate slot, using it');
@@ -866,26 +895,28 @@ export default function DisplayDetailPage({
         }
       } else {
         console.log('🔍 No banner_slots found for item:', {
-          itemId: item.id,
-          itemType: item.type,
-          hasBannerSlotInfo: 'banner_slots' in item,
+          itemId: targetItem.id,
+          itemType: targetItem.type,
+          hasBannerSlotInfo: 'banner_slots' in targetItem,
           bannerSlotInfoLength:
-            'banner_slots' in item ? item.banner_slots?.length : 'N/A',
+            'banner_slots' in targetItem
+              ? targetItem.banner_slots?.length
+              : 'N/A',
         });
       }
 
       // 상반기/하반기 정보를 포함한 고유한 ID 생성
-      const uniqueCartItemId = `${item.id}-${selectedHalfPeriod}`;
+      const uniqueCartItemId = `${targetItem.id}-${selectedHalfPeriod}`;
 
       // 상단광고 여부 확인 (panel_slot_snapshot의 banner_type 또는 item.panel_type 사용)
       const isTopFixed =
         panelSlotSnapshot?.banner_type === 'top_fixed' ||
-        item.panel_type === 'top_fixed';
+        targetItem.panel_type === 'top_fixed';
 
       console.log('🔍 상단광고 판별 로직:', {
-        itemId: item.id,
-        itemName: item.name,
-        itemPanelType: item.panel_type,
+        itemId: targetItem.id,
+        itemName: targetItem.name,
+        itemPanelType: targetItem.panel_type,
         panelSlotSnapshotBannerType: panelSlotSnapshot?.banner_type,
         isTopFixed: isTopFixed,
         currentPanelTypeFilter: currentPanelTypeFilter,
@@ -911,8 +942,8 @@ export default function DisplayDetailPage({
       const cartItem = {
         id: uniqueCartItemId, // 상반기/하반기 정보를 포함한 고유 ID
         type: 'banner-display' as const,
-        name: getCartItemName(item),
-        district: item.district,
+        name: getCartItemName(targetItem),
+        district: targetItem.district,
         price: priceForCart,
         halfPeriod: selectedHalfPeriod,
         // 선택된 기간의 년월 정보 사용
@@ -923,12 +954,12 @@ export default function DisplayDetailPage({
         // 선택된 기간의 시작/종료 날짜
         selectedPeriodFrom,
         selectedPeriodTo,
-        panel_type: isTopFixed ? 'top_fixed' : item.panel_type,
-        panel_id: item.panel_id, // 원본 UUID
+        panel_type: isTopFixed ? 'top_fixed' : targetItem.panel_type,
+        panel_id: targetItem.panel_id, // 원본 UUID
         isTopFixed: isTopFixed, // 상단광고 여부
         ...(panelSlotSnapshot && { panel_slot_snapshot: panelSlotSnapshot }), // 가격 상세 정보 추가
-        panel_code: item.panel_code?.toString(),
-        photo_url: item.photo_url, // 게시대 사진 URL 추가
+        panel_code: targetItem.panel_code?.toString(),
+        photo_url: targetItem.photo_url, // 게시대 사진 URL 추가
         // 사용자 프로필 정보 추가
         contact_person_name: defaultProfile?.contact_person_name,
         phone: defaultProfile?.phone,
@@ -1179,12 +1210,8 @@ export default function DisplayDetailPage({
       districtObj?.code === 'seodaemun' ||
       // 마포구: 모든 탭에서 상하반기 탭 표시
       isMapoDistrict) &&
-    // period가 없어도 탭 표시 (동적 계산 사용)
-    (!isAllDistrictsView ||
-      (isAllDistrictsView &&
-        selectedOption &&
-        selectedOption.option !== '전체' &&
-        selectedDistrictPeriod));
+    // period가 있거나 selectedDistrictPeriod가 있으면 탭 표시
+    (period || selectedDistrictPeriod || !isAllDistrictsView);
 
   // 디버그 로그 추가
   console.log('🔍 showHalfPeriodTabs Debug:', {
@@ -1193,6 +1220,9 @@ export default function DisplayDetailPage({
     currentPanelTypeFilter,
     isMapoDistrict,
     period,
+    periodExists: !!period,
+    periodFirstHalf: period?.first_half_from,
+    periodSecondHalf: period?.second_half_from,
     isAllDistrictsView,
     selectedOption,
     selectedDistrictPeriod,
@@ -1363,7 +1393,7 @@ export default function DisplayDetailPage({
               setSelectedIdsSecondHalf([]);
             }}
             districtName={districtObj?.name}
-            periodData={period}
+            periodData={selectedDistrictPeriod || period}
           />
         )}
         {/* View Type Selector */}

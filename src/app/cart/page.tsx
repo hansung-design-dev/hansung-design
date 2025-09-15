@@ -318,7 +318,7 @@ function CartItemRow({
           {!isConsulting && item.price !== 0 && item.type !== 'led-display' && (
             <div className="mt-2">
               <PeriodSelector
-                halfPeriod={item.halfPeriod}
+                halfPeriod={item.halfPeriod || 'first_half'}
                 selectedYear={item.selectedYear}
                 selectedMonth={item.selectedMonth}
                 onPeriodChange={(year, month, halfPeriod) => {

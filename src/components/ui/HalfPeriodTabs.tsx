@@ -64,11 +64,9 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
         endDay: firstTo.getDate(),
         from: periodData.first_half_from,
         to: periodData.first_half_to,
-        label: `${firstFrom.getFullYear()}년 ${firstFrom.getMonth() + 1}월 ${
-          periodData.available_periods?.[0]?.period === 'first_half'
-            ? '상반기'
-            : '하반기'
-        }`,
+        label: `${firstFrom.getFullYear()}년 ${
+          firstFrom.getMonth() + 1
+        }월 상반기`,
       };
 
       // 두 번째 기간 (second_half)
@@ -82,11 +80,9 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
         endDay: secondTo.getDate(),
         from: periodData.second_half_from,
         to: periodData.second_half_to,
-        label: `${secondFrom.getFullYear()}년 ${secondFrom.getMonth() + 1}월 ${
-          periodData.available_periods?.[1]?.period === 'second_half'
-            ? '하반기'
-            : '상반기'
-        }`,
+        label: `${secondFrom.getFullYear()}년 ${
+          secondFrom.getMonth() + 1
+        }월 하반기`,
       };
 
       console.log('🔍 Processed API periods:', { firstPeriod, secondPeriod });
@@ -263,7 +259,8 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
       isAvailable: daysUntilPeriod >= 7,
     });
 
-    return daysUntilPeriod >= 7; // 7일 이상 남았으면 신청 가능
+    // 임시로 모든 기간을 신청 가능하도록 설정 (테스트용)
+    return true; // daysUntilPeriod >= 7; // 7일 이상 남았으면 신청 가능
   };
 
   // 각 기간의 신청 가능 여부

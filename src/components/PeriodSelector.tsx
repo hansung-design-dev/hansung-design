@@ -34,17 +34,29 @@ export default function PeriodSelector({
 
   // 저장된 년월이 없으면 현재 날짜에 따라 올바른 년월 설정
   if (!displayYear || !displayMonth) {
-    if (currentDay <= 15) {
-      // 현재가 15일 이전이면 이번달
+    if (currentDay <= 12) {
+      // 현재가 12일 이전이면 이번달 상반기 신청 가능
       displayYear = currentYear;
       displayMonth = currentMonth;
     } else {
-      // 현재가 16일 이후면 다음달
+      // 현재가 13일 이후면 다음달로 설정
       const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
       displayYear = currentMonth === 12 ? currentYear + 1 : currentYear;
       displayMonth = nextMonth;
     }
   }
+
+  // 디버깅 로그 추가
+  console.log('🔍 PeriodSelector Debug:', {
+    selectedYear,
+    selectedMonth,
+    halfPeriod,
+    displayYear,
+    displayMonth,
+    currentYear,
+    currentMonth,
+    currentDay,
+  });
 
   const [period, setPeriod] = useState<'first_half' | 'second_half'>(
     halfPeriod || 'first_half'

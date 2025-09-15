@@ -57,8 +57,8 @@ CREATE TABLE public.bank_accounts (
   updated_at timestamp without time zone DEFAULT now(),
   contact text,
   CONSTRAINT bank_accounts_pkey PRIMARY KEY (id),
-  CONSTRAINT bank_accounts_region_gu_id_fkey FOREIGN KEY (region_gu_id) REFERENCES public.region_gu(id),
-  CONSTRAINT bank_accounts_display_type_id_fkey FOREIGN KEY (display_type_id) REFERENCES public.display_types(id)
+  CONSTRAINT bank_accounts_display_type_id_fkey FOREIGN KEY (display_type_id) REFERENCES public.display_types(id),
+  CONSTRAINT bank_accounts_region_gu_id_fkey FOREIGN KEY (region_gu_id) REFERENCES public.region_gu(id)
 );
 CREATE TABLE public.banner_display_cache (
   id integer NOT NULL DEFAULT nextval('banner_display_cache_id_seq'::regclass),
@@ -109,8 +109,8 @@ CREATE TABLE public.banner_slot_price_policy (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT banner_slot_price_policy_pkey PRIMARY KEY (id),
-  CONSTRAINT banner_slot_price_policy_banner_slot_info_id_fkey FOREIGN KEY (banner_slot_id) REFERENCES public.banner_slots(id),
-  CONSTRAINT banner_slot_price_policy_banner_slot_id_fkey FOREIGN KEY (banner_slot_id) REFERENCES public.banner_slots(id)
+  CONSTRAINT banner_slot_price_policy_banner_slot_id_fkey FOREIGN KEY (banner_slot_id) REFERENCES public.banner_slots(id),
+  CONSTRAINT banner_slot_price_policy_banner_slot_info_id_fkey FOREIGN KEY (banner_slot_id) REFERENCES public.banner_slots(id)
 );
 CREATE TABLE public.banner_slots (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -333,9 +333,9 @@ CREATE TABLE public.order_details (
   panel_id uuid,
   panel_slot_usage_id uuid,
   CONSTRAINT order_details_pkey PRIMARY KEY (id),
+  CONSTRAINT order_details_panel_info_id_fkey FOREIGN KEY (panel_id) REFERENCES public.panels(id),
   CONSTRAINT order_details_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
-  CONSTRAINT order_details_panel_slot_usage_id_fkey FOREIGN KEY (panel_slot_usage_id) REFERENCES public.panel_slot_usage(id),
-  CONSTRAINT order_details_panel_info_id_fkey FOREIGN KEY (panel_id) REFERENCES public.panels(id)
+  CONSTRAINT order_details_panel_slot_usage_id_fkey FOREIGN KEY (panel_slot_usage_id) REFERENCES public.panel_slot_usage(id)
 );
 CREATE TABLE public.orders (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -544,8 +544,8 @@ CREATE TABLE public.top_fixed_banner_inventory (
   occupied_until date,
   occupied_from date,
   CONSTRAINT top_fixed_banner_inventory_pkey PRIMARY KEY (id),
-  CONSTRAINT top_fixed_banner_inventory_occupied_slot_id_fkey FOREIGN KEY (occupied_slot_id) REFERENCES public.banner_slots(id),
-  CONSTRAINT top_fixed_banner_inventory_panel_id_fkey FOREIGN KEY (panel_id) REFERENCES public.panels(id)
+  CONSTRAINT top_fixed_banner_inventory_panel_id_fkey FOREIGN KEY (panel_id) REFERENCES public.panels(id),
+  CONSTRAINT top_fixed_banner_inventory_occupied_slot_id_fkey FOREIGN KEY (occupied_slot_id) REFERENCES public.banner_slots(id)
 );
 CREATE TABLE public.user_auth (
   id uuid NOT NULL DEFAULT gen_random_uuid(),

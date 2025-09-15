@@ -1348,6 +1348,41 @@ function PaymentPageContent() {
                 </div>
               </div>
 
+              {/* 환불 규정 사항 */}
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mt-4">
+                <h4 className="font-semibold text-gray-800 mb-3">
+                  현수막 지정게시대 환불규정사항
+                </h4>
+                <ul className="text-sm text-gray-700 space-y-2">
+                  <li>
+                    · 현수막 접수일 기준(주말·공휴일 제외)으로 3일내에 입금 및
+                    결제를 진행해야 합니다.
+                  </li>
+                  <li>
+                    · 결제기간 내 결제하지 않을 시 통보 후 기간 조율 또는 취소를
+                    진행할 수 있습니다.
+                  </li>
+                  <li>· 게시일 기준 2주 전까지는 100% 환불할 수 있습니다.</li>
+                  <li>
+                    · 디자인 조율 후 출력 및 제작이 들어간 상태라면 출력비용을
+                    제외하고 환불받을 수 있습니다.
+                  </li>
+                  <li>
+                    · 출력 후 게시 준비까지 마무리되었다면 환불을 받을 수
+                    없습니다.
+                  </li>
+                  <li>
+                    · 게시 후, 단순 변심으로 인한 게시 취소일 경우
+                    철거비용(인건비와 장비비용)을 지불하고 철거해야 합니다.
+                  </li>
+                  <li>
+                    · 게시물 허용한 내용이 미관을 해치거나 혐오를 줄 수 있는
+                    내용일 시 강제취소를 통보받을 수 있으며 환불을 진행받을 수
+                    있습니다.
+                  </li>
+                </ul>
+              </div>
+
               <div className="flex items-start gap-2">
                 <input
                   type="checkbox"

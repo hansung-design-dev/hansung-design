@@ -64,10 +64,21 @@ export default function DistrictCard({
 }: DistrictCardProps) {
   const isGangbuk = district.code === 'gangbuk';
   const isMaintenance = district.panel_status === 'maintenance';
-  // 기간 데이터를 URL 파라미터로 전달
+  // 기간 데이터를 URL 파라미터로 전달 - 디버깅 로그 추가
   const periodParams = district.period
     ? `?period=${encodeURIComponent(JSON.stringify(district.period))}`
     : '';
+
+  // 디버깅 로그 추가
+  console.log(`🔍 DistrictCard ${district.name} period data:`, {
+    districtName: district.name,
+    districtCode: district.code,
+    period: district.period,
+    periodParams: periodParams,
+    encodedPeriod: district.period
+      ? encodeURIComponent(JSON.stringify(district.period))
+      : null,
+  });
 
   // LED 전자게시대의 경우 강북구도 내부 페이지로 이동, 현수막게시대의 경우에만 외부 링크
   const href =

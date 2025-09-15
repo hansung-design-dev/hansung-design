@@ -195,6 +195,7 @@ export default function BannerDisplayPage() {
             name: district.name,
             pricePolicies: district.pricePolicies,
             pricePoliciesLength: district.pricePolicies?.length || 0,
+            period: district.period,
           });
         });
 

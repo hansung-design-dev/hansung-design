@@ -1536,20 +1536,23 @@ async function getDistrictDataFromCache(districtName: string) {
           .filter(Boolean)
       : [];
 
-    // 기간 정보 파싱
+    // 기간 정보는 캐시에서 가져오지 않고 API에서 실시간으로 가져오기
     let periodData = null;
-    if (cacheData.period_summary) {
-      const periods = cacheData.period_summary.split(', ');
-      if (periods.length >= 1) {
-        const [firstFrom, firstTo] = periods[0].split('~');
-        periodData = {
-          first_half_from: firstFrom,
-          first_half_to: firstTo,
-          second_half_from:
-            periods.length >= 2 ? periods[1].split('~')[0] : null,
-          second_half_to: periods.length >= 2 ? periods[1].split('~')[1] : null,
-        };
+    try {
+      const periodResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/display-period?district=${encodeURIComponent(
+          districtName
+        )}&display_type=banner_display`
+      );
+      const periodResult = await periodResponse.json();
+      if (periodResult.success) {
+        periodData = periodResult.data;
+        console.log('🔍 Period data from API (in getDistrictDataFromCache):', periodData);
+      } else {
+        console.warn('🔍 Failed to fetch period data from API:', periodResult.error);
       }
+    } catch (err) {
+      console.warn('🔍 Error fetching period data from API:', err);
     }
 
     // 은행 정보
@@ -1577,11 +1580,11 @@ async function getDistrictDataFromCache(districtName: string) {
       logo_image_url: cacheData.logo_image_url,
       phone_number: cacheData.phone_number,
       bank_accounts: bankData,
-      period: periodData,
+      period: periodData, // 실시간으로 가져온 기간 데이터 사용
       pricePolicies: pricePolicies,
     };
 
-    console.log('🔍 District data from cache:', responseData);
+    console.log('🔍 District data from cache (with real-time period):', responseData);
 
     return NextResponse.json({
       success: true,
