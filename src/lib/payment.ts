@@ -38,12 +38,13 @@ export async function processTossPayment(
 
     // requestPayment will redirect; this return is mostly unreachable
     return { success: true } as PaymentResponse;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Toss payment error:', error);
+    const errorObj = error as { code?: string; message?: string };
     return {
       success: false,
-      errorCode: error?.code || 'PAYMENT_ERROR',
-      errorMessage: error?.message || '결제 처리 중 오류가 발생했습니다.',
+      errorCode: errorObj?.code || 'PAYMENT_ERROR',
+      errorMessage: errorObj?.message || '결제 처리 중 오류가 발생했습니다.',
     };
   }
 }
