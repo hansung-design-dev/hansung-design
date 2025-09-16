@@ -1,4 +1,54 @@
 'use client';
+import { useEffect, useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+
+export default function PaymentSuccessPage() {
+  const params = useSearchParams();
+  const router = useRouter();
+  const [message, setMessage] = useState('결제 승인 처리 중입니다...');
+
+  useEffect(() => {
+    const paymentKey = params.get('paymentKey');
+    const orderId = params.get('orderId');
+    const amountParam = params.get('amount');
+    const amount = amountParam ? Number(amountParam) : undefined;
+
+    if (!paymentKey || !orderId || !amount) {
+      setMessage('필수 파라미터가 누락되었습니다.');
+      return;
+    }
+
+    const confirm = async () => {
+      try {
+        const res = await fetch('/api/payment/toss/confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paymentKey, orderId, amount }),
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          setMessage('결제가 완료되었습니다.');
+        } else {
+          setMessage(`결제 승인 실패: ${data.error || '알 수 없는 오류'}`);
+        }
+      } catch (e) {
+        setMessage('결제 승인 처리 중 오류가 발생했습니다.');
+      }
+    };
+
+    confirm();
+  }, [params, router]);
+
+  return (
+    <main className="min-h-screen flex items-center justify-center">
+      <div className="p-6 border rounded-lg">
+        <div>{message}</div>
+      </div>
+    </main>
+  );
+}
+
+('use client');
 
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';

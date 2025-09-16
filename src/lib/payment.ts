@@ -1,26 +1,49 @@
 import { PaymentRequest, PaymentResponse } from '@/src/types/payment';
+import { loadTossPayments } from '@tosspayments/payment-sdk';
 
 // 토스페이먼츠 결제 처리
 export async function processTossPayment(
   paymentRequest: PaymentRequest
 ): Promise<PaymentResponse> {
   try {
-    const response = await fetch('/api/payment/toss', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(paymentRequest),
+    if (typeof window === 'undefined') {
+      return {
+        success: false,
+        errorCode: 'NO_WINDOW',
+        errorMessage: '클라이언트 환경에서만 결제가 가능합니다.',
+      };
+    }
+
+    const clientKey = process.env
+      .NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY as string;
+    if (!clientKey) {
+      return {
+        success: false,
+        errorCode: 'NO_CLIENT_KEY',
+        errorMessage: '토스 클라이언트 키가 설정되지 않았습니다.',
+      };
+    }
+
+    const tossPayments = await loadTossPayments(clientKey);
+    await tossPayments.requestPayment('카드', {
+      amount: paymentRequest.amount,
+      orderId: paymentRequest.orderId,
+      orderName: paymentRequest.orderName,
+      customerName: paymentRequest.customerName,
+      customerEmail: paymentRequest.customerEmail,
+      customerMobilePhone: paymentRequest.customerPhone,
+      successUrl: paymentRequest.successUrl,
+      failUrl: paymentRequest.failUrl,
     });
 
-    const result = await response.json();
-    return result;
-  } catch (error) {
+    // requestPayment will redirect; this return is mostly unreachable
+    return { success: true } as PaymentResponse;
+  } catch (error: any) {
     console.error('Toss payment error:', error);
     return {
       success: false,
-      errorCode: 'PAYMENT_ERROR',
-      errorMessage: '결제 처리 중 오류가 발생했습니다.',
+      errorCode: error?.code || 'PAYMENT_ERROR',
+      errorMessage: error?.message || '결제 처리 중 오류가 발생했습니다.',
     };
   }
 }

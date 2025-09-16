@@ -1,4 +1,21 @@
 'use client';
+import { useSearchParams } from 'next/navigation';
+
+export default function PaymentFailPage() {
+  const params = useSearchParams();
+  const message = params.get('message') || '결제가 실패했습니다.';
+
+  return (
+    <main className="min-h-screen flex items-center justify-center">
+      <div className="p-6 border rounded-lg">
+        <div>결제 실패</div>
+        <div className="text-sm text-gray-600 mt-2">{message}</div>
+      </div>
+    </main>
+  );
+}
+
+('use client');
 
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
