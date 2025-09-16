@@ -314,18 +314,8 @@ export default function LEDDisplayDetailPage({
       newSelectedIds = [...selectedIds, id];
       const item = billboards.find((item) => item.id === id);
       if (item) {
-        // total_price가 있으면 사용, 없으면 기존 로직 사용
-        const priceForCart =
-          item.total_price !== undefined
-            ? item.total_price
-            : (() => {
-                const priceString = String(item.price || '').replace(
-                  /,|원/g,
-                  ''
-                );
-                const priceNumber = parseInt(priceString, 10);
-                return !isNaN(priceNumber) ? priceNumber : 0;
-              })();
+        // LED 전자게시대는 상담신청이므로 가격을 0으로 설정
+        const priceForCart = 0;
 
         // 기본 프로필 정보 가져오기
         const defaultProfile = profiles.find((profile) => profile.is_default);
@@ -373,15 +363,8 @@ export default function LEDDisplayDetailPage({
   const handleAddToCart = (id: string) => {
     const item = billboards.find((item) => item.id === id);
     if (item) {
-      // total_price가 있으면 사용, 없으면 기존 로직 사용
-      const priceForCart =
-        item.total_price !== undefined
-          ? item.total_price
-          : (() => {
-              const priceString = String(item.price || '').replace(/,|원/g, '');
-              const priceNumber = parseInt(priceString, 10);
-              return !isNaN(priceNumber) ? priceNumber : 0;
-            })();
+      // LED 전자게시대는 상담신청이므로 가격을 0으로 설정
+      const priceForCart = 0;
 
       // 기본 프로필 정보 가져오기
       const defaultProfile = profiles.find((profile) => profile.is_default);

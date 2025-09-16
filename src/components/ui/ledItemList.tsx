@@ -88,7 +88,7 @@ const LEDItemList: React.FC<LEDItemTableProps> = ({
                 {showCheckbox && <th className="w-10"></th>}
                 <th className="text-center pl-4">No</th>
                 <th className="text-left pl-4">게시대 명</th>
-                <th className="text-center pl-4"></th>
+
                 <th className="text-center pl-4">규격(px)</th>
                 <th className="text-center pl-4">최대배너수</th>
                 <th className="text-center pl-4">상태</th>
