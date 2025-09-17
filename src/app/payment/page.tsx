@@ -102,18 +102,14 @@ function PaymentPageContent() {
     };
   }>({});
 
-  // 결제 모달 상태
-  const [paymentModalOpen, setPaymentModalOpen] = useState<string | null>(null);
-  // modalPaymentMethod 제거 - 바로 토스 위젯 사용
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-
-  const [modalTaxInvoice, setModalTaxInvoice] = useState(false);
-
   // 토스 위젯 상태
   const [tossWidgetOpen, setTossWidgetOpen] = useState(false);
   const [tossWidgetData, setTossWidgetData] = useState<GroupedCartItem | null>(
     null
   );
+
+  // 세금계산서 상태
+  const [modalTaxInvoice, setModalTaxInvoice] = useState(false);
 
   // 결제 처리 상태
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -767,7 +763,6 @@ function PaymentPageContent() {
   const openTossWidget = (group: GroupedCartItem) => {
     setTossWidgetData(group);
     setTossWidgetOpen(true);
-    setIsProcessingPayment(false); // 결제 처리 상태 초기화
   };
 
   // 토스 위젯 초기화
@@ -1198,7 +1193,19 @@ function PaymentPageContent() {
                   </div>
                 </div>
               </div>
-
+              {/* 세금계산서 */}
+              <div className="mb-4">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="modal-tax"
+                    checked={modalTaxInvoice}
+                    onChange={(e) => setModalTaxInvoice(e.target.checked)}
+                    className="w-4 h-4"
+                  />
+                  <label htmlFor="modal-tax">세금계산서 발급을 원합니다</label>
+                </div>
+              </div>
               {/* 결제 버튼 */}
               <div className="mt-2">
                 {/* 결제 조건 확인 */}
@@ -1217,7 +1224,7 @@ function PaymentPageContent() {
                   return (
                     <>
                       <Button
-                        onClick={() => setPaymentModalOpen(group.id)}
+                        onClick={() => openTossWidget(group)}
                         disabled={!isButtonEnabled}
                         className={`w-full py-2 rounded-lg ${
                           isButtonEnabled
@@ -1407,71 +1414,6 @@ function PaymentPageContent() {
         </div>
       </div>
 
-      {/* 구별 결제 모달 */}
-      {paymentModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            {/* 결제 방법 선택 */}
-            <div className="mb-4">
-              {/* 결제 수단 선택 UI 제거 - 바로 토스 위젯으로 이동 */}
-            </div>
-
-            {/* 세금계산서 */}
-            <div className="mb-4">
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="modal-tax"
-                  checked={modalTaxInvoice}
-                  onChange={(e) => setModalTaxInvoice(e.target.checked)}
-                  className="w-4 h-4"
-                />
-                <label htmlFor="modal-tax">세금계산서 발급을 원합니다</label>
-              </div>
-            </div>
-
-            {/* 결제 금액 */}
-            <div className="mb-4 p-3 bg-gray-50 rounded">
-              <div className="flex justify-between font-semibold">
-                <span>결제 금액:</span>
-                <span>
-                  {groupedItems
-                    .find((g) => g.id === paymentModalOpen)
-                    ?.totalPrice.toLocaleString()}
-                  원
-                </span>
-              </div>
-            </div>
-
-            {/* 버튼 */}
-            <div className="flex gap-2">
-              <Button
-                onClick={() => setPaymentModalOpen(null)}
-                className="flex-1 bg-gray-500 text-white py-2 rounded"
-              >
-                취소
-              </Button>
-              <Button
-                onClick={() => {
-                  const group = groupedItems.find(
-                    (g) => g.id === paymentModalOpen
-                  );
-                  if (group) {
-                    // 바로 토스 위젯 모달 열기
-                    setPaymentModalOpen(null); // 현재 모달 닫기
-                    openTossWidget(group);
-                  }
-                }}
-                disabled={isProcessingPayment}
-                className="flex-1 bg-blue-600 text-white py-2 rounded"
-              >
-                {isProcessingPayment ? '결제 처리 중...' : '결제하기'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* 토스 위젯 모달 */}
       {tossWidgetOpen && tossWidgetData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
@@ -1482,7 +1424,6 @@ function PaymentPageContent() {
                 onClick={() => {
                   setTossWidgetOpen(false);
                   setTossWidgetData(null);
-                  setIsProcessingPayment(false);
                 }}
                 className="text-gray-500 hover:text-gray-700 text-2xl"
               >
