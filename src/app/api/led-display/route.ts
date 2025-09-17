@@ -316,19 +316,6 @@ async function getAllDistrictsData() {
     const processedDistricts =
       cacheData?.map((cache) => {
         // 가격 정책 정보 변환
-        const basePricePolicies = cache.price_summary
-          ? [
-              {
-                id: `cache-${cache.region_gu_id}`,
-                price_usage_type: 'default',
-                tax_price: 0,
-                road_usage_fee: 0,
-                advertising_fee: 0,
-                total_price: 0,
-                displayName: cache.price_summary,
-              },
-            ]
-          : [];
 
         // LED 전자게시대는 모든 구에서 상담신청으로 표시
         const pricePolicies = [

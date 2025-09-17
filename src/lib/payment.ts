@@ -1,10 +1,6 @@
 import { PaymentRequest, PaymentResponse } from '@/src/types/payment';
 import { loadTossPayments } from '@tosspayments/payment-sdk';
 
-const clientKey = process.env.NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY as string;
-const customerKey = process.env
-  .NEXT_PUBLIC_TOSS_PAYMENTS_CUSTOMER_KEY as string;
-
 // 토스페이먼츠 결제 처리
 export async function processTossPayment(
   paymentRequest: PaymentRequest

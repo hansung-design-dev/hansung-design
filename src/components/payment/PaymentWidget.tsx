@@ -41,9 +41,13 @@ function PaymentWidgetComponent(
   const widgetContainerId = `payment-methods-${orderId}`;
   const agreementContainerId = `payment-agreement-${orderId}`;
   const [isMounted, setIsMounted] = useState(false);
-  const paymentWidgetRef = useRef<any>(null);
-  const paymentMethodsWidgetRef = useRef<any>(null);
-  const agreementWidgetRef = useRef<any>(null);
+  const paymentWidgetRef = useRef<{
+    requestPayment: (params: unknown) => Promise<void>;
+  } | null>(null);
+  const paymentMethodsWidgetRef = useRef<{
+    updateAmount: (amount: number) => void;
+  } | null>(null);
+  const agreementWidgetRef = useRef<unknown>(null);
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
@@ -61,13 +65,14 @@ function PaymentWidgetComponent(
       const clientKey = process.env
         .NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY as string;
       if (!clientKey) {
-        // eslint-disable-next-line no-console
         console.error('Missing NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY');
         return;
       }
 
       const loaded = await loadPaymentWidget(clientKey, ANONYMOUS);
-      paymentWidgetRef.current = loaded as unknown as any;
+      paymentWidgetRef.current = loaded as {
+        requestPayment: (params: unknown) => Promise<void>;
+      };
 
       paymentMethodsWidgetRef.current = loaded.renderPaymentMethods(
         widgetSelector,
