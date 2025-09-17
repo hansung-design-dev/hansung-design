@@ -220,6 +220,15 @@ export default function LiveCart() {
                             : '하반기'}
                         </span>
                       )}
+                      {/* LED 전자게시대인 경우 기간과 가격 표시 */}
+                      {item.type === 'led-display' && (
+                        <span className="ml-2 text-sm font-medium">
+                          1달 |{' '}
+                          {item.total_price
+                            ? `${item.total_price.toLocaleString()}원`
+                            : '상담문의'}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-gray-500">{item.district}</span>

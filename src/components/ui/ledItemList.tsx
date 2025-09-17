@@ -88,9 +88,10 @@ const LEDItemList: React.FC<LEDItemTableProps> = ({
                 {showCheckbox && <th className="w-10"></th>}
                 <th className="text-center pl-4">No</th>
                 <th className="text-left pl-4">게시대 명</th>
-
                 <th className="text-center pl-4">규격(px)</th>
                 <th className="text-center pl-4">최대배너수</th>
+                <th className="text-center pl-4">기간</th>
+                <th className="text-center pl-4">가격</th>
                 <th className="text-center pl-4">상태</th>
                 {renderAction && <th className="text-center">작업</th>}
               </tr>
@@ -154,6 +155,12 @@ const LEDItemList: React.FC<LEDItemTableProps> = ({
                     {item.slot_width_px} x {item.slot_height_px}
                   </td>
                   <td className="text-center pl-4">{item.max_banners}</td>
+                  <td className="text-center pl-4">1달</td>
+                  <td className="text-center pl-4">
+                    {item.total_price
+                      ? `${item.total_price.toLocaleString()}원`
+                      : '-'}
+                  </td>
                   <td
                     className={`text-center pl-4 ${getStatusClass(
                       displayStatus
@@ -224,6 +231,13 @@ const LEDItemList: React.FC<LEDItemTableProps> = ({
                   규격: {item.slot_width_px} x {item.slot_height_px}px
                 </div>
                 <div>최대배너수: {item.max_banners}</div>
+                <div>기간: 1달</div>
+                <div>
+                  가격:{' '}
+                  {item.total_price
+                    ? `${item.total_price.toLocaleString()}원`
+                    : '-'}
+                </div>
                 <div>
                   상태:{' '}
                   <span className={getStatusClass(displayStatus)}>

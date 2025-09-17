@@ -203,9 +203,15 @@ function CartItemRow({
               </div>
             </div>
             <div className="text-1.25 font-semibold">
-              {item.price === 0
-                ? '상담문의'
-                : `${item.price?.toLocaleString()}원`}
+              {/* LED 전자게시대인 경우 가격과 기간 정보 표시 */}
+              {item.type === 'led-display' && (
+                <div className="text-1 font-500 text-gray-800">
+                  기간: 1달 | 가격:
+                  {item.total_price
+                    ? `${item.total_price.toLocaleString()}원`
+                    : '상담문의'}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -239,6 +245,7 @@ function CartItemRow({
             해당상품은 상담 진행 후 결제가 완료됩니다.
             <br /> 상담문의가 어려우실 경우 고객센터에 문의 부탁드립니다.
           </div>
+
           <Button
             className={`w-[15rem] h-[2rem] px-12 py-4 text-lg font-bold rounded text-1 ${
               isPending
@@ -314,6 +321,10 @@ function CartItemRow({
               ? '상담문의'
               : `${item.price?.toLocaleString()}원`}
           </div>
+          {/* LED 전자게시대인 경우 기간 정보 표시 */}
+          {!isConsulting && item.price !== 0 && item.type === 'led-display' && (
+            <div className="mt-2 text-0.875  font-medium">기간: 1달</div>
+          )}
           {/* 기간 선택 UI - 상담이 아닌 경우에만 표시, LED 전자게시대는 제외 */}
           {!isConsulting && item.price !== 0 && item.type !== 'led-display' && (
             <div className="mt-2">

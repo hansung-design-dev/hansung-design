@@ -275,12 +275,16 @@ export default function DisplayDetailPage({
   //   setSelectedIdsSecondHalf([]);
   // }, [selectedHalfPeriod]);
 
-  // district가 변경될 때 panelTypeFilter를 'panel'로 리셋
+  // district가 변경될 때 panelTypeFilter를 'panel'로 리셋 (단, 송파구/용산구는 제외)
   useEffect(() => {
-    if (currentSetPanelTypeFilter) {
+    if (
+      currentSetPanelTypeFilter &&
+      districtObj?.code !== 'songpa' &&
+      districtObj?.code !== 'yongsan'
+    ) {
       currentSetPanelTypeFilter('panel');
     }
-  }, [district, currentSetPanelTypeFilter]);
+  }, [district, currentSetPanelTypeFilter, districtObj?.code]);
 
   // 게시일 7일 전까지 신청 가능 여부 확인 (한국시간 기준)
   const isPeriodAvailable = (periodStartDate: string) => {
@@ -363,17 +367,18 @@ export default function DisplayDetailPage({
         // banner_slots에서 slot_number 확인
         if (item.type === 'banner' && item.banner_slots) {
           if (currentPanelTypeFilter === 'top_fixed') {
-            // 상단광고 탭: slot_number가 0인 슬롯이 있는 아이템만
+            // 상단광고 탭: slot_number가 0이고 price_unit이 '1 year'인 슬롯이 있는 아이템
             const hasTopFixedSlot = item.banner_slots.some(
-              (slot) => slot.slot_number === 0
+              (slot) => slot.slot_number === 0 && slot.price_unit === '1 year'
             );
             if (hasTopFixedSlot) {
               console.log(`🔍 상단광고 아이템: ${item.name}`, {
                 panelCode: item.panel_code,
-                slot_number: 0,
-                banner_type: item.banner_slots.find(
-                  (slot) => slot.slot_number === 0
-                )?.banner_type,
+                slots: item.banner_slots.map((slot) => ({
+                  slot_number: slot.slot_number,
+                  banner_type: slot.banner_type,
+                  price_unit: slot.price_unit,
+                })),
               });
             }
             return hasTopFixedSlot;
@@ -397,6 +402,17 @@ export default function DisplayDetailPage({
       상단광고_아이템들: filteredByPanelType.map((item) => ({
         name: item.name,
         panelCode: item.panel_code,
+        banner_type: item.banner_type,
+        price: item.price,
+      })),
+    });
+    console.log(`🔍 ${district} 상단광고 필터링 전 원본 데이터:`, {
+      원본_개수: billboards.length,
+      원본_데이터: billboards.map((item) => ({
+        name: item.name,
+        panelCode: item.panel_code,
+        banner_type: item.banner_type,
+        banner_slots: item.banner_slots,
       })),
     });
   }
@@ -1381,6 +1397,7 @@ export default function DisplayDetailPage({
                     '🔍 현수막게시대 탭 클릭 - 변경 전:',
                     currentPanelTypeFilter
                   );
+                  // 단순하게 하나의 상태만 업데이트
                   currentSetPanelTypeFilter('panel');
                   console.log('🔍 현수막게시대 탭 클릭 - 변경 후 요청됨');
                 }}
@@ -1398,6 +1415,7 @@ export default function DisplayDetailPage({
                     '🔍 상단광고 탭 클릭 - 변경 전:',
                     currentPanelTypeFilter
                   );
+                  // 단순하게 하나의 상태만 업데이트
                   currentSetPanelTypeFilter('top_fixed');
                   console.log('🔍 상단광고 탭 클릭 - 변경 후 요청됨');
                 }}
@@ -1415,21 +1433,23 @@ export default function DisplayDetailPage({
         {/* 상하반기 탭 - 개별 구 페이지에서만 표시하거나, 전체보기에서 특정 구를 선택했을 때만 표시 */}
         {/* 상단광고 탭에서는 상하반기 탭 숨김 */}
         {/* 시민게시대 탭에서는 신청기간 섹션 숨김 */}
-        {showHalfPeriodTabs && !(isMapoDistrict && mapoFilter === 'simin') && (
-          <HalfPeriodTabs
-            selectedPeriod={selectedHalfPeriod}
-            onPeriodChange={(newPeriod, year, month) => {
-              setSelectedHalfPeriod(newPeriod);
-              if (year !== undefined) setSelectedPeriodYear(year);
-              if (month !== undefined) setSelectedPeriodMonth(month);
-              // 선택된 기간이 변경되면 선택 상태 초기화
-              setSelectedIdsFirstHalf([]);
-              setSelectedIdsSecondHalf([]);
-            }}
-            districtName={districtObj?.name}
-            periodData={selectedDistrictPeriod || period}
-          />
-        )}
+        {showHalfPeriodTabs &&
+          !(isMapoDistrict && mapoFilter === 'simin') &&
+          !(isSongpaOrYongsan && currentPanelTypeFilter === 'top_fixed') && (
+            <HalfPeriodTabs
+              selectedPeriod={selectedHalfPeriod}
+              onPeriodChange={(newPeriod, year, month) => {
+                setSelectedHalfPeriod(newPeriod);
+                if (year !== undefined) setSelectedPeriodYear(year);
+                if (month !== undefined) setSelectedPeriodMonth(month);
+                // 선택된 기간이 변경되면 선택 상태 초기화
+                setSelectedIdsFirstHalf([]);
+                setSelectedIdsSecondHalf([]);
+              }}
+              districtName={districtObj?.name}
+              periodData={selectedDistrictPeriod || period}
+            />
+          )}
         {/* View Type Selector */}
         <div className="flex items-center gap-4 mb-8 border-b border-gray-200 pb-4">
           <ViewTypeButton
@@ -1507,11 +1527,44 @@ export default function DisplayDetailPage({
             // 준비 중인 경우 메시지 표시
             <div className="flex flex-col items-center justify-center py-20">
               <div className="text-2xl font-bold text-gray-600 mb-4">
-                현재 준비 중입니다
+                {isSongpaOrYongsan && currentPanelTypeFilter === 'top_fixed'
+                  ? '상단광고 상담문의'
+                  : '현재 준비 중입니다'}
               </div>
               <div className="text-gray-500 text-center">
-                서비스 준비 중입니다. <br />
-                조금만 기다려 주세요.
+                {isSongpaOrYongsan && currentPanelTypeFilter === 'top_fixed' ? (
+                  <>
+                    상단광고는 별도 상담을 통해 진행됩니다. <br />
+                    문의사항이 있으시면 연락주세요.
+                  </>
+                ) : (
+                  <>
+                    서비스 준비 중입니다. <br />
+                    조금만 기다려 주세요.
+                  </>
+                )}
+              </div>
+            </div>
+          ) : filteredBillboards.length === 0 ? (
+            // 필터링된 결과가 없는 경우 메시지 표시
+            <div className="flex flex-col items-center justify-center py-20">
+              <div className="text-2xl font-bold text-gray-600 mb-4">
+                {isSongpaOrYongsan && currentPanelTypeFilter === 'top_fixed'
+                  ? '상단광고 상담문의'
+                  : '해당 조건의 게시대가 없습니다'}
+              </div>
+              <div className="text-gray-500 text-center">
+                {isSongpaOrYongsan && currentPanelTypeFilter === 'top_fixed' ? (
+                  <>
+                    상단광고는 별도 상담을 통해 진행됩니다. <br />
+                    문의사항이 있으시면 연락주세요.
+                  </>
+                ) : (
+                  <>
+                    선택한 조건에 맞는 게시대가 없습니다. <br />
+                    다른 조건을 선택해보세요.
+                  </>
+                )}
               </div>
             </div>
           ) : viewType === 'location' ? (

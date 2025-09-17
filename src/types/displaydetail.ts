@@ -115,6 +115,14 @@ export interface LEDBillboard extends BaseBillboard {
   road_usage_fee: number;
   administrative_fee: number;
   panel_slot_status: string;
+  banner_type: string;
+  banner_slots: {
+    id: string;
+    slot_number: number;
+    slot_name: string;
+    max_width: number;
+    max_height: number;
+  }[];
 }
 
 // 통합 타입 (기존 DisplayBillboard와 동일)
