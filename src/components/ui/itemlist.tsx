@@ -193,6 +193,7 @@ const ItemList: React.FC<ItemTableProps> = ({
                   <th className="text-center pl-4">면수</th>
                 )}
                 <th className="text-center pl-4">가격</th>
+                <th className="text-center pl-4">기간</th>
                 <th className="text-center pl-4">구분</th>
                 {!hideQuantityColumns && (
                   <th className="text-center pl-4">수량</th>
@@ -303,6 +304,13 @@ const ItemList: React.FC<ItemTableProps> = ({
                       ? '상담문의'
                       : item.price}
                   </td>
+                  <td className="text-center pl-4">
+                    {isSpecialDistrict &&
+                    item.type === 'banner' &&
+                    item.banner_type === 'top_fixed'
+                      ? '1년'
+                      : item.period || '15일'}
+                  </td>
                   <td className="text-center pl-4">{categoryDisplay}</td>
                   {!hideQuantityColumns && (
                     <td className="text-center pl-4">
@@ -328,7 +336,7 @@ const ItemList: React.FC<ItemTableProps> = ({
             {Array.from({ length: itemsPerPage - paginatedItems.length }).map(
               (_, i) => {
                 const baseCols = showCheckbox ? 1 : 0; // checkbox
-                const dataCols = hideStatusColumn ? 7 : 8; // No, 게시대명, 아이콘, 규격, 가격, 구분, 상태 (상태 컬럼 숨김 시 7개)
+                const dataCols = hideStatusColumn ? 8 : 9; // No, 게시대명, 아이콘, 규격, 가격, 기간, 구분, 상태 (상태 컬럼 숨김 시 8개)
                 const quantityCols = hideQuantityColumns ? 0 : 2; // 면수, 수량
                 const actionCols = renderAction ? 1 : 0; // 작업
                 const totalCols =
@@ -350,6 +358,8 @@ const ItemList: React.FC<ItemTableProps> = ({
         {paginatedItems.map((item) => {
           const displayStatus = statusDisplayMap[item.status] || item.status;
           const categoryDisplay = getCategoryDisplay(item);
+          const isSpecialDistrict =
+            item.district === '송파구' || item.district === '용산구';
           return (
             <div
               key={item.id}
@@ -463,6 +473,14 @@ const ItemList: React.FC<ItemTableProps> = ({
               )}
 
               <div className="text-0.875">구분: {categoryDisplay}</div>
+              <div className="text-0.875">
+                기간:{' '}
+                {isSpecialDistrict &&
+                item.type === 'banner' &&
+                item.banner_type === 'top_fixed'
+                  ? '1년'
+                  : item.period || '15일'}
+              </div>
               {!hideQuantityColumns && (
                 <div className="text-0.875">수량: {item.faces ?? '-'}</div>
               )}

@@ -23,10 +23,8 @@ const Footer = () => {
         </div>
         <div className="flex justify-between  sm:flex-col-reverse sm:gap-[3rem] ">
           <div className="lg:text-1.125 font-weight-500 flex flex-col gap-[1rem]">
-            <div>
-              상호 : (주)한성디자인기획 | 대표자 : 김수엽 | 사업자등록번호 :
-              105-86-69782
-            </div>
+            <div>상호 : (주)한성디자인기획 | 대표자 : 김수엽 </div>
+            <div>사업자등록번호 : 105-86-69782 | 통신판매번호 : 2005-03093</div>
             <div>
               본사 : 서울특별시 마포구 서강로14길 3 | 대표전화 : 02) 711-3737 |
               FAX : 02) 711-3789

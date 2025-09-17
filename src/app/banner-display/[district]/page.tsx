@@ -301,6 +301,12 @@ export default function BannerDisplayPage({
           const slotType =
             panelTypeFilter === 'top_fixed' ? 'top_ad' : 'banner';
           console.log(`🔍 ${districtName} ${slotType} 데이터 요청 중...`);
+          console.log(`🔍 현재 panelTypeFilter:`, panelTypeFilter);
+          console.log(`🔍 API 호출 전 상태:`, {
+            districtName,
+            slotType,
+            panelTypeFilter,
+          });
           data = await getBannerDisplaysByDistrictWithSlotType(
             districtName,
             slotType
@@ -311,6 +317,23 @@ export default function BannerDisplayPage({
             panelTypeFilter,
             slotType,
           });
+
+          // 상단광고 탭인 경우 더 자세한 로그
+          if (slotType === 'top_ad') {
+            console.log(
+              `🔍 ${districtName} 상단광고 원본 데이터 상세:`,
+              data?.map((item) => ({
+                panel_code: item.panel_code,
+                nickname: item.nickname,
+                banner_slots: item.banner_slots?.map((slot) => ({
+                  slot_number: slot.slot_number,
+                  banner_type: slot.banner_type,
+                  price_unit: slot.price_unit,
+                  slot_name: slot.slot_name,
+                })),
+              }))
+            );
+          }
         } else {
           data = await getBannerDisplaysByDistrict(districtName);
         }
@@ -380,6 +403,14 @@ export default function BannerDisplayPage({
             panel_type: item.panel_type,
             nickname: item.nickname,
           }))
+        );
+
+        console.log(
+          `🔍 ${districtName} ${panelTypeFilter} - 데이터 변환 시작:`,
+          {
+            dataLength: data?.length || 0,
+            hasData: !!(data && data.length > 0),
+          }
         );
 
         if (data && data.length > 0) {
@@ -464,23 +495,23 @@ export default function BannerDisplayPage({
                 panelTypeFilter
               );
 
-              // 디버깅 로그 추가
-              console.log('🔍 슬롯 정보:', {
-                panelCode: item.panel_code,
-                nickname: item.nickname,
-                district: item.region_gu.name,
-                photo_url: item.photo_url, // 사진 URL 로그 추가
-                bannerSlotInfo: item.banner_slots?.map((slot) => ({
-                  slot_number: slot.slot_number,
-                  banner_type: slot.banner_type,
-                  total_price: slot.total_price,
-                  max_width: slot.max_width,
-                  max_height: slot.max_height,
-                  price_policies: slot.banner_slot_price_policy,
-                })),
-                foundSlots: slots,
-                isTopFixed,
-              });
+              // // 디버깅 로그 추가
+              // console.log('🔍 슬롯 정보:', {
+              //   panelCode: item.panel_code,
+              //   nickname: item.nickname,
+              //   district: item.region_gu.name,
+              //   photo_url: item.photo_url, // 사진 URL 로그 추가
+              //   bannerSlotInfo: item.banner_slots?.map((slot) => ({
+              //     slot_number: slot.slot_number,
+              //     banner_type: slot.banner_type,
+              //     total_price: slot.total_price,
+              //     max_width: slot.max_width,
+              //     max_height: slot.max_height,
+              //     price_policies: slot.banner_slot_price_policy,
+              //   })),
+              //   foundSlots: slots,
+              //   isTopFixed,
+              // });
 
               // 가격 계산 로직 수정 - banner_slot_price_policy 사용
               let price = '문의';
@@ -588,7 +619,7 @@ export default function BannerDisplayPage({
                 address: item.address,
                 nickname: item.nickname,
                 neighborhood: item.region_dong.name,
-                period: '상시',
+                period: '',
                 price: price,
                 total_price: totalPrice,
                 size: `${slotWidth}x${slotHeight}` || 'no size',
@@ -621,6 +652,21 @@ export default function BannerDisplayPage({
             }
           );
 
+          // 상단광고 탭인 경우 변환된 데이터 상세 로그
+          if (panelTypeFilter === 'top_fixed') {
+            console.log(
+              `🔍 ${districtName} 상단광고 변환된 데이터 상세:`,
+              transformed.map((item) => ({
+                id: item.id,
+                name: item.name,
+                nickname: item.nickname,
+                banner_type: item.banner_type,
+                price: item.price,
+                period: item.period,
+              }))
+            );
+          }
+
           // 관악구인 경우 마감된 게시대를 하드코딩으로 추가
           let finalBillboards = transformed as BannerBillboard[];
 
@@ -633,7 +679,7 @@ export default function BannerDisplayPage({
               address: '관악구 봉천동 123-45',
               nickname: '마감데모',
               neighborhood: '봉천동',
-              period: '상시',
+              period: '',
               price: '50,000원',
               total_price: 50000,
               size: '300x200',
@@ -686,7 +732,32 @@ export default function BannerDisplayPage({
             }
           );
 
+          // 상단광고 탭인 경우 최종 데이터 상세 로그
+          if (panelTypeFilter === 'top_fixed') {
+            console.log(
+              `🔍 ${districtName} 상단광고 최종 설정 데이터:`,
+              finalBillboards.map((item) => ({
+                id: item.id,
+                name: item.name,
+                nickname: item.nickname,
+                banner_type: item.banner_type,
+                price: item.price,
+                period: item.period,
+              }))
+            );
+          }
+
+          console.log(
+            `🔍 ${districtName} ${panelTypeFilter} - setBillboards 호출 직전:`,
+            {
+              finalBillboardsLength: finalBillboards.length,
+              finalBillboards: finalBillboards,
+            }
+          );
           setBillboards(finalBillboards);
+          console.log(
+            `🔍 ${districtName} ${panelTypeFilter} - setBillboards 호출 완료`
+          );
         } else {
           // panel_status가 maintenance인 구들만 준비 중으로 처리
           const isMaintenanceDistrict =
@@ -745,7 +816,7 @@ export default function BannerDisplayPage({
     if (district) {
       fetchBannerData();
     }
-  }, [district, districtObj, panelTypeFilter, period]);
+  }, [district, districtObj, panelTypeFilter]);
 
   if (loading) {
     return (
