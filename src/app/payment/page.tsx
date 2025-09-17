@@ -1011,7 +1011,7 @@ function PaymentPageContent() {
                     <div className="flex flex-col gap-2 items-start">
                       {bulkApply.emailMethod && (
                         <p className="text-xs text-gray-500 ml-6">
-                          banner114@hanmail.net로 시안을 보내드리겠습니다.
+                          banner114@hanmail.net로 시안을 보내주세요.
                         </p>
                       )}
                     </div>
@@ -1095,7 +1095,7 @@ function PaymentPageContent() {
                       </div>
                       {groupStates[group.id]?.sendByEmail && (
                         <p className="text-xs text-gray-500 ml-6">
-                          banner114@hanmail.net로 시안을 보내드리겠습니다.
+                          banner114@hanmail.net로 시안을 보내주세요.
                         </p>
                       )}
                     </div>
@@ -1444,19 +1444,11 @@ function PaymentPageContent() {
             {/* 토스 위젯이 렌더링될 영역 */}
             <div className="space-y-4">
               <div id="toss-payment-methods" className="min-h-[200px]">
-                {!tossWidgetData && (
-                  <div className="flex items-center justify-center h-32 text-gray-500">
-                    결제 수단을 로딩 중...
-                  </div>
-                )}
+                {/* 토스 위젯이 여기에 렌더링됩니다 */}
               </div>
 
               <div id="toss-agreement" className="min-h-[100px]">
-                {!tossWidgetData && (
-                  <div className="flex items-center justify-center h-16 text-gray-500">
-                    약관을 로딩 중...
-                  </div>
-                )}
+                {/* 토스 위젯 약관이 여기에 렌더링됩니다 */}
               </div>
 
               <div id="toss-payment-button" className="mt-4">
