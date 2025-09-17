@@ -1,6 +1,10 @@
 import { PaymentRequest, PaymentResponse } from '@/src/types/payment';
 import { loadTossPayments } from '@tosspayments/payment-sdk';
 
+const clientKey = process.env.NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY as string;
+const customerKey = process.env
+  .NEXT_PUBLIC_TOSS_PAYMENTS_CUSTOMER_KEY as string;
+
 // 토스페이먼츠 결제 처리
 export async function processTossPayment(
   paymentRequest: PaymentRequest
@@ -24,14 +28,57 @@ export async function processTossPayment(
       };
     }
 
-    const tossPayments = await loadTossPayments(clientKey);
-    await tossPayments.requestPayment('카드', {
+    // orderId 검증 및 정리 (토스페이먼츠 요구사항: 영문, 숫자, 언더스코어, 하이픈만 허용)
+    const sanitizedOrderId = paymentRequest.orderId.replace(
+      /[^a-zA-Z0-9_-]/g,
+      ''
+    );
+
+    // 전화번호 형식 검증 및 정리 (숫자만 남기고 하이픈 제거)
+    const sanitizedPhone = paymentRequest.customerPhone.replace(/\D/g, '');
+
+    // 필수 파라미터 검증
+    if (!sanitizedOrderId || sanitizedOrderId.length === 0) {
+      return {
+        success: false,
+        errorCode: 'INVALID_ORDER_ID',
+        errorMessage: '주문 ID가 유효하지 않습니다.',
+      };
+    }
+
+    if (!sanitizedPhone || sanitizedPhone.length < 10) {
+      return {
+        success: false,
+        errorCode: 'INVALID_PHONE',
+        errorMessage: '전화번호가 유효하지 않습니다.',
+      };
+    }
+
+    // Debug: log required payload fields for verification
+    // Do NOT log clientKey itself
+    // Required by Toss requestPayment('카드', ...) for widget redirect mode
+    console.log('[TOSS] requestPayment payload check', {
+      method: '카드',
       amount: paymentRequest.amount,
-      orderId: paymentRequest.orderId,
+      orderId: sanitizedOrderId,
       orderName: paymentRequest.orderName,
       customerName: paymentRequest.customerName,
       customerEmail: paymentRequest.customerEmail,
-      customerMobilePhone: paymentRequest.customerPhone,
+      customerMobilePhone: sanitizedPhone,
+      successUrl: paymentRequest.successUrl,
+      failUrl: paymentRequest.failUrl,
+    });
+
+    const tossPayments = await loadTossPayments(clientKey);
+
+    // 토스페이먼츠 payment-sdk의 올바른 형식
+    await tossPayments.requestPayment('카드', {
+      amount: paymentRequest.amount,
+      orderId: sanitizedOrderId,
+      orderName: paymentRequest.orderName,
+      customerName: paymentRequest.customerName,
+      customerEmail: paymentRequest.customerEmail,
+      customerMobilePhone: sanitizedPhone,
       successUrl: paymentRequest.successUrl,
       failUrl: paymentRequest.failUrl,
     });

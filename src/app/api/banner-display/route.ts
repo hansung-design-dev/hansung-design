@@ -675,6 +675,12 @@ export async function GET(request: NextRequest) {
         return await getBannerDisplayPricePolicies();
       case 'getDistrictData':
         return await getDistrictDataFromCache(district!);
+      case 'getByDistrictWithSlotType':
+        const slotType = searchParams.get('slot_type'); // 'banner' or 'top_ad'
+        return await getBannerDisplaysByDistrictWithSlotType(
+          district!,
+          slotType!
+        );
       default:
         return NextResponse.json(
           { success: false, error: 'Invalid action' },
@@ -1396,22 +1402,9 @@ async function getUltraFastDistrictsData() {
             .filter(Boolean) // null 값 제거
         : [];
 
-      // 송파구, 용산구에 상단광고 추가
-      const pricePolicies =
-        item.region_name === '송파구' || item.region_name === '용산구'
-          ? [
-              ...basePricePolicies,
-              {
-                id: `cache_상단광고_${item.region_name}`,
-                price_usage_type: 'default' as const,
-                tax_price: 0,
-                road_usage_fee: 0,
-                advertising_fee: 0,
-                total_price: 0,
-                displayName: '상단광고: 상담문의',
-              },
-            ]
-          : basePricePolicies;
+      // 현수막 게시대: 송파구, 용산구는 현수막게시대(가격표기)와 상단광고(상담신청) 분리
+      // 다른 구들은 기존 가격정책 그대로 사용
+      const pricePolicies = basePricePolicies;
 
       // 기간 정보 파싱
       let periodData = null;
@@ -1487,6 +1480,276 @@ async function getUltraFastDistrictsData() {
   }
 }
 
+// 특정 구의 현수막 게시대 데이터를 slot_type별로 조회 (송파구, 용산구용)
+async function getBannerDisplaysByDistrictWithSlotType(
+  districtName: string,
+  slotType: string
+) {
+  try {
+    console.log(`🔍 ${districtName} ${slotType} 조회 시작...`);
+    console.log(`🔍 함수 파라미터:`, { districtName, slotType });
+
+    // 송파구, 용산구가 아니면 기존 함수 사용
+    if (districtName !== '송파구' && districtName !== '용산구') {
+      console.log(
+        `🔍 ${districtName}는 송파구/용산구가 아니므로 기존 함수 사용`
+      );
+      return await getBannerDisplaysByDistrict(districtName);
+    }
+
+    // slot_type에 따른 slot_number 결정
+    const slotNumber = slotType === 'top_ad' ? 0 : 1;
+
+    // 동적으로 현재 날짜 기준으로 대상 월 계산
+    const now = new Date();
+    const koreaTime = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+    const currentYear = koreaTime.getFullYear();
+    const currentMonth = koreaTime.getMonth() + 1;
+    const currentDay = koreaTime.getDate();
+
+    // 현재 날짜에 따라 신청 가능한 기간 계산
+    let targetYear = currentYear;
+    let targetMonth = currentMonth;
+
+    if (currentDay >= 13) {
+      if (currentMonth === 12) {
+        targetYear = currentYear + 1;
+        targetMonth = 1;
+      } else {
+        targetMonth = currentMonth + 1;
+      }
+    }
+
+    const targetYearMonth = `${targetYear}년 ${targetMonth}월`;
+    console.log(
+      `🔍 Target year/month for ${districtName} ${slotType}:`,
+      targetYearMonth
+    );
+
+    // 먼저 해당 구의 region_gu_id를 찾기
+    const { data: regionData, error: regionError } = await supabase
+      .from('region_gu')
+      .select('id')
+      .eq('name', districtName)
+      .eq('display_type_id', (await getBannerDisplayTypeId()).id)
+      .eq('is_active', 'true')
+      .single();
+
+    if (regionError || !regionData) {
+      throw new Error(`구를 찾을 수 없습니다: ${districtName}`);
+    }
+
+    // 먼저 해당 구의 모든 slot_number 확인
+    const { data: allSlotsData, error: allSlotsError } = await supabase
+      .from('panels')
+      .select(
+        `
+        id,
+        panel_code,
+        banner_slots (
+          slot_number,
+          slot_name
+        )
+      `
+      )
+      .eq('region_gu_id', regionData.id)
+      .eq('display_type_id', (await getBannerDisplayTypeId()).id)
+      .eq('panel_status', 'active');
+
+    if (!allSlotsError && allSlotsData) {
+      const slotNumbers = allSlotsData.flatMap(
+        (panel) => panel.banner_slots?.map((slot) => slot.slot_number) || []
+      );
+      console.log(
+        `🔍 ${districtName} 모든 slot_number:`,
+        [...new Set(slotNumbers)].sort()
+      );
+    }
+
+    const query = supabase
+      .from('panels')
+      .select(
+        `
+        *,
+        banner_panel_details (
+          id,
+          is_for_admin
+        ),
+        banner_slots!inner (
+          id,
+          slot_number,
+          slot_name,
+          max_width,
+          max_height,
+          banner_type,
+          price_unit,
+          panel_slot_status,
+          banner_slot_price_policy!banner_slot_price_policy_banner_slot_id_fkey (
+            id,
+            price_usage_type,
+            tax_price,
+            road_usage_fee,
+            advertising_fee,
+            total_price
+          )
+        ),
+        region_gu!inner (
+          id,
+          name,
+          code
+        ),
+        region_dong!inner (
+          id,
+          name
+        )
+      `
+      )
+      .eq('region_gu_id', regionData.id)
+      .eq('display_type_id', (await getBannerDisplayTypeId()).id)
+      .eq('panel_status', 'active')
+      .eq('banner_slots.slot_number', slotNumber);
+
+    // 상단광고 탭인 경우 추가 필터링 조건 적용
+    if (slotType === 'top_ad') {
+      console.log(`🔍 ${districtName} 상단광고 탭 필터링 조건 적용:`, {
+        slotNumber: 0,
+        price_unit: '6 months',
+        banner_type: 'top_fixed',
+      });
+      query
+        .eq('banner_slots.price_unit', '6 months')
+        .eq('banner_slots.banner_type', 'top_fixed');
+    }
+
+    const { data, error } = await query.order('panel_code', {
+      ascending: true,
+    });
+
+    if (error) {
+      console.error(`❌ ${districtName} ${slotType} 쿼리 오류:`, error);
+      throw error;
+    }
+
+    console.log(`🔍 ${districtName} ${slotType} 쿼리 결과:`, {
+      dataLength: data?.length || 0,
+      data: data,
+      slotType,
+      slotNumber,
+    });
+
+    // 슬롯별 개별 재고 정보 조회 (banner_slots와 직접 연결)
+    let slotInventoryData = null;
+    let slotInventoryError = null;
+
+    if (data && data.length > 0) {
+      // banner_slot_id 목록 추출
+      const bannerSlotIds = data.flatMap(
+        (item) =>
+          item.banner_slots?.map((slot: { id: string }) => slot.id) || []
+      );
+
+      if (bannerSlotIds.length > 0) {
+        const slotInventoryQuery = supabase
+          .from('banner_slot_inventory')
+          .select(
+            `
+            banner_slot_id,
+            is_available,
+            is_closed,
+            region_gu_display_periods (
+              id,
+              year_month,
+              period,
+              period_from,
+              period_to
+            )
+          `
+          )
+          .in('banner_slot_id', bannerSlotIds)
+          .eq('region_gu_display_periods.year_month', targetYearMonth);
+
+        const result = await slotInventoryQuery;
+        slotInventoryData = result.data;
+        slotInventoryError = result.error;
+      }
+    }
+
+    if (slotInventoryError) {
+      console.error('슬롯별 재고 조회 오류:', slotInventoryError);
+    }
+
+    // 슬롯별 재고 정보를 banner_slot_id별로 그룹화
+    const slotInventoryByBannerSlot =
+      slotInventoryData?.reduce(
+        (acc, item) => {
+          acc[item.banner_slot_id] = {
+            is_available: item.is_available,
+            is_closed: item.is_closed,
+            period: item.region_gu_display_periods?.[0]?.period,
+            year_month: item.region_gu_display_periods?.[0]?.year_month,
+          };
+          return acc;
+        },
+        {} as Record<
+          string,
+          {
+            is_available: boolean;
+            is_closed: boolean;
+            period?: string;
+            year_month?: string;
+          }
+        >
+      ) || {};
+
+    const dataWithInventory = data?.map((item: BannerDisplayData) => {
+      // 슬롯별 개별 재고 정보 추가
+      return {
+        ...item,
+        banner_slots: item.banner_slots?.map((slot) => ({
+          ...slot,
+          slot_inventory: slotInventoryByBannerSlot[slot.id]
+            ? [slotInventoryByBannerSlot[slot.id]]
+            : [],
+        })),
+        inventory_data: {
+          current_period: null,
+          first_half: null,
+          second_half: null,
+        },
+      };
+    });
+
+    console.log(`🔍 ${districtName} ${slotType} 조회 결과:`, {
+      district: districtName,
+      slotType: slotType,
+      slotNumber: slotNumber,
+      totalCount: dataWithInventory?.length || 0,
+      targetYearMonth,
+      rawData: data,
+      dataWithInventory: dataWithInventory,
+    });
+
+    console.log(`🔍 ${districtName} 정상 데이터 반환:`, {
+      dataWithInventory,
+      dataWithInventoryLength: dataWithInventory?.length,
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: dataWithInventory as BannerDisplayData[],
+    });
+  } catch (error) {
+    console.error(`❌ Error in getBannerDisplaysByDistrictWithSlotType:`, {
+      districtName,
+      slotType,
+      error: error,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      errorStack: error instanceof Error ? error.stack : undefined,
+    });
+    throw error;
+  }
+}
+
 // 특정 구의 데이터를 캐시 테이블에서 가져오기
 async function getDistrictDataFromCache(districtName: string) {
   try {
@@ -1540,16 +1803,24 @@ async function getDistrictDataFromCache(districtName: string) {
     let periodData = null;
     try {
       const periodResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/display-period?district=${encodeURIComponent(
+        `${
+          process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+        }/api/display-period?district=${encodeURIComponent(
           districtName
         )}&display_type=banner_display`
       );
       const periodResult = await periodResponse.json();
       if (periodResult.success) {
         periodData = periodResult.data;
-        console.log('🔍 Period data from API (in getDistrictDataFromCache):', periodData);
+        console.log(
+          '🔍 Period data from API (in getDistrictDataFromCache):',
+          periodData
+        );
       } else {
-        console.warn('🔍 Failed to fetch period data from API:', periodResult.error);
+        console.warn(
+          '🔍 Failed to fetch period data from API:',
+          periodResult.error
+        );
       }
     } catch (err) {
       console.warn('🔍 Error fetching period data from API:', err);
@@ -1584,7 +1855,10 @@ async function getDistrictDataFromCache(districtName: string) {
       pricePolicies: pricePolicies,
     };
 
-    console.log('🔍 District data from cache (with real-time period):', responseData);
+    console.log(
+      '🔍 District data from cache (with real-time period):',
+      responseData
+    );
 
     return NextResponse.json({
       success: true,

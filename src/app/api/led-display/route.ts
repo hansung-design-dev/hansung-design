@@ -316,7 +316,7 @@ async function getAllDistrictsData() {
     const processedDistricts =
       cacheData?.map((cache) => {
         // 가격 정책 정보 변환
-        const pricePolicies = cache.price_summary
+        const basePricePolicies = cache.price_summary
           ? [
               {
                 id: `cache-${cache.region_gu_id}`,
@@ -329,6 +329,19 @@ async function getAllDistrictsData() {
               },
             ]
           : [];
+
+        // LED 전자게시대는 모든 구에서 상담신청으로 표시
+        const pricePolicies = [
+          {
+            id: `cache_led_consultation_${cache.region_gu_id}`,
+            price_usage_type: 'default' as const,
+            tax_price: 0,
+            road_usage_fee: 0,
+            advertising_fee: 0,
+            total_price: 0,
+            displayName: '상담문의',
+          },
+        ];
 
         // 입금계좌 정보 변환
         const bank_accounts = cache.bank_name

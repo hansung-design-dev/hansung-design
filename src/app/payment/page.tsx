@@ -1,16 +1,16 @@
 'use client';
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { Button } from '@/src/components/button/button';
 import Nav from '@/src/components/layouts/nav';
 import { useAuth } from '@/src/contexts/authContext';
 import { useCart } from '@/src/contexts/cartContext';
 import { useProfile } from '@/src/contexts/profileContext';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { CartItem } from '@/src/contexts/cartContext';
 import CustomFileUpload from '@/src/components/ui/CustomFileUpload';
 // import Image from 'next/image';
-import PaymentMethodSelector from '@/src/components/payment/PaymentMethodSelector';
-import { processPayment } from '@/src/lib/payment';
+// PaymentMethodSelector import 제거 - 바로 토스 위젯 사용
+// processPayment import 제거 - 토스 위젯에서 직접 처리
 
 // UserProfile 타입 정의
 interface UserProfile {
@@ -61,7 +61,7 @@ function PaymentPageContent() {
   const { user } = useAuth();
   const { cart } = useCart();
   const { profiles } = useProfile();
-  const router = useRouter();
+  // router 제거 - 토스 위젯에서 직접 처리
   const searchParams = useSearchParams();
 
   const [selectedItems, setSelectedItems] = useState<CartItem[]>([]);
@@ -104,17 +104,21 @@ function PaymentPageContent() {
 
   // 결제 모달 상태
   const [paymentModalOpen, setPaymentModalOpen] = useState<string | null>(null);
-  const [modalPaymentMethod, setModalPaymentMethod] = useState<string>('card');
+  // modalPaymentMethod 제거 - 바로 토스 위젯 사용
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   const [modalTaxInvoice, setModalTaxInvoice] = useState(false);
 
+  // 토스 위젯 상태
+  const [tossWidgetOpen, setTossWidgetOpen] = useState(false);
+  const [tossWidgetData, setTossWidgetData] = useState<GroupedCartItem | null>(
+    null
+  );
+
   // 결제 처리 상태
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isProcessing, setIsProcessing] = useState(false);
-  const [completedDistricts, setCompletedDistricts] = useState<string[]>([]);
-  const [successModalOpen, setSuccessModalOpen] = useState(false);
-  const [successDistrict, setSuccessDistrict] = useState<string | null>(null);
+  // completedDistricts, successModalOpen, successDistrict 제거 - 토스 위젯에서 직접 처리
 
   // 일괄적용 핸들러들
   const handleBulkProjectNameToggle = () => {
@@ -185,8 +189,8 @@ function PaymentPageContent() {
     }));
   };
 
-  // 일괄적용 실행 함수
-  const applyBulkSettings = () => {
+  // 일괄적용 실행 함수 (useCallback으로 안정화)
+  const applyBulkSettings = useCallback(() => {
     if (bulkApply.projectName && projectName) {
       groupedItems.forEach((group) => {
         handleGroupProjectNameChange(group.id, projectName);
@@ -206,12 +210,15 @@ function PaymentPageContent() {
         handleGroupEmailSelect(group.id, true);
       });
     }
-  };
+  }, [bulkApply, projectName, selectedFile, groupedItems]);
 
-  // 일괄적용 상태 변경 시 자동 적용
+  // 일괄적용 상태 변경 시 자동 적용 (무한 루프 방지)
   useEffect(() => {
-    applyBulkSettings();
-  }, [bulkApply, projectName, selectedFile]);
+    // groupedItems가 있을 때만 실행
+    if (groupedItems.length > 0) {
+      applyBulkSettings();
+    }
+  }, [applyBulkSettings, groupedItems.length]);
 
   // 사용자 프로필 데이터 가져오기
   useEffect(() => {
@@ -251,7 +258,8 @@ function PaymentPageContent() {
     if (
       directParam === 'true' &&
       selectedItems.length > 0 &&
-      userProfiles.length > 0
+      userProfiles.length > 0 &&
+      !projectName // 프로젝트명이 아직 설정되지 않은 경우에만 실행
     ) {
       console.log('🔍 Direct mode: re-grouping items with loaded profiles');
       const grouped = groupItemsByDistrict(selectedItems, true);
@@ -260,13 +268,32 @@ function PaymentPageContent() {
       // 기본 프로젝트 이름 설정 (현재 날짜 + 기본 프로필 회사명)
       const defaultProfile =
         userProfiles.find((profile) => profile.is_default) || userProfiles[0];
+
+      console.log('🔍 Direct mode - defaultProfile:', defaultProfile);
+      console.log(
+        '🔍 Direct mode - company_name:',
+        defaultProfile?.company_name
+      );
+
       const today = new Date();
       const dateStr = `${today.getFullYear()}년 ${
         today.getMonth() + 1
       }월 ${today.getDate()}일`;
-      const defaultProjectName = `${
-        defaultProfile?.company_name || '광고'
-      } ${dateStr}`;
+
+      // company_name이 undefined이거나 빈 문자열일 때 '광고'로 대체
+      let companyName = '광고';
+      if (
+        defaultProfile?.company_name &&
+        defaultProfile.company_name.trim() !== ''
+      ) {
+        companyName = defaultProfile.company_name;
+      }
+
+      console.log('🔍 Direct mode - final companyName:', companyName);
+
+      const defaultProjectName = `${companyName} ${dateStr}`;
+
+      console.log('🔍 Direct mode - defaultProjectName:', defaultProjectName);
 
       setProjectName(defaultProjectName);
       setTempProjectName(defaultProjectName);
@@ -278,79 +305,81 @@ function PaymentPageContent() {
         fileUpload: true,
       }));
     }
-  }, [userProfiles, selectedItems, searchParams]);
+  }, [userProfiles, selectedItems, searchParams, projectName]);
 
-  // 묶음 결제를 위한 아이템 그룹화 함수
-  const groupItemsByDistrict = (
-    items: CartItem[],
-    isDirectMode = false
-  ): GroupedCartItem[] => {
-    // 구별 + 상하반기별로 그룹화
-    const grouped: { [key: string]: CartItem[] } = {};
+  // 묶음 결제를 위한 아이템 그룹화 함수 (useCallback으로 안정화)
+  const groupItemsByDistrict = useCallback(
+    (items: CartItem[], isDirectMode = false): GroupedCartItem[] => {
+      // 구별 + 상하반기별로 그룹화
+      const grouped: { [key: string]: CartItem[] } = {};
 
-    items.forEach((item) => {
-      // 상하반기 정보 생성
-      const halfPeriod = item.halfPeriod || 'first_half';
-      const year = item.selectedYear || new Date().getFullYear();
-      const month = item.selectedMonth || new Date().getMonth() + 1;
+      items.forEach((item) => {
+        // 상하반기 정보 생성
+        const halfPeriod = item.halfPeriod || 'first_half';
+        const year = item.selectedYear || new Date().getFullYear();
+        const month = item.selectedMonth || new Date().getMonth() + 1;
 
-      // 그룹 키: 구_상하반기_년월
-      const groupKey = `${item.district}_${halfPeriod}_${year}_${month}`;
+        // 그룹 키: 구_상하반기_년월
+        const groupKey = `${item.district}_${halfPeriod}_${year}_${month}`;
 
-      if (!grouped[groupKey]) grouped[groupKey] = [];
-      grouped[groupKey].push(item);
-    });
+        if (!grouped[groupKey]) grouped[groupKey] = [];
+        grouped[groupKey].push(item);
+      });
 
-    return Object.entries(grouped).map(([groupKey, group]) => {
-      const firstItem = group[0];
-      const totalPrice = group.reduce(
-        (sum, item) => sum + (item.price || 0),
-        0
-      );
+      return Object.entries(grouped).map(([groupKey, group]) => {
+        const firstItem = group[0];
+        const totalPrice = group.reduce(
+          (sum, item) => sum + (item.price || 0),
+          0
+        );
 
-      // 상하반기 표시 텍스트 생성
-      const halfPeriod = firstItem.halfPeriod || 'first_half';
-      const year = firstItem.selectedYear || new Date().getFullYear();
-      const month = firstItem.selectedMonth || new Date().getMonth() + 1;
-      const periodText = `${year}년 ${month}월 ${
-        halfPeriod === 'first_half' ? '상반기' : '하반기'
-      }`;
+        // 상하반기 표시 텍스트 생성
+        const halfPeriod = firstItem.halfPeriod || 'first_half';
+        const year = firstItem.selectedYear || new Date().getFullYear();
+        const month = firstItem.selectedMonth || new Date().getMonth() + 1;
+        const periodText = `${year}년 ${month}월 ${
+          halfPeriod === 'first_half' ? '상반기' : '하반기'
+        }`;
 
-      // Direct 모드인 경우 기본 프로필 정보를 우선적으로 사용
-      const profileToUse = isDirectMode ? defaultProfile : null;
+        // Direct 모드인 경우 기본 프로필 정보를 우선적으로 사용
+        const profileToUse = isDirectMode ? defaultProfile : null;
 
-      return {
-        id: `group_${groupKey}`,
-        name: `${firstItem.district} 현수막게시대`,
-        items: group,
-        totalPrice,
-        district: firstItem.district,
-        type: 'banner-display',
-        panel_type: firstItem.panel_type || 'panel',
-        is_public_institution:
-          firstItem.is_public_institution ||
-          profileToUse?.is_public_institution,
-        is_company: firstItem.is_company || profileToUse?.is_company,
-        user_profile_id:
-          firstItem.user_profile_id || profileToUse?.id || defaultProfile?.id,
-        contact_person_name:
-          firstItem.contact_person_name ||
-          profileToUse?.contact_person_name ||
-          defaultProfile?.contact_person_name,
-        phone: firstItem.phone || profileToUse?.phone || defaultProfile?.phone,
-        company_name:
-          firstItem.company_name ||
-          profileToUse?.company_name ||
-          defaultProfile?.company_name,
-        email: firstItem.email || profileToUse?.email || defaultProfile?.email,
-        // 상하반기 정보 추가
-        halfPeriod,
-        selectedYear: year,
-        selectedMonth: month,
-        periodText,
-      };
-    });
-  };
+        return {
+          id: `group_${groupKey}`,
+          name: `${firstItem.district} 현수막게시대`,
+          items: group,
+          totalPrice,
+          district: firstItem.district,
+          type: 'banner-display',
+          panel_type: firstItem.panel_type || 'panel',
+          is_public_institution:
+            firstItem.is_public_institution ||
+            profileToUse?.is_public_institution,
+          is_company: firstItem.is_company || profileToUse?.is_company,
+          user_profile_id:
+            firstItem.user_profile_id || profileToUse?.id || defaultProfile?.id,
+          contact_person_name:
+            firstItem.contact_person_name ||
+            profileToUse?.contact_person_name ||
+            defaultProfile?.contact_person_name,
+          phone:
+            firstItem.phone || profileToUse?.phone || defaultProfile?.phone,
+          company_name:
+            firstItem.company_name ||
+            profileToUse?.company_name ||
+            defaultProfile?.company_name,
+          email:
+            firstItem.email || profileToUse?.email || defaultProfile?.email,
+          // 상하반기 정보 추가
+          halfPeriod,
+          selectedYear: year,
+          selectedMonth: month,
+          periodText,
+        };
+      });
+    },
+    [userProfiles]
+  );
 
   // URL 파라미터에서 선택된 아이템 ID들 가져오기
   useEffect(() => {
@@ -384,6 +413,77 @@ function PaymentPageContent() {
         // 승인된 주문의 경우 cart에서 아이템을 찾지 않고 주문 ID를 직접 사용
         if (isApprovedOrder) {
           // 승인된 주문의 경우 주문 정보를 가져와서 selectedItems 설정
+          const fetchApprovedOrderItems = async (orderNumber: string) => {
+            const directParam = searchParams.get('direct');
+            try {
+              const response = await fetch(`/api/orders/${orderNumber}`);
+              const data = await response.json();
+
+              if (data.success) {
+                // 주문 정보를 CartItem 형태로 변환
+                const orderItems: CartItem[] =
+                  data.data.order_details?.map(
+                    (detail: {
+                      id: string;
+                      name: string;
+                      price: number;
+                      quantity: number;
+                      district?: string;
+                      panel_type?: string;
+                      panel_id?: string;
+                      panel_slot_snapshot?: {
+                        id?: string;
+                        notes?: string;
+                        max_width?: number;
+                        slot_name?: string;
+                        tax_price?: number;
+                        created_at?: string;
+                        max_height?: number;
+                        price_unit?: string;
+                        updated_at?: string;
+                        banner_type?: string;
+                        slot_number?: number;
+                        total_price?: number;
+                        panel_id?: string;
+                        road_usage_fee?: number;
+                        advertising_fee?: number;
+                        panel_slot_status?: string;
+                      };
+                      panel_slot_usage_id?: string;
+                      period?: string;
+                      selected_year?: number;
+                      selected_month?: number;
+                    }) => ({
+                      id: detail.id,
+                      name: detail.name,
+                      price: detail.price,
+                      quantity: detail.quantity,
+                      district: detail.district || '',
+                      type: 'banner-display' as const,
+                      panel_type: detail.panel_type || 'panel',
+                      panel_id: detail.panel_id,
+                      panel_slot_snapshot: detail.panel_slot_snapshot,
+                      panel_slot_usage_id: detail.panel_slot_usage_id,
+                      halfPeriod: detail.period,
+                      selectedYear: detail.selected_year,
+                      selectedMonth: detail.selected_month,
+                    })
+                  ) || [];
+
+                setSelectedItems(orderItems);
+
+                // 묶음 결제를 위한 그룹화 (direct 모드 여부 전달)
+                const grouped = groupItemsByDistrict(
+                  orderItems,
+                  directParam === 'true'
+                );
+                setGroupedItems(grouped);
+              }
+            } catch (error) {
+              console.error('Failed to fetch approved order items:', error);
+            }
+          };
+
           fetchApprovedOrderItems(selectedItemIds[0]);
         } else {
           const items = cart.filter((item) =>
@@ -408,33 +508,21 @@ function PaymentPageContent() {
     } else {
       console.log('🔍 Payment page - no items param found');
     }
-  }, [searchParams, cart, isApprovedOrder]);
+  }, [searchParams, cart, isApprovedOrder, groupItemsByDistrict]);
 
-  // selectedItems 상태 변경 감지
-  useEffect(() => {
-    console.log(
-      '🔍 selectedItems 상태 변경됨:',
-      selectedItems.length,
-      selectedItems.map((item) => ({
-        id: item.id,
-        name: item.name,
-        fileName: item.fileName,
-        fileUploadMethod: item.fileUploadMethod,
-      }))
-    );
+  // // selectedItems 상태 변경 감지 (디버깅용 - 주기적 실행 방지)
+  // useEffect(() => {
+  //   // selectedItems가 비어있고 cart도 비어있을 때만 경고 (무한 루프 방지)
+  //   if (selectedItems.length === 0 && cart.length === 0) {
+  //     console.warn('🔍 WARNING: selectedItems와 cart가 모두 비어있음!');
+  //     console.warn('🔍 현재 URL params:', searchParams.get('items'));
+  //   }
+  // }, [selectedItems.length, cart.length, searchParams]);
 
-    // selectedItems가 비어있게 되면 경고
-    if (selectedItems.length === 0) {
-      console.warn('🔍 WARNING: selectedItems가 비어있음!');
-      console.warn('🔍 현재 cart 상태:', cart.length);
-      console.warn('🔍 현재 URL params:', searchParams.get('items'));
-    }
-  }, [selectedItems, cart, searchParams]);
-
-  // selectedFile 상태 변경 감지
-  useEffect(() => {
-    console.log('🔍 selectedFile 상태 변경됨:', selectedFile?.name || '없음');
-  }, [selectedFile]);
+  // // selectedFile 상태 변경 감지
+  // useEffect(() => {
+  //   console.log('🔍 selectedFile 상태 변경됨:', selectedFile?.name || '없음');
+  // }, [selectedFile]);
 
   // 실시간 유효성 검사
   useEffect(() => {
@@ -471,79 +559,6 @@ function PaymentPageContent() {
     isAgreedCaution,
     selectedItems.length,
   ]);
-
-  // 승인된 주문의 아이템 정보 가져오기
-  const fetchApprovedOrderItems = async (orderNumber: string) => {
-    const directParam = searchParams.get('direct');
-    try {
-      const response = await fetch(`/api/orders/${orderNumber}`);
-      const data = await response.json();
-
-      if (data.success) {
-        // 주문 정보를 CartItem 형태로 변환
-        const orderItems: CartItem[] =
-          data.data.order_details?.map(
-            (detail: {
-              id: string;
-              name: string;
-              price: number;
-              quantity: number;
-              district?: string;
-              panel_type?: string;
-              panel_id?: string;
-              panel_slot_snapshot?: {
-                id?: string;
-                notes?: string;
-                max_width?: number;
-                slot_name?: string;
-                tax_price?: number;
-                created_at?: string;
-                max_height?: number;
-                price_unit?: string;
-                updated_at?: string;
-                banner_type?: string;
-                slot_number?: number;
-                total_price?: number;
-                panel_id?: string;
-                road_usage_fee?: number;
-                advertising_fee?: number;
-                panel_slot_status?: string;
-              };
-              panel_slot_usage_id?: string;
-              period?: string;
-              selected_year?: number;
-              selected_month?: number;
-            }) => ({
-              id: detail.id,
-              name: detail.name,
-              price: detail.price,
-              quantity: detail.quantity,
-              district: detail.district || '',
-              type: 'banner-display' as const,
-              panel_type: detail.panel_type || 'panel',
-              panel_id: detail.panel_id,
-              panel_slot_snapshot: detail.panel_slot_snapshot,
-              panel_slot_usage_id: detail.panel_slot_usage_id,
-              halfPeriod: detail.period,
-              selectedYear: detail.selected_year,
-              selectedMonth: detail.selected_month,
-            })
-          ) || [];
-
-        setSelectedItems(orderItems);
-
-        // 묶음 결제를 위한 그룹화 (direct 모드 여부 전달)
-        const grouped = groupItemsByDistrict(
-          orderItems,
-          directParam === 'true'
-        );
-        setGroupedItems(grouped);
-      }
-    } catch (error) {
-      console.error('Failed to fetch approved order items:', error);
-      // setError('승인된 주문 정보를 불러오는데 실패했습니다.'); // Removed setError
-    }
-  };
 
   // 결제대기 주문 정보 가져오기
   const fetchPendingOrder = async (orderNumber: string) => {
@@ -632,7 +647,8 @@ function PaymentPageContent() {
     : userProfiles?.find((profile) => profile.is_default) ||
       userProfiles?.[0] ||
       profiles?.find((profile) => profile.is_default) ||
-      profiles?.[0];
+      profiles?.[0] ||
+      null; // 명시적으로 null 반환
 
   console.log('🔍 defaultProfile:', defaultProfile);
 
@@ -745,173 +761,114 @@ function PaymentPageContent() {
   //   );
   // }
 
-  // 결제 처리 함수
-  const handleSingleGroupPayment = async (group: GroupedCartItem) => {
-    try {
-      setIsProcessingPayment(true);
+  // handleSingleGroupPayment 함수 제거 - 바로 토스 위젯 사용
 
-      // 1. 먼저 주문을 생성
-      if (!user?.id) {
-        throw new Error('사용자 정보가 없습니다. 다시 로그인해주세요.');
-      }
-
-      // 사용자 프로필 ID가 없으면 기본 프로필 사용
-      let userProfileId = group.user_profile_id || defaultProfile?.id;
-
-      // 여전히 프로필 ID가 없으면 더 강력한 검색
-      if (!userProfileId) {
-        // userProfiles에서 기본 프로필 찾기
-        const fallbackProfile =
-          userProfiles?.find((profile) => profile.is_default) ||
-          userProfiles?.[0] ||
-          profiles?.find((profile) => profile.is_default) ||
-          profiles?.[0];
-
-        if (fallbackProfile) {
-          userProfileId = fallbackProfile.id;
-          console.log('🔍 Fallback profile found:', fallbackProfile);
-        }
-      }
-
-      if (!userProfileId) {
-        console.error(
-          '🔍 No profile found. userProfiles:',
-          userProfiles,
-          'profiles:',
-          profiles
-        );
-        throw new Error(
-          '사용자 프로필 정보가 없습니다. 프로필을 먼저 설정해주세요.'
-        );
-      }
-
-      // 그룹의 사용자 정보가 없으면 기본 프로필 정보로 업데이트
-      const updatedGroup = {
-        ...group,
-        user_profile_id: userProfileId,
-        contact_person_name:
-          group.contact_person_name || defaultProfile?.contact_person_name,
-        phone: group.phone || defaultProfile?.phone,
-        company_name: group.company_name || defaultProfile?.company_name,
-        email: group.email || defaultProfile?.email,
-      };
-
-      const orderData = {
-        userAuthId: user.id,
-        userProfileId: userProfileId,
-        projectName: groupStates[updatedGroup.id]?.projectName || '',
-        draftDeliveryMethod: groupStates[updatedGroup.id]?.selectedFile
-          ? 'upload'
-          : groupStates[updatedGroup.id]?.sendByEmail
-          ? 'email'
-          : 'upload',
-        items: updatedGroup.items.map((item) => ({
-          panel_id: item.panel_id,
-          price: item.price,
-          quantity: 1,
-          halfPeriod: item.halfPeriod,
-          selectedYear: item.selectedYear,
-          selectedMonth: item.selectedMonth,
-          selectedPeriodFrom: item.selectedPeriodFrom,
-          selectedPeriodTo: item.selectedPeriodTo,
-        })),
-      };
-
-      console.log('🔍 Creating order with data:', orderData);
-
-      const orderResponse = await fetch('/api/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(orderData),
-      });
-
-      if (!orderResponse.ok) {
-        const errorData = await orderResponse.json();
-        throw new Error(
-          `주문 생성 실패: ${errorData.error || '알 수 없는 오류'}`
-        );
-      }
-
-      const orderResult = await orderResponse.json();
-      console.log('🔍 Order created successfully:', orderResult);
-
-      // 2. 결제 요청 데이터 생성
-      const paymentRequest = {
-        orderId: orderResult.order_number,
-        amount: updatedGroup.totalPrice,
-        orderName: `${updatedGroup.district} ${updatedGroup.type} 광고`,
-        customerName: updatedGroup.contact_person_name || '고객',
-        customerEmail: updatedGroup.email || 'customer@example.com',
-        customerPhone: updatedGroup.phone || '010-0000-0000',
-        successUrl: `${window.location.origin}/payment/success?orderId=${orderResult.order_number}`,
-        failUrl: `${window.location.origin}/payment/fail?orderId=${orderResult.order_number}`,
-        cancelUrl: `${window.location.origin}/payment/cancel?orderId=${orderResult.order_number}`,
-      };
-
-      // 3. 결제 처리
-      const result = await processPayment(modalPaymentMethod, paymentRequest);
-
-      if (result.success) {
-        // 결제 성공
-        setCompletedDistricts((prev) => [...prev, updatedGroup.district]);
-        setSuccessDistrict(updatedGroup.district);
-        setSuccessModalOpen(true);
-        setPaymentModalOpen(null);
-
-        // 4. 주문 상태 업데이트
-        try {
-          await fetch(`/api/orders/${orderResult.order_number}/update-status`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              payment_status:
-                modalPaymentMethod === 'bank_transfer'
-                  ? 'pending_deposit'
-                  : 'completed',
-            }),
-          });
-        } catch (error) {
-          console.error('주문 상태 업데이트 실패:', error);
-        }
-
-        // 5. 계좌이체의 경우 리다이렉트 URL로 이동
-        if (modalPaymentMethod === 'bank_transfer' && result.redirectUrl) {
-          window.location.href = result.redirectUrl;
-        }
-      } else {
-        // 결제 실패 - 주문 상태를 failed로 업데이트
-        try {
-          await fetch(`/api/orders/${orderResult.order_number}/update-status`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              payment_status: 'failed',
-            }),
-          });
-        } catch (error) {
-          console.error('주문 상태 업데이트 실패:', error);
-        }
-
-        alert(`결제 실패: ${result.errorMessage}`);
-      }
-    } catch (error) {
-      console.error('Payment error:', error);
-      alert('결제 처리 중 오류가 발생했습니다.');
-    } finally {
-      setIsProcessingPayment(false);
-    }
+  // 토스 위젯 열기 함수
+  const openTossWidget = (group: GroupedCartItem) => {
+    setTossWidgetData(group);
+    setTossWidgetOpen(true);
+    setIsProcessingPayment(false); // 결제 처리 상태 초기화
   };
 
-  // 결제 안한 구만 보여주기
-  const visibleGroups = groupedItems.filter(
-    (group) => !completedDistricts.includes(group.district)
-  );
+  // 토스 위젯 초기화
+  useEffect(() => {
+    if (tossWidgetOpen && tossWidgetData) {
+      const initializeTossWidget = async () => {
+        try {
+          // 토스페이먼츠 SDK 동적 로드
+          const { loadTossPayments, ANONYMOUS } = await import(
+            '@tosspayments/tosspayments-sdk'
+          );
+
+          const tossPayments = await loadTossPayments(
+            'test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm' // 테스트 키
+          );
+
+          const widgets = tossPayments.widgets({
+            customerKey: ANONYMOUS,
+          });
+
+          // 결제 금액 설정
+          await widgets.setAmount({
+            currency: 'KRW',
+            value: tossWidgetData.totalPrice,
+          });
+
+          // 위젯 렌더링
+          await Promise.all([
+            widgets.renderPaymentMethods({
+              selector: '#toss-payment-methods',
+              variantKey: 'DEFAULT',
+            }),
+            widgets.renderAgreement({
+              selector: '#toss-agreement',
+              variantKey: 'AGREEMENT',
+            }),
+          ]);
+
+          // 결제 요청 버튼 이벤트 리스너
+          const paymentButton = document.createElement('button');
+          paymentButton.textContent = '결제하기';
+          paymentButton.className =
+            'w-full py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700';
+
+          paymentButton.addEventListener('click', async () => {
+            try {
+              const randomId =
+                Math.random().toString(36).substring(2, 15) +
+                Math.random().toString(36).substring(2, 15);
+              const testOrderId = `test_${Date.now()}_${randomId}`;
+
+              // 전화번호 정리 (숫자만 남기기)
+              const sanitizedPhone = (
+                tossWidgetData.phone || '010-0000-0000'
+              ).replace(/\D/g, '');
+
+              await widgets.requestPayment({
+                orderId: testOrderId,
+                orderName: `${tossWidgetData.district} 현수막게시대`,
+                successUrl: `${window.location.origin}/payment/success?orderId=${testOrderId}`,
+                failUrl: `${window.location.origin}/payment/fail?orderId=${testOrderId}`,
+                customerEmail: tossWidgetData.email || 'customer@example.com',
+                customerName: tossWidgetData.contact_person_name || '고객',
+                customerMobilePhone: sanitizedPhone,
+              });
+            } catch (err) {
+              console.error('결제 요청 실패:', err);
+              alert('결제 요청 중 오류가 발생했습니다.');
+            }
+          });
+
+          // 결제 버튼을 버튼 컨테이너에 추가
+          const buttonContainer = document.getElementById(
+            'toss-payment-button'
+          );
+          if (buttonContainer) {
+            buttonContainer.innerHTML = '';
+            buttonContainer.appendChild(paymentButton);
+          }
+        } catch (error) {
+          console.error('토스 위젯 초기화 실패:', error);
+
+          // 에러 발생 시 사용자에게 알림
+          const container = document.getElementById('toss-payment-methods');
+          if (container) {
+            container.innerHTML = `
+              <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div class="text-red-800 font-medium">토스 위젯 로딩 실패</div>
+                <div class="text-red-600 text-sm mt-1">결제 위젯을 불러오는데 실패했습니다. 페이지를 새로고침해주세요.</div>
+              </div>
+            `;
+          }
+        }
+      };
+
+      initializeTossWidget();
+    }
+  }, [tossWidgetOpen, tossWidgetData]);
+
+  // 모든 그룹 보여주기 (토스 위젯에서 직접 처리)
+  const visibleGroups = groupedItems;
 
   return (
     <main className="min-h-screen bg-white pt-[5.5rem] bg-gray-100 lg:px-[10rem]">
@@ -1456,11 +1413,7 @@ function PaymentPageContent() {
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             {/* 결제 방법 선택 */}
             <div className="mb-4">
-              <PaymentMethodSelector
-                selectedMethod={modalPaymentMethod}
-                onMethodChange={setModalPaymentMethod}
-                disabled={isProcessingPayment}
-              />
+              {/* 결제 수단 선택 UI 제거 - 바로 토스 위젯으로 이동 */}
             </div>
 
             {/* 세금계산서 */}
@@ -1499,12 +1452,14 @@ function PaymentPageContent() {
                 취소
               </Button>
               <Button
-                onClick={async () => {
+                onClick={() => {
                   const group = groupedItems.find(
                     (g) => g.id === paymentModalOpen
                   );
                   if (group) {
-                    await handleSingleGroupPayment(group);
+                    // 바로 토스 위젯 모달 열기
+                    setPaymentModalOpen(null); // 현재 모달 닫기
+                    openTossWidget(group);
                   }
                 }}
                 disabled={isProcessingPayment}
@@ -1517,33 +1472,61 @@ function PaymentPageContent() {
         </div>
       )}
 
-      {/* 결제 성공 모달 */}
-      {successModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-lg p-8 shadow-lg w-full max-w-xs flex flex-col items-center">
-            <div className="text-2xl font-bold mb-2 text-blue-700">
-              결제 완료
-            </div>
-            <div className="mb-6 text-center text-gray-700">
-              {successDistrict} 결제가 완료되었습니다.
-            </div>
-            <div className="flex gap-2 w-full">
+      {/* 토스 위젯 모달 */}
+      {tossWidgetOpen && tossWidgetData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">토스페이먼츠 결제</h2>
               <button
-                className="flex-1 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
-                onClick={() => setSuccessModalOpen(false)}
+                onClick={() => {
+                  setTossWidgetOpen(false);
+                  setTossWidgetData(null);
+                  setIsProcessingPayment(false);
+                }}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
               >
-                결제페이지로 돌아가기
+                ×
               </button>
-              <button
-                className="flex-1 py-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300"
-                onClick={() => router.push('/mypage/orders')}
-              >
-                마이페이지로 가기
-              </button>
+            </div>
+
+            <div className="mb-4 p-3 bg-gray-50 rounded">
+              <div className="flex justify-between font-semibold">
+                <span>결제 금액:</span>
+                <span>{tossWidgetData.totalPrice.toLocaleString()}원</span>
+              </div>
+              <div className="text-sm text-gray-600 mt-1">
+                {tossWidgetData.district} 현수막게시대
+              </div>
+            </div>
+
+            {/* 토스 위젯이 렌더링될 영역 */}
+            <div className="space-y-4">
+              <div id="toss-payment-methods" className="min-h-[200px]">
+                {!tossWidgetData && (
+                  <div className="flex items-center justify-center h-32 text-gray-500">
+                    결제 수단을 로딩 중...
+                  </div>
+                )}
+              </div>
+
+              <div id="toss-agreement" className="min-h-[100px]">
+                {!tossWidgetData && (
+                  <div className="flex items-center justify-center h-16 text-gray-500">
+                    약관을 로딩 중...
+                  </div>
+                )}
+              </div>
+
+              <div id="toss-payment-button" className="mt-4">
+                {/* 결제 버튼이 여기에 동적으로 추가됩니다 */}
+              </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* 결제 성공 모달 제거 - 토스 위젯에서 직접 처리 */}
     </main>
   );
 }

@@ -364,7 +364,19 @@ export default function DisplayDetailPage({
         if (item.type === 'banner' && item.banner_slots) {
           if (currentPanelTypeFilter === 'top_fixed') {
             // 상단광고 탭: slot_number가 0인 슬롯이 있는 아이템만
-            return item.banner_slots.some((slot) => slot.slot_number === 0);
+            const hasTopFixedSlot = item.banner_slots.some(
+              (slot) => slot.slot_number === 0
+            );
+            if (hasTopFixedSlot) {
+              console.log(`🔍 상단광고 아이템: ${item.name}`, {
+                panelCode: item.panel_code,
+                slot_number: 0,
+                banner_type: item.banner_slots.find(
+                  (slot) => slot.slot_number === 0
+                )?.banner_type,
+              });
+            }
+            return hasTopFixedSlot;
           } else if (currentPanelTypeFilter === 'panel') {
             // 현수막게시대 탭: slot_number가 0보다 큰 슬롯이 있는 아이템
             return item.banner_slots.some((slot) => slot.slot_number > 0);
@@ -378,6 +390,16 @@ export default function DisplayDetailPage({
         return true;
       })
     : filteredByMapo;
+
+  if (currentPanelTypeFilter === 'top_fixed') {
+    console.log(`🔍 ${district} 상단광고 탭 결과:`, {
+      총_아이템_개수: filteredByPanelType.length,
+      상단광고_아이템들: filteredByPanelType.map((item) => ({
+        name: item.name,
+        panelCode: item.panel_code,
+      })),
+    });
+  }
 
   const filteredByDistrict =
     isAllDistrictsView && selectedOption
@@ -425,6 +447,18 @@ export default function DisplayDetailPage({
         a.district.localeCompare(b.district)
       )
     : filteredByHalfPeriod;
+
+  if (currentPanelTypeFilter === 'top_fixed') {
+    console.log(`🔍 ${district} 최종 렌더링 데이터:`, {
+      isAllDistrictsView,
+      filteredByHalfPeriodLength: filteredByHalfPeriod.length,
+      filteredBillboardsLength: filteredBillboards.length,
+      filteredBillboards: filteredBillboards.map((item) => ({
+        name: item.name,
+        panelCode: item.panel_code,
+      })),
+    });
+  }
 
   // // 구분 컬럼에 표시할 값 계산 함수 (탭에 따라 다른 로직 적용)
   // const getPanelTypeLabel = (item: DisplayBillboard) => {

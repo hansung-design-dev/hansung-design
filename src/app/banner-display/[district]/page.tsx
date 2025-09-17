@@ -144,6 +144,40 @@ async function getBannerDisplaysByDistrict(
   }
 }
 
+// 송파구, 용산구용 slot_type별 API 함수
+async function getBannerDisplaysByDistrictWithSlotType(
+  districtName: string,
+  slotType: 'banner' | 'top_ad'
+): Promise<BannerDisplayData[]> {
+  try {
+    console.log(`🔍 Fetching ${districtName} ${slotType} displays...`);
+    const url = `/api/banner-display?action=getByDistrictWithSlotType&district=${encodeURIComponent(
+      districtName
+    )}&slot_type=${slotType}`;
+    console.log(`🔍 API URL:`, url);
+
+    const response = await fetch(url);
+    console.log(`🔍 Response status:`, response.status, response.statusText);
+
+    const result = await response.json();
+    console.log(`🔍 ${slotType} API response:`, result);
+
+    if (result.success) {
+      console.log(
+        `🔍 ${slotType} API success, data length:`,
+        result.data?.length || 0
+      );
+      return result.data;
+    } else {
+      console.error(`🔍 ${slotType} API error:`, result.error);
+      throw new Error(result.error);
+    }
+  } catch (error) {
+    console.error(`❌ Error fetching ${slotType} displays:`, error);
+    throw error;
+  }
+}
+
 export default function BannerDisplayPage({
   params,
   searchParams,
@@ -259,9 +293,27 @@ export default function BannerDisplayPage({
         console.log('🔍 district:', district);
 
         // 1. 현수막 데이터 가져오기
-        const data = await getBannerDisplaysByDistrict(
-          districtObj?.name || district
-        );
+        let data: BannerDisplayData[];
+        const districtName = districtObj?.name || district;
+
+        // 송파구, 용산구는 slot_type별로 API 호출
+        if (districtName === '송파구' || districtName === '용산구') {
+          const slotType =
+            panelTypeFilter === 'top_fixed' ? 'top_ad' : 'banner';
+          console.log(`🔍 ${districtName} ${slotType} 데이터 요청 중...`);
+          data = await getBannerDisplaysByDistrictWithSlotType(
+            districtName,
+            slotType
+          );
+          console.log(`🔍 ${districtName} ${slotType} 데이터 받음:`, {
+            dataLength: data?.length || 0,
+            data: data,
+            panelTypeFilter,
+            slotType,
+          });
+        } else {
+          data = await getBannerDisplaysByDistrict(districtName);
+        }
 
         // 2. 기간 데이터 가져오기 (URL 파라미터에 없으면 API에서 가져오기)
         if (!period && districtObj?.name) {
@@ -359,10 +411,11 @@ export default function BannerDisplayPage({
 
                 // 디버깅: 모든 슬롯 정보 출력
                 console.log(
-                  '🔍 모든 슬롯:',
+                  `🔍 ${districtName} ${panelTypeFilter} - 모든 슬롯:`,
                   item.banner_slots.map((slot) => ({
                     slot_number: slot.slot_number,
                     banner_type: slot.banner_type,
+                    price_unit: slot.price_unit,
                     total_price: slot.total_price,
                   }))
                 );
@@ -375,6 +428,27 @@ export default function BannerDisplayPage({
                 // 현수막게시대 슬롯 찾기 (slot_number로 구분)
                 const panelSlot = item.banner_slots.find(
                   (slot) => slot.slot_number > 0
+                );
+
+                console.log(
+                  `🔍 ${districtName} ${panelTypeFilter} - 슬롯 찾기 결과:`,
+                  {
+                    panelCode: item.panel_code,
+                    topFixedSlot: topFixedSlot
+                      ? {
+                          slot_number: topFixedSlot.slot_number,
+                          banner_type: topFixedSlot.banner_type,
+                          price_unit: topFixedSlot.price_unit,
+                        }
+                      : null,
+                    panelSlot: panelSlot
+                      ? {
+                          slot_number: panelSlot.slot_number,
+                          banner_type: panelSlot.banner_type,
+                          price_unit: panelSlot.price_unit,
+                        }
+                      : null,
+                  }
                 );
 
                 return { topFixedSlot, panelSlot };
@@ -538,6 +612,15 @@ export default function BannerDisplayPage({
               };
             }
           );
+
+          console.log(
+            `🔍 ${districtName} ${panelTypeFilter} - 변환된 데이터:`,
+            {
+              transformedLength: transformed.length,
+              transformed: transformed,
+            }
+          );
+
           // 관악구인 경우 마감된 게시대를 하드코딩으로 추가
           let finalBillboards = transformed as BannerBillboard[];
 
@@ -594,6 +677,14 @@ export default function BannerDisplayPage({
             // 마감된 아이템을 맨 앞에 추가
             finalBillboards = [closedItem, ...finalBillboards];
           }
+
+          console.log(
+            `🔍 ${districtName} ${panelTypeFilter} - 최종 설정할 데이터:`,
+            {
+              finalBillboardsLength: finalBillboards.length,
+              finalBillboards: finalBillboards,
+            }
+          );
 
           setBillboards(finalBillboards);
         } else {
@@ -654,7 +745,7 @@ export default function BannerDisplayPage({
     if (district) {
       fetchBannerData();
     }
-  }, [district, districtObj]);
+  }, [district, districtObj, panelTypeFilter, period]);
 
   if (loading) {
     return (
