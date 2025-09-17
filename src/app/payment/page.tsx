@@ -1439,6 +1439,31 @@ function PaymentPageContent() {
               <div className="text-sm text-gray-600 mt-1">
                 {tossWidgetData.district} 현수막게시대
               </div>
+              <div className="text-sm text-gray-600 mt-2">
+                <div className="font-medium mb-1">결제할 게시대 목록:</div>
+                <div className="space-y-1">
+                  {tossWidgetData.items.map((item, index) => {
+                    // 상하반기 정보 표시
+                    const itemHalfPeriod = item.halfPeriod || 'first_half';
+                    const itemYear =
+                      item.selectedYear || new Date().getFullYear();
+                    const itemMonth =
+                      item.selectedMonth || new Date().getMonth() + 1;
+                    const itemPeriodText = `${itemYear}년 ${itemMonth}월 ${
+                      itemHalfPeriod === 'first_half' ? '상반기' : '하반기'
+                    }`;
+
+                    return (
+                      <div key={item.id} className="text-xs text-gray-600">
+                        {index + 1}. 패널번호:{' '}
+                        {item.panel_code || item.panel_id || '-'} / 이름:{' '}
+                        {item.name || '-'} / 구: {item.district} / 기간:{' '}
+                        {itemPeriodText}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
             {/* 토스 위젯이 렌더링될 영역 */}
