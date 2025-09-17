@@ -12,6 +12,8 @@
     "@heroicons/react": "^2.2.0",
     "@supabase/supabase-js": "^2.49.8",
     "@tosspayments/payment-sdk": "^1.0.0",
+    "@tosspayments/payment-widget-sdk": "^0.12.0",
+    "@tosspayments/tosspayments-sdk": "^2.4.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/uuid": "^10.0.0",
     "@unocss/postcss": "^66.1.0-beta.5",
