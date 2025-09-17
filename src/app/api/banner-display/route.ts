@@ -1700,12 +1700,19 @@ async function getBannerDisplaysByDistrictWithSlotType(
           data.map((item) => ({
             panel_code: item.panel_code,
             nickname: item.nickname,
-            banner_slots: item.banner_slots?.map((slot) => ({
-              slot_number: slot.slot_number,
-              banner_type: slot.banner_type,
-              price_unit: slot.price_unit,
-              slot_name: slot.slot_name,
-            })),
+            banner_slots: item.banner_slots?.map(
+              (slot: {
+                slot_number: number;
+                banner_type: string;
+                price_unit: string;
+                slot_name: string;
+              }) => ({
+                slot_number: slot.slot_number,
+                banner_type: slot.banner_type,
+                price_unit: slot.price_unit,
+                slot_name: slot.slot_name,
+              })
+            ),
           }))
         );
       } else {

@@ -331,6 +331,7 @@ export default function LEDDisplayDetailPage({
           panel_id: item.panel_id, // 원본 UUID
           panel_code: item.panel_code?.toString(),
           photo_url: item.photo_url || undefined, // 게시대 사진 URL 추가
+          total_price: item.total_price, // LED 아이템의 실제 가격 정보 추가
           // 사용자 프로필 정보 추가
           contact_person_name: defaultProfile?.contact_person_name,
           phone: defaultProfile?.phone,
@@ -465,6 +466,12 @@ export default function LEDDisplayDetailPage({
                 )}
               </h3>
               <p className="text-0.875 text-gray-600">{item.neighborhood}</p>
+              <div className="mt-2 text-0.875  font-medium">
+                기간: 1달 | 가격:{' '}
+                {item.total_price
+                  ? `${item.total_price.toLocaleString()}원`
+                  : '상담문의'}
+              </div>
             </div>
           </div>
         );
