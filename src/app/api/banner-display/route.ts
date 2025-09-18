@@ -73,6 +73,25 @@ export interface BannerDisplayData {
       closed_slots: number;
     } | null;
   };
+  // 중앙광고 관련 정보
+  center_ad_slot?: {
+    id: string;
+    slot_number: number;
+    slot_name: string;
+    max_width: number;
+    max_height: number;
+    banner_type: string;
+    price_unit: string;
+    panel_slot_status: string;
+  };
+  center_ad_inventory?: {
+    id: string;
+    panel_id: string;
+    is_occupied: boolean;
+    occupied_slot_id: string | null;
+    occupied_until: string | null;
+    occupied_from: string | null;
+  };
 }
 
 // 추가 타입 정의들
@@ -237,6 +256,14 @@ async function getBannerDisplaysByDistrict(districtName: string) {
             total_price
           )
         ),
+        center_ad_inventory (
+          id,
+          panel_id,
+          is_occupied,
+          occupied_slot_id,
+          occupied_until,
+          occupied_from
+        ),
         region_gu!inner (
           id,
           name,
@@ -325,9 +352,58 @@ async function getBannerDisplaysByDistrict(districtName: string) {
       ) || {};
 
     const dataWithInventory = data?.map((item: BannerDisplayData) => {
+      // 중앙광고 슬롯(slot_number = 0) 찾기
+      const centerAdSlot = item.banner_slots?.find(
+        (slot) => slot.slot_number === 0
+      );
+
+      // 디버깅: 중앙광고 슬롯 정보 로깅
+      if (
+        item.panel_type === 'bulletin_board' ||
+        item.panel_type === 'cultural_board'
+      ) {
+        console.log(
+          `🔍 ${districtName} - Panel ${item.panel_code} 중앙광고 슬롯 정보:`,
+          {
+            panel_code: item.panel_code,
+            panel_type: item.panel_type,
+            banner_slots_count: item.banner_slots?.length || 0,
+            all_slot_numbers:
+              item.banner_slots?.map((slot) => ({
+                slot_number: slot.slot_number,
+                type: typeof slot.slot_number,
+              })) || [],
+            center_ad_slot: centerAdSlot
+              ? {
+                  id: centerAdSlot.id,
+                  slot_number: centerAdSlot.slot_number,
+                  max_width: centerAdSlot.max_width,
+                  max_height: centerAdSlot.max_height,
+                  price_unit: centerAdSlot.price_unit,
+                }
+              : 'NOT_FOUND',
+            center_ad_inventory: item.center_ad_inventory,
+            raw_center_ad_inventory: item.center_ad_inventory,
+            has_center_ad_inventory: !!item.center_ad_inventory,
+          }
+        );
+      }
+
       // 슬롯별 개별 재고 정보 추가
       return {
         ...item,
+        center_ad_slot: centerAdSlot
+          ? {
+              id: centerAdSlot.id,
+              slot_number: centerAdSlot.slot_number,
+              slot_name: centerAdSlot.slot_name,
+              max_width: centerAdSlot.max_width,
+              max_height: centerAdSlot.max_height,
+              banner_type: centerAdSlot.banner_type,
+              price_unit: centerAdSlot.price_unit,
+              panel_slot_status: centerAdSlot.panel_slot_status,
+            }
+          : undefined,
         banner_slots: item.banner_slots?.map((slot) => ({
           ...slot,
           slot_inventory: slotInventoryByBannerSlot[slot.id]
@@ -438,6 +514,14 @@ async function getAllBannerDisplays() {
             advertising_fee,
             total_price
           )
+        ),
+        center_ad_inventory (
+          id,
+          panel_id,
+          is_occupied,
+          occupied_slot_id,
+          occupied_until,
+          occupied_from
         ),
         region_gu!inner (
           id,

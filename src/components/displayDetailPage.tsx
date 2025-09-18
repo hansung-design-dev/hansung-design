@@ -1588,6 +1588,7 @@ export default function DisplayDetailPage({
                 }
                 hideStatusColumn={isMapoDistrict && mapoFilter === 'simin'}
                 district={districtObj?.name}
+                isCitizenBoardTab={isMapoDistrict && mapoFilter === 'simin'}
               />
 
               {/* 가이드라인 섹션 삭제 */}

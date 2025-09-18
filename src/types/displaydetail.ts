@@ -66,6 +66,25 @@ export interface BaseBillboard {
       closed_slots: number;
     } | null;
   };
+  center_ad_status?: string; // 중앙광고 신청현황
+  center_ad_slot?: {
+    id: string;
+    slot_number: number;
+    slot_name: string;
+    max_width: number;
+    max_height: number;
+    banner_type: string;
+    price_unit: string;
+    panel_slot_status: string;
+  };
+  center_ad_inventory?: {
+    id: string;
+    panel_id: string;
+    is_occupied: boolean;
+    occupied_slot_id: string | null;
+    occupied_until: string | null;
+    occupied_from: string | null;
+  };
 }
 
 // 현수막게시대 전용 타입

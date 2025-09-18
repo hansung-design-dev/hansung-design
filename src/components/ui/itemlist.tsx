@@ -38,6 +38,7 @@ interface ItemTableProps {
   hideQuantityColumns?: boolean; // 상단광고 탭에서 면수/수량 컬럼 숨김
   hideStatusColumn?: boolean; // 시민게시대 탭에서 상태 컬럼 숨김
   district?: string; // 구 이름 추가
+  isCitizenBoardTab?: boolean; // 시민게시대 탭 여부
 }
 
 const ITEMS_PER_PAGE = 20;
@@ -53,6 +54,7 @@ const ItemList: React.FC<ItemTableProps> = ({
   hideQuantityColumns = false,
   hideStatusColumn = false,
   district,
+  isCitizenBoardTab = false,
 }) => {
   const [page, setPage] = useState(1);
   // PhotoModal related states are temporarily disabled
@@ -187,19 +189,30 @@ const ItemList: React.FC<ItemTableProps> = ({
                 {showCheckbox && <th className="w-10"></th>}
                 <th className="text-center pl-4">No</th>
                 <th className="text-left pl-4">게시대 명</th>
-
-                <th className="text-center pl-4">규격(cm)</th>
-                {!hideQuantityColumns && (
-                  <th className="text-center pl-4">면수</th>
-                )}
-                <th className="text-center pl-4">가격</th>
-                <th className="text-center pl-4">기간</th>
-                <th className="text-center pl-4">구분</th>
-                {!hideQuantityColumns && (
-                  <th className="text-center pl-4">수량</th>
-                )}
-                {!hideStatusColumn && (
-                  <th className="text-center pl-4">상태</th>
+                {isCitizenBoardTab ? (
+                  <>
+                    <th className="text-center pl-4">시민게시대 규격</th>
+                    <th className="text-center pl-4">시민게시대 기간</th>
+                    <th className="text-center pl-4">중앙광고 규격</th>
+                    <th className="text-center pl-4">중앙광고 기간</th>
+                    <th className="text-center pl-4">중앙광고 상태</th>
+                  </>
+                ) : (
+                  <>
+                    <th className="text-center pl-4">규격(cm)</th>
+                    {!hideQuantityColumns && (
+                      <th className="text-center pl-4">면수</th>
+                    )}
+                    <th className="text-center pl-4">가격</th>
+                    <th className="text-center pl-4">기간</th>
+                    <th className="text-center pl-4">구분</th>
+                    {!hideQuantityColumns && (
+                      <th className="text-center pl-4">수량</th>
+                    )}
+                    {!hideStatusColumn && (
+                      <th className="text-center pl-4">상태</th>
+                    )}
+                  </>
                 )}
                 {renderAction && <th className="text-center">작업</th>}
               </tr>
@@ -287,44 +300,116 @@ const ItemList: React.FC<ItemTableProps> = ({
                     </div>
                   </td>
 
-                  <td className="text-center pl-4">
-                    {item.panel_width && item.panel_height
-                      ? `${item.panel_width} x ${item.panel_height}`
-                      : '-'}
-                  </td>
-                  {!hideQuantityColumns && (
-                    <td className="text-center pl-4">
-                      {item.faces ? `${item.faces}` : '-'}
-                    </td>
-                  )}
-                  <td className="text-center pl-4">
-                    {isSpecialDistrict &&
-                    item.type === 'banner' &&
-                    item.banner_type === 'top_fixed'
-                      ? '상담문의'
-                      : item.price}
-                  </td>
-                  <td className="text-center pl-4">
-                    {isSpecialDistrict &&
-                    item.type === 'banner' &&
-                    item.banner_type === 'top_fixed'
-                      ? '1년'
-                      : item.period || '15일'}
-                  </td>
-                  <td className="text-center pl-4">{categoryDisplay}</td>
-                  {!hideQuantityColumns && (
-                    <td className="text-center pl-4">
-                      {item.faces ? `${item.faces}` : '-'}
-                    </td>
-                  )}
-                  {!hideStatusColumn && (
-                    <td
-                      className={`text-center font-semibold pl-4 ${getStatusClass(
-                        displayStatus
-                      )}`}
-                    >
-                      {displayStatus}
-                    </td>
+                  {isCitizenBoardTab ? (
+                    <>
+                      <td className="text-center pl-4">
+                        {item.panel_width && item.panel_height
+                          ? `${item.panel_width} x ${item.panel_height}`
+                          : '-'}
+                      </td>
+                      <td className="text-center pl-4">
+                        {(() => {
+                          // 시민게시대 기간 (일반 슬롯들의 기간)
+                          const regularSlots = item.banner_slots?.filter(
+                            (slot) => slot.slot_number !== 0
+                          );
+                          if (regularSlots && regularSlots.length > 0) {
+                            const firstSlot = regularSlots[0];
+                            if ('price_unit' in firstSlot) {
+                              const priceUnit = (
+                                firstSlot as { price_unit?: string }
+                              ).price_unit;
+                              return priceUnit === '15 days'
+                                ? '15일'
+                                : priceUnit || '15일';
+                            }
+                          }
+                          return '15일';
+                        })()}
+                      </td>
+                      <td className="text-center pl-4">
+                        {(() => {
+                          const centerSlot = item.banner_slots?.find(
+                            (slot) => slot.slot_number === 0
+                          );
+                          if (centerSlot?.max_width && centerSlot?.max_height) {
+                            return `${centerSlot.max_width} x ${centerSlot.max_height}`;
+                          }
+                          return '840 x 1650';
+                        })()}
+                      </td>
+                      <td className="text-center pl-4">
+                        {(() => {
+                          const centerSlot = item.banner_slots?.find(
+                            (slot) => slot.slot_number === 0
+                          );
+                          if (centerSlot && 'price_unit' in centerSlot) {
+                            const priceUnit = (
+                              centerSlot as { price_unit?: string }
+                            ).price_unit;
+                            return priceUnit === '1 month'
+                              ? '1개월'
+                              : priceUnit || '1개월';
+                          }
+                          return '1개월';
+                        })()}
+                      </td>
+                      <td className="text-center pl-4">
+                        <span
+                          className={
+                            item.center_ad_inventory?.is_occupied
+                              ? 'text-red-500'
+                              : 'text-[#109251]'
+                          }
+                        >
+                          {item.center_ad_inventory?.is_occupied
+                            ? '마감'
+                            : '진행중'}
+                        </span>
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td className="text-center pl-4">
+                        {item.panel_width && item.panel_height
+                          ? `${item.panel_width} x ${item.panel_height}`
+                          : '-'}
+                      </td>
+                      {!hideQuantityColumns && (
+                        <td className="text-center pl-4">
+                          {item.faces ? `${item.faces}` : '-'}
+                        </td>
+                      )}
+                      <td className="text-center pl-4">
+                        {isSpecialDistrict &&
+                        item.type === 'banner' &&
+                        item.banner_type === 'top_fixed'
+                          ? '상담문의'
+                          : item.price}
+                      </td>
+                      <td className="text-center pl-4">
+                        {isSpecialDistrict &&
+                        item.type === 'banner' &&
+                        item.banner_type === 'top_fixed'
+                          ? '1년'
+                          : item.period || '15일'}
+                      </td>
+                      <td className="text-center pl-4">{categoryDisplay}</td>
+                      {!hideQuantityColumns && (
+                        <td className="text-center pl-4">
+                          {item.faces ? `${item.faces}` : '-'}
+                        </td>
+                      )}
+                      {!hideStatusColumn && (
+                        <td
+                          className={`text-center font-semibold pl-4 ${getStatusClass(
+                            displayStatus
+                          )}`}
+                        >
+                          {displayStatus}
+                        </td>
+                      )}
+                    </>
                   )}
                   {renderAction && (
                     <td className="text-center">{renderAction(item)}</td>
@@ -336,7 +421,12 @@ const ItemList: React.FC<ItemTableProps> = ({
             {Array.from({ length: itemsPerPage - paginatedItems.length }).map(
               (_, i) => {
                 const baseCols = showCheckbox ? 1 : 0; // checkbox
-                const dataCols = hideStatusColumn ? 8 : 9; // No, 게시대명, 아이콘, 규격, 가격, 기간, 구분, 상태 (상태 컬럼 숨김 시 8개)
+                let dataCols;
+                if (isCitizenBoardTab) {
+                  dataCols = 6; // No, 게시대명, 시민게시대 규격, 시민게시대 기간, 중앙광고 규격, 중앙광고 기간, 중앙광고 신청현황
+                } else {
+                  dataCols = hideStatusColumn ? 8 : 9; // No, 게시대명, 아이콘, 규격, 가격, 기간, 구분, 상태 (상태 컬럼 숨김 시 8개)
+                }
                 const quantityCols = hideQuantityColumns ? 0 : 2; // 면수, 수량
                 const actionCols = renderAction ? 1 : 0; // 작업
                 const totalCols =
@@ -459,42 +549,120 @@ const ItemList: React.FC<ItemTableProps> = ({
                 <div className="text-gray-500">{item.neighborhood}</div>
               )}
               <div className="text-0.875">행정동: {item.neighborhood}</div>
-              {!hideStatusColumn && (
-                <div className="text-0.875">
-                  상태:&nbsp;
-                  <span
-                    className={`text-0.875 ${getStatusClass(
-                      displayStatus
-                    )} font-medium`}
-                  >
-                    {displayStatus}
-                  </span>
-                </div>
-              )}
 
-              <div className="text-0.875">구분: {categoryDisplay}</div>
-              <div className="text-0.875">
-                기간:{' '}
-                {isSpecialDistrict &&
-                item.type === 'banner' &&
-                item.banner_type === 'top_fixed'
-                  ? '1년'
-                  : item.period || '15일'}
-              </div>
-              {!hideQuantityColumns && (
-                <div className="text-0.875">수량: {item.faces ?? '-'}</div>
-              )}
-              {!hideStatusColumn && (
-                <div className="text-0.875">
-                  상태:&nbsp;
-                  <span
-                    className={`text-0.875 ${getStatusClass(
-                      displayStatus
-                    )} font-medium`}
-                  >
-                    {displayStatus}
-                  </span>
-                </div>
+              {isCitizenBoardTab ? (
+                <>
+                  <div className="text-0.875">
+                    시민게시대 규격:{' '}
+                    {item.panel_width && item.panel_height
+                      ? `${item.panel_width} x ${item.panel_height}`
+                      : '-'}
+                  </div>
+                  <div className="text-0.875">
+                    시민게시대 기간:{' '}
+                    {(() => {
+                      // 시민게시대 기간 (일반 슬롯들의 기간)
+                      const regularSlots = item.banner_slots?.filter(
+                        (slot) => slot.slot_number !== 0
+                      );
+                      if (regularSlots && regularSlots.length > 0) {
+                        const firstSlot = regularSlots[0];
+                        if ('price_unit' in firstSlot) {
+                          const priceUnit = (
+                            firstSlot as { price_unit?: string }
+                          ).price_unit;
+                          return priceUnit === '15 days'
+                            ? '15일'
+                            : priceUnit || '15일';
+                        }
+                      }
+                      return '15일';
+                    })()}
+                  </div>
+                  <div className="text-0.875">
+                    중앙광고 규격:{' '}
+                    {(() => {
+                      const centerSlot = item.banner_slots?.find(
+                        (slot) => slot.slot_number === 0
+                      );
+                      if (centerSlot?.max_width && centerSlot?.max_height) {
+                        return `${centerSlot.max_width} x ${centerSlot.max_height}`;
+                      }
+                      return '840 x 1650';
+                    })()}
+                  </div>
+                  <div className="text-0.875">
+                    중앙광고 기간:{' '}
+                    {(() => {
+                      const centerSlot = item.banner_slots?.find(
+                        (slot) => slot.slot_number === 0
+                      );
+                      if (centerSlot && 'price_unit' in centerSlot) {
+                        const priceUnit = (
+                          centerSlot as { price_unit?: string }
+                        ).price_unit;
+                        return priceUnit === '1 month'
+                          ? '1개월'
+                          : priceUnit || '1개월';
+                      }
+                      return '1개월';
+                    })()}
+                  </div>
+                  <div className="text-0.875">
+                    중앙광고 상태:{' '}
+                    <span
+                      className={
+                        item.center_ad_inventory?.is_occupied
+                          ? 'text-red-500'
+                          : 'text-[#109251]'
+                      }
+                    >
+                      {item.center_ad_inventory?.is_occupied
+                        ? '마감'
+                        : '진행중'}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {!hideStatusColumn && (
+                    <div className="text-0.875">
+                      상태:&nbsp;
+                      <span
+                        className={`text-0.875 ${getStatusClass(
+                          displayStatus
+                        )} font-medium`}
+                      >
+                        {displayStatus}
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="text-0.875">구분: {categoryDisplay}</div>
+                  <div className="text-0.875">
+                    기간:{' '}
+                    {isSpecialDistrict &&
+                    item.type === 'banner' &&
+                    item.banner_type === 'top_fixed'
+                      ? '1년'
+                      : item.period || '15일'}
+                  </div>
+                  {!hideQuantityColumns && (
+                    <div className="text-0.875">수량: {item.faces ?? '-'}</div>
+                  )}
+                  {!hideStatusColumn && (
+                    <div className="text-0.875">
+                      상태:&nbsp;
+                      <span
+                        className={`text-0.875 ${getStatusClass(
+                          displayStatus
+                        )} font-medium`}
+                      >
+                        {displayStatus}
+                      </span>
+                    </div>
+                  )}
+                </>
               )}
               {renderAction && <div>{renderAction(item)}</div>}
             </div>
