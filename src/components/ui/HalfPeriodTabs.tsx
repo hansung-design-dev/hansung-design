@@ -40,57 +40,12 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
   districtName,
   periodData,
 }) => {
-  // API에서 받은 데이터를 사용하거나, 없으면 동적으로 계산
+  // 항상 현재 날짜 기준으로 계산 (API 데이터는 참고용으로만 사용)
   const getCurrentPeriods = () => {
     let firstPeriod: PeriodInfo | null = null;
     let secondPeriod: PeriodInfo | null = null;
 
-    // API에서 받은 데이터가 있으면 우선 사용
-    if (
-      periodData &&
-      periodData.first_half_from &&
-      periodData.second_half_from
-    ) {
-      console.log('🔍 Using API period data:', periodData);
-
-      // 첫 번째 기간 (first_half)
-      const firstFrom = new Date(periodData.first_half_from);
-      const firstTo = new Date(periodData.first_half_to);
-
-      firstPeriod = {
-        year: firstFrom.getFullYear(),
-        month: firstFrom.getMonth() + 1,
-        startDay: firstFrom.getDate(),
-        endDay: firstTo.getDate(),
-        from: periodData.first_half_from,
-        to: periodData.first_half_to,
-        label: `${firstFrom.getFullYear()}년 ${
-          firstFrom.getMonth() + 1
-        }월 상반기`,
-      };
-
-      // 두 번째 기간 (second_half)
-      const secondFrom = new Date(periodData.second_half_from);
-      const secondTo = new Date(periodData.second_half_to);
-
-      secondPeriod = {
-        year: secondFrom.getFullYear(),
-        month: secondFrom.getMonth() + 1,
-        startDay: secondFrom.getDate(),
-        endDay: secondTo.getDate(),
-        from: periodData.second_half_from,
-        to: periodData.second_half_to,
-        label: `${secondFrom.getFullYear()}년 ${
-          secondFrom.getMonth() + 1
-        }월 하반기`,
-      };
-
-      console.log('🔍 Processed API periods:', { firstPeriod, secondPeriod });
-      return { firstPeriod, secondPeriod };
-    }
-
-    // API 데이터가 없을 때만 현재 날짜 기준으로 계산 (fallback)
-    console.log('🔍 No API data, using fallback calculation');
+    console.log('🔍 Calculating periods based on current date');
 
     const now = new Date();
     const koreaTime = new Date(now.getTime() + 9 * 60 * 60 * 1000); // UTC+9 (한국시간)
@@ -99,142 +54,65 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
     const currentMonth = koreaTime.getMonth() + 1;
     const currentDay = koreaTime.getDate();
 
-    console.log('🔍 Fallback calculation:', {
+    // 오늘 날짜 기준으로 다음 달의 상반기/하반기 자동 계산
+    const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+    const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+
+    console.log('🔍 Current date calculation:', {
       currentYear,
       currentMonth,
       currentDay,
       koreaTime: koreaTime.toISOString(),
+      nextYear,
+      nextMonth,
     });
 
     // 마포구, 강북구: 특별한 기간 (5일-19일 상반기, 20일-다음달 4일 하반기)
     if (districtName === '마포구' || districtName === '강북구') {
-      // 현재 날짜가 8월 27일이므로 9월 하반기와 10월 상반기가 신청 가능해야 함
-      if (currentMonth === 8 && currentDay >= 20) {
-        // 8월 20일 이후면 9월 하반기와 10월 상반기 신청 가능
-        firstPeriod = {
-          year: currentYear,
-          month: 9,
-          startDay: 20,
-          endDay: 30,
-          from: `${currentYear}-09-20`,
-          to: `${currentYear}-10-04`,
-          label: `${currentYear}년 9월 하반기`,
-        };
-        secondPeriod = {
-          year: currentYear,
-          month: 10,
-          startDay: 5,
-          endDay: 19,
-          from: `${currentYear}-10-05`,
-          to: `${currentYear}-10-19`,
-          label: `${currentYear}년 10월 상반기`,
-        };
-      } else if (currentMonth === 9 && currentDay <= 12) {
-        // 9월 12일까지는 9월 하반기와 10월 상반기 신청 가능
-        firstPeriod = {
-          year: currentYear,
-          month: 9,
-          startDay: 20,
-          endDay: 30,
-          from: `${currentYear}-09-20`,
-          to: `${currentYear}-10-04`,
-          label: `${currentYear}년 9월 하반기`,
-        };
-        secondPeriod = {
-          year: currentYear,
-          month: 10,
-          startDay: 5,
-          endDay: 19,
-          from: `${currentYear}-10-05`,
-          to: `${currentYear}-10-19`,
-          label: `${currentYear}년 10월 상반기`,
-        };
-      } else if (currentMonth === 9 && currentDay >= 13) {
-        // 9월 13일 이후면 10월 상반기와 하반기 신청 가능
-        firstPeriod = {
-          year: currentYear,
-          month: 10,
-          startDay: 5,
-          endDay: 19,
-          from: `${currentYear}-10-05`,
-          to: `${currentYear}-10-19`,
-          label: `${currentYear}년 10월 상반기`,
-        };
-        secondPeriod = {
-          year: currentYear,
-          month: 10,
-          startDay: 20,
-          endDay: 31,
-          from: `${currentYear}-10-20`,
-          to: `${currentYear}-11-04`,
-          label: `${currentYear}년 10월 하반기`,
-        };
-      }
+      firstPeriod = {
+        year: nextYear,
+        month: nextMonth,
+        startDay: 5,
+        endDay: 19,
+        from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-05`,
+        to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-19`,
+        label: `${nextYear}년 ${nextMonth}월 상반기`,
+      };
+
+      // 하반기는 다음달 4일까지
+      const nextNextMonth = nextMonth === 12 ? 1 : nextMonth + 1;
+      const nextNextYear = nextMonth === 12 ? nextYear + 1 : nextYear;
+
+      secondPeriod = {
+        year: nextYear,
+        month: nextMonth,
+        startDay: 20,
+        endDay: 30,
+        from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-20`,
+        to: `${nextNextYear}-${String(nextNextMonth).padStart(2, '0')}-04`,
+        label: `${nextYear}년 ${nextMonth}월 하반기`,
+      };
     } else {
       // 송파, 관악, 용산, 서대문: 일반적인 1일-15일 상반기, 16일-31일 하반기
-      // 현재 날짜가 8월 27일이므로 9월 하반기와 10월 상반기가 신청 가능해야 함
+      firstPeriod = {
+        year: nextYear,
+        month: nextMonth,
+        startDay: 1,
+        endDay: 15,
+        from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`,
+        to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-15`,
+        label: `${nextYear}년 ${nextMonth}월 상반기`,
+      };
 
-      if (currentMonth === 8 && currentDay >= 23) {
-        // 8월 23일 이후면 9월 하반기와 10월 상반기 신청 가능
-        firstPeriod = {
-          year: currentYear,
-          month: 9,
-          startDay: 16,
-          endDay: 30,
-          from: `${currentYear}-09-16`,
-          to: `${currentYear}-09-30`,
-          label: `${currentYear}년 9월 하반기`,
-        };
-        secondPeriod = {
-          year: currentYear,
-          month: 10,
-          startDay: 1,
-          endDay: 15,
-          from: `${currentYear}-10-01`,
-          to: `${currentYear}-10-15`,
-          label: `${currentYear}년 10월 상반기`,
-        };
-      } else if (currentMonth === 9 && currentDay <= 8) {
-        // 9월 8일까지는 9월 하반기와 10월 상반기 신청 가능
-        firstPeriod = {
-          year: currentYear,
-          month: 9,
-          startDay: 16,
-          endDay: 30,
-          from: `${currentYear}-09-16`,
-          to: `${currentYear}-09-30`,
-          label: `${currentYear}년 9월 하반기`,
-        };
-        secondPeriod = {
-          year: currentYear,
-          month: 10,
-          startDay: 1,
-          endDay: 15,
-          from: `${currentYear}-10-01`,
-          to: `${currentYear}-10-15`,
-          label: `${currentYear}년 10월 상반기`,
-        };
-      } else if (currentMonth === 9 && currentDay >= 9) {
-        // 9월 9일 이후면 10월 상반기와 하반기 신청 가능
-        firstPeriod = {
-          year: currentYear,
-          month: 10,
-          startDay: 1,
-          endDay: 15,
-          from: `${currentYear}-10-01`,
-          to: `${currentYear}-10-15`,
-          label: `${currentYear}년 10월 상반기`,
-        };
-        secondPeriod = {
-          year: currentYear,
-          month: 10,
-          startDay: 16,
-          endDay: 31,
-          from: `${currentYear}-10-16`,
-          to: `${currentYear}-10-31`,
-          label: `${currentYear}년 10월 하반기`,
-        };
-      }
+      secondPeriod = {
+        year: nextYear,
+        month: nextMonth,
+        startDay: 16,
+        endDay: 31,
+        from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-16`,
+        to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-31`,
+        label: `${nextYear}년 ${nextMonth}월 하반기`,
+      };
     }
 
     return { firstPeriod, secondPeriod };
