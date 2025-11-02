@@ -474,22 +474,132 @@ export async function POST(request: NextRequest) {
     );
 
     // payment_methods 테이블에서 카드 결제 수단 ID 찾기
-    const { error: paymentMethodError, data: paymentMethodData } =
-      await supabase
+    // 토스페이먼츠 응답에서 결제 수단 확인
+    // 토스페이먼츠 응답: method: "카드" (한글), "카드", "간편결제" 등
+    const tossPaymentMethod = confirmData?.method || '';
+    let methodCode = 'card'; // 기본값
+    
+    console.log('🔍 [결제 확인 API] 토스페이먼츠 결제 수단 정보:', {
+      method: confirmData?.method,
+      hasCard: !!confirmData?.card,
+      hasVirtualAccount: !!confirmData?.virtualAccount,
+      hasTransfer: !!confirmData?.transfer,
+      hasMobilePhone: !!confirmData?.mobilePhone,
+      cardInfo: confirmData?.card ? {
+        cardType: confirmData.card.cardType,
+        ownerType: confirmData.card.ownerType,
+      } : null,
+    });
+    
+    // 토스페이먼츠 method를 우리 DB method_code로 변환
+    // 토스페이먼츠는 한글로 "카드", "간편결제" 등으로 반환
+    const methodLower = tossPaymentMethod.toLowerCase();
+    
+    if (methodLower.includes('카드') || methodLower.includes('card') || confirmData?.card) {
+      // 카드 결제인 경우 (method가 "카드"이거나 card 객체가 있는 경우)
+      methodCode = 'card';
+    } else if (methodLower.includes('kakao') || methodLower.includes('카카오')) {
+      methodCode = 'kakao';
+    } else if (methodLower.includes('naver') || methodLower.includes('네이버')) {
+      methodCode = 'naver';
+    } else if (methodLower.includes('bank') || methodLower.includes('계좌') || confirmData?.transfer) {
+      methodCode = 'bank_transfer';
+    } else if (confirmData?.virtualAccount) {
+      methodCode = 'bank_transfer';
+    }
+
+    console.log('🔍 [결제 확인 API] 결제 수단 매핑 결과:', {
+      tossPaymentMethod,
+      methodCode,
+      confirmDataMethod: confirmData?.method,
+      note: '토스페이먼츠 응답에서 결제 수단을 확인하여 DB method_code로 변환했습니다.',
+    });
+
+    // payment_methods 테이블에서 결제 수단 조회 (없으면 자동 생성)
+    let paymentMethodData;
+    const { error: paymentMethodError, data: foundPaymentMethod } = await supabase
+      .from('payment_methods')
+      .select('id, method_code, name')
+      .eq('method_code', methodCode)
+      .single();
+
+    if (paymentMethodError || !foundPaymentMethod) {
+      console.warn(
+        '🔍 [결제 확인 API] ⚠️ payment_methods 조회 실패 - 자동 생성 시도:',
+        {
+          error: paymentMethodError,
+          methodCode,
+          tossPaymentMethod,
+          errorMessage: paymentMethodError?.message,
+          note: 'payment_methods 테이블에 레코드가 없어서 자동 생성합니다.',
+        }
+      );
+
+      // payment_methods 매핑 (method_code -> name, method_type)
+      const methodMapping: Record<
+        string,
+        { name: string; method_type: string }
+      > = {
+        card: { name: '카드결제', method_type: 'online' },
+        kakao: { name: '카카오페이', method_type: 'online' },
+        naver: { name: '네이버페이', method_type: 'online' },
+        bank_transfer: { name: '계좌이체', method_type: 'offline' },
+      };
+
+      const methodInfo = methodMapping[methodCode] || {
+        name: '카드결제',
+        method_type: 'online',
+      };
+
+      // 자동 생성 시도
+      const { data: createdPaymentMethod, error: createError } = await supabase
         .from('payment_methods')
+        .insert({
+          method_code: methodCode,
+          name: methodInfo.name,
+          method_type: methodInfo.method_type,
+          is_active: true,
+          is_online: methodInfo.method_type === 'online',
+          requires_admin_approval: false,
+        })
         .select('id, method_code, name')
-        .eq('method_code', 'card')
         .single();
 
-    if (paymentMethodError || !paymentMethodData) {
-      console.error(
-        '🔍 [결제 확인 API] ❌ payment_methods 조회 실패:',
-        paymentMethodError
+      if (createError || !createdPaymentMethod) {
+        console.error(
+          '🔍 [결제 확인 API] ❌ payment_methods 자동 생성도 실패:',
+          {
+            createError,
+            methodCode,
+            note: 'payment_methods 자동 생성에 실패했습니다. DB에 수동으로 레코드를 추가해주세요.',
+          }
+        );
+        return NextResponse.json(
+          {
+            success: false,
+            error: '결제 수단을 찾을 수 없고 생성에도 실패했습니다.',
+            details: {
+              methodCode,
+              tossPaymentMethod,
+              error: createError?.message || paymentMethodError?.message,
+            },
+          },
+          { status: 500 }
+        );
+      }
+
+      paymentMethodData = createdPaymentMethod;
+      console.log(
+        '🔍 [결제 확인 API] ✅ payment_methods 자동 생성 성공:',
+        paymentMethodData
       );
-      return NextResponse.json(
-        { success: false, error: '결제 수단을 찾을 수 없습니다.' },
-        { status: 500 }
-      );
+    } else {
+      paymentMethodData = foundPaymentMethod;
+      console.log('🔍 [결제 확인 API] ✅ payment_methods 조회 성공:', {
+        id: paymentMethodData.id,
+        method_code: paymentMethodData.method_code,
+        name: paymentMethodData.name,
+      });
     }
 
     // ⚠️ 중요: 임시 orderId인 경우 실제 주문 생성 (결제 완료 후!)
