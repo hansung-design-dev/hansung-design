@@ -373,16 +373,31 @@ export async function POST(request: NextRequest) {
 
     // HTTP 응답 상태 확인
     if (!confirmResponse.ok) {
+      const errorCode = confirmData?.code;
+      const errorMessage = confirmData?.message || '결제 승인 실패';
+
       console.error(
         '🔍 [결제 확인 API] ❌ 토스페이먼츠 결제 승인 실패 (HTTP 에러):',
         {
           status: confirmResponse.status,
           statusText: confirmResponse.statusText,
+          errorCode,
+          errorMessage,
           error: confirmData,
+          note:
+            errorCode === 'M006'
+              ? '토스페이먼츠 측 문제 - 업체 사정으로 결제 일시 중지. 카드에서 돈이 빠져나가지 않았습니다.'
+              : '결제 승인 실패. 카드에서 돈이 빠져나가지 않았습니다.',
         }
       );
+
       return NextResponse.json(
-        { success: false, error: confirmData?.message || '결제 승인 실패' },
+        {
+          success: false,
+          error: errorMessage,
+          code: errorCode,
+          confirmData,
+        },
         { status: 400 }
       );
     }

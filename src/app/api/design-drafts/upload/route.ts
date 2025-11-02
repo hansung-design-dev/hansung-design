@@ -45,8 +45,11 @@ export async function POST(request: NextRequest) {
 
     // 파일명 생성 (안전한 파일명: timestamp_orderId_originalname)
     const timestamp = Date.now();
-    const safeFileName = `${timestamp}_${orderId}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-    
+    const safeFileName = `${timestamp}_${orderId}_${file.name.replace(
+      /[^a-zA-Z0-9._-]/g,
+      '_'
+    )}`;
+
     // Storage 경로 설정
     const bucketName = 'design-drafts';
     const filePath = `drafts/${safeFileName}`;
@@ -69,9 +72,12 @@ export async function POST(request: NextRequest) {
 
     if (uploadError) {
       console.error('🔍 [시안 업로드] ❌ Storage 업로드 실패:', uploadError);
-      
+
       // 이미 존재하는 파일인 경우 (upsert로 재시도)
-      if (uploadError.message.includes('already exists') || uploadError.message.includes('duplicate')) {
+      if (
+        uploadError.message.includes('already exists') ||
+        uploadError.message.includes('duplicate')
+      ) {
         console.log('🔍 [시안 업로드] 파일이 이미 존재, upsert로 재시도...');
         const { error: upsertError } = await supabase.storage
           .from(bucketName)
@@ -79,7 +85,7 @@ export async function POST(request: NextRequest) {
             cacheControl: '3600',
             upsert: true, // 기존 파일 덮어쓰기
           });
-        
+
         if (upsertError) {
           console.error('🔍 [시안 업로드] ❌ upsert 실패:', upsertError);
           return NextResponse.json(

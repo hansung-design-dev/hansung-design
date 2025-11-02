@@ -25,22 +25,25 @@ function PaymentSuccessContent() {
     const status = searchParams.get('status');
 
     // 🔍 디버깅: 토스페이먼츠에서 받은 URL 파라미터 확인
-    console.log('🔍 [결제 성공 페이지] URL 파라미터 확인 (토스페이먼츠에서 전달됨):', {
-      paymentKey: paymentKey ? `${paymentKey.substring(0, 30)}...` : '(없음)',
-      orderId: orderId || '(없음)',
-      amount: amount || '(없음)',
-      paymentId: paymentId || '(없음)',
-      status: status || '(없음)',
-      allParams: {
-        paymentKey,
-        orderId,
-        amount,
-        paymentId,
-        status,
-      },
-      url: typeof window !== 'undefined' ? window.location.href : '(SSR)',
-      timestamp: new Date().toISOString(),
-    });
+    console.log(
+      '🔍 [결제 성공 페이지] URL 파라미터 확인 (토스페이먼츠에서 전달됨):',
+      {
+        paymentKey: paymentKey ? `${paymentKey.substring(0, 30)}...` : '(없음)',
+        orderId: orderId || '(없음)',
+        amount: amount || '(없음)',
+        paymentId: paymentId || '(없음)',
+        status: status || '(없음)',
+        allParams: {
+          paymentKey,
+          orderId,
+          amount,
+          paymentId,
+          status,
+        },
+        url: typeof window !== 'undefined' ? window.location.href : '(SSR)',
+        timestamp: new Date().toISOString(),
+      }
+    );
 
     // 이미 호출했으면 다시 호출하지 않음
     if (hasCalledConfirm.current) {
@@ -52,7 +55,8 @@ function PaymentSuccessContent() {
 
     // 토스 결제 성공 시 paymentKey가 있으면 결제 확인 API 호출
     if (paymentKey && orderId && amount && !isProcessing) {
-      hasCalledConfirm.current = true; // 호출 플래그 설정 (무한 루프 방지)
+      // ⚠️ 중요: hasCalledConfirm은 성공했을 때만 true로 설정
+      // 실패 시에는 재시도할 수 있도록 false로 유지
       setIsProcessing(true);
 
       const confirmPayment = async () => {
@@ -60,40 +64,57 @@ function PaymentSuccessContent() {
           // 임시 orderId인 경우 localStorage에서 주문 정보 가져오기
           let orderData = null;
           if (orderId.startsWith('temp_')) {
-            console.log('🔍 [결제 성공 페이지] 임시 orderId 감지, localStorage 확인 중...');
+            console.log(
+              '🔍 [결제 성공 페이지] 임시 orderId 감지, localStorage 확인 중...'
+            );
             const pendingOrderData = localStorage.getItem('pending_order_data');
             if (pendingOrderData) {
               try {
                 orderData = JSON.parse(pendingOrderData);
-                console.log('🔍 [결제 성공 페이지] ✅ localStorage에서 주문 정보 가져옴:', {
-                  hasOrderData: !!orderData,
-                  itemsCount: orderData?.items?.length || 0,
-                  userAuthId: orderData?.userAuthId || '(없음)',
-                  userProfileId: orderData?.userProfileId || '(없음)',
-                  projectName: orderData?.projectName || '(없음)',
-                  draftDeliveryMethod: orderData?.draftDeliveryMethod || '(없음)',
-                  tempOrderId: orderData?.tempOrderId || '(없음)',
-                  orderDataKeys: orderData ? Object.keys(orderData) : [],
-                });
+                console.log(
+                  '🔍 [결제 성공 페이지] ✅ localStorage에서 주문 정보 가져옴:',
+                  {
+                    hasOrderData: !!orderData,
+                    itemsCount: orderData?.items?.length || 0,
+                    userAuthId: orderData?.userAuthId || '(없음)',
+                    userProfileId: orderData?.userProfileId || '(없음)',
+                    projectName: orderData?.projectName || '(없음)',
+                    draftDeliveryMethod:
+                      orderData?.draftDeliveryMethod || '(없음)',
+                    tempOrderId: orderData?.tempOrderId || '(없음)',
+                    orderDataKeys: orderData ? Object.keys(orderData) : [],
+                  }
+                );
                 // 사용 후 삭제
                 localStorage.removeItem('pending_order_data');
               } catch (e) {
-                console.error('🔍 [결제 성공 페이지] ❌ localStorage 파싱 실패:', {
-                  error: e,
-                  rawData: pendingOrderData.substring(0, 200),
-                });
+                console.error(
+                  '🔍 [결제 성공 페이지] ❌ localStorage 파싱 실패:',
+                  {
+                    error: e,
+                    rawData: pendingOrderData.substring(0, 200),
+                  }
+                );
               }
             } else {
-              console.error('🔍 [결제 성공 페이지] ❌ localStorage에 주문 정보가 없습니다.', {
-                orderId,
-                localStorageKeys: typeof window !== 'undefined' ? Object.keys(localStorage) : [],
-              });
+              console.error(
+                '🔍 [결제 성공 페이지] ❌ localStorage에 주문 정보가 없습니다.',
+                {
+                  orderId,
+                  localStorageKeys:
+                    typeof window !== 'undefined'
+                      ? Object.keys(localStorage)
+                      : [],
+                }
+              );
               setError('주문 정보를 찾을 수 없습니다.');
               setIsProcessing(false);
               return;
             }
           } else {
-            console.log('🔍 [결제 성공 페이지] 임시 orderId가 아님, 기존 주문 정보 사용');
+            console.log(
+              '🔍 [결제 성공 페이지] 임시 orderId가 아님, 기존 주문 정보 사용'
+            );
           }
 
           // 🔍 디버깅: 결제 확인 API 호출 전 최종 확인
@@ -108,16 +129,20 @@ function PaymentSuccessContent() {
             url: '/api/payment/toss/confirm',
             method: 'POST',
             requestBody: {
-              paymentKey: paymentKey ? `${paymentKey.substring(0, 30)}...` : '(없음)',
+              paymentKey: paymentKey
+                ? `${paymentKey.substring(0, 30)}...`
+                : '(없음)',
               orderId,
               amount: parseInt(amount),
               hasOrderData: !!orderData,
-              orderDataStructure: orderData ? {
-                itemsCount: orderData.items?.length || 0,
-                userAuthId: orderData.userAuthId || '(없음)',
-                userProfileId: orderData.userProfileId || '(없음)',
-                projectName: orderData.projectName || '(없음)',
-              } : null,
+              orderDataStructure: orderData
+                ? {
+                    itemsCount: orderData.items?.length || 0,
+                    userAuthId: orderData.userAuthId || '(없음)',
+                    userProfileId: orderData.userProfileId || '(없음)',
+                    projectName: orderData.projectName || '(없음)',
+                  }
+                : null,
             },
             timestamp: new Date().toISOString(),
           });
@@ -141,27 +166,34 @@ function PaymentSuccessContent() {
           const data = await response.json();
 
           // 🔍 디버깅: 토스페이먼츠 결제 확인 API 응답 상세 로깅
-          console.log('🔍 [결제 성공 페이지] 결제 확인 API 응답 데이터 (토스페이먼츠에서 받은 정보):', {
-            success: data.success,
-            hasError: !!data.error,
-            error: data.error || '(없음)',
-            hasData: !!data.data,
-            responseData: data.data ? {
-              // 토스페이먼츠에서 받은 결제 정보
-              orderId: data.data.orderId || '(없음)',
-              orderNumber: data.data.orderNumber || '(없음)',
-              paymentKey: data.data.paymentKey ? `${data.data.paymentKey.substring(0, 30)}...` : '(없음)',
-              amount: data.data.amount || '(없음)',
-              method: data.data.method || '(없음)',
-              paymentStatus: data.data.status || '(없음)',
-              requestedAt: data.data.requestedAt || '(없음)',
-              approvedAt: data.data.approvedAt || '(없음)',
-              // 전체 데이터 구조 확인
-              allKeys: Object.keys(data.data),
-            } : null,
-            fullResponse: data,
-            timestamp: new Date().toISOString(),
-          });
+          console.log(
+            '🔍 [결제 성공 페이지] 결제 확인 API 응답 데이터 (토스페이먼츠에서 받은 정보):',
+            {
+              success: data.success,
+              hasError: !!data.error,
+              error: data.error || '(없음)',
+              hasData: !!data.data,
+              responseData: data.data
+                ? {
+                    // 토스페이먼츠에서 받은 결제 정보
+                    orderId: data.data.orderId || '(없음)',
+                    orderNumber: data.data.orderNumber || '(없음)',
+                    paymentKey: data.data.paymentKey
+                      ? `${data.data.paymentKey.substring(0, 30)}...`
+                      : '(없음)',
+                    amount: data.data.amount || '(없음)',
+                    method: data.data.method || '(없음)',
+                    paymentStatus: data.data.status || '(없음)',
+                    requestedAt: data.data.requestedAt || '(없음)',
+                    approvedAt: data.data.approvedAt || '(없음)',
+                    // 전체 데이터 구조 확인
+                    allKeys: Object.keys(data.data),
+                  }
+                : null,
+              fullResponse: data,
+              timestamp: new Date().toISOString(),
+            }
+          );
 
           if (!response.ok || !data.success) {
             console.error('🔍 [결제 성공 페이지] ❌ 결제 확인 실패:', {
@@ -169,22 +201,41 @@ function PaymentSuccessContent() {
               responseStatus: response.status,
               dataSuccess: data.success,
               error: data.error,
+              code: data.code,
               fullErrorData: data,
+              note:
+                data.code === 'M006'
+                  ? '토스페이먼츠 측 문제 - 업체 사정으로 결제 일시 중지. 카드에서 돈이 빠져나가지 않았습니다.'
+                  : '결제 승인 실패',
             });
-            setError(data.error || '결제 확인에 실패했습니다.');
+
+            // M006 에러는 토스페이먼츠 측 문제이므로 사용자에게 안내
+            const errorMessage =
+              data.code === 'M006'
+                ? '토스페이먼츠 업체 사정으로 인해 결제를 일시 중지하였습니다. 카드에서 돈이 빠져나가지 않았으니 안심하시고, 잠시 후 다시 시도해주시거나 상점으로 문의해주세요.'
+                : data.error || '결제 확인에 실패했습니다.';
+
+            setError(errorMessage);
             setPaymentInfo({
               paymentId: paymentKey,
               orderId: orderId,
               amount: parseInt(amount),
               status: 'failed',
             });
+            // 실패 시에는 hasCalledConfirm을 false로 유지하여 재시도 가능하도록
+            hasCalledConfirm.current = false;
             return;
           }
+
+          // ✅ 성공 시에만 호출 플래그 설정
+          hasCalledConfirm.current = true;
 
           console.log('🔍 [결제 성공 페이지] ✅ 결제 확인 성공:', {
             orderId: data.data?.orderId || '(없음)',
             orderNumber: data.data?.orderNumber || '(없음)',
-            paymentKey: data.data?.paymentKey ? `${data.data.paymentKey.substring(0, 30)}...` : '(없음)',
+            paymentKey: data.data?.paymentKey
+              ? `${data.data.paymentKey.substring(0, 30)}...`
+              : '(없음)',
             amount: data.data?.amount || '(없음)',
             paymentStatus: data.data?.status || '(없음)',
             method: data.data?.method || '(없음)',
@@ -193,8 +244,9 @@ function PaymentSuccessContent() {
 
           // 결제 확인 성공 후 주문 정보 표시
           // 실제 주문이 생성되었으면 orderNumber를 사용, 아니면 임시 orderId 사용
-          const finalOrderId = data.data?.orderNumber || data.data?.orderId || orderId;
-          
+          const finalOrderId =
+            data.data?.orderNumber || data.data?.orderId || orderId;
+
           setPaymentInfo({
             paymentId: paymentKey,
             orderId: finalOrderId,
@@ -204,9 +256,12 @@ function PaymentSuccessContent() {
         } catch (error) {
           console.error('🔍 [결제 성공 페이지] ❌ 결제 확인 중 예외 발생:', {
             error,
-            errorMessage: error instanceof Error ? error.message : String(error),
+            errorMessage:
+              error instanceof Error ? error.message : String(error),
             errorStack: error instanceof Error ? error.stack : undefined,
-            paymentKey: paymentKey ? `${paymentKey.substring(0, 30)}...` : '(없음)',
+            paymentKey: paymentKey
+              ? `${paymentKey.substring(0, 30)}...`
+              : '(없음)',
             orderId: orderId || '(없음)',
             amount: amount || '(없음)',
             timestamp: new Date().toISOString(),
@@ -218,6 +273,8 @@ function PaymentSuccessContent() {
             amount: amount ? parseInt(amount) : 0,
             status: 'error',
           });
+          // 예외 발생 시에도 재시도 가능하도록 플래그 리셋
+          hasCalledConfirm.current = false;
         } finally {
           setIsProcessing(false);
         }
