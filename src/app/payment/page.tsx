@@ -59,7 +59,7 @@ interface GroupedCartItem {
 
 function PaymentPageContent() {
   const { user } = useAuth();
-  const { cart } = useCart();
+  const { cart, dispatch: cartDispatch } = useCart();
   const { profiles } = useProfile();
   // router 제거 - 토스 위젯에서 직접 처리
   const searchParams = useSearchParams();
@@ -67,6 +67,7 @@ function PaymentPageContent() {
   const [selectedItems, setSelectedItems] = useState<CartItem[]>([]);
   const [groupedItems, setGroupedItems] = useState<GroupedCartItem[]>([]);
   const [isApprovedOrder, setIsApprovedOrder] = useState(false);
+  const [cartUpdated, setCartUpdated] = useState(false); // cart 업데이트 플래그
   const [isAgreedCaution, setIsAgreedCaution] = useState(false);
   const [projectName, setProjectName] = useState('');
   const [tempProjectName, setTempProjectName] = useState('');
@@ -216,7 +217,7 @@ function PaymentPageContent() {
     }
   }, [applyBulkSettings, groupedItems.length]);
 
-  // 사용자 프로필 데이터 가져오기
+  // 사용자 프로필 데이터 가져오기 및 cart 아이템 업데이트
   useEffect(() => {
     const fetchUserProfiles = async () => {
       if (!user?.id) return;
@@ -239,6 +240,67 @@ function PaymentPageContent() {
             profilesWithAuthId
           );
           setUserProfiles(profilesWithAuthId);
+
+          // 프로필이 있고 cart 아이템에 user_profile_id가 없으면 업데이트
+          if (profilesWithAuthId.length > 0 && cart.length > 0) {
+            const defaultProfile =
+              profilesWithAuthId.find(
+                (p: { is_default?: boolean }) => p.is_default
+              ) || profilesWithAuthId[0];
+            const defaultProfileId = defaultProfile?.id;
+
+            if (defaultProfileId) {
+              const itemsNeedingUpdate = cart.filter(
+                (item) => !item.user_profile_id
+              );
+
+              if (itemsNeedingUpdate.length > 0) {
+                console.log('🔍 [Payment] cart 아이템 user_profile_id 보완:', {
+                  itemsNeedingUpdate: itemsNeedingUpdate.length,
+                  defaultProfileId,
+                });
+
+                // cart 아이템 업데이트
+                const updatedCart = cart.map((item) => {
+                  if (!item.user_profile_id) {
+                    return {
+                      ...item,
+                      user_profile_id: defaultProfileId,
+                      // 프로필 정보도 함께 업데이트
+                      contact_person_name:
+                        item.contact_person_name ||
+                        defaultProfile.contact_person_name,
+                      phone: item.phone || defaultProfile.phone,
+                      company_name:
+                        item.company_name || defaultProfile.company_name,
+                      email: item.email || defaultProfile.email,
+                    };
+                  }
+                  return item;
+                });
+
+                // cart 업데이트
+                cartDispatch({
+                  type: 'UPDATE_CART',
+                  items: updatedCart,
+                });
+
+                console.log('🔍 [Payment] cart 업데이트 완료:', {
+                  updatedItems: updatedCart.filter(
+                    (item) => item.user_profile_id === defaultProfileId
+                  ).length,
+                });
+
+                // cart 업데이트 플래그 설정
+                setCartUpdated(true);
+              }
+            }
+          } else if (profilesWithAuthId.length === 0) {
+            // 프로필이 없는 경우
+            console.warn(
+              '🔍 [Payment] ⚠️ 프로필이 없습니다. 마이페이지에서 프로필을 생성해주세요.'
+            );
+          }
         }
       } catch (error) {
         console.error('🔍 프로필 데이터 가져오기 실패:', error);
@@ -246,7 +308,51 @@ function PaymentPageContent() {
     };
 
     fetchUserProfiles();
-  }, [user?.id]);
+  }, [user?.id, cart, cartDispatch]);
+
+  // cart 업데이트 후 cart가 변경되면 그룹화 다시 수행
+  useEffect(() => {
+    // selectedItems가 있고 이미 그룹화가 수행된 상태에서만 재실행
+    if (selectedItems.length > 0 && groupedItems.length > 0 && cartUpdated) {
+      console.log('🔍 [Payment] cart 업데이트 후 그룹화 재실행');
+      const directParam = searchParams.get('direct');
+
+      // cart에서 최신 아이템 다시 가져오기
+      const itemsParam = searchParams.get('items');
+      if (itemsParam) {
+        try {
+          const selectedItemIds = JSON.parse(
+            decodeURIComponent(itemsParam)
+          ) as string[];
+          const latestItems = cart.filter((item) =>
+            selectedItemIds.includes(item.id)
+          );
+
+          if (latestItems.length > 0) {
+            const grouped = groupItemsByDistrict(
+              latestItems,
+              directParam === 'true'
+            );
+            console.log('🔍 [Payment] 재그룹화 결과:', {
+              groupedCount: grouped.length,
+              groupedItems: grouped.map((group) => ({
+                id: group.id,
+                name: group.name,
+                user_profile_id: group.user_profile_id,
+                hasProfileId: !!group.user_profile_id,
+              })),
+            });
+            setGroupedItems(grouped);
+            setSelectedItems(latestItems);
+            setCartUpdated(false);
+          }
+        } catch (error) {
+          console.error('🔍 [Payment] 재그룹화 중 오류:', error);
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartUpdated, cart]);
 
   // Direct 모드일 때 프로필 정보가 로드된 후 그룹화 다시 수행
   useEffect(() => {
@@ -322,7 +428,7 @@ function PaymentPageContent() {
         grouped[groupKey].push(item);
       });
 
-      return Object.entries(grouped).map(([groupKey, group]) => {
+      const groups = Object.entries(grouped).map(([groupKey, group]) => {
         const firstItem = group[0];
         const totalPrice = group.reduce(
           (sum, item) => sum + (item.price || 0),
@@ -340,20 +446,114 @@ function PaymentPageContent() {
         // Direct 모드인 경우 기본 프로필 정보를 우선적으로 사용
         const profileToUse = isDirectMode ? defaultProfile : null;
 
+        // 🔍 [디버깅] 그룹화 단계에서 user_profile_id 파싱 확인
+        console.log('🔍 [그룹화] 아이템 user_profile_id 확인:', {
+          groupKey,
+          firstItemId: firstItem.id,
+          firstItemName: firstItem.name,
+          firstItemUserProfileId: firstItem.user_profile_id,
+          hasFirstItemProfileId: !!firstItem.user_profile_id,
+          groupItemsProfileIds: group.map((item) => ({
+            id: item.id,
+            name: item.name,
+            user_profile_id: item.user_profile_id,
+            hasProfileId: !!item.user_profile_id,
+          })),
+          defaultProfileId: defaultProfile?.id,
+          userProfilesCount: userProfiles?.length || 0,
+          userProfilesIds:
+            userProfiles?.map((p) => ({
+              id: p.id,
+              is_default: p.is_default,
+              profile_title: p.profile_title,
+            })) || [],
+        });
+
+        // user_profile_id가 없으면 현재 사용자의 기본 프로필 사용 (폴백)
+        let finalUserProfileId = firstItem.user_profile_id;
+
+        if (!finalUserProfileId) {
+          console.warn(
+            '🔍 [그룹화] ⚠️ 첫 번째 아이템에 user_profile_id가 없음, 기본 프로필 사용:',
+            {
+              itemId: firstItem.id,
+              itemName: firstItem.name,
+              district: firstItem.district,
+              groupKey,
+            }
+          );
+
+          // 그룹 내 다른 아이템에서 user_profile_id 찾기
+          const itemWithProfile = group.find((item) => item.user_profile_id);
+          if (itemWithProfile) {
+            finalUserProfileId = itemWithProfile.user_profile_id;
+            console.log(
+              '🔍 [그룹화] ✅ 그룹 내 다른 아이템에서 user_profile_id 찾음:',
+              finalUserProfileId
+            );
+          } else {
+            // 그래도 없으면 현재 사용자의 기본 프로필 사용
+            const currentDefaultProfile =
+              defaultProfile ||
+              userProfiles?.find((p) => p.is_default) ||
+              userProfiles?.[0];
+            if (currentDefaultProfile?.id) {
+              finalUserProfileId = currentDefaultProfile.id;
+              console.log(
+                '🔍 [그룹화] ⚠️ 그룹 내 아이템들에도 user_profile_id가 없어서 현재 사용자 기본 프로필 사용:',
+                finalUserProfileId
+              );
+            } else {
+              console.warn(
+                '🔍 [그룹화] ⚠️ 프로필이 없습니다. undefined로 설정:',
+                {
+                  itemId: firstItem.id,
+                  itemName: firstItem.name,
+                  district: firstItem.district,
+                  groupKey,
+                  hasDefaultProfile: !!defaultProfile,
+                  hasUserProfiles: !!userProfiles?.length,
+                  userProfiles: userProfiles,
+                  note: '결제 시점에 프로필이 필요합니다.',
+                }
+              );
+              // 프로필이 없어도 그룹은 생성하되, undefined로 설정
+              // 결제 버튼 클릭 시 검증
+              finalUserProfileId = undefined;
+            }
+          }
+        }
+
+        console.log('🔍 [그룹화] 최종 user_profile_id:', finalUserProfileId);
+
+        // user_profile_id가 없어도 그룹은 생성 (UI에 표시하기 위해)
+        // 결제 버튼 클릭 시에만 검증
+        if (!finalUserProfileId) {
+          console.warn(
+            '🔍 [그룹화] ⚠️ user_profile_id가 없지만 그룹은 생성 (결제 시점에 검증)',
+            {
+              groupKey,
+              firstItemId: firstItem.id,
+              firstItemName: firstItem.name,
+              note: '프로필이 없어도 UI에 표시하고, 결제 버튼 클릭 시 경고 표시',
+            }
+          );
+        }
+
         return {
           id: `group_${groupKey}`,
           name: `${firstItem.district} 현수막게시대`,
           items: group,
           totalPrice,
           district: firstItem.district,
-          type: 'banner-display',
+          type: 'banner-display' as const,
           panel_type: firstItem.panel_type || 'panel',
           is_public_institution:
             firstItem.is_public_institution ||
             profileToUse?.is_public_institution,
           is_company: firstItem.is_company || profileToUse?.is_company,
-          user_profile_id:
-            firstItem.user_profile_id || profileToUse?.id || defaultProfile?.id,
+          // user_profile_id는 보완된 값 사용 (없으면 undefined)
+          user_profile_id: finalUserProfileId || undefined,
           contact_person_name:
             firstItem.contact_person_name ||
             profileToUse?.contact_person_name ||
@@ -373,6 +573,9 @@ function PaymentPageContent() {
           periodText,
         };
       });
+
+      // 모든 그룹 반환 (null 체크만)
+      return groups.filter((group) => group !== null) as GroupedCartItem[];
     },
     [userProfiles]
   );
@@ -383,11 +586,57 @@ function PaymentPageContent() {
     const approvedParam = searchParams.get('approved');
     const orderIdParam = searchParams.get('orderId');
     const directParam = searchParams.get('direct');
-    console.log('🔍 Payment page - itemsParam:', itemsParam);
-    console.log('🔍 Payment page - approvedParam:', approvedParam);
-    console.log('🔍 Payment page - orderIdParam:', orderIdParam);
-    console.log('🔍 Payment page - directParam:', directParam);
-    console.log('🔍 Payment page - cart:', cart);
+
+    // 통합 로그: user 정보와 cart 정보를 함께 출력
+    console.log('🔍 [Payment 페이지] 초기 로드:', {
+      user: user
+        ? {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            name: user.name,
+          }
+        : null,
+      hasUser: !!user,
+      itemsParam,
+      approvedParam,
+      orderIdParam,
+      directParam,
+      cartLength: cart.length,
+      cartItems: cart.map((item) => ({
+        id: item.id,
+        name: item.name,
+        user_profile_id: item.user_profile_id,
+        user_auth_id: item.user_auth_id,
+        hasUserProfileId: !!item.user_profile_id,
+        hasUserAuthId: !!item.user_auth_id,
+      })),
+    });
+
+    // localStorage에서 직접 확인
+    if (typeof window !== 'undefined') {
+      try {
+        const storedCart = localStorage.getItem('hansung_cart');
+        if (storedCart) {
+          const parsedCart = JSON.parse(storedCart);
+          console.log('🔍 [Payment] localStorage 직접 확인:', {
+            itemsCount: parsedCart.items?.length || 0,
+            items:
+              parsedCart.items?.map((item: CartItem) => ({
+                id: item.id,
+                name: item.name,
+                user_profile_id: item.user_profile_id,
+                user_auth_id: item.user_auth_id,
+                hasUserProfileId: !!item.user_profile_id,
+              })) || [],
+          });
+        } else {
+          console.log('🔍 [Payment] localStorage에 장바구니 데이터 없음');
+        }
+      } catch (error) {
+        console.error('🔍 [Payment] localStorage 확인 중 오류:', error);
+      }
+    }
 
     if (approvedParam === 'true') {
       setIsApprovedOrder(true);
@@ -482,15 +731,146 @@ function PaymentPageContent() {
 
           fetchApprovedOrderItems(selectedItemIds[0]);
         } else {
-          const items = cart.filter((item) =>
-            selectedItemIds.includes(item.id)
-          );
-          console.log('🔍 Payment page - filtered items:', items);
+          // cart에서 최신 상태 가져오기 (cart가 업데이트되었을 수 있음)
+          const latestCart = cart; // useCart에서 가져온 최신 cart
+
+          console.log('🔍 [Payment 필터링] 통합 정보:', {
+            user: user
+              ? {
+                  id: user.id,
+                  username: user.username,
+                  email: user.email,
+                }
+              : null,
+            selectedItemIds: selectedItemIds,
+            selectedItemIdsType: typeof selectedItemIds,
+            selectedItemIdsIsArray: Array.isArray(selectedItemIds),
+            latestCartLength: latestCart.length,
+            latestCartItemIds: latestCart.map((item) => item.id),
+            latestCartItems: latestCart.map((item) => ({
+              id: item.id,
+              name: item.name,
+              user_profile_id: item.user_profile_id,
+              user_auth_id: item.user_auth_id,
+              hasUserProfileId: !!item.user_profile_id,
+              hasUserAuthId: !!item.user_auth_id,
+            })),
+            matchCheck: selectedItemIds.map((id) => ({
+              id,
+              foundInCart: latestCart.some((item) => item.id === id),
+              matchedItem: latestCart.find((item) => item.id === id)
+                ? {
+                    id: latestCart.find((item) => item.id === id)?.id,
+                    name: latestCart.find((item) => item.id === id)?.name,
+                  }
+                : null,
+            })),
+          });
+
+          // 아이템 필터링
+          const items = latestCart.filter((item) => {
+            const isIncluded = selectedItemIds.includes(item.id);
+            if (!isIncluded) {
+              console.warn('🔍 [필터링] 매칭 실패:', {
+                itemId: item.id,
+                itemIdType: typeof item.id,
+                selectedItemIds: selectedItemIds,
+                selectedItemIdsIncludes: selectedItemIds.includes(item.id),
+              });
+            }
+            return isIncluded;
+          });
+
+          console.log('🔍 [장바구니 필터링] 최신 cart 상태:', {
+            latestCartLength: latestCart.length,
+            latestCartItems: latestCart.map((item) => ({
+              id: item.id,
+              name: item.name,
+              user_profile_id: item.user_profile_id,
+              user_auth_id: item.user_auth_id,
+              hasUserProfileId: !!item.user_profile_id,
+            })),
+          });
+
+          // 🔍 [디버깅] 장바구니에서 필터링된 아이템의 user_profile_id 확인
+          console.log('🔍 [장바구니 필터링] cart에서 선택된 아이템:', {
+            cartLength: cart.length,
+            selectedItemIdsCount: selectedItemIds.length,
+            selectedItemIds: selectedItemIds,
+            cartItemIds: cart.map((item) => item.id),
+            matchedIds: items.map((item) => item.id),
+            unmatchedIds: selectedItemIds.filter(
+              (id) => !cart.some((item) => item.id === id)
+            ),
+            cartItems: cart.map((item) => ({
+              id: item.id,
+              name: item.name,
+              user_profile_id: item.user_profile_id,
+              user_auth_id: item.user_auth_id,
+              hasUserProfileId: !!item.user_profile_id,
+            })),
+            filteredItemsCount: items.length,
+            filteredItems: items.map((item) => ({
+              id: item.id,
+              name: item.name,
+              user_profile_id: item.user_profile_id,
+              hasProfileId: !!item.user_profile_id,
+              user_auth_id: item.user_auth_id,
+            })),
+          });
+
+          // 필터링 결과가 비어있으면 경고
+          if (items.length === 0 && selectedItemIds.length > 0) {
+            console.error('🔍 [장바구니 필터링] ❌ 필터링 결과가 비어있음!', {
+              selectedItemIds,
+              cartItemIds: cart.map((item) => item.id),
+              cartLength: cart.length,
+              localStorageCheck:
+                typeof window !== 'undefined'
+                  ? localStorage.getItem('hansung_cart')
+                  : null,
+            });
+          }
+
           setSelectedItems(items);
 
           // 묶음 결제를 위한 그룹화 (direct 모드 여부 전달)
+          console.log('🔍 [그룹화 전] groupItemsByDistrict 호출:', {
+            itemsCount: items.length,
+            isDirectMode: directParam === 'true',
+            userProfilesCount: userProfiles.length,
+            profilesCount: profiles?.length || 0,
+          });
+
           const grouped = groupItemsByDistrict(items, directParam === 'true');
-          setGroupedItems(grouped);
+
+          console.log('🔍 [그룹화 후] 그룹화 결과:', {
+            groupedCount: grouped.length,
+            groupedItems: grouped.map((group) => ({
+              id: group.id,
+              name: group.name,
+              district: group.district,
+              user_profile_id: group.user_profile_id,
+              hasProfileId: !!group.user_profile_id,
+              itemsCount: group.items.length,
+              totalPrice: group.totalPrice,
+              itemsProfileIds: group.items.map((item) => ({
+                id: item.id,
+                name: item.name,
+                user_profile_id: item.user_profile_id,
+              })),
+            })),
+            willBeSetToGroupedItems: grouped.length > 0,
+          });
+
+          if (grouped.length > 0) {
+            console.log('🔍 [그룹화 후] ✅ groupedItems 설정:', grouped.length);
+            setGroupedItems(grouped);
+          } else {
+            console.warn(
+              '🔍 [그룹화 후] ⚠️ groupedItems가 비어있어서 설정 안 함'
+            );
+          }
 
           // direct=true인 경우 기본 프로필 정보를 아이템들에 자동 설정
           if (directParam === 'true') {
@@ -504,7 +884,7 @@ function PaymentPageContent() {
     } else {
       console.log('🔍 Payment page - no items param found');
     }
-  }, [searchParams, cart, isApprovedOrder, groupItemsByDistrict]);
+  }, [searchParams, cart, isApprovedOrder, groupItemsByDistrict, user]);
 
   // // selectedItems 상태 변경 감지 (디버깅용 - 주기적 실행 방지)
   // useEffect(() => {
@@ -761,6 +1141,21 @@ function PaymentPageContent() {
 
   // 토스 위젯 열기 함수
   const openTossWidget = (group: GroupedCartItem) => {
+    // 🔍 [디버깅] tossWidgetData에 저장될 그룹의 user_profile_id 확인
+    console.log('🔍 [토스 위젯 열기] openTossWidget 호출:', {
+      groupId: group.id,
+      groupName: group.name,
+      user_profile_id: group.user_profile_id,
+      hasProfileId: !!group.user_profile_id,
+      itemsCount: group.items.length,
+      itemsProfileIds: group.items.map((item) => ({
+        id: item.id,
+        name: item.name,
+        user_profile_id: item.user_profile_id,
+        hasProfileId: !!item.user_profile_id,
+      })),
+    });
+
     setTossWidgetData(group);
     setTossWidgetOpen(true);
   };
@@ -770,14 +1165,41 @@ function PaymentPageContent() {
     if (tossWidgetOpen && tossWidgetData) {
       const initializeTossWidget = async () => {
         try {
+          // 클로저 문제 방지를 위해 현재 상태 값 저장
+          const currentUser = user;
+          const currentGroupStates = groupStates;
+          const currentTossWidgetData = tossWidgetData;
+          // profiles (context)와 userProfiles (state) 둘 다 확인
+          const currentProfilesFromContext = profiles;
+          const currentUserProfiles = userProfiles;
+          const currentProfiles =
+            currentUserProfiles.length > 0
+              ? currentUserProfiles
+              : currentProfilesFromContext || [];
+
           // 토스페이먼츠 SDK 동적 로드
           const { loadTossPayments, ANONYMOUS } = await import(
             '@tosspayments/tosspayments-sdk'
           );
 
-          const tossPayments = await loadTossPayments(
-            'test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm' // 테스트 키
-          );
+          // 토스페이먼츠 클라이언트 키 가져오기
+          const clientKey = process.env.NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY;
+
+          if (!clientKey) {
+            console.error('토스페이먼츠 클라이언트 키가 설정되지 않았습니다.');
+            const container = document.getElementById('toss-payment-methods');
+            if (container) {
+              container.innerHTML = `
+                <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <div class="text-red-800 font-medium">설정 오류</div>
+                  <div class="text-red-600 text-sm mt-1">토스페이먼츠 클라이언트 키가 설정되지 않았습니다.</div>
+                </div>
+              `;
+            }
+            return;
+          }
+
+          const tossPayments = await loadTossPayments(clientKey);
 
           const widgets = tossPayments.widgets({
             customerKey: ANONYMOUS,
@@ -809,28 +1231,260 @@ function PaymentPageContent() {
 
           paymentButton.addEventListener('click', async () => {
             try {
-              const randomId =
-                Math.random().toString(36).substring(2, 15) +
-                Math.random().toString(36).substring(2, 15);
-              const testOrderId = `test_${Date.now()}_${randomId}`;
+              // 버튼 비활성화
+              paymentButton.disabled = true;
+              paymentButton.textContent = '주문 생성 중...';
+
+              // 주문 생성에 필요한 정보 가져오기 (클로저에서 저장한 값 사용)
+              const groupState = currentGroupStates[currentTossWidgetData.id];
+              const projectName = groupState?.projectName || '';
+              const draftDeliveryMethod = groupState?.sendByEmail
+                ? 'email'
+                : 'upload';
+              const userAuthId = currentUser?.id;
+              const userProfileId = currentTossWidgetData.user_profile_id;
+
+              console.log('🔍 [결제 페이지] 사용자 정보 확인:', {
+                userAuthId,
+                userProfileId,
+                hasUser: !!currentUser,
+                hasTossWidgetData: !!currentTossWidgetData,
+                tossWidgetDataKeys: currentTossWidgetData
+                  ? Object.keys(currentTossWidgetData)
+                  : [],
+                profilesCount: currentProfiles?.length || 0,
+                tossWidgetDataItems:
+                  currentTossWidgetData?.items?.map((item) => ({
+                    id: item.id,
+                    name: item.name,
+                    user_profile_id: item.user_profile_id,
+                  })) || [],
+              });
+
+              // user_profile_id는 필수이므로 폴백 제거
+
+              if (!userAuthId) {
+                console.error('🔍 [결제 페이지] ❌ userAuthId가 없음');
+                alert('로그인이 필요합니다.');
+                paymentButton.disabled = false;
+                paymentButton.textContent = '결제하기';
+                return;
+              }
+
+              // user_profile_id가 없으면 현재 사용자의 기본 프로필로 보완
+              let finalUserProfileId = userProfileId;
+
+              if (!finalUserProfileId) {
+                console.warn(
+                  '🔍 [결제 페이지] ⚠️ user_profile_id가 없음, 기본 프로필 찾는 중...',
+                  {
+                    profilesFromContext:
+                      currentProfilesFromContext?.length || 0,
+                    userProfiles: currentUserProfiles?.length || 0,
+                    currentProfiles: currentProfiles?.length || 0,
+                  }
+                );
+
+                // 프로필이 없으면 API를 다시 호출하여 가져오기 시도
+                if (currentProfiles.length === 0 && currentUser?.id) {
+                  console.log(
+                    '🔍 [결제 페이지] 프로필이 없어서 API 재호출 시도...',
+                    {
+                      userId: currentUser.id,
+                    }
+                  );
+                  try {
+                    const profileResponse = await fetch(
+                      `/api/user-profiles?userId=${currentUser.id}`
+                    );
+                    const profileData = await profileResponse.json();
+
+                    console.log('🔍 [결제 페이지] 프로필 API 응답:', {
+                      ok: profileResponse.ok,
+                      status: profileResponse.status,
+                      success: profileData.success,
+                      dataLength: profileData.data?.length || 0,
+                      data: profileData.data,
+                    });
+
+                    if (profileData.success && profileData.data?.length > 0) {
+                      const fetchedProfiles = profileData.data.map(
+                        (profile: Record<string, unknown>) => ({
+                          ...profile,
+                          user_auth_id:
+                            (profile.user_auth_id as string) || currentUser.id,
+                        })
+                      );
+                      console.log(
+                        '🔍 [결제 페이지] 가져온 프로필:',
+                        fetchedProfiles
+                      );
+
+                      const fallbackProfile =
+                        fetchedProfiles.find(
+                          (p: UserProfile) => p.is_default
+                        ) || fetchedProfiles[0];
+
+                      console.log(
+                        '🔍 [결제 페이지] 선택된 폴백 프로필:',
+                        fallbackProfile
+                      );
+
+                      if (fallbackProfile?.id) {
+                        finalUserProfileId = fallbackProfile.id;
+                        console.log(
+                          '🔍 [결제 페이지] ✅ API 재호출로 기본 프로필 찾음:',
+                          finalUserProfileId
+                        );
+                      } else {
+                        console.error(
+                          '🔍 [결제 페이지] ❌ 폴백 프로필에도 id가 없음:',
+                          fallbackProfile
+                        );
+                      }
+                    } else {
+                      console.error(
+                        '🔍 [결제 페이지] ❌ 프로필 API 응답이 비어있음:',
+                        {
+                          success: profileData.success,
+                          hasData: !!profileData.data,
+                          dataLength: profileData.data?.length || 0,
+                          error: profileData.error,
+                        }
+                      );
+                    }
+                  } catch (error) {
+                    console.error(
+                      '🔍 [결제 페이지] 프로필 API 재호출 실패:',
+                      error
+                    );
+                  }
+                } else if (currentProfiles.length > 0) {
+                  const fallbackProfile =
+                    currentProfiles.find((p: UserProfile) => p.is_default) ||
+                    currentProfiles[0];
+                  if (fallbackProfile?.id) {
+                    finalUserProfileId = fallbackProfile.id;
+                    console.log(
+                      '🔍 [결제 페이지] ✅ 기본 프로필 찾음:',
+                      finalUserProfileId
+                    );
+                  }
+                }
+              }
+
+              if (!finalUserProfileId) {
+                console.error(
+                  '🔍 [결제 페이지] ❌ user_profile_id를 찾을 수 없음',
+                  {
+                    tossWidgetData: currentTossWidgetData,
+                    items: currentTossWidgetData?.items?.map((item) => ({
+                      id: item.id,
+                      name: item.name,
+                      user_profile_id: item.user_profile_id,
+                    })),
+                    profilesCount: currentProfiles?.length || 0,
+                    userId: currentUser?.id,
+                  }
+                );
+
+                // 명확한 에러 메시지 표시
+                const errorMessage =
+                  currentProfiles?.length === 0
+                    ? '프로필이 없습니다. 마이페이지에서 프로필을 먼저 생성해주세요.'
+                    : '프로필 정보가 누락되었습니다. 장바구니에서 아이템을 다시 선택해주세요.';
+
+                alert(errorMessage);
+                paymentButton.disabled = false;
+                paymentButton.textContent = '결제하기';
+
+                // 마이페이지로 리다이렉트 제안
+                if (
+                  currentProfiles?.length === 0 &&
+                  confirm('프로필 생성 페이지로 이동하시겠습니까?')
+                ) {
+                  window.location.href = '/mypage/info';
+                }
+                return;
+              }
+
+              if (!projectName || projectName.trim() === '') {
+                alert('작업이름을 입력해주세요.');
+                paymentButton.disabled = false;
+                paymentButton.textContent = '결제하기';
+                return;
+              }
+
+              console.log('🔍 [결제 페이지] 주문 생성 시작...', {
+                itemsCount: currentTossWidgetData.items.length,
+                userAuthId,
+                userProfileId: finalUserProfileId,
+                projectName,
+                draftDeliveryMethod,
+              });
+
+              // 주문 생성 API 호출
+              const orderResponse = await fetch('/api/orders', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  items: currentTossWidgetData.items.map((item) => ({
+                    id: item.id,
+                    panel_id: item.panel_id,
+                    price: item.price || 0,
+                    quantity: 1, // CartItem에 quantity가 없으므로 기본값 1 사용
+                    halfPeriod: item.halfPeriod,
+                    selectedYear: item.selectedYear,
+                    selectedMonth: item.selectedMonth,
+                    panel_slot_usage_id: item.panel_slot_usage_id,
+                    panel_slot_snapshot: item.panel_slot_snapshot,
+                  })),
+                  userAuthId,
+                  userProfileId: finalUserProfileId,
+                  isPaid: false, // 결제 전이므로 false
+                  draftDeliveryMethod,
+                  projectName,
+                  // paymentMethodId는 결제 확인 시점에 설정
+                }),
+              });
+
+              const orderData = await orderResponse.json();
+
+              if (!orderResponse.ok || !orderData.order) {
+                console.error('🔍 [결제 페이지] ❌ 주문 생성 실패:', orderData);
+                alert(orderData.error || '주문 생성에 실패했습니다.');
+                paymentButton.disabled = false;
+                paymentButton.textContent = '결제하기';
+                return;
+              }
+
+              const orderNumber = orderData.order.order_number;
+              console.log('🔍 [결제 페이지] ✅ 주문 생성 성공:', orderNumber);
 
               // 전화번호 정리 (숫자만 남기기)
               const sanitizedPhone = (
-                tossWidgetData.phone || '010-0000-0000'
+                currentTossWidgetData.phone || '010-0000-0000'
               ).replace(/\D/g, '');
 
+              // 생성된 주문번호를 토스 위젯 orderId로 사용
               await widgets.requestPayment({
-                orderId: testOrderId,
-                orderName: `${tossWidgetData.district} 현수막게시대`,
-                successUrl: `${window.location.origin}/payment/success?orderId=${testOrderId}`,
-                failUrl: `${window.location.origin}/payment/fail?orderId=${testOrderId}`,
-                customerEmail: tossWidgetData.email || 'customer@example.com',
-                customerName: tossWidgetData.contact_person_name || '고객',
+                orderId: orderNumber, // 실제 주문번호 사용
+                orderName: `${currentTossWidgetData.district} 현수막게시대`,
+                successUrl: `${window.location.origin}/payment/success?orderId=${orderNumber}`,
+                failUrl: `${window.location.origin}/payment/fail?orderId=${orderNumber}`,
+                customerEmail:
+                  currentTossWidgetData.email || 'customer@example.com',
+                customerName:
+                  currentTossWidgetData.contact_person_name || '고객',
                 customerMobilePhone: sanitizedPhone,
               });
             } catch (err) {
-              console.error('결제 요청 실패:', err);
+              console.error('🔍 [결제 페이지] ❌ 결제 요청 실패:', err);
               alert('결제 요청 중 오류가 발생했습니다.');
+              paymentButton.disabled = false;
+              paymentButton.textContent = '결제하기';
             }
           });
 
@@ -860,10 +1514,26 @@ function PaymentPageContent() {
 
       initializeTossWidget();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tossWidgetOpen, tossWidgetData]);
 
   // 모든 그룹 보여주기 (토스 위젯에서 직접 처리)
   const visibleGroups = groupedItems;
+
+  // 디버깅: visibleGroups 상태 확인
+  useEffect(() => {
+    console.log('🔍 [UI 렌더링] visibleGroups 상태:', {
+      visibleGroupsCount: visibleGroups.length,
+      groupedItemsCount: groupedItems.length,
+      visibleGroups: visibleGroups.map((group) => ({
+        id: group.id,
+        name: group.name,
+        district: group.district,
+        itemsCount: group.items.length,
+        user_profile_id: group.user_profile_id,
+      })),
+    });
+  }, [visibleGroups, groupedItems]);
 
   return (
     <main className="min-h-screen bg-white pt-[5.5rem] bg-gray-100 lg:px-[10rem]">
@@ -919,7 +1589,7 @@ function PaymentPageContent() {
             {bulkApply.projectName && (
               <div className="flex flex-col sm:flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4 sm:gap-2">
                 <label className="w-full md:w-[9rem] text-gray-600 font-medium">
-                  작업이름
+                  <span className="text-red">*</span> 작업이름
                 </label>
                 <div className="flex flex-col gap-1">
                   <input
@@ -961,7 +1631,9 @@ function PaymentPageContent() {
           {bulkApply.projectName && (
             <section className="p-6 border rounded-lg shadow-sm flex flex-col gap-4 sm:p-2">
               <div className="flex items-center justify-between mb-4 border-b-solid border-black border-b-[0.1rem] pb-4">
-                <h2 className="text-1.25 text-gray-2 font-bold">시안 업로드</h2>
+                <h2 className="text-1.25 text-gray-2 font-bold">
+                  <span className="text-red">*</span> 시안 업로드
+                </h2>
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
                     <input
@@ -1367,15 +2039,13 @@ function PaymentPageContent() {
                   htmlFor="agreement"
                   className="text-sm text-gray-700 leading-relaxed"
                 >
-                  <span className="text-red-500">*</span> 유의사항을 확인하고
-                  동의합니다.
+                  {validationErrors.agreement && (
+                    <span className="text-red text-sm">
+                      * {validationErrors.agreement}
+                    </span>
+                  )}
                 </label>
               </div>
-              {validationErrors.agreement && (
-                <span className="text-red-500 text-sm">
-                  {validationErrors.agreement}
-                </span>
-              )}
             </div>
           </section>
 

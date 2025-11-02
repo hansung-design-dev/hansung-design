@@ -261,16 +261,21 @@ export async function POST(request: NextRequest) {
       projectName, // 작업이름 필수
     } = body;
 
-    console.log('🔍 주문 요청 데이터:', {
+    console.log(
+      '🔍 [주문 생성 API] 시작 =========================================='
+    );
+    console.log('🔍 [주문 생성 API] 입력 파라미터:', {
       itemsCount: items?.length,
       userAuthId,
       userProfileId,
       isPaid,
       draftDeliveryMethod,
       paymentMethodId,
+      projectName,
     });
 
     if (!items || !Array.isArray(items) || items.length === 0) {
+      console.error('🔍 [주문 생성 API] ❌ 주문 항목 누락');
       return NextResponse.json(
         { error: '주문 항목이 필요합니다.' },
         { status: 400 }
@@ -278,6 +283,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!userAuthId) {
+      console.error('🔍 [주문 생성 API] ❌ 사용자 인증 ID 누락');
       return NextResponse.json(
         { error: '사용자 인증 ID가 필요합니다.' },
         { status: 400 }
@@ -289,24 +295,46 @@ export async function POST(request: NextRequest) {
       typeof projectName !== 'string' ||
       !projectName.trim()
     ) {
+      console.error('🔍 [주문 생성 API] ❌ 작업이름 누락');
       return NextResponse.json(
         { error: '작업이름(projectName)은 필수입니다.' },
         { status: 400 }
       );
     }
 
-    // 사용자 프로필 조회
-    const { data: userProfile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('id', userProfileId)
-      .single();
+    // 사용자 프로필 조회 (선택적)
+    console.log('🔍 [주문 생성 API] 사용자 프로필 조회 시작...', {
+      userProfileId,
+      hasUserProfileId: !!userProfileId,
+    });
 
-    if (profileError || !userProfile) {
-      console.error('🔍 사용자 프로필 조회 오류:', profileError);
-      return NextResponse.json(
-        { error: '사용자 프로필을 찾을 수 없습니다.' },
-        { status: 400 }
+    let userProfile = null;
+    if (userProfileId) {
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', userProfileId)
+        .single();
+
+      console.log('🔍 [주문 생성 API] 사용자 프로필 조회 결과:', {
+        found: !!profile,
+        profileId: profile?.id,
+        error: profileError,
+      });
+
+      if (profileError || !profile) {
+        console.warn(
+          '🔍 [주문 생성 API] ⚠️ 사용자 프로필 조회 실패 (계속 진행):',
+          profileError
+        );
+        // 프로필이 없어도 주문은 생성 가능하도록 변경
+        // 하지만 프로필 정보는 사용할 수 없음
+      } else {
+        userProfile = profile;
+      }
+    } else {
+      console.warn(
+        '🔍 [주문 생성 API] ⚠️ userProfileId가 없음 (프로필 없이 주문 생성)'
       );
     }
 
@@ -316,38 +344,82 @@ export async function POST(request: NextRequest) {
     const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
     const orderNumber = `${dateStr}-${randomStr}`;
 
+    console.log('🔍 [주문 생성 API] 생성된 주문번호:', orderNumber);
+
     // 총 가격 계산
     const totalPrice = items.reduce(
       (sum, item) => sum + item.price * item.quantity,
       0
     );
 
+    console.log('🔍 [주문 생성 API] 총 가격 계산:', {
+      totalPrice,
+      itemsCount: items.length,
+      itemPrices: items.map((item) => ({
+        id: item.id,
+        price: item.price,
+        quantity: item.quantity,
+      })),
+    });
+
     // 1. orders 테이블에 주문 생성 (가격 정보 제외)
+    console.log('🔍 [주문 생성 API] orders 테이블에 주문 생성 시작...');
+    const orderInsertData: {
+      order_number: string;
+      user_auth_id: string;
+      user_profile_id?: string | null;
+      payment_status: 'completed' | 'pending';
+      order_status: string;
+      draft_delivery_method: string;
+    } = {
+      order_number: orderNumber,
+      user_auth_id: userAuthId,
+      payment_status: isPaid ? 'completed' : 'pending',
+      order_status: 'pending',
+      draft_delivery_method: draftDeliveryMethod || 'upload',
+    };
+
+    // user_profile_id가 있으면 추가 (없으면 null 또는 undefined)
+    if (userProfileId && userProfile) {
+      orderInsertData.user_profile_id = userProfileId;
+      console.log('🔍 [주문 생성 API] user_profile_id 포함:', userProfileId);
+    } else {
+      orderInsertData.user_profile_id = null;
+      console.warn('🔍 [주문 생성 API] ⚠️ user_profile_id 없이 주문 생성');
+    }
+
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .insert({
-        order_number: orderNumber,
-        user_auth_id: userAuthId,
-        user_profile_id: userProfileId,
-        payment_status: isPaid ? 'completed' : 'pending',
-        order_status: 'pending',
-        draft_delivery_method: draftDeliveryMethod || 'upload',
-      })
-      .select('id')
+      .insert(orderInsertData)
+      .select('id, order_number, payment_status')
       .single();
 
+    console.log('🔍 [주문 생성 API] orders 생성 결과:', {
+      success: !orderError,
+      orderId: order?.id,
+      orderNumber: order?.order_number,
+      payment_status: order?.payment_status,
+      error: orderError,
+    });
+
     if (orderError) {
-      console.error('🔍 주문 생성 오류:', orderError);
+      console.error('🔍 [주문 생성 API] ❌ 주문 생성 실패:', orderError);
       return NextResponse.json(
         { error: '주문 생성에 실패했습니다.' },
         { status: 500 }
       );
     }
 
-    console.log('🔍 주문 생성 성공:', order.id);
+    console.log('🔍 [주문 생성 API] ✅ 주문 생성 성공:', {
+      orderId: order.id,
+      orderNumber: order.order_number,
+    });
 
     // 2. payments 테이블에 결제 정보 생성
     if (paymentMethodId) {
+      console.log(
+        '🔍 [주문 생성 API] payments 테이블에 결제 정보 생성 시작...'
+      );
       const { data: payment, error: paymentError } = await supabase
         .from('payments')
         .insert({
@@ -358,21 +430,43 @@ export async function POST(request: NextRequest) {
           payment_date: isPaid ? new Date().toISOString() : null,
           admin_approval_status: isPaid ? 'approved' : 'pending',
         })
-        .select('id')
+        .select('id, payment_status, amount')
         .single();
 
+      console.log('🔍 [주문 생성 API] payments 생성 결과:', {
+        success: !paymentError,
+        paymentId: payment?.id,
+        payment_status: payment?.payment_status,
+        amount: payment?.amount,
+        error: paymentError,
+      });
+
       if (paymentError) {
-        console.error('🔍 결제 정보 생성 오류:', paymentError);
+        console.error(
+          '🔍 [주문 생성 API] ⚠️ 결제 정보 생성 실패 (치명적이지 않음):',
+          paymentError
+        );
         // 결제 정보 생성 실패는 치명적이지 않으므로 계속 진행
       } else {
-        console.log('🔍 결제 정보 생성 성공:', payment.id);
+        console.log('🔍 [주문 생성 API] ✅ 결제 정보 생성 성공:', payment.id);
       }
+    } else {
+      console.log(
+        '🔍 [주문 생성 API] paymentMethodId가 없어서 payments 레코드 생성 건너뜀'
+      );
     }
 
     // 3. order_details 생성
+    console.log('🔍 [주문 생성 API] order_details 생성 시작...');
     const orderDetails = [];
 
     for (const item of items) {
+      console.log('🔍 [주문 생성 API] order_detail 처리 중:', {
+        itemId: item.id,
+        panelId: item.panel_id,
+        quantity: item.quantity,
+        price: item.price,
+      });
       // 기간 설정 - 수정된 부분: selectedPeriodFrom/selectedPeriodTo 우선 사용
       let displayStartDate: string;
       let displayEndDate: string;
@@ -490,7 +584,15 @@ export async function POST(request: NextRequest) {
       orderDetails.push(orderDetail);
     }
 
-    console.log('🔍 주문 상세 정보:', orderDetails);
+    console.log('🔍 [주문 생성 API] 생성할 order_details:', {
+      count: orderDetails.length,
+      details: orderDetails.map((od) => ({
+        panel_id: od.panel_id,
+        slot_order_quantity: od.slot_order_quantity,
+        display_start_date: od.display_start_date,
+        display_end_date: od.display_end_date,
+      })),
+    });
 
     // order_details 일괄 생성
     const orderDetailsResult = await supabase
@@ -498,22 +600,38 @@ export async function POST(request: NextRequest) {
       .insert(orderDetails)
       .select('id, panel_slot_usage_id, panel_id, slot_order_quantity');
 
-    console.log('🔍 주문 상세 정보 생성 결과:', orderDetailsResult);
+    console.log('🔍 [주문 생성 API] order_details 생성 결과:', {
+      success: !orderDetailsResult.error,
+      createdCount: orderDetailsResult.data?.length || 0,
+      createdIds: orderDetailsResult.data?.map((od) => od.id) || [],
+      error: orderDetailsResult.error,
+    });
 
     if (orderDetailsResult.error) {
-      console.error('🔍 주문 상세 정보 생성 오류:', orderDetailsResult.error);
+      console.error(
+        '🔍 [주문 생성 API] ❌ order_details 생성 실패:',
+        orderDetailsResult.error
+      );
       return NextResponse.json(
         { error: '주문 상세 정보 생성에 실패했습니다.' },
         { status: 500 }
       );
     }
 
+    console.log(
+      '🔍 [주문 생성 API] ✅ order_details 생성 성공:',
+      orderDetailsResult.data?.length,
+      '개'
+    );
+
     // 생성된 order_details의 panel_slot_usage_id 업데이트 (재고는 DB 트리거가 자동 처리)
     if (orderDetailsResult.data) {
+      console.log('🔍 [주문 생성 API] panel_slot_usage 업데이트 시작...');
       for (const orderDetail of orderDetailsResult.data) {
         if (orderDetail.panel_slot_usage_id) {
           try {
             // panel_slot_usage의 order_details_id 업데이트
+            // 주의: 스키마에 order_details_id 컬럼이 없을 수 있음
             const { error: updateError } = await supabase
               .from('panel_slot_usage')
               .update({ order_details_id: orderDetail.id })
@@ -521,32 +639,39 @@ export async function POST(request: NextRequest) {
 
             if (updateError) {
               console.error(
-                '🔍 panel_slot_usage order_details_id 업데이트 오류:',
-                updateError
+                '🔍 [주문 생성 API] ⚠️ panel_slot_usage 업데이트 실패 (치명적이지 않음):',
+                {
+                  orderDetailId: orderDetail.id,
+                  panelSlotUsageId: orderDetail.panel_slot_usage_id,
+                  error: updateError,
+                  note: '스키마에 order_details_id 컬럼이 없을 수 있습니다.',
+                }
               );
             } else {
               console.log(
-                '🔍 panel_slot_usage order_details_id 업데이트 성공:',
+                '🔍 [주문 생성 API] ✅ panel_slot_usage 업데이트 성공:',
                 orderDetail.id
               );
             }
           } catch (error) {
-            console.error('🔍 panel_slot_usage 업데이트 중 예외 발생:', error);
+            console.error(
+              '🔍 [주문 생성 API] ⚠️ panel_slot_usage 업데이트 중 예외 발생 (치명적이지 않음):',
+              error
+            );
             // 이 에러는 치명적이지 않으므로 계속 진행
           }
+        } else {
+          console.log(
+            '🔍 [주문 생성 API] order_detail에 panel_slot_usage_id 없음:',
+            orderDetail.id
+          );
         }
       }
     }
 
     // 3. design_drafts row 생성 (항상)
-    if (userProfile.id) {
-      console.log('🔍 design_drafts 생성 시작:', {
-        order_id: order.id,
-        user_profile_id: userProfile.id,
-        project_name: projectName,
-        draft_delivery_method: draftDeliveryMethod || 'upload',
-      });
-
+    if (userProfile?.id) {
+      console.log('🔍 [주문 생성 API] design_drafts 생성 시작...');
       const { data: draft, error: draftError } = await supabase
         .from('design_drafts')
         .insert({
@@ -557,13 +682,23 @@ export async function POST(request: NextRequest) {
             draftDeliveryMethod || 'upload'
           })`,
         })
-        .select('id')
+        .select('id, project_name')
         .single();
 
+      console.log('🔍 [주문 생성 API] design_drafts 생성 결과:', {
+        success: !draftError,
+        draftId: draft?.id,
+        project_name: draft?.project_name,
+        error: draftError,
+      });
+
       if (draftError) {
-        console.error('🔍 design_drafts 생성 실패:', draftError);
+        console.error(
+          '🔍 [주문 생성 API] ❌ design_drafts 생성 실패:',
+          draftError
+        );
       } else {
-        console.log('🔍 design_drafts 생성 성공:', draft.id);
+        console.log('🔍 [주문 생성 API] ✅ design_drafts 생성 성공:', draft.id);
 
         // orders 테이블의 design_drafts_id와 draft_delivery_method 업데이트
         const { error: updateError } = await supabase
@@ -574,35 +709,56 @@ export async function POST(request: NextRequest) {
           })
           .eq('id', order.id);
 
+        console.log(
+          '🔍 [주문 생성 API] orders.design_drafts_id 업데이트 결과:',
+          {
+            success: !updateError,
+            error: updateError,
+          }
+        );
+
         if (updateError) {
-          console.error('🔍 orders 테이블 업데이트 실패:', updateError);
+          console.error(
+            '🔍 [주문 생성 API] ⚠️ orders 업데이트 실패 (치명적이지 않음):',
+            updateError
+          );
         } else {
-          console.log('🔍 orders 테이블 업데이트 성공');
+          console.log('🔍 [주문 생성 API] ✅ orders 업데이트 성공');
         }
       }
     } else {
-      console.error('🔍 userProfile.id가 없어서 design_drafts 생성 불가');
+      console.error(
+        '🔍 [주문 생성 API] ❌ userProfile.id가 없어서 design_drafts 생성 불가'
+      );
     }
 
     // 4. 결제 완료 시 시안관리 레코드 자동 생성
     // (기존 결제완료 시 design_drafts 생성 로직은 제거)
 
-    console.log('🔍 주문 생성 성공:', {
+    console.log(
+      '🔍 [주문 생성 API] ✅ 모든 처리 완료 =========================================='
+    );
+    console.log('🔍 [주문 생성 API] 최종 결과:', {
       orderId: order.id,
       orderNumber: orderNumber,
       totalPrice: totalPrice,
       itemCount: items.length,
+      orderDetailsCount: orderDetailsResult.data?.length || 0,
     });
 
     // 재고 현황 확인을 위한 로그 추가
-    console.log('🔍 재고 현황 확인:');
+    console.log('🔍 [주문 생성 API] 재고 현황 확인:');
     for (const item of items) {
-      const { data: inventoryData } = await supabase
+      const { data: inventoryData, error: inventoryError } = await supabase
         .from('banner_slot_inventory')
         .select('*')
         .eq('panel_id', item.panel_id);
 
-      console.log(`  - 패널 ${item.panel_id}:`, inventoryData);
+      console.log(`🔍 [주문 생성 API] 패널 ${item.panel_id} 재고:`, {
+        found: !!inventoryData,
+        count: inventoryData?.length || 0,
+        error: inventoryError,
+      });
     }
 
     return NextResponse.json({
@@ -616,7 +772,11 @@ export async function POST(request: NextRequest) {
       message: '주문이 성공적으로 생성되었습니다.',
     });
   } catch (error) {
-    console.error('🔍 주문 생성 중 오류:', error);
+    console.error('🔍 [주문 생성 API] ❌ 예외 발생:', error);
+    console.error('🔍 [주문 생성 API] 예외 상세:', {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return NextResponse.json(
       { error: '서버 오류가 발생했습니다.' },
       { status: 500 }

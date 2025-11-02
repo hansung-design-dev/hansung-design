@@ -1000,12 +1000,30 @@ function CartContent() {
       }
 
       // 일반 사용자인 경우 결제 페이지로 이동
+      // ID만 전달 (user_auth_id는 payment 페이지에서 user 컨텍스트로 가져옴)
+      const selectedItemIds = selectedCartItems.map((item) => item.id);
       const selectedItemsParam = encodeURIComponent(
-        JSON.stringify(selectedCartItems.map((item) => item.id))
+        JSON.stringify(selectedItemIds)
       );
 
-      console.log('🔍 Cart - selectedCartItems:', selectedCartItems);
-      console.log('🔍 Cart - selectedItemsParam:', selectedItemsParam);
+      console.log('🔍 [Cart → Payment] 선택된 아이템 전달:', {
+        selectedCartItemsCount: selectedCartItems.length,
+        selectedCartItems: selectedCartItems.map((item) => ({
+          id: item.id,
+          name: item.name,
+          user_profile_id: item.user_profile_id,
+          user_auth_id: item.user_auth_id,
+          hasUserProfileId: !!item.user_profile_id,
+        })),
+        selectedItemIds: selectedItemIds,
+        selectedItemsParam: selectedItemsParam,
+        fullCartItems: cart.map((item) => ({
+          id: item.id,
+          name: item.name,
+          user_profile_id: item.user_profile_id,
+          user_auth_id: item.user_auth_id,
+        })),
+      });
 
       // 선택 상태 초기화 (아이템은 payment 페이지에서 성공 후 제거)
       setSelectedItems(new Set());
