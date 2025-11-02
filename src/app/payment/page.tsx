@@ -1370,21 +1370,38 @@ function PaymentPageContent() {
           // 토스페이먼츠 클라이언트 키 가져오기
           const clientKey = process.env.NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY;
 
+          console.log('🔍 [로컬 디버깅] 토스페이먼츠 초기화 시작:', {
+            hasClientKey: !!clientKey,
+            clientKeyPrefix: clientKey ? `${clientKey.substring(0, 10)}...` : '(없음)',
+            isTestKey: clientKey?.startsWith('test_') || false,
+            isProductionKey: clientKey?.startsWith('live_') || false,
+            windowOrigin: typeof window !== 'undefined' ? window.location.origin : '(SSR)',
+            timestamp: new Date().toISOString(),
+          });
+
           if (!clientKey) {
-            console.error('토스페이먼츠 클라이언트 키가 설정되지 않았습니다.');
+            console.error('🔍 [로컬 디버깅] ❌ 토스페이먼츠 클라이언트 키가 설정되지 않았습니다.');
             const container = document.getElementById('toss-payment-methods');
             if (container) {
               container.innerHTML = `
                 <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
                   <div class="text-red-800 font-medium">설정 오류</div>
                   <div class="text-red-600 text-sm mt-1">토스페이먼츠 클라이언트 키가 설정되지 않았습니다.</div>
+                  <div class="text-gray-600 text-xs mt-2">로컬 환경에서는 테스트 키 (test_로 시작)를 사용해야 합니다.</div>
                 </div>
               `;
             }
             return;
           }
 
+          // 로컬 환경에서는 테스트 키를 사용하는 것이 좋습니다
+          if (typeof window !== 'undefined' && window.location.hostname === 'localhost' && !clientKey.startsWith('test_')) {
+            console.warn('🔍 [로컬 디버깅] ⚠️ 로컬 환경에서 프로덕션 키를 사용하고 있습니다. 테스트 키(test_로 시작) 사용을 권장합니다.');
+          }
+
+          console.log('🔍 [로컬 디버깅] 토스페이먼츠 SDK 로드 시작...');
           const tossPayments = await loadTossPayments(clientKey);
+          console.log('🔍 [로컬 디버깅] ✅ 토스페이먼츠 SDK 로드 성공');
 
           const widgets = tossPayments.widgets({
             customerKey: ANONYMOUS,
@@ -2021,11 +2038,24 @@ function PaymentPageContent() {
               }
 
               // 결제 요청 파라미터 검증
+              const successUrl = `${window.location.origin}/payment/success?orderId=${finalOrderId}`;
+              const failUrl = `${window.location.origin}/payment/fail?orderId=${finalOrderId}`;
+              
+              console.log('🔍 [로컬 디버깅] 결제 URL 생성:', {
+                windowOrigin: window.location.origin,
+                hostname: window.location.hostname,
+                protocol: window.location.protocol,
+                successUrl,
+                failUrl,
+                orderId: finalOrderId,
+                note: '로컬 환경에서는 localhost를 사용해야 하며, 토스페이먼츠 테스트 키가 필요합니다.',
+              });
+
               const paymentParams = {
                 orderId: finalOrderId,
                 orderName: `${currentTossWidgetData.district} 현수막게시대`,
-                successUrl: `${window.location.origin}/payment/success?orderId=${finalOrderId}`,
-                failUrl: `${window.location.origin}/payment/fail?orderId=${finalOrderId}`,
+                successUrl,
+                failUrl,
                 customerEmail:
                   currentTossWidgetData.email || 'customer@example.com',
                 customerName:

@@ -3,11 +3,16 @@ import { supabase } from '@/src/lib/supabase';
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('🔍 display-period API called');
     const { searchParams } = new URL(request.url);
     const district = searchParams.get('district');
     const displayTypeParam =
       searchParams.get('display_type') || 'banner_display';
+
+    console.log('🔍 Parameters:', { district, displayTypeParam });
+
     if (!district) {
+      console.log('❌ No district parameter');
       return NextResponse.json(
         { success: false, error: 'district parameter is required' },
         { status: 400 }
@@ -15,12 +20,17 @@ export async function GET(request: NextRequest) {
     }
 
     // display_type_id 찾기
+    console.log('🔍 Looking for display_type:', displayTypeParam);
     const { data: typeData, error: typeError } = await supabase
       .from('display_types')
       .select('id')
       .eq('name', displayTypeParam)
       .single();
+
+    console.log('🔍 Display type result:', { typeData, typeError });
+
     if (typeError || !typeData) {
+      console.log('❌ Display type not found');
       return NextResponse.json(
         { success: false, error: 'display_type 정보를 찾을 수 없습니다.' },
         { status: 404 }
@@ -28,13 +38,23 @@ export async function GET(request: NextRequest) {
     }
 
     // region_gu_id 찾기 (display_type_id와 함께)
+    console.log(
+      '🔍 Looking for district:',
+      district,
+      'with display_type:',
+      typeData.id
+    );
     const { data: guData, error: guError } = await supabase
       .from('region_gu')
       .select('id')
       .eq('name', district)
       .eq('display_type_id', typeData.id)
       .single();
+
+    console.log('🔍 District result:', { guData, guError });
+
     if (guError || !guData) {
+      console.log('❌ District not found');
       return NextResponse.json(
         { success: false, error: '구 정보를 찾을 수 없습니다.' },
         { status: 404 }
@@ -55,12 +75,22 @@ export async function GET(request: NextRequest) {
       return `${year}-${month}-${day}`;
     };
 
-    // 현재 날짜 이후의 모든 기간 조회
+    // 현재 년도 기준으로 조회
+    const currentYear = koreaTime.getFullYear();
+    const currentMonth = koreaTime.getMonth() + 1;
+
+    // 현재 년도의 현재 월과 다음 월만 조회
+    const targetMonths = [
+      `${currentYear}-${String(currentMonth).padStart(2, '0')}`,
+      `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`,
+    ];
+
     const { data: allPeriods, error: periodError } = await supabase
       .from('region_gu_display_periods')
       .select('period_from, period_to, period, year_month')
       .eq('region_gu_id', guData.id)
       .eq('display_type_id', typeData.id)
+      .in('year_month', targetMonths) // 현재 년도의 현재 월과 다음 월만
       .gte('period_from', formatDate(koreaTime)) // 현재 날짜 이후부터 시작하는 기간들
       .order('period_from', { ascending: true });
 

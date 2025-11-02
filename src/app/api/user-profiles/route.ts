@@ -19,6 +19,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    console.log('🔍 [API] user-profiles GET 요청:', {
+      userId,
+      userIdType: typeof userId,
+      userIdLength: userId?.length,
+    });
+
+    // 전체 프로필 조회
     const { data: profiles, error } = await supabase
       .from('user_profiles')
       .select('*')
@@ -26,13 +33,73 @@ export async function GET(request: NextRequest) {
       .order('is_default', { ascending: false })
       .order('created_at', { ascending: false });
 
+    // is_default = true인 프로필만 별도로 조회 (확인용)
+    const { data: defaultProfile, error: defaultProfileError } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('user_auth_id', userId)
+      .eq('is_default', true)
+      .maybeSingle();
+
+    console.log('🔍 [API] user-profiles 쿼리 결과:', {
+      profilesCount: profiles?.length || 0,
+      hasError: !!error,
+      error: error
+        ? {
+            message: error.message,
+            code: error.code,
+            details: error.details,
+            hint: error.hint,
+          }
+        : null,
+      sampleProfile:
+        profiles && profiles.length > 0
+          ? {
+              id: profiles[0].id,
+              user_auth_id: profiles[0].user_auth_id,
+              profile_title: profiles[0].profile_title,
+              is_default: profiles[0].is_default,
+            }
+          : null,
+      // is_default = true인 프로필 확인
+      defaultProfileCheck: {
+        found: !!defaultProfile,
+        defaultProfileId: defaultProfile?.id,
+        defaultProfileTitle: defaultProfile?.profile_title,
+        hasError: !!defaultProfileError,
+        error: defaultProfileError
+          ? {
+              message: defaultProfileError.message,
+              code: defaultProfileError.code,
+            }
+          : null,
+      },
+      allProfilesWithIsDefault: profiles?.map((p) => ({
+        id: p.id,
+        profile_title: p.profile_title,
+        is_default: p.is_default,
+        user_auth_id: p.user_auth_id,
+      })),
+    });
+
+    // 에러가 있으면 상세 로그
     if (error) {
-      console.error('프로필 조회 에러:', error);
+      console.error('🔍 [API] 프로필 조회 에러:', error);
       return NextResponse.json(
-        { success: false, error: '프로필 조회에 실패했습니다.' },
+        {
+          success: false,
+          error: '프로필 조회에 실패했습니다.',
+          details: error.message,
+        },
         { status: 500 }
       );
     }
+
+    // 프로필이 없어도 성공으로 반환 (빈 배열)
+    console.log('🔍 [API] user-profiles 응답:', {
+      success: true,
+      dataLength: profiles?.length || 0,
+    });
 
     return NextResponse.json({
       success: true,

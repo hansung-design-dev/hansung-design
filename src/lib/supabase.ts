@@ -4,31 +4,75 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabaseServiceKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
 
+// URL 유효성 검증 함수
+function isValidUrl(url: string | undefined): boolean {
+  if (!url) return false;
+  // placeholder 값 체크
+  if (
+    url.includes('your_supabase_url') ||
+    url.includes('placeholder') ||
+    url === 'your_supabase_url' ||
+    url === 'your_supabase_url/'
+  ) {
+    return false;
+  }
+  // 실제 URL 형식 체크
+  try {
+    const urlObj = new URL(url);
+    return urlObj.protocol === 'https:' || urlObj.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
 // 디버깅을 위한 로그
 console.log('🔍 Supabase URL:', supabaseUrl ? 'Set' : 'Not set');
 console.log('🔍 Supabase Key:', supabaseAnonKey ? 'Set' : 'Not set');
 console.log('🔍 Supabase Service Key:', supabaseServiceKey ? 'Set' : 'Not set');
 
-// 환경변수가 없을 때 에러 방지
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn(
-    'Supabase environment variables are not set. Some features may not work.'
-  );
-  console.warn('Please check your .env.local file contains:');
-  console.warn('NEXT_PUBLIC_SUPABASE_URL=your_supabase_url');
-  console.warn('NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key');
+// 환경변수 검증
+if (!supabaseUrl || !isValidUrl(supabaseUrl)) {
+  const errorMsg =
+    '❌ NEXT_PUBLIC_SUPABASE_URL이 설정되지 않았거나 유효하지 않습니다.\n' +
+    '   .env.local 파일에 올바른 Supabase URL을 설정해주세요.\n' +
+    `   현재 값: ${supabaseUrl || '(없음)'}\n` +
+    '   예시: NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co';
+  console.error(errorMsg);
+  throw new Error('Supabase URL이 설정되지 않았거나 유효하지 않습니다.');
 }
 
-export const supabase = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseAnonKey || 'placeholder-key'
-);
+if (
+  !supabaseAnonKey ||
+  supabaseAnonKey.includes('your_') ||
+  supabaseAnonKey.includes('placeholder')
+) {
+  const errorMsg =
+    '❌ NEXT_PUBLIC_SUPABASE_ANON_KEY가 설정되지 않았거나 유효하지 않습니다.\n' +
+    '   .env.local 파일에 올바른 Supabase Anon Key를 설정해주세요.\n' +
+    `   현재 값: ${supabaseAnonKey ? '(placeholder)' : '(없음)'}`;
+  console.error(errorMsg);
+  throw new Error('Supabase Anon Key가 설정되지 않았거나 유효하지 않습니다.');
+}
+
+if (
+  !supabaseServiceKey ||
+  supabaseServiceKey.includes('your_') ||
+  supabaseServiceKey.includes('placeholder')
+) {
+  const errorMsg =
+    '❌ NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY가 설정되지 않았거나 유효하지 않습니다.\n' +
+    '   .env.local 파일에 올바른 Supabase Service Role Key를 설정해주세요.\n' +
+    `   현재 값: ${supabaseServiceKey ? '(placeholder)' : '(없음)'}`;
+  console.error(errorMsg);
+  throw new Error(
+    'Supabase Service Role Key가 설정되지 않았거나 유효하지 않습니다.'
+  );
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Service Role Key를 사용하는 클라이언트 (관리자 권한)
-export const supabaseAdmin = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseServiceKey || 'placeholder-service-key'
-);
+export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 // 타입 정의
 export interface User {

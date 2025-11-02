@@ -54,65 +54,126 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
     const currentMonth = koreaTime.getMonth() + 1;
     const currentDay = koreaTime.getDate();
 
-    // 오늘 날짜 기준으로 다음 달의 상반기/하반기 자동 계산
-    const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
-    const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+    // 15일 기준으로 상하반기 밀림 로직
+    // 로직:
+    // 1일-15일: 현재 달의 하반기 + 다음 달의 상반기
+    // 16일-31일: 다음 달의 상반기 + 다음 달의 하반기
+    // 예: 11월 2일(1일-15일) → 11월 하반기(16-31) + 12월 상반기(1-15) 표시
+    // 예: 11월 16일(16일-31일) → 12월 상반기(1-15) + 12월 하반기(16-31) 표시
 
     console.log('🔍 Current date calculation:', {
       currentYear,
       currentMonth,
       currentDay,
       koreaTime: koreaTime.toISOString(),
-      nextYear,
-      nextMonth,
     });
 
     // 마포구, 강북구: 특별한 기간 (5일-19일 상반기, 20일-다음달 4일 하반기)
     if (districtName === '마포구' || districtName === '강북구') {
-      firstPeriod = {
-        year: nextYear,
-        month: nextMonth,
-        startDay: 5,
-        endDay: 19,
-        from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-05`,
-        to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-19`,
-        label: `${nextYear}년 ${nextMonth}월 상반기`,
-      };
+      // 마포구/강북구는 5일과 20일이 기준일
+      if (currentDay <= 19) {
+        // 1일-19일: 현재 달의 하반기(20일-다음달4일) + 다음 달의 상반기(5일-19일)
+        const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+        const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
 
-      // 하반기는 다음달 4일까지
-      const nextNextMonth = nextMonth === 12 ? 1 : nextMonth + 1;
-      const nextNextYear = nextMonth === 12 ? nextYear + 1 : nextYear;
+        firstPeriod = {
+          year: currentYear,
+          month: currentMonth,
+          startDay: 20,
+          endDay: 30,
+          from: `${currentYear}-${String(currentMonth).padStart(2, '0')}-20`,
+          to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-04`,
+          label: `${currentYear}년 ${currentMonth}월 하반기`,
+        };
 
-      secondPeriod = {
-        year: nextYear,
-        month: nextMonth,
-        startDay: 20,
-        endDay: 30,
-        from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-20`,
-        to: `${nextNextYear}-${String(nextNextMonth).padStart(2, '0')}-04`,
-        label: `${nextYear}년 ${nextMonth}월 하반기`,
-      };
+        secondPeriod = {
+          year: nextYear,
+          month: nextMonth,
+          startDay: 5,
+          endDay: 19,
+          from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-05`,
+          to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-19`,
+          label: `${nextYear}년 ${nextMonth}월 상반기`,
+        };
+      } else {
+        // 20일-31일(또는 다음달 4일까지): 다음 달의 상반기(5일-19일) + 다음 달의 하반기(20일-다음달4일)
+        const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+        const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+
+        const nextNextMonth = nextMonth === 12 ? 1 : nextMonth + 1;
+        const nextNextYear = nextMonth === 12 ? nextYear + 1 : nextYear;
+
+        firstPeriod = {
+          year: nextYear,
+          month: nextMonth,
+          startDay: 5,
+          endDay: 19,
+          from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-05`,
+          to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-19`,
+          label: `${nextYear}년 ${nextMonth}월 상반기`,
+        };
+
+        secondPeriod = {
+          year: nextYear,
+          month: nextMonth,
+          startDay: 20,
+          endDay: 30,
+          from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-20`,
+          to: `${nextNextYear}-${String(nextNextMonth).padStart(2, '0')}-04`,
+          label: `${nextYear}년 ${nextMonth}월 하반기`,
+        };
+      }
     } else {
       // 송파, 관악, 용산, 서대문: 일반적인 1일-15일 상반기, 16일-31일 하반기
-      firstPeriod = {
-        year: nextYear,
-        month: nextMonth,
-        startDay: 1,
-        endDay: 15,
-        from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`,
-        to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-15`,
-        label: `${nextYear}년 ${nextMonth}월 상반기`,
-      };
+      if (currentDay <= 15) {
+        // 1일-15일: 현재 달의 하반기(16-31일) + 다음 달의 상반기(1-15일)
+        firstPeriod = {
+          year: currentYear,
+          month: currentMonth,
+          startDay: 16,
+          endDay: 31,
+          from: `${currentYear}-${String(currentMonth).padStart(2, '0')}-16`,
+          to: `${currentYear}-${String(currentMonth).padStart(2, '0')}-31`,
+          label: `${currentYear}년 ${currentMonth}월 하반기`,
+        };
 
-      secondPeriod = {
-        year: nextYear,
-        month: nextMonth,
-        startDay: 16,
-        endDay: 31,
-        from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-16`,
-        to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-31`,
-        label: `${nextYear}년 ${nextMonth}월 하반기`,
-      };
+        const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+        const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+
+        secondPeriod = {
+          year: nextYear,
+          month: nextMonth,
+          startDay: 1,
+          endDay: 15,
+          from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`,
+          to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-15`,
+          label: `${nextYear}년 ${nextMonth}월 상반기`,
+        };
+      } else {
+        // 16일-31일: 다음 달의 상반기(1-15일) + 다음 달의 하반기(16-31일)
+        const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+        const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+
+        firstPeriod = {
+          year: nextYear,
+          month: nextMonth,
+          startDay: 1,
+          endDay: 15,
+          from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`,
+          to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-15`,
+          label: `${nextYear}년 ${nextMonth}월 상반기`,
+        };
+
+        secondPeriod = {
+          year: nextYear,
+          month: nextMonth,
+          startDay: 16,
+          endDay: 31,
+          from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-16`,
+          to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-31`,
+          label: `${nextYear}년 ${nextMonth}월 하반기`,
+        };
+      }
     }
 
     return { firstPeriod, secondPeriod };

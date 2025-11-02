@@ -40,6 +40,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// localStorage 키
+const USER_AUTH_ID_KEY = 'hansung_user_auth_id';
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -52,6 +55,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(user);
       // 새로고침 시에도 쿠키 재설정
       document.cookie = `user_id=${user.id}; path=/; max-age=86400`; // 24시간
+      // 새로고침 시에도 localStorage에 user_auth_id 재저장
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(USER_AUTH_ID_KEY, user.id);
+        console.log(
+          '🔍 [AuthContext] 새로고침 시 user_auth_id 재저장:',
+          user.id
+        );
+      }
     }
     setLoading(false);
   }, []);
@@ -73,6 +84,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify(requestBody),
       });
 
+      // 응답 상태 확인
+      if (!response.ok) {
+        let errorMessage = '로그인 중 오류가 발생했습니다.';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+          if (errorData.details) {
+            console.error('서버 에러 상세:', errorData.details);
+          }
+        } catch {
+          errorMessage = `서버 오류 (${response.status})`;
+        }
+        return { success: false, error: errorMessage };
+      }
+
       const data = await response.json();
       console.log('API 응답:', data);
 
@@ -81,12 +107,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         sessionStorage.setItem('user', JSON.stringify(data.user));
         // 사용자 ID를 쿠키에 저장 (API에서 사용)
         document.cookie = `user_id=${data.user.id}; path=/; max-age=86400`; // 24시간
+        // user_auth_id를 localStorage에 저장 (장바구니/결제 페이지에서 사용)
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(USER_AUTH_ID_KEY, data.user.id);
+          console.log(
+            '🔍 [AuthContext] 로그인 시 user_auth_id를 localStorage에 저장:',
+            data.user.id
+          );
+        }
         return { success: true };
       } else {
-        return { success: false, error: data.error };
+        return {
+          success: false,
+          error: data.error || '로그인에 실패했습니다.',
+        };
       }
-    } catch {
-      return { success: false, error: '로그인 중 오류가 발생했습니다.' };
+    } catch (error) {
+      console.error('로그인 요청 중 예외 발생:', error);
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : '로그인 중 오류가 발생했습니다.',
+      };
     }
   };
 
@@ -121,6 +165,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         sessionStorage.setItem('user', JSON.stringify(data.user));
         // 사용자 ID를 쿠키에 저장 (API에서 사용)
         document.cookie = `user_id=${data.user.id}; path=/; max-age=86400`; // 24시간
+        // user_auth_id를 localStorage에 저장 (장바구니/결제 페이지에서 사용)
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(USER_AUTH_ID_KEY, data.user.id);
+          console.log(
+            '🔍 [AuthContext] 회원가입 시 user_auth_id를 localStorage에 저장:',
+            data.user.id
+          );
+        }
         return { success: true };
       } else {
         return { success: false, error: data.error };
@@ -137,6 +189,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // 쿠키에서 사용자 ID 삭제
       document.cookie =
         'user_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      // localStorage에서 user_auth_id 삭제
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(USER_AUTH_ID_KEY);
+        console.log('🔍 [AuthContext] 로그아웃 시 user_auth_id 삭제');
+      }
       return { success: true };
     } catch {
       return { success: false, error: '로그아웃 중 오류가 발생했습니다.' };
@@ -148,6 +205,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     sessionStorage.setItem('user', JSON.stringify(user));
     // 사용자 ID를 쿠키에 저장 (API에서 사용)
     document.cookie = `user_id=${user.id}; path=/; max-age=86400`; // 24시간
+    // user_auth_id를 localStorage에 저장 (장바구니/결제 페이지에서 사용)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(USER_AUTH_ID_KEY, user.id);
+      console.log(
+        '🔍 [AuthContext] login() 호출 시 user_auth_id를 localStorage에 저장:',
+        user.id
+      );
+    }
   };
 
   return (

@@ -624,48 +624,18 @@ export async function POST(request: NextRequest) {
       '개'
     );
 
-    // 생성된 order_details의 panel_slot_usage_id 업데이트 (재고는 DB 트리거가 자동 처리)
+    // 생성된 order_details의 panel_slot_usage_id는 이미 설정되어 있음
+    // panel_slot_usage 테이블에는 order_details_id 컬럼이 없으므로 업데이트 불필요
+    // 재고는 DB 트리거가 자동으로 처리함
     if (orderDetailsResult.data) {
-      console.log('🔍 [주문 생성 API] panel_slot_usage 업데이트 시작...');
+      console.log('🔍 [주문 생성 API] order_details 생성 완료:');
       for (const orderDetail of orderDetailsResult.data) {
-        if (orderDetail.panel_slot_usage_id) {
-          try {
-            // panel_slot_usage의 order_details_id 업데이트
-            // 주의: 스키마에 order_details_id 컬럼이 없을 수 있음
-            const { error: updateError } = await supabase
-              .from('panel_slot_usage')
-              .update({ order_details_id: orderDetail.id })
-              .eq('id', orderDetail.panel_slot_usage_id);
-
-            if (updateError) {
-              console.error(
-                '🔍 [주문 생성 API] ⚠️ panel_slot_usage 업데이트 실패 (치명적이지 않음):',
-                {
-                  orderDetailId: orderDetail.id,
-                  panelSlotUsageId: orderDetail.panel_slot_usage_id,
-                  error: updateError,
-                  note: '스키마에 order_details_id 컬럼이 없을 수 있습니다.',
-                }
-              );
-            } else {
-              console.log(
-                '🔍 [주문 생성 API] ✅ panel_slot_usage 업데이트 성공:',
-                orderDetail.id
-              );
-            }
-          } catch (error) {
-            console.error(
-              '🔍 [주문 생성 API] ⚠️ panel_slot_usage 업데이트 중 예외 발생 (치명적이지 않음):',
-              error
-            );
-            // 이 에러는 치명적이지 않으므로 계속 진행
-          }
-        } else {
-          console.log(
-            '🔍 [주문 생성 API] order_detail에 panel_slot_usage_id 없음:',
-            orderDetail.id
-          );
-        }
+        console.log('🔍 [주문 생성 API] order_detail:', {
+          id: orderDetail.id,
+          panel_id: orderDetail.panel_id,
+          panel_slot_usage_id: orderDetail.panel_slot_usage_id,
+          note: '재고 관리는 DB 트리거가 자동 처리합니다.',
+        });
       }
     }
 
@@ -747,17 +717,15 @@ export async function POST(request: NextRequest) {
     });
 
     // 재고 현황 확인을 위한 로그 추가
+    // ⚠️ banner_slot_inventory 테이블에는 panel_id가 없고 banner_slot_id가 있음
+    // 재고 확인은 DB 트리거가 처리하므로 여기서는 로그만 남김
     console.log('🔍 [주문 생성 API] 재고 현황 확인:');
     for (const item of items) {
-      const { data: inventoryData, error: inventoryError } = await supabase
-        .from('banner_slot_inventory')
-        .select('*')
-        .eq('panel_id', item.panel_id);
-
+      // banner_slot_inventory는 banner_slot_id 기준이므로 직접 조회하지 않음
+      // 필요시 order_details의 panel_slot_usage_id를 통해 banner_slot_id를 찾아야 함
       console.log(`🔍 [주문 생성 API] 패널 ${item.panel_id} 재고:`, {
-        found: !!inventoryData,
-        count: inventoryData?.length || 0,
-        error: inventoryError,
+        note: '재고는 banner_slot_id 기준으로 관리되며 DB 트리거가 자동 처리합니다.',
+        panel_id: item.panel_id,
       });
     }
 

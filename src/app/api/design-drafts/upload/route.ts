@@ -43,13 +43,69 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 파일명 생성 (timestamp + original name)
+    // 파일명 생성 (안전한 파일명: timestamp_orderId_originalname)
     const timestamp = Date.now();
-    const fileName = `${timestamp}_${file.name}`;
+    const safeFileName = `${timestamp}_${orderId}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+    
+    // Storage 경로 설정
+    const bucketName = 'design-drafts';
+    const filePath = `drafts/${safeFileName}`;
 
-    // 실제 구현에서는 Supabase Storage나 다른 파일 스토리지 서비스 사용
-    // 여기서는 임시로 파일 정보만 반환
-    const fileUrl = `/uploads/${fileName}`; // 실제 URL로 변경 필요
+    console.log('🔍 [시안 업로드] Supabase Storage 업로드 시작:', {
+      bucketName,
+      filePath,
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type,
+    });
+
+    // Supabase Storage에 파일 업로드
+    const { error: uploadError } = await supabase.storage
+      .from(bucketName)
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false, // 기존 파일이 있으면 에러 발생
+      });
+
+    if (uploadError) {
+      console.error('🔍 [시안 업로드] ❌ Storage 업로드 실패:', uploadError);
+      
+      // 이미 존재하는 파일인 경우 (upsert로 재시도)
+      if (uploadError.message.includes('already exists') || uploadError.message.includes('duplicate')) {
+        console.log('🔍 [시안 업로드] 파일이 이미 존재, upsert로 재시도...');
+        const { error: upsertError } = await supabase.storage
+          .from(bucketName)
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: true, // 기존 파일 덮어쓰기
+          });
+        
+        if (upsertError) {
+          console.error('🔍 [시안 업로드] ❌ upsert 실패:', upsertError);
+          return NextResponse.json(
+            { success: false, error: '파일 업로드에 실패했습니다.' },
+            { status: 500 }
+          );
+        }
+      } else {
+        return NextResponse.json(
+          { success: false, error: '파일 업로드에 실패했습니다.' },
+          { status: 500 }
+        );
+      }
+    }
+
+    // 공개 URL 생성
+    const { data: urlData } = supabase.storage
+      .from(bucketName)
+      .getPublicUrl(filePath);
+
+    const fileUrl = urlData.publicUrl;
+
+    console.log('🔍 [시안 업로드] ✅ Storage 업로드 성공:', {
+      fileUrl,
+      filePath,
+    });
 
     // orders 테이블에서 design_drafts_id 조회
     const { data: order, error: orderError } = await supabase

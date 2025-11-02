@@ -367,8 +367,20 @@ export default function LEDDisplayDetailPage({
       // LED 전자게시대는 상담신청이므로 가격을 0으로 설정
       const priceForCart = 0;
 
-      // 기본 프로필 정보 가져오기
+      // 기본 프로필 정보 가져오기 (리스트에서 장바구니 추가 시 프로필은 선택사항)
       const defaultProfile = profiles.find((profile) => profile.is_default);
+
+      if (!defaultProfile?.id) {
+        console.log(
+          '🔍 [LED 장바구니 추가] 프로필이 없지만 장바구니에 추가 (장바구니 페이지에서 설정 가능):',
+          {
+            profilesCount: profiles.length,
+            hasUser: !!user,
+            userId: user?.id,
+            note: '장바구니 페이지에서 프로필을 설정할 수 있습니다.',
+          }
+        );
+      }
 
       const cartItem = {
         id: item.id, // 복합 ID (gwanak-03-uuid)
@@ -381,14 +393,71 @@ export default function LEDDisplayDetailPage({
         panel_id: item.panel_id, // 원본 UUID
         panel_code: item.panel_code?.toString(),
         photo_url: item.photo_url || undefined, // 게시대 사진 URL 추가
-        // 사용자 프로필 정보 추가
+        // 사용자 프로필 정보 추가 (프로필이 있으면 사용, 없으면 undefined - 장바구니에서 설정 가능)
         contact_person_name: defaultProfile?.contact_person_name,
         phone: defaultProfile?.phone,
         company_name: defaultProfile?.company_name,
         email: defaultProfile?.email,
-        user_profile_id: defaultProfile?.id,
-        user_auth_id: defaultProfile?.user_auth_id || user?.id,
+        user_profile_id: defaultProfile?.id || undefined, // 프로필이 없어도 장바구니에 추가 가능
+        // user_auth_id: localStorage에서 가져오기 (로그인 시 저장됨)
+        user_auth_id: (() => {
+          if (typeof window !== 'undefined') {
+            const storedAuthId = localStorage.getItem('hansung_user_auth_id');
+            if (storedAuthId) {
+              console.log(
+                '🔍 [LED 장바구니 추가] localStorage에서 user_auth_id 가져옴:',
+                storedAuthId
+              );
+              return storedAuthId;
+            }
+          }
+          // localStorage에 없으면 user.id 또는 defaultProfile.user_auth_id 사용 (폴백)
+          const fallbackAuthId = user?.id || defaultProfile?.user_auth_id;
+          if (fallbackAuthId) {
+            console.warn(
+              '🔍 [LED 장바구니 추가] ⚠️ localStorage에 없어서 폴백 사용:',
+              fallbackAuthId
+            );
+            // 폴백 사용 시 localStorage에 저장 (다음번에는 바로 사용)
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('hansung_user_auth_id', fallbackAuthId);
+            }
+            return fallbackAuthId;
+          }
+          console.error(
+            '🔍 [LED 장바구니 추가] ❌ user_auth_id를 찾을 수 없음!',
+            {
+              hasLocalStorage: typeof window !== 'undefined',
+              storedAuthId:
+                typeof window !== 'undefined'
+                  ? localStorage.getItem('hansung_user_auth_id')
+                  : null,
+              hasUser: !!user,
+              userId: user?.id,
+              hasDefaultProfile: !!defaultProfile,
+              profileUserAuthId: defaultProfile?.user_auth_id,
+            }
+          );
+          return undefined;
+        })(),
       };
+
+      // user_auth_id가 없으면 장바구니에 추가하지 않음
+      if (!cartItem.user_auth_id) {
+        console.error(
+          '🔍 [LED 장바구니 추가] ❌ user_auth_id가 없어서 장바구니 추가 중단',
+          {
+            itemId: cartItem.id,
+            itemName: cartItem.name,
+            hasUser: !!user,
+            userId: user?.id,
+            hasDefaultProfile: !!defaultProfile,
+            profileUserAuthId: defaultProfile?.user_auth_id,
+          }
+        );
+        alert('사용자 정보를 찾을 수 없습니다. 로그인 상태를 확인해주세요.');
+        return;
+      }
 
       console.log('🔍 Adding LED item to cart:', cartItem);
       console.log('🔍 LED 상담신청 아이템:', {
@@ -398,6 +467,8 @@ export default function LEDDisplayDetailPage({
         type: cartItem.type,
         photo_url: cartItem.photo_url,
         hasPhotoUrl: !!cartItem.photo_url,
+        user_auth_id: cartItem.user_auth_id,
+        hasUserAuthId: !!cartItem.user_auth_id,
       });
       dispatch({
         type: 'ADD_ITEM',

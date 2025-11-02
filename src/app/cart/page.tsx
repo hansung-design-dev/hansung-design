@@ -491,12 +491,99 @@ function CartContent() {
 
   console.log('user', user);
 
-  // ProfileContext에서 기본 프로필 찾기 (최초 1회만)
+  // 장바구니 페이지 로드 시 프로필이 없는 아이템에 기본 프로필 자동 설정
   useEffect(() => {
-    if (profiles.length > 0) {
-      // defaultProf 변수 및 관련 코드 제거
-    }
-  }, []); // profiles 의존성 제거 - 최초 1회만 실행
+    const fetchAndSetDefaultProfile = async () => {
+      if (!user?.id || cart.length === 0) return;
+
+      // 먼저 profiles context에서 확인
+      let defaultProfile = profiles.find((profile) => profile.is_default);
+
+      // profiles context에 없으면 API로 직접 조회
+      if (!defaultProfile && user.id) {
+        console.log(
+          '🔍 [장바구니] profiles context에 기본 프로필 없음, API 호출:',
+          {
+            userId: user.id,
+            profilesCount: profiles.length,
+          }
+        );
+
+        try {
+          const response = await fetch(`/api/user-profiles?userId=${user.id}`);
+          const data = await response.json();
+
+          if (data.success && data.data?.length > 0) {
+            // is_default = true인 프로필 찾기
+            defaultProfile = data.data.find(
+              (p: { is_default: boolean }) => p.is_default
+            );
+
+            console.log('🔍 [장바구니] API로 가져온 기본 프로필:', {
+              found: !!defaultProfile,
+              defaultProfileId: defaultProfile?.id,
+              defaultProfileTitle: defaultProfile?.profile_title,
+              allProfiles: data.data.map(
+                (p: { id: string; is_default: boolean }) => ({
+                  id: p.id,
+                  is_default: p.is_default,
+                })
+              ),
+            });
+          }
+        } catch (error) {
+          console.error('🔍 [장바구니] 프로필 API 호출 실패:', error);
+        }
+      }
+
+      // 기본 프로필을 찾았으면 카트 아이템 업데이트
+      if (defaultProfile?.id) {
+        // user_profile_id가 없는 아이템 찾기
+        const itemsWithoutProfile = cart.filter(
+          (item) => !item.user_profile_id
+        );
+
+        if (itemsWithoutProfile.length > 0) {
+          console.log(
+            '🔍 [장바구니] 프로필이 없는 아이템에 기본 프로필 자동 설정:',
+            {
+              itemsCount: itemsWithoutProfile.length,
+              defaultProfileId: defaultProfile.id,
+              defaultProfileTitle: defaultProfile.profile_title,
+              userId: user.id,
+            }
+          );
+
+          // 기본 프로필 정보로 업데이트
+          const updatedCart = cart.map((item) => {
+            if (!item.user_profile_id) {
+              return {
+                ...item,
+                user_profile_id: defaultProfile.id,
+                contact_person_name:
+                  item.contact_person_name ||
+                  defaultProfile.contact_person_name,
+                phone: item.phone || defaultProfile.phone,
+                company_name: item.company_name || defaultProfile.company_name,
+                email: item.email || defaultProfile.email,
+              };
+            }
+            return item;
+          });
+
+          dispatch({ type: 'UPDATE_CART', items: updatedCart });
+        }
+      } else {
+        console.warn('🔍 [장바구니] ⚠️ 기본 프로필을 찾을 수 없음:', {
+          userId: user.id,
+          profilesCount: profiles.length,
+          hasProfiles: profiles.length > 0,
+        });
+      }
+    };
+
+    fetchAndSetDefaultProfile();
+  }, [user?.id, cart, profiles, dispatch]); // user.id, cart, profiles 변경 시 실행
 
   // URL 해시를 확인하여 상담신청 탭으로 자동 이동 (무한루프 방지)
   useEffect(() => {
@@ -743,6 +830,7 @@ function CartContent() {
       is_default: boolean;
       is_public_institution: boolean;
       is_company: boolean;
+      profile_id?: string; // 선택한 프로필 ID 추가
     },
     itemId: string
   ) => {
@@ -820,6 +908,7 @@ function CartContent() {
             phone: profileData.phone,
             company_name: profileData.company_name,
             email: profileData.email,
+            user_profile_id: profileData.profile_id || item.user_profile_id, // 선택한 프로필 ID 저장
           }
         : item
     );
@@ -1122,6 +1211,56 @@ function CartContent() {
       }
     : null;
 
+  // 기본 프로필 조회 (주문자정보 수정을 안 누른 경우 사용)
+  const [defaultProfile, setDefaultProfile] = useState<{
+    id: string;
+    contact_person_name: string;
+    phone: string;
+    company_name?: string;
+    email: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const fetchDefaultProfile = async () => {
+      if (!user?.id) return;
+
+      // 먼저 profiles context에서 확인
+      let foundProfile = profiles.find((profile) => profile.is_default);
+
+      // profiles context에 없으면 API로 직접 조회
+      if (!foundProfile) {
+        try {
+          const response = await fetch(`/api/user-profiles?userId=${user.id}`);
+          const data = await response.json();
+
+          if (data.success && data.data?.length > 0) {
+            foundProfile = data.data.find(
+              (p: { is_default: boolean }) => p.is_default
+            );
+          }
+        } catch (error) {
+          console.error('🔍 [장바구니] 기본 프로필 조회 실패:', error);
+        }
+      }
+
+      if (foundProfile) {
+        setDefaultProfile({
+          id: foundProfile.id,
+          contact_person_name: foundProfile.contact_person_name,
+          phone: foundProfile.phone,
+          company_name: foundProfile.company_name,
+          email: foundProfile.email,
+        });
+        console.log('🔍 [장바구니] 기본 프로필 로드 완료:', {
+          id: foundProfile.id,
+          contact_person_name: foundProfile.contact_person_name,
+        });
+      }
+    };
+
+    fetchDefaultProfile();
+  }, [user?.id, profiles]);
+
   // 패널 타입을 한글로 변환하는 함수
   const getPanelTypeDisplay = (panelType: string) => {
     const typeMap: Record<string, string> = {
@@ -1322,15 +1461,37 @@ function CartContent() {
                             }
                           >
                             {regularItems.map((item) => {
-                              const userInfo = {
-                                name:
-                                  item.contact_person_name ||
-                                  userWithPhone?.name,
-                                phone: item.phone || userWithPhone?.phone,
-                                company_name:
-                                  item.company_name ||
-                                  userWithPhone?.company_name,
-                              };
+                              // 주문자정보 수정 여부 확인: item.user_profile_id가 있거나 명시적으로 프로필 정보가 설정된 경우
+                              const hasModifiedProfile =
+                                item.user_profile_id ||
+                                (item.contact_person_name &&
+                                  item.phone &&
+                                  item.company_name);
+
+                              // 주문자정보 수정을 안 누른 경우 → 기본 프로필 정보 사용
+                              // 주문자정보 수정을 한 경우 → 카트 아이템의 프로필 정보 사용
+                              const userInfo = hasModifiedProfile
+                                ? {
+                                    // 주문자정보 수정으로 선택한 프로필 정보
+                                    name: item.contact_person_name || '',
+                                    phone: item.phone || '',
+                                    company_name: item.company_name || '',
+                                  }
+                                : {
+                                    // 주문자정보 수정을 안 한 경우 → 기본 프로필 정보
+                                    name:
+                                      defaultProfile?.contact_person_name ||
+                                      userWithPhone?.name ||
+                                      '',
+                                    phone:
+                                      defaultProfile?.phone ||
+                                      userWithPhone?.phone ||
+                                      '',
+                                    company_name:
+                                      defaultProfile?.company_name ||
+                                      userWithPhone?.company_name ||
+                                      '-',
+                                  };
                               return (
                                 <CartItemRow
                                   key={item.id}
@@ -1382,15 +1543,33 @@ function CartContent() {
                             }
                           >
                             {publicInstitutionItems.map((item) => {
-                              const userInfo = {
-                                name:
-                                  item.contact_person_name ||
-                                  userWithPhone?.name,
-                                phone: item.phone || userWithPhone?.phone,
-                                company_name:
-                                  item.company_name ||
-                                  userWithPhone?.company_name,
-                              };
+                              // 주문자정보 수정 여부 확인
+                              const hasModifiedProfile =
+                                item.user_profile_id ||
+                                (item.contact_person_name &&
+                                  item.phone &&
+                                  item.company_name);
+
+                              const userInfo = hasModifiedProfile
+                                ? {
+                                    name: item.contact_person_name || '',
+                                    phone: item.phone || '',
+                                    company_name: item.company_name || '',
+                                  }
+                                : {
+                                    name:
+                                      defaultProfile?.contact_person_name ||
+                                      userWithPhone?.name ||
+                                      '',
+                                    phone:
+                                      defaultProfile?.phone ||
+                                      userWithPhone?.phone ||
+                                      '',
+                                    company_name:
+                                      defaultProfile?.company_name ||
+                                      userWithPhone?.company_name ||
+                                      '-',
+                                  };
                               return (
                                 <CartItemRow
                                   key={item.id}
@@ -1434,15 +1613,33 @@ function CartContent() {
                             }
                           >
                             {companyItems.map((item) => {
-                              const userInfo = {
-                                name:
-                                  item.contact_person_name ||
-                                  userWithPhone?.name,
-                                phone: item.phone || userWithPhone?.phone,
-                                company_name:
-                                  item.company_name ||
-                                  userWithPhone?.company_name,
-                              };
+                              // 주문자정보 수정 여부 확인
+                              const hasModifiedProfile =
+                                item.user_profile_id ||
+                                (item.contact_person_name &&
+                                  item.phone &&
+                                  item.company_name);
+
+                              const userInfo = hasModifiedProfile
+                                ? {
+                                    name: item.contact_person_name || '',
+                                    phone: item.phone || '',
+                                    company_name: item.company_name || '',
+                                  }
+                                : {
+                                    name:
+                                      defaultProfile?.contact_person_name ||
+                                      userWithPhone?.name ||
+                                      '',
+                                    phone:
+                                      defaultProfile?.phone ||
+                                      userWithPhone?.phone ||
+                                      '',
+                                    company_name:
+                                      defaultProfile?.company_name ||
+                                      userWithPhone?.company_name ||
+                                      '-',
+                                  };
                               return (
                                 <CartItemRow
                                   key={item.id}
@@ -1496,12 +1693,33 @@ function CartContent() {
                     isConsulting={true}
                   >
                     {bannerConsultingItems.map((item) => {
-                      const userInfo = {
-                        name: item.contact_person_name || userWithPhone?.name,
-                        phone: item.phone || userWithPhone?.phone,
-                        company_name:
-                          item.company_name || userWithPhone?.company_name,
-                      };
+                      // 주문자정보 수정 여부 확인
+                      const hasModifiedProfile =
+                        item.user_profile_id ||
+                        (item.contact_person_name &&
+                          item.phone &&
+                          item.company_name);
+
+                      const userInfo = hasModifiedProfile
+                        ? {
+                            name: item.contact_person_name || '',
+                            phone: item.phone || '',
+                            company_name: item.company_name || '',
+                          }
+                        : {
+                            name:
+                              defaultProfile?.contact_person_name ||
+                              userWithPhone?.name ||
+                              '',
+                            phone:
+                              defaultProfile?.phone ||
+                              userWithPhone?.phone ||
+                              '',
+                            company_name:
+                              defaultProfile?.company_name ||
+                              userWithPhone?.company_name ||
+                              '-',
+                          };
                       return (
                         <CartItemRow
                           key={item.id}
@@ -1539,12 +1757,33 @@ function CartContent() {
                     isConsulting={true}
                   >
                     {ledConsultingItemsOnly.map((item) => {
-                      const userInfo = {
-                        name: item.contact_person_name || userWithPhone?.name,
-                        phone: item.phone || userWithPhone?.phone,
-                        company_name:
-                          item.company_name || userWithPhone?.company_name,
-                      };
+                      // 주문자정보 수정 여부 확인
+                      const hasModifiedProfile =
+                        item.user_profile_id ||
+                        (item.contact_person_name &&
+                          item.phone &&
+                          item.company_name);
+
+                      const userInfo = hasModifiedProfile
+                        ? {
+                            name: item.contact_person_name || '',
+                            phone: item.phone || '',
+                            company_name: item.company_name || '',
+                          }
+                        : {
+                            name:
+                              defaultProfile?.contact_person_name ||
+                              userWithPhone?.name ||
+                              '',
+                            phone:
+                              defaultProfile?.phone ||
+                              userWithPhone?.phone ||
+                              '',
+                            company_name:
+                              defaultProfile?.company_name ||
+                              userWithPhone?.company_name ||
+                              '-',
+                          };
                       return (
                         <CartItemRow
                           key={item.id}
@@ -1571,12 +1810,33 @@ function CartContent() {
                 {digitalSignageConsultingItems.length > 0 && (
                   <>
                     {digitalSignageConsultingItems.map((item) => {
-                      const userInfo = {
-                        name: item.contact_person_name || userWithPhone?.name,
-                        phone: item.phone || userWithPhone?.phone,
-                        company_name:
-                          item.company_name || userWithPhone?.company_name,
-                      };
+                      // 주문자정보 수정 여부 확인
+                      const hasModifiedProfile =
+                        item.user_profile_id ||
+                        (item.contact_person_name &&
+                          item.phone &&
+                          item.company_name);
+
+                      const userInfo = hasModifiedProfile
+                        ? {
+                            name: item.contact_person_name || '',
+                            phone: item.phone || '',
+                            company_name: item.company_name || '',
+                          }
+                        : {
+                            name:
+                              defaultProfile?.contact_person_name ||
+                              userWithPhone?.name ||
+                              '',
+                            phone:
+                              defaultProfile?.phone ||
+                              userWithPhone?.phone ||
+                              '',
+                            company_name:
+                              defaultProfile?.company_name ||
+                              userWithPhone?.company_name ||
+                              '-',
+                          };
                       return (
                         <CartGroupCard
                           key={item.id}
@@ -1614,12 +1874,33 @@ function CartContent() {
                 {publicDesignConsultingItems.length > 0 && (
                   <>
                     {publicDesignConsultingItems.map((item) => {
-                      const userInfo = {
-                        name: item.contact_person_name || userWithPhone?.name,
-                        phone: item.phone || userWithPhone?.phone,
-                        company_name:
-                          item.company_name || userWithPhone?.company_name,
-                      };
+                      // 주문자정보 수정 여부 확인
+                      const hasModifiedProfile =
+                        item.user_profile_id ||
+                        (item.contact_person_name &&
+                          item.phone &&
+                          item.company_name);
+
+                      const userInfo = hasModifiedProfile
+                        ? {
+                            name: item.contact_person_name || '',
+                            phone: item.phone || '',
+                            company_name: item.company_name || '',
+                          }
+                        : {
+                            name:
+                              defaultProfile?.contact_person_name ||
+                              userWithPhone?.name ||
+                              '',
+                            phone:
+                              defaultProfile?.phone ||
+                              userWithPhone?.phone ||
+                              '',
+                            company_name:
+                              defaultProfile?.company_name ||
+                              userWithPhone?.company_name ||
+                              '-',
+                          };
                       return (
                         <CartGroupCard
                           key={item.id}

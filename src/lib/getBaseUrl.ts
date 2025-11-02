@@ -55,4 +55,3 @@ export function getBaseUrlFromRequest(request?: Request): string {
   // 4. 기본값: localhost
   return 'http://localhost:3000';
 }
-

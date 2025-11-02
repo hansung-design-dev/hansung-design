@@ -116,6 +116,17 @@ const loadCartFromStorage = (): CartState => {
     }
 
     console.log('🔍 Cart loaded from storage:', cartState);
+    console.log('🔍 [Cart 복원] 아이템 user_profile_id 확인:', {
+      itemsCount: cartState.items.length,
+      items:
+        cartState.items.map((item) => ({
+          id: item.id,
+          name: item.name,
+          user_profile_id: item.user_profile_id,
+          user_auth_id: item.user_auth_id,
+          hasUserProfileId: !!item.user_profile_id,
+        })) || [],
+    });
     return cartState;
   } catch (error) {
     console.error('🔍 Error loading cart from storage:', error);
@@ -130,6 +141,17 @@ const saveCartToStorage = (state: CartState) => {
   try {
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(state));
     console.log('🔍 Cart saved to storage:', state);
+    console.log('🔍 [Cart 저장] 아이템 user_profile_id 확인:', {
+      itemsCount: state.items.length,
+      items:
+        state.items.map((item) => ({
+          id: item.id,
+          name: item.name,
+          user_profile_id: item.user_profile_id,
+          user_auth_id: item.user_auth_id,
+          hasUserProfileId: !!item.user_profile_id,
+        })) || [],
+    });
   } catch (error) {
     console.error('🔍 Error saving cart to storage:', error);
   }
@@ -166,6 +188,9 @@ function cartReducer(state: CartState, action: CartAction): CartState {
                 action.item.halfPeriod === 'first_half' ? '상반기' : '하반기'
               }`
             : '기간 미설정',
+        user_profile_id: action.item.user_profile_id,
+        user_auth_id: action.item.user_auth_id,
+        hasUserProfileId: !!action.item.user_profile_id,
       });
       newState = {
         items: [...state.items, action.item],

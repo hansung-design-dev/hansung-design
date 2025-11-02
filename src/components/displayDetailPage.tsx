@@ -186,7 +186,7 @@ export default function DisplayDetailPage({
   });
 
   const { dispatch } = useCart();
-  const { profiles } = useProfile();
+  const { profiles, setProfiles } = useProfile();
   const { user } = useAuth();
   const router = useRouter();
 
@@ -621,7 +621,7 @@ export default function DisplayDetailPage({
     }
   };
 
-  const handleItemSelect = (id: string, checked?: boolean) => {
+  const handleItemSelect = async (id: string, checked?: boolean) => {
     console.log('🔍 handleItemSelect called with id:', id, 'checked:', checked);
 
     // 아이템 찾기 - filteredBillboards에서 찾기
@@ -987,7 +987,92 @@ export default function DisplayDetailPage({
       }
 
       // 기본 프로필 정보 가져오기
-      const defaultProfile = profiles.find((profile) => profile.is_default);
+      // 🔍 [디버깅] 장바구니 추가 시 프로필 확인
+      console.log('🔍 [장바구니 추가] displayDetailPage - 프로필 확인:', {
+        profilesCount: profiles?.length || 0,
+        profiles:
+          profiles?.map((p) => ({
+            id: p.id,
+            is_default: p.is_default,
+            profile_title: p.profile_title,
+          })) || [],
+        hasUser: !!user,
+        userId: user?.id,
+      });
+
+      // 프로필이 없으면 API를 통해 다시 가져오기 시도
+      let profilesToUse = profiles;
+      if ((!profiles || profiles.length === 0) && user?.id) {
+        console.log('🔍 [장바구니 추가] 프로필이 없어서 API 호출 시도...');
+        try {
+          const profileResponse = await fetch(
+            `/api/user-profiles?userId=${user.id}`
+          );
+          const profileData = await profileResponse.json();
+
+          console.log('🔍 [장바구니 추가] 프로필 API 응답:', {
+            ok: profileResponse.ok,
+            status: profileResponse.status,
+            success: profileData.success,
+            dataLength: profileData.data?.length || 0,
+          });
+
+          if (profileData.success && profileData.data?.length > 0) {
+            profilesToUse = profileData.data.map(
+              (profile: Record<string, unknown>) => ({
+                ...profile,
+                user_auth_id: (profile.user_auth_id as string) || user.id,
+              })
+            );
+            console.log('🔍 [장바구니 추가] API에서 프로필 가져옴:', {
+              count: profilesToUse.length,
+              profiles: profilesToUse.map((p) => ({
+                id: p.id,
+                is_default: p.is_default,
+                profile_title: p.profile_title,
+              })),
+            });
+            // ProfileContext에도 업데이트
+            setProfiles(profilesToUse);
+          }
+        } catch (error) {
+          console.error('🔍 [장바구니 추가] 프로필 API 호출 실패:', error);
+        }
+      }
+
+      const defaultProfile = profilesToUse?.find(
+        (profile) => profile.is_default
+      );
+
+      console.log('🔍 [장바구니 추가] defaultProfile 찾기 결과:', {
+        found: !!defaultProfile,
+        defaultProfileId: defaultProfile?.id,
+        defaultProfileTitle: defaultProfile?.profile_title,
+        profilesToUseCount: profilesToUse?.length || 0,
+      });
+
+      // 리스트에서 장바구니 추가 시 프로필 정보는 선택사항
+      // 장바구니 페이지에서 프로필 설정 가능
+      const profileToUse = defaultProfile || profilesToUse?.[0];
+
+      if (!profileToUse?.id) {
+        console.log(
+          '🔍 [장바구니 추가] 프로필이 없지만 장바구니에 추가 (장바구니 페이지에서 설정 가능):',
+          {
+            profilesCount: profilesToUse?.length || 0,
+            hasUser: !!user,
+            userId: user?.id,
+            note: '장바구니 페이지에서 프로필을 설정할 수 있습니다.',
+          }
+        );
+        // 프로필이 없어도 장바구니에 추가 가능
+      } else {
+        console.log('🔍 [장바구니 추가] 사용할 프로필:', {
+          id: profileToUse.id,
+          title: profileToUse.profile_title,
+          is_default: profileToUse.is_default,
+        });
+      }
 
       const cartItem = {
         id: uniqueCartItemId, // 상반기/하반기 정보를 포함한 고유 ID
@@ -1010,14 +1095,76 @@ export default function DisplayDetailPage({
         ...(panelSlotSnapshot && { panel_slot_snapshot: panelSlotSnapshot }), // 가격 상세 정보 추가
         panel_code: targetItem.panel_code?.toString(),
         photo_url: targetItem.photo_url, // 게시대 사진 URL 추가
-        // 사용자 프로필 정보 추가
-        contact_person_name: defaultProfile?.contact_person_name,
-        phone: defaultProfile?.phone,
-        company_name: defaultProfile?.company_name,
-        email: defaultProfile?.email,
-        user_profile_id: defaultProfile?.id,
-        user_auth_id: defaultProfile?.user_auth_id || user?.id,
+        // 사용자 프로필 정보 추가 (프로필이 있으면 사용, 없으면 undefined - 장바구니에서 설정 가능)
+        contact_person_name: profileToUse?.contact_person_name,
+        phone: profileToUse?.phone,
+        company_name: profileToUse?.company_name,
+        email: profileToUse?.email,
+        user_profile_id: profileToUse?.id || undefined, // 프로필이 없어도 장바구니에 추가 가능
+        // user_auth_id: localStorage에서 가져오기 (로그인 시 저장됨)
+        user_auth_id: (() => {
+          if (typeof window !== 'undefined') {
+            const storedAuthId = localStorage.getItem('hansung_user_auth_id');
+            if (storedAuthId) {
+              console.log(
+                '🔍 [장바구니 추가] localStorage에서 user_auth_id 가져옴:',
+                storedAuthId
+              );
+              return storedAuthId;
+            }
+          }
+          // localStorage에 없으면 user.id 또는 profileToUse.user_auth_id 사용 (폴백)
+          const fallbackAuthId = user?.id || profileToUse?.user_auth_id;
+          if (fallbackAuthId) {
+            console.warn(
+              '🔍 [장바구니 추가] ⚠️ localStorage에 없어서 폴백 사용:',
+              fallbackAuthId
+            );
+            // 폴백 사용 시 localStorage에 저장 (다음번에는 바로 사용)
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('hansung_user_auth_id', fallbackAuthId);
+            }
+            return fallbackAuthId;
+          }
+          console.error('🔍 [장바구니 추가] ❌ user_auth_id를 찾을 수 없음!', {
+            hasLocalStorage: typeof window !== 'undefined',
+            storedAuthId:
+              typeof window !== 'undefined'
+                ? localStorage.getItem('hansung_user_auth_id')
+                : null,
+            hasUser: !!user,
+            userId: user?.id,
+            hasProfileToUse: !!profileToUse,
+            profileUserAuthId: profileToUse?.user_auth_id,
+          });
+          return undefined;
+        })(),
       };
+
+      // user_auth_id가 없으면 장바구니에 추가하지 않음
+      if (!cartItem.user_auth_id) {
+        console.error(
+          '🔍 [장바구니 추가] ❌ user_auth_id가 없어서 장바구니 추가 중단',
+          {
+            itemId: cartItem.id,
+            itemName: cartItem.name,
+            hasUser: !!user,
+            userId: user?.id,
+            hasProfileToUse: !!profileToUse,
+            profileUserAuthId: profileToUse?.user_auth_id,
+          }
+        );
+        alert('사용자 정보를 찾을 수 없습니다. 로그인 상태를 확인해주세요.');
+        return;
+      }
+
+      console.log('🔍 [장바구니 추가] cartItem 생성 결과:', {
+        itemId: cartItem.id,
+        user_profile_id: cartItem.user_profile_id,
+        hasUserProfileId: !!cartItem.user_profile_id,
+        user_auth_id: cartItem.user_auth_id,
+        hasUserAuthId: !!cartItem.user_auth_id,
+      });
 
       console.log('🔍 Final cart item with snapshot:', {
         itemId: cartItem.id,

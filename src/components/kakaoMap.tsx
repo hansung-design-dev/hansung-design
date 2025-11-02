@@ -37,7 +37,7 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
   } | null>(null);
   const [roadviewError, setRoadviewError] = useState<string | null>(null);
 
-  useKakaoLoader();
+  const { isLoaded: kakaoLoaded } = useKakaoLoader();
 
   // 카카오맵 로딩 체크 개선
   useEffect(() => {
@@ -45,27 +45,34 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
 
     const checkKakaoMapLoading = () => {
       if (window.kakao && window.kakao.maps) {
-        console.log('✅ 카카오맵 SDK 로딩 완료');
-        console.log('🔍 로드뷰 라이브러리 확인:', !!window.kakao.maps.Roadview);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('✅ 카카오맵 SDK 로딩 완료');
+          console.log(
+            '🔍 로드뷰 라이브러리 확인:',
+            !!window.kakao.maps.Roadview
+          );
+        }
         setIsLoading(false);
         setError(null);
       } else {
-        console.log('⏳ 카카오맵 SDK 로딩 중...');
-        // 3초 후에도 로딩되지 않으면 에러 표시
+        if (process.env.NODE_ENV === 'development') {
+          console.log('⏳ 카카오맵 SDK 로딩 중...');
+        }
+        // 5초 후에도 로딩되지 않으면 에러 표시
         setTimeout(() => {
           if (!window.kakao || !window.kakao.maps) {
             console.error('❌ 카카오맵 SDK 로딩 실패');
             setError('카카오맵을 불러올 수 없습니다. API 키를 확인해주세요.');
             setIsLoading(false);
           }
-        }, 3000);
+        }, 5000);
       }
     };
 
     // 초기 체크
     checkKakaoMapLoading();
 
-    // 주기적으로 체크 (최대 10초)
+    // 주기적으로 체크 (최대 8초)
     const interval = setInterval(() => {
       if (window.kakao && window.kakao.maps) {
         clearInterval(interval);
@@ -74,28 +81,44 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
       }
     }, 1000);
 
-    // 10초 후 타임아웃
+    // 8초 후 타임아웃
     const timeout = setTimeout(() => {
       clearInterval(interval);
       if (!window.kakao || !window.kakao.maps) {
         setError('카카오맵 로딩 시간이 초과되었습니다.');
         setIsLoading(false);
       }
-    }, 10000);
+    }, 8000);
 
     return () => {
       clearInterval(interval);
       clearTimeout(timeout);
     };
-  }, []);
+  }, [kakaoLoaded]);
 
   // 로드뷰 오버레이 열기
   const openRoadview = (lat: number, lng: number) => {
-    console.log('🔍 로드뷰 열기 시도:', { lat, lng });
-    console.log(
-      '🔍 카카오맵 API 키 확인:',
-      process.env.NEXT_PUBLIC_KAKAO_KEY ? '설정됨' : '설정되지 않음'
-    );
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 로드뷰 열기 시도:', { lat, lng });
+      console.log(
+        '🔍 카카오맵 API 키 확인:',
+        process.env.NEXT_PUBLIC_KAKAO_KEY ? '설정됨' : '설정되지 않음'
+      );
+    }
+
+    // 카카오맵 SDK 로딩 상태 확인
+    if (!window.kakao || !window.kakao.maps) {
+      console.error('❌ 카카오맵 SDK가 로드되지 않았습니다.');
+      setRoadviewError('카카오맵 SDK가 로드되지 않았습니다.');
+      return;
+    }
+
+    if (!window.kakao.maps.Roadview) {
+      console.error('❌ 로드뷰 라이브러리가 로드되지 않았습니다.');
+      setRoadviewError('로드뷰 라이브러리가 로드되지 않았습니다.');
+      return;
+    }
+
     setRoadviewError(null);
     setRoadviewPosition({ lat, lng });
     setRoadviewVisible(true);
@@ -276,6 +299,8 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
                       fontWeight: 'bold',
                       cursor: 'pointer',
                       width: '100%',
+                      minWidth: '100%',
+                      boxSizing: 'border-box',
                       transition: 'all 0.2s ease',
                     }}
                     onMouseEnter={(e) => {

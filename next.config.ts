@@ -24,6 +24,25 @@ const nextConfig: NextConfig = {
     });
     return config;
   },
+  // 카카오맵 및 토스페이먼츠를 위한 헤더 설정
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'X-Frame-Options',
+            value: 'SAMEORIGIN',
+          },
+          {
+            key: 'Content-Security-Policy',
+            value:
+              "frame-src 'self' https://*.kakao.com https://*.kakao.co.kr https://*.tosspayments.com; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.kakao.com https://*.kakao.co.kr https://*.tosspayments.com; connect-src 'self' https://*.kakao.com https://*.kakao.co.kr https://*.tosspayments.com https://api.tosspayments.com;",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

@@ -352,18 +352,22 @@ export async function POST(request: NextRequest) {
       ok: confirmResponse.ok,
       status: confirmResponse.status,
       statusText: confirmResponse.statusText,
-      confirmData: confirmData ? {
-        code: confirmData.code || '(없음)',
-        message: confirmData.message || '(없음)',
-        status: confirmData.status || '(없음)',
-        totalAmount: confirmData.totalAmount || '(없음)',
-        method: confirmData.method || '(없음)',
-        approvedAt: confirmData.approvedAt || '(없음)',
-        requestedAt: confirmData.requestedAt || '(없음)',
-        orderId: confirmData.orderId || '(없음)',
-        paymentKey: confirmData.paymentKey ? `${confirmData.paymentKey.substring(0, 30)}...` : '(없음)',
-        allKeys: Object.keys(confirmData),
-      } : null,
+      confirmData: confirmData
+        ? {
+            code: confirmData.code || '(없음)',
+            message: confirmData.message || '(없음)',
+            status: confirmData.status || '(없음)',
+            totalAmount: confirmData.totalAmount || '(없음)',
+            method: confirmData.method || '(없음)',
+            approvedAt: confirmData.approvedAt || '(없음)',
+            requestedAt: confirmData.requestedAt || '(없음)',
+            orderId: confirmData.orderId || '(없음)',
+            paymentKey: confirmData.paymentKey
+              ? `${confirmData.paymentKey.substring(0, 30)}...`
+              : '(없음)',
+            allKeys: Object.keys(confirmData),
+          }
+        : null,
       fullResponse: confirmData,
     });
 
@@ -389,7 +393,7 @@ export async function POST(request: NextRequest) {
     const responseCode = confirmData?.code;
     const paymentStatus = confirmData?.status;
     const hasError = confirmData?.message && !responseCode?.includes('SUCCESS');
-    
+
     // 결제 승인 API가 성공적으로 호출되었는지 확인
     // HTTP 200 응답이면 결제 승인이 완료된 것이지만, 에러 메시지가 있으면 확인 필요
     if (hasError || (responseCode && !responseCode.includes('SUCCESS'))) {
@@ -401,9 +405,11 @@ export async function POST(request: NextRequest) {
         fullResponse: confirmData,
       });
       return NextResponse.json(
-        { 
-          success: false, 
-          error: confirmData?.message || `결제 승인 실패. 코드: ${responseCode || '알 수 없음'}`,
+        {
+          success: false,
+          error:
+            confirmData?.message ||
+            `결제 승인 실패. 코드: ${responseCode || '알 수 없음'}`,
           code: responseCode,
           status: paymentStatus,
           confirmData,
@@ -415,8 +421,8 @@ export async function POST(request: NextRequest) {
     // 결제 승인 성공 확인
     // HTTP 200 응답이면 결제 승인이 완료된 것
     // 단, status가 'CANCELED'나 'FAILED'면 제외
-    const isCancelledOrFailed = 
-      paymentStatus === 'CANCELED' || 
+    const isCancelledOrFailed =
+      paymentStatus === 'CANCELED' ||
       paymentStatus === 'FAILED' ||
       paymentStatus === 'PARTIAL_CANCELED';
 
@@ -429,8 +435,8 @@ export async function POST(request: NextRequest) {
         fullResponse: confirmData,
       });
       return NextResponse.json(
-        { 
-          success: false, 
+        {
+          success: false,
           error: `결제가 취소되었거나 실패했습니다. 상태: ${paymentStatus}`,
           paymentStatus,
           code: responseCode,
@@ -440,14 +446,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('🔍 [결제 확인 API] ✅ 토스페이먼츠 결제 승인 성공 (실제 결제 완료):', {
-      paymentStatus,
-      amount: confirmData?.totalAmount || amount,
-      method: confirmData?.method,
-      approvedAt: confirmData?.approvedAt,
-      orderId: confirmData?.orderId,
-      note: '이 시점에서 실제로 카드에서 돈이 빠져나갔습니다.',
-    });
+    console.log(
+      '🔍 [결제 확인 API] ✅ 토스페이먼츠 결제 승인 성공 (실제 결제 완료):',
+      {
+        paymentStatus,
+        amount: confirmData?.totalAmount || amount,
+        method: confirmData?.method,
+        approvedAt: confirmData?.approvedAt,
+        orderId: confirmData?.orderId,
+        note: '이 시점에서 실제로 카드에서 돈이 빠져나갔습니다.',
+      }
+    );
 
     // payment_methods 테이블에서 카드 결제 수단 ID 찾기
     const { error: paymentMethodError, data: paymentMethodData } =
@@ -501,7 +510,9 @@ export async function POST(request: NextRequest) {
         );
 
         console.log('🔍 [결제 확인 API] ✅ 주문 생성 성공:', orderResult);
-        console.log('🔍 [결제 확인 API] ✅ payments 테이블에 데이터 저장 완료 (createOrderAfterPayment 내부에서 처리)');
+        console.log(
+          '🔍 [결제 확인 API] ✅ payments 테이블에 데이터 저장 완료 (createOrderAfterPayment 내부에서 처리)'
+        );
 
         return NextResponse.json({
           success: true,

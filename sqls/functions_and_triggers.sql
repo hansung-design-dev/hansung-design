@@ -1,12 +1,96 @@
+------------------
+-------함수-------
+------------------
+
+-- Inventory & Order Management Functions
+check_inventory_before_order | TRIGGER | 재고 확인 후 주문 가능 여부 판단
+check_led_display_inventory_before_order | TRIGGER | LED 디스플레이 재고 확인
+restore_banner_slot_inventory_on_order_delete | TRIGGER | 주문 삭제 시 배너 슬롯 재고 복구
+restore_led_display_inventory_on_order_delete | TRIGGER | 주문 삭제 시 LED 디스플레이 재고 복구
+restore_slot_inventory_on_order_delete | TRIGGER | 주문 삭제 시 슬롯 재고 복구
+update_banner_slot_inventory_on_order | TRIGGER | 주문 시 배너 슬롯 재고 차감
+update_led_display_inventory_on_order | TRIGGER | 주문 시 LED 디스플레이 재고 차감
+update_slot_inventory_on_order | TRIGGER | 주문 시 슬롯 재고 차감
+
+-- Duplicate Booking Prevention Functions
+prevent_duplicate_banner_booking | TRIGGER | 배너 중복 예약 방지
+prevent_duplicate_slot_booking | TRIGGER | 슬롯 중복 예약 방지
+
+-- Period Generation Functions
+check_period_data | FUNCTION | 기간 데이터 조회 (target_year_month)
+generate_next_first_half_periods | FUNCTION | 다음 달 상반기 기간 자동 생성
+generate_next_second_half_periods | FUNCTION | 다음 달 하반기 기간 자동 생성
+generate_next_month_led_periods | FUNCTION | 다음 달 LED 기간 및 재고 생성
+generate_specific_month_periods | FUNCTION | 특정 월 기간 생성 (target_year, target_month)
+generate_slot_based_inventory | FUNCTION | 슬롯별 재고 생성
+
+-- Panel Insert Functions
+insert_led_panel_bulk | FUNCTION | LED 패널 일괄 삽입
+insert_mapo_bulletin_board | FUNCTION | 마포구 시민게시대 삽입
+insert_mapo_citizen_bulletin | FUNCTION | 마포구 시민게시대 삽입 (행정용)
+insert_mapo_lower_panel | FUNCTION | 마포구 저단형 패널 삽입
+insert_mapo_multi_panel | FUNCTION | 마포구 연립형 패널 삽입
+insert_songpa_banner | FUNCTION | 송파구 배너 삽입
+insert_yongsan_banner | FUNCTION | 용산구 배너 삽입
+
+-- Top Fixed Banner Inventory Functions
+disable_other_periods_on_order | TRIGGER | 상단광고 주문 시 다른 기간 비활성화
+release_top_fixed_inventory_on_cancel | TRIGGER | 주문 취소 시 상단광고 재고 해제
+update_top_fixed_banner_inventory | TRIGGER | 상단광고 재고 업데이트
+update_top_fixed_inventory_on_order | TRIGGER | 주문 시 상단광고 재고 업데이트
+
+-- Cache Update Functions
+update_banner_display_cache | FUNCTION | 배너 디스플레이 캐시 업데이트
+update_led_display_cache | FUNCTION | LED 디스플레이 캐시 업데이트
+trigger_update_led_cache | TRIGGER | LED 캐시 자동 업데이트 트리거
+
+-- Order & Snapshot Management Functions
+fill_panel_slot_snapshot_after_order_details | TRIGGER | 주문 상세 생성 시 패널 슬롯 스냅샷 채우기
+
+-- Utility Functions
+get_active_regions_by_display_type | FUNCTION | 활성화된 구 조회 (display_type 기준)
+update_updated_at_column | TRIGGER | updated_at 컬럼 자동 업데이트
+update_installed_photos_updated_at | TRIGGER | 설치 사진 updated_at 업데이트
+update_region_gu_display_types_updated_at | TRIGGER | region_gu updated_at 업데이트
+
+------------------
+----함수 정의----
+------------------
+
 --1.  check_inventory_before_order
 
 CREATE OR REPLACE FUNCTION check_inventory_before_order()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER AS $check_inventory$
 DECLARE
   period_id UUID;
+  banner_slot_id_val UUID;
   current_inventory RECORD;
 BEGIN
-  -- order_details의 display_start_date와 display_end_date를 기반으로 해당하는 기간 찾기
+  -- 1. panel_slot_usage_id를 통해 banner_slot_id 조회
+  IF NEW.panel_slot_usage_id IS NOT NULL THEN
+    SELECT banner_slot_id INTO banner_slot_id_val
+    FROM panel_slot_usage
+    WHERE id = NEW.panel_slot_usage_id;
+    
+    IF banner_slot_id_val IS NULL THEN
+      -- banner_slot_id를 찾을 수 없으면 기본 슬롯 사용 (재고 확인은 건너뜀)
+      RETURN NEW;
+    END IF;
+  ELSE
+    -- panel_slot_usage_id가 없으면 panel_id로 기본 슬롯 찾기
+    SELECT bs.id INTO banner_slot_id_val
+    FROM banner_slots bs
+    WHERE bs.panel_id = NEW.panel_id
+      AND bs.slot_number = 1
+    LIMIT 1;
+    
+    IF banner_slot_id_val IS NULL THEN
+      -- 슬롯을 찾을 수 없으면 재고 확인 건너뜀
+      RETURN NEW;
+    END IF;
+  END IF;
+
+  -- 2. order_details의 display_start_date와 display_end_date를 기반으로 해당하는 기간 찾기
   SELECT rgdp.id INTO period_id
   FROM region_gu_display_periods rgdp
   JOIN panels pi ON pi.region_gu_id = rgdp.region_gu_id
@@ -20,27 +104,27 @@ BEGIN
       (NEW.display_start_date <= rgdp.period_to AND NEW.display_end_date >= rgdp.period_from)
     );
   
-  -- 해당 기간의 재고 확인
+  -- 3. 해당 기간의 재고 확인 (banner_slot_id 기준)
   IF period_id IS NOT NULL THEN
-    SELECT available_slots, total_slots INTO current_inventory
+    SELECT * INTO current_inventory
     FROM banner_slot_inventory
-    WHERE panel_id = NEW.panel_id
+    WHERE banner_slot_id = banner_slot_id_val
       AND region_gu_display_period_id = period_id;
     
-    -- 재고 정보가 있고, 주문 수량이 가용 재고를 초과하는 경우
-    IF FOUND AND current_inventory.available_slots < NEW.slot_order_quantity THEN
-      RAISE EXCEPTION '재고 부족: 요청 수량 %개, 가용 재고 %개 (기간: %)', 
-        NEW.slot_order_quantity, current_inventory.available_slots, period_id;
+    -- 재고가 이미 닫혀있으면 에러
+    IF FOUND AND current_inventory.is_closed = true THEN
+      RAISE EXCEPTION '재고 부족: 해당 슬롯이 이미 닫혀있습니다 (슬롯 ID: %, 기간: %)', 
+        banner_slot_id_val, period_id;
     END IF;
   ELSE
     -- 기간을 찾지 못한 경우 경고
-    RAISE WARNING '기간을 찾을 수 없음: panel_id=%, display_start_date=%, display_end_date=%', 
-      NEW.panel_id, NEW.display_start_date, NEW.display_end_date;
+    RAISE WARNING '기간을 찾을 수 없음: panel_id=%, banner_slot_id=%, display_start_date=%, display_end_date=%', 
+      NEW.panel_id, banner_slot_id_val, NEW.display_start_date, NEW.display_end_date;
   END IF;
   
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$check_inventory$ LANGUAGE plpgsql;
 
 
 --2.check_period_data
@@ -536,7 +620,8 @@ END;
 
 -- 4. fill_panel_slot_snapshot_after_order_details
 
-
+CREATE OR REPLACE FUNCTION fill_panel_slot_snapshot_after_order_details()
+RETURNS TRIGGER AS $fill_snapshot$
 DECLARE
     v_panel_type TEXT;
     v_slot_record RECORD;
@@ -646,6 +731,7 @@ BEGIN
     
     RETURN NEW;
 END;
+$fill_snapshot$ LANGUAGE plpgsql;
 
 
 -- 5. generate_next_first_half_periods
@@ -1552,11 +1638,35 @@ END;
 
 --17.restore_banner_slot_inventory_on_order_delete
 
-
+CREATE OR REPLACE FUNCTION restore_banner_slot_inventory_on_order_delete()
+RETURNS TRIGGER AS $restore_inventory$
 DECLARE
   period_id UUID;
+  banner_slot_id_val UUID;
 BEGIN
-  -- order_details의 display_start_date와 display_end_date를 기반으로 해당하는 기간 찾기
+  -- 1. panel_slot_usage_id를 통해 banner_slot_id 조회
+  IF OLD.panel_slot_usage_id IS NOT NULL THEN
+    SELECT banner_slot_id INTO banner_slot_id_val
+    FROM panel_slot_usage
+    WHERE id = OLD.panel_slot_usage_id;
+    
+    IF banner_slot_id_val IS NULL THEN
+      RETURN OLD;
+    END IF;
+  ELSE
+    -- panel_slot_usage_id가 없으면 panel_id로 기본 슬롯 찾기
+    SELECT bs.id INTO banner_slot_id_val
+    FROM banner_slots bs
+    WHERE bs.panel_id = OLD.panel_id
+      AND bs.slot_number = 1
+    LIMIT 1;
+    
+    IF banner_slot_id_val IS NULL THEN
+      RETURN OLD;
+    END IF;
+  END IF;
+
+  -- 2. order_details의 display_start_date와 display_end_date를 기반으로 해당하는 기간 찾기
   SELECT rgdp.id INTO period_id
   FROM region_gu_display_periods rgdp
   JOIN panels pi ON pi.region_gu_id = rgdp.region_gu_id
@@ -1570,28 +1680,55 @@ BEGIN
       (OLD.display_start_date <= rgdp.period_to AND OLD.display_end_date >= rgdp.period_from)
     );
   
-  -- 해당 기간의 재고 복구
+  -- 3. 해당 기간의 재고 복구 (banner_slot_id 기준)
   IF period_id IS NOT NULL THEN
     UPDATE banner_slot_inventory 
     SET 
-      available_slots = LEAST(total_slots, available_slots + OLD.slot_order_quantity),
-      closed_slots = GREATEST(0, closed_slots - OLD.slot_order_quantity),
+      is_available = true,
+      is_closed = false,
       updated_at = NOW()
-    WHERE panel_id = OLD.panel_id
+    WHERE banner_slot_id = banner_slot_id_val
       AND region_gu_display_period_id = period_id;
   END IF;
   
   RETURN OLD;
 END;
+$restore_inventory$ LANGUAGE plpgsql;
 
 --18. update_banner_slot_inventory_on_order
 
-
+CREATE OR REPLACE FUNCTION update_banner_slot_inventory_on_order()
+RETURNS TRIGGER AS $update_inventory$
 DECLARE
   period_id UUID;
-  panel_record RECORD;
+  banner_slot_id_val UUID;
+  current_inventory RECORD;
 BEGIN
-  -- order_details의 display_start_date와 display_end_date를 기반으로 해당하는 기간 찾기
+  -- 1. panel_slot_usage_id를 통해 banner_slot_id 조회
+  IF NEW.panel_slot_usage_id IS NOT NULL THEN
+    SELECT banner_slot_id INTO banner_slot_id_val
+    FROM panel_slot_usage
+    WHERE id = NEW.panel_slot_usage_id;
+    
+    IF banner_slot_id_val IS NULL THEN
+      RAISE NOTICE 'panel_slot_usage_id %에 해당하는 banner_slot_id를 찾을 수 없음', NEW.panel_slot_usage_id;
+      RETURN NEW;
+    END IF;
+  ELSE
+    -- panel_slot_usage_id가 없으면 panel_id로 기본 슬롯 찾기
+    SELECT bs.id INTO banner_slot_id_val
+    FROM banner_slots bs
+    WHERE bs.panel_id = NEW.panel_id
+      AND bs.slot_number = 1
+    LIMIT 1;
+    
+    IF banner_slot_id_val IS NULL THEN
+      RAISE NOTICE 'panel_id %에 해당하는 banner_slot을 찾을 수 없음', NEW.panel_id;
+      RETURN NEW;
+    END IF;
+  END IF;
+
+  -- 2. order_details의 display_start_date와 display_end_date를 기반으로 해당하는 기간 찾기
   SELECT rgdp.id INTO period_id
   FROM region_gu_display_periods rgdp
   JOIN panels pi ON pi.region_gu_id = rgdp.region_gu_id
@@ -1605,69 +1742,83 @@ BEGIN
       (NEW.display_start_date <= rgdp.period_to AND NEW.display_end_date >= rgdp.period_from)
     );
   
-  -- 해당 기간의 재고 업데이트
+  -- 3. 해당 기간의 재고 업데이트 (banner_slot_id 기준)
   IF period_id IS NOT NULL THEN
-    UPDATE banner_slot_inventory 
-    SET 
-      available_slots = GREATEST(0, available_slots - NEW.slot_order_quantity),
-      closed_slots = closed_slots + NEW.slot_order_quantity,
-      updated_at = NOW()
-    WHERE panel_id = NEW.panel_id
+    -- 기존 재고 조회
+    SELECT * INTO current_inventory
+    FROM banner_slot_inventory
+    WHERE banner_slot_id = banner_slot_id_val
       AND region_gu_display_period_id = period_id;
     
-    -- 재고 정보가 없으면 새로 생성
-    IF NOT FOUND THEN
-      SELECT * INTO panel_record FROM panels WHERE id = NEW.panel_id;
+    IF FOUND THEN
+      -- 재고 업데이트: 주문되면 닫힘
+      UPDATE banner_slot_inventory 
+      SET 
+        is_available = false,
+        is_closed = true,
+        updated_at = NOW()
+      WHERE banner_slot_id = banner_slot_id_val
+        AND region_gu_display_period_id = period_id;
+    ELSE
+      -- 재고 정보가 없으면 새로 생성 (주문되면 닫힘 상태로)
       INSERT INTO banner_slot_inventory (
-        panel_id,
+        banner_slot_id,
         region_gu_display_period_id,
-        total_slots,
-        available_slots,
-        closed_slots
+        is_available,
+        is_closed
       )
       VALUES (
-        NEW.panel_id,
+        banner_slot_id_val,
         period_id,
-        panel_record.max_banner,
-        GREATEST(0, panel_record.max_banner - NEW.slot_order_quantity),
-        NEW.slot_order_quantity
+        false, -- 주문되면 사용 불가
+        true   -- 닫힘
       );
     END IF;
   ELSE
     -- 기간을 찾지 못한 경우 로그 출력 (디버깅용)
-    RAISE NOTICE '기간을 찾을 수 없음: panel_id=%, display_start_date=%, display_end_date=%', 
-      NEW.panel_id, NEW.display_start_date, NEW.display_end_date;
+    RAISE NOTICE '기간을 찾을 수 없음: panel_id=%, banner_slot_id=%, display_start_date=%, display_end_date=%', 
+      NEW.panel_id, banner_slot_id_val, NEW.display_start_date, NEW.display_end_date;
   END IF;
   
   RETURN NEW;
 END;
+$update_inventory$ LANGUAGE plpgsql;
 
 --19.update_top_fixed_banner_inventory
 
+CREATE OR REPLACE FUNCTION update_top_fixed_banner_inventory()
+RETURNS TRIGGER AS $top_fixed_inventory$
 BEGIN
-  -- Check if this is a top-fixed banner (slot_number = 0)
-  IF EXISTS (
-    SELECT 1 FROM banner_slots 
-    WHERE id = NEW.banner_slot_id 
-    AND slot_number = 0
-    AND banner_type = 'top_fixed'
-  ) THEN
-    -- Update top_fixed_banner_inventory to mark all periods as unavailable for this panel
-    UPDATE top_fixed_banner_inventory 
-    SET available_slots = 0,
-        updated_at = NOW()
-    WHERE panel_id = NEW.panel_id;
+  -- Only process if banner_slot_id is not NULL
+  IF NEW.banner_slot_id IS NOT NULL THEN
+    -- Check if this is a top-fixed banner (slot_number = 0)
+    IF EXISTS (
+      SELECT 1 FROM banner_slots 
+      WHERE id = NEW.banner_slot_id 
+      AND slot_number = 0
+      AND banner_type = 'top_fixed'
+    ) THEN
+      -- Update top_fixed_banner_inventory to mark all periods as unavailable for this panel
+      UPDATE top_fixed_banner_inventory 
+      SET available_slots = 0,
+          updated_at = NOW()
+      WHERE panel_id = NEW.panel_id;
+    END IF;
   END IF;
   
   RETURN NEW;
 END;
+$top_fixed_inventory$ LANGUAGE plpgsql;
 
 --20.update_updated_at_column
 
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $update_timestamp$
 BEGIN
     NEW.updated_at = now();
     RETURN NEW;
 END;
+$update_timestamp$ LANGUAGE plpgsql;
 
 -- LED 캐시 테이블 업데이트 함수
 CREATE OR REPLACE FUNCTION update_led_display_cache()
@@ -1947,248 +2098,53 @@ END;
 ------------------
 -------트리거-------
 ------------------
-Name	Table	Function	Events	Orientation	Enabled	
-banner_inventory_delete_trigger	
-order_details
 
-restore_banner_slot_inventory_on_order_delete
-
-AFTER DELETE
-ROW
-
-
-banner_inventory_insert_trigger	
-order_details
-
-update_banner_slot_inventory_on_order
-
-AFTER INSERT
-ROW
-
-
-duplicate_banner_booking_trigger	
-panel_slot_usage
-
-prevent_duplicate_banner_booking
-
-BEFORE INSERT
-ROW
-
-
-inventory_check_trigger	
-order_details
-
-check_inventory_before_order
-
-BEFORE INSERT
-ROW
-
-
-trigger_fill_panel_slot_snapshot_after_order_details	
-order_details
-
-fill_panel_slot_snapshot_after_order_details
-
-AFTER INSERT
-ROW
-
-
-trigger_update_top_fixed_banner_inventory	
-panel_slot_usage
-
-update_top_fixed_banner_inventory
-
-AFTER INSERT
-ROW
-
-
-update_banner_panel_details_updated_at	
-banner_panel_details
-
-update_updated_at_column
-
-BEFORE UPDATE
-ROW
-
-
-update_banner_slots_updated_at	
-banner_slots
-
-update_updated_at_column
-
-BEFORE UPDATE
-ROW
-
-
-update_customer_inquiries_updated_at	
-customer_inquiries
-
-update_updated_at_column
-
-BEFORE UPDATE
-ROW
-
-
-update_customer_service_updated_at	
-customer_service
-
-update_updated_at_column
-
-BEFORE UPDATE
-ROW
-
-
-update_display_types_updated_at	
-display_types
-
-update_updated_at_column
-
-BEFORE UPDATE
-ROW
-
-
-update_homepage_contents_updated_at	
-homepage_contents
-
-update_updated_at_column
-
-BEFORE UPDATE
-ROW
-
-
-update_homepage_menu_types_updated_at	
-homepage_menu_types
-
-update_updated_at_column
-
-BEFORE UPDATE
-ROW
-
-
-update_homepage_notice_updated_at	
-homepage_notice
-
-update_updated_at_column
-
-BEFORE UPDATE
-ROW
-
-
-update_led_panel_details_updated_at	
-led_panel_details
-
-update_updated_at_column
-
-BEFORE UPDATE
-ROW
-
-
-update_led_slots_updated_at	
-led_slots
-
-update_updated_at_column
-
-BEFORE UPDATE
-ROW
-
-
-update_notice_categories_updated_at	
-notice_categories
-
-update_updated_at_column
-
-BEFORE UPDATE
-ROW
-
-
-update_order_details_updated_at	
-order_details
-
-update_updated_at_column
-
-BEFORE UPDATE
-ROW
-
-
-update_orders_updated_at	
-orders
-
-update_updated_at_column
-
-BEFORE UPDATE
-ROW
-
-
-update_panel_guideline_updated_at	
-panel_guideline
-
-update_updated_at_column
-
-BEFORE UPDATE
-ROW
-
-
-update_panels_updated_at	
-panels
-
-update_updated_at_column
-
-BEFORE UPDATE
-ROW
-
-
-update_panel_popup_notices_updated_at	
-panel_popup_notices
-
-update_updated_at_column
-
-BEFORE UPDATE
-ROW
-
-
-update_panel_slot_usage_updated_at	
-panel_slot_usage
-
-update_updated_at_column
-
-BEFORE UPDATE
-ROW
-
-
-update_region_dong_updated_at	
-region_dong
-
-update_updated_at_column
-
-BEFORE UPDATE
-ROW
-
-
-update_region_gu_display_periods_updated_at	
-region_gu_display_periods
-
-update_updated_at_column
-
-BEFORE UPDATE
-ROW
-
-
-update_region_gu_updated_at	
-region_gu
-
-update_updated_at_column
-
-BEFORE UPDATE
-ROW
-
-
-update_user_auth_updated_at	
-user_auth
-
-update_updated_at_column
-
-BEFORE UPDATE
-ROW
+-- Inventory & Order Management Triggers
+banner_inventory_delete_trigger | order_details | restore_banner_slot_inventory_on_order_delete | AFTER DELETE | ROW
+banner_inventory_insert_trigger | order_details | update_banner_slot_inventory_on_order | AFTER INSERT | ROW
+slot_inventory_delete_trigger | order_details | restore_slot_inventory_on_order_delete | AFTER DELETE | ROW
+slot_inventory_insert_trigger | order_details | update_slot_inventory_on_order | AFTER INSERT | ROW
+inventory_check_trigger | order_details | check_inventory_before_order | BEFORE INSERT | ROW
+
+-- Duplicate Booking Prevention Triggers
+duplicate_banner_booking_trigger | panel_slot_usage | prevent_duplicate_banner_booking | BEFORE INSERT | ROW
+duplicate_slot_booking_trigger | panel_slot_usage | prevent_duplicate_slot_booking | BEFORE INSERT | ROW
+
+-- Order & Snapshot Management Triggers
+trigger_fill_panel_slot_snapshot_after_order_details | order_details | fill_panel_slot_snapshot_after_order_details | AFTER INSERT | ROW
+
+-- Top Fixed Banner Inventory Triggers
+trigger_update_top_fixed_banner_inventory | panel_slot_usage | update_top_fixed_banner_inventory | AFTER INSERT | ROW
+trigger_top_fixed_inventory_on_order | orders | update_top_fixed_inventory_on_order | AFTER INSERT | ROW
+trigger_top_fixed_inventory_on_cancel | orders | release_top_fixed_inventory_on_cancel | AFTER UPDATE | ROW
+
+-- LED Cache Triggers
+trigger_led_cache_on_inventory | led_display_inventory | trigger_update_led_cache | AFTER INSERT, UPDATE, DELETE | ROW
+trigger_led_cache_on_panels | panels | trigger_update_led_cache | AFTER INSERT, UPDATE, DELETE | ROW
+trigger_led_cache_on_region_gu | region_gu | trigger_update_led_cache | AFTER INSERT, UPDATE, DELETE | ROW
+
+-- Updated At Column Triggers
+update_banner_panel_details_updated_at | banner_panel_details | update_updated_at_column | BEFORE UPDATE | ROW
+update_banner_slots_updated_at | banner_slots | update_updated_at_column | BEFORE UPDATE | ROW
+update_customer_inquiries_updated_at | customer_inquiries | update_updated_at_column | BEFORE UPDATE | ROW
+update_customer_service_updated_at | frequent_questions | update_updated_at_column | BEFORE UPDATE | ROW
+update_display_types_updated_at | display_types | update_updated_at_column | BEFORE UPDATE | ROW
+update_homepage_contents_updated_at | homepage_contents | update_updated_at_column | BEFORE UPDATE | ROW
+update_homepage_menu_types_updated_at | homepage_menu_types | update_updated_at_column | BEFORE UPDATE | ROW
+update_homepage_notice_updated_at | homepage_notice | update_updated_at_column | BEFORE UPDATE | ROW
+update_led_panel_details_updated_at | led_panel_details | update_updated_at_column | BEFORE UPDATE | ROW
+update_led_slots_updated_at | led_slots | update_updated_at_column | BEFORE UPDATE | ROW
+update_notice_categories_updated_at | notice_categories | update_updated_at_column | BEFORE UPDATE | ROW
+update_order_details_updated_at | order_details | update_updated_at_column | BEFORE UPDATE | ROW
+update_orders_updated_at | orders | update_updated_at_column | BEFORE UPDATE | ROW
+update_panel_popup_notices_updated_at | panel_popup_notices | update_updated_at_column | BEFORE UPDATE | ROW
+update_panel_slot_usage_updated_at | panel_slot_usage | update_updated_at_column | BEFORE UPDATE | ROW
+update_panels_updated_at | panels | update_updated_at_column | BEFORE UPDATE | ROW
+update_region_dong_updated_at | region_dong | update_updated_at_column | BEFORE UPDATE | ROW
+update_region_gu_display_periods_updated_at | region_gu_display_periods | update_updated_at_column | BEFORE UPDATE | ROW
+update_region_gu_display_types_updated_at | region_gu | update_region_gu_display_types_updated_at | BEFORE UPDATE | ROW
+update_user_auth_updated_at | user_auth | update_updated_at_column | BEFORE UPDATE | ROW
+trigger_update_installed_photos_updated_at | installed_banner | update_installed_photos_updated_at | BEFORE UPDATE | ROW
 
 
 

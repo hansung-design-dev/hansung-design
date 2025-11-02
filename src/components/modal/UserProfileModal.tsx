@@ -39,6 +39,7 @@ interface UserProfileModalProps {
     is_default: boolean;
     is_public_institution: boolean;
     is_company: boolean;
+    profile_id?: string; // 선택한 프로필 ID 추가
   }) => void; // 장바구니에서 확인 버튼 클릭 시 호출
 }
 
@@ -517,7 +518,11 @@ export default function UserProfileModal({
   const handleConfirm = () => {
     // 장바구니에서 확인 버튼 클릭 시
     if (onConfirm) {
-      onConfirm(formData);
+      // 선택한 프로필 ID 포함 (selectedProfileId가 있으면 사용, 없으면 formData만 전달)
+      onConfirm({
+        ...formData,
+        profile_id: selectedProfileId || undefined, // 선택한 프로필 ID 추가
+      });
       onClose();
     }
   };

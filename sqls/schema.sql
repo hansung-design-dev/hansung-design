@@ -28,8 +28,8 @@ CREATE TABLE public.admin_order_verifications (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT admin_order_verifications_pkey PRIMARY KEY (id),
-  CONSTRAINT admin_order_verifications_verified_by_fkey FOREIGN KEY (verified_by) REFERENCES public.admin_profiles(id),
-  CONSTRAINT admin_order_verifications_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id)
+  CONSTRAINT admin_order_verifications_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
+  CONSTRAINT admin_order_verifications_verified_by_fkey FOREIGN KEY (verified_by) REFERENCES public.admin_profiles(id)
 );
 CREATE TABLE public.admin_profiles (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -109,8 +109,8 @@ CREATE TABLE public.banner_slot_price_policy (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT banner_slot_price_policy_pkey PRIMARY KEY (id),
-  CONSTRAINT banner_slot_price_policy_banner_slot_id_fkey FOREIGN KEY (banner_slot_id) REFERENCES public.banner_slots(id),
-  CONSTRAINT banner_slot_price_policy_banner_slot_info_id_fkey FOREIGN KEY (banner_slot_id) REFERENCES public.banner_slots(id)
+  CONSTRAINT banner_slot_price_policy_banner_slot_info_id_fkey FOREIGN KEY (banner_slot_id) REFERENCES public.banner_slots(id),
+  CONSTRAINT banner_slot_price_policy_banner_slot_id_fkey FOREIGN KEY (banner_slot_id) REFERENCES public.banner_slots(id)
 );
 CREATE TABLE public.banner_slots (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -127,6 +127,19 @@ CREATE TABLE public.banner_slots (
   updated_at timestamp without time zone DEFAULT now(),
   CONSTRAINT banner_slots_pkey PRIMARY KEY (id),
   CONSTRAINT banner_slots_panel_id_fkey FOREIGN KEY (panel_id) REFERENCES public.panels(id)
+);
+CREATE TABLE public.center_ad_inventory (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  panel_id uuid NOT NULL,
+  is_occupied boolean NOT NULL DEFAULT false,
+  occupied_slot_id uuid,
+  occupied_until date,
+  occupied_from date,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT center_ad_inventory_pkey PRIMARY KEY (id),
+  CONSTRAINT center_ad_inventory_panel_id_fkey FOREIGN KEY (panel_id) REFERENCES public.panels(id),
+  CONSTRAINT center_ad_inventory_occupied_slot_id_fkey FOREIGN KEY (occupied_slot_id) REFERENCES public.banner_slots(id)
 );
 CREATE TABLE public.customer_inquiries (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -258,8 +271,8 @@ CREATE TABLE public.led_display_inventory (
   created_at timestamp without time zone DEFAULT now(),
   updated_at timestamp without time zone DEFAULT now(),
   CONSTRAINT led_display_inventory_pkey PRIMARY KEY (id),
-  CONSTRAINT led_display_inventory_region_gu_display_period_id_fkey FOREIGN KEY (region_gu_display_period_id) REFERENCES public.region_gu_display_periods(id),
-  CONSTRAINT led_display_inventory_panel_info_id_fkey FOREIGN KEY (panel_id) REFERENCES public.panels(id)
+  CONSTRAINT led_display_inventory_panel_info_id_fkey FOREIGN KEY (panel_id) REFERENCES public.panels(id),
+  CONSTRAINT led_display_inventory_region_gu_display_period_id_fkey FOREIGN KEY (region_gu_display_period_id) REFERENCES public.region_gu_display_periods(id)
 );
 CREATE TABLE public.led_display_price_policy (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -333,8 +346,8 @@ CREATE TABLE public.order_details (
   panel_id uuid,
   panel_slot_usage_id uuid,
   CONSTRAINT order_details_pkey PRIMARY KEY (id),
-  CONSTRAINT order_details_panel_info_id_fkey FOREIGN KEY (panel_id) REFERENCES public.panels(id),
   CONSTRAINT order_details_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
+  CONSTRAINT order_details_panel_info_id_fkey FOREIGN KEY (panel_id) REFERENCES public.panels(id),
   CONSTRAINT order_details_panel_slot_usage_id_fkey FOREIGN KEY (panel_slot_usage_id) REFERENCES public.panel_slot_usage(id)
 );
 CREATE TABLE public.orders (
@@ -352,11 +365,11 @@ CREATE TABLE public.orders (
   draft_delivery_method text CHECK (draft_delivery_method = ANY (ARRAY['email'::text, 'upload'::text])),
   order_status USER-DEFINED DEFAULT 'pending'::order_status_enum,
   CONSTRAINT orders_pkey PRIMARY KEY (id),
+  CONSTRAINT orders_user_profile_id_fkey FOREIGN KEY (user_profile_id) REFERENCES public.user_profiles(id),
   CONSTRAINT orders_auth_user_id_fkey FOREIGN KEY (auth_user_id) REFERENCES public.user_auth(id),
-  CONSTRAINT fk_orders_user_auth_id FOREIGN KEY (user_auth_id) REFERENCES public.user_auth(id),
-  CONSTRAINT orders_payment_method_id_fkey FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id),
   CONSTRAINT orders_design_drafts_id_fkey FOREIGN KEY (design_drafts_id) REFERENCES public.design_drafts(id),
-  CONSTRAINT orders_user_profile_id_fkey FOREIGN KEY (user_profile_id) REFERENCES public.user_profiles(id)
+  CONSTRAINT orders_payment_method_id_fkey FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id),
+  CONSTRAINT fk_orders_user_auth_id FOREIGN KEY (user_auth_id) REFERENCES public.user_auth(id)
 );
 CREATE TABLE public.panel_popup_notices (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -390,10 +403,10 @@ CREATE TABLE public.panel_slot_usage (
   updated_at timestamp without time zone DEFAULT now(),
   banner_slot_id uuid,
   CONSTRAINT panel_slot_usage_pkey PRIMARY KEY (id),
-  CONSTRAINT panel_slot_usage_banner_slot_info_id_fkey FOREIGN KEY (banner_slot_id) REFERENCES public.banner_slots(id),
+  CONSTRAINT panel_slot_usage_display_type_id_fkey FOREIGN KEY (display_type_id) REFERENCES public.display_types(id),
   CONSTRAINT panel_slot_usage_panel_info_id_fkey FOREIGN KEY (panel_id) REFERENCES public.panels(id),
-  CONSTRAINT panel_slot_usage_banner_slot_id_fkey FOREIGN KEY (banner_slot_id) REFERENCES public.banner_slots(id),
-  CONSTRAINT panel_slot_usage_display_type_id_fkey FOREIGN KEY (display_type_id) REFERENCES public.display_types(id)
+  CONSTRAINT panel_slot_usage_banner_slot_info_id_fkey FOREIGN KEY (banner_slot_id) REFERENCES public.banner_slots(id),
+  CONSTRAINT panel_slot_usage_banner_slot_id_fkey FOREIGN KEY (banner_slot_id) REFERENCES public.banner_slots(id)
 );
 CREATE TABLE public.panels (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -417,28 +430,6 @@ CREATE TABLE public.panels (
   CONSTRAINT panels_display_type_id_fkey FOREIGN KEY (display_type_id) REFERENCES public.display_types(id),
   CONSTRAINT panels_region_gu_id_fkey FOREIGN KEY (region_gu_id) REFERENCES public.region_gu(id),
   CONSTRAINT panels_region_dong_id_fkey FOREIGN KEY (region_dong_id) REFERENCES public.region_dong(id)
-);
-CREATE TABLE public.panels_backup (
-  id uuid,
-  display_type_id uuid,
-  post_code text,
-  region_gu_id uuid,
-  region_dong_id uuid,
-  nickname text,
-  address text,
-  photo_url text,
-  location_url text,
-  map_url text,
-  latitude numeric,
-  longitude numeric,
-  panel_status USER-DEFINED,
-  maintenance_notes text,
-  created_at timestamp without time zone,
-  updated_at timestamp without time zone,
-  panel_code smallint,
-  panel_type USER-DEFINED,
-  max_banner integer,
-  notes text
 );
 CREATE TABLE public.payment_methods (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -471,8 +462,8 @@ CREATE TABLE public.payments (
   is_require_tax_filing boolean,
   is_agreed_caution boolean,
   CONSTRAINT payments_pkey PRIMARY KEY (id),
-  CONSTRAINT payments_payment_method_id_fkey FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id),
-  CONSTRAINT payments_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id)
+  CONSTRAINT payments_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
+  CONSTRAINT payments_payment_method_id_fkey FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id)
 );
 CREATE TABLE public.public_design_contents (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -487,6 +478,78 @@ CREATE TABLE public.public_design_contents (
   image_urls ARRAY DEFAULT '{}'::text[],
   project_category USER-DEFINED NOT NULL,
   CONSTRAINT public_design_contents_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.digital_media_billboards (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  district_code character varying NOT NULL UNIQUE,
+  title character varying NOT NULL,
+  main_image_url text NOT NULL,
+  image_urls text[] DEFAULT '{}'::text[],
+  operating_lineup text,
+  model_name text,
+  product_size text,
+  resolution_brightness text,
+  key_features text,
+  usage text,
+  installation_method text,
+  inquiry_phone character varying,
+  description text,
+  display_order integer DEFAULT 0,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT digital_media_billboards_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.digital_signage_products (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  product_code character varying NOT NULL UNIQUE,
+  title character varying NOT NULL,
+  main_image_url text NOT NULL,
+  image_urls text[] DEFAULT '{}'::text[],
+  product_type character varying NOT NULL,
+  series_name character varying,
+  model_name character varying NOT NULL,
+  brand character varying,
+  inch_size character varying,
+  physical_size character varying,
+  resolution character varying,
+  brightness character varying,
+  specifications text,
+  usage text,
+  installation_method text,
+  vesa_hole character varying,
+  price character varying,
+  special_features text,
+  description text,
+  bracket_note text,
+  contact_info character varying,
+  display_order integer DEFAULT 0,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT digital_signage_products_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.media_landscape_displays (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  project_code character varying NOT NULL UNIQUE,
+  title character varying NOT NULL,
+  main_image_url text NOT NULL,
+  image_urls text[] DEFAULT '{}'::text[],
+  operating_lineup text,
+  model_name text,
+  product_size text,
+  resolution_brightness text,
+  key_features text,
+  usage text,
+  installation_method text,
+  inquiry_phone character varying,
+  description text,
+  location text,
+  display_order integer DEFAULT 0,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT media_landscape_displays_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.region_dong (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -589,9 +652,9 @@ slot_type_enum	manual, semi_automatic, panel, citizen_board
 
 panel_type_enum	manual, semi_auto, panel, citizen_bulletin-board, bulletin_board, lower_panel, multi_panel, led, fabric, no_lighting, with_lighting	
 
-display_type_enum	banner_display, led_display, public_design, digital_signage	
+display_type_enum	banner_display, led_display, public_design, digital_signage, digital_media	
 
-homepage_menu_enum	landing, banner_display, led_display, public_design, digital_signage	
+homepage_menu_enum	landing, banner_display, led_display, public_design, digital_signage, main, digital_media	
 
 banner_type_enum	manual, semi_auto, panel, citizen_bulletin_board, with_lighting, no_lighting, top_fixed	
 
@@ -617,7 +680,7 @@ inquiry_status_enum	pending, answered, closed
 
 guideline_panel_type	lower_panel, multi_panel, bulliten_board, led, panel, top_fixed, admin, commercial, banner	
 
-price_usage_type	default, public_institution, re_order, self_install, reduction_by_admin, rent-place	
+price_usage_type	default, public_institution, re_order, self_install, reduction_by_admin, rent_place	
 
 panel_type_enums	manual, semi_auto, bulletin_board, cultural_board, lower_panel, multi_panel, led, no_lighting, with_lighting, panel, top_fixed, citizen_board	
 
@@ -625,5 +688,12 @@ banner_type_enums	fabric, panel, bulletin_board, top_fixed, cultural_board, semi
 
 period_type	first_half, second_half, full_month	
 
-design_contents_type_enum	list, detail
+design_contents_type_enum	list, detail	
 
+district_status_enum	true, false, maintenance	
+
+section_type_enum	main, banner_display_part, led_display_part, public_design_part, digital_signage_part	
+
+page_type_enum	landing, banner_display, led_display, public_design, digital_signage	
+
+public_design_category_enum	banner_improvement, env_improvement, public_design, ect
