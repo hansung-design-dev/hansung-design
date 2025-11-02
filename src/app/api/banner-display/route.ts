@@ -198,23 +198,13 @@ async function getBannerDisplaysByDistrict(districtName: string) {
     const koreaTime = new Date(now.getTime() + 9 * 60 * 60 * 1000);
     const currentYear = koreaTime.getFullYear();
     const currentMonth = koreaTime.getMonth() + 1;
-    const currentDay = koreaTime.getDate();
 
-    // 현재 날짜에 따라 신청 가능한 기간 계산
-    let targetYear = currentYear;
-    let targetMonth = currentMonth;
-
-    if (currentDay >= 13) {
-      if (currentMonth === 12) {
-        targetYear = currentYear + 1;
-        targetMonth = 1;
-      } else {
-        targetMonth = currentMonth + 1;
-      }
-    }
-
-    const targetYearMonth = `${targetYear}년 ${targetMonth}월`;
-    console.log('🔍 Target year/month for district:', targetYearMonth);
+    // 현재 년도의 현재 월과 다음 월만 조회
+    const targetMonths = [
+      `${currentYear}-${String(currentMonth).padStart(2, '0')}`,
+      `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`,
+    ];
+    console.log('🔍 Target months for district:', targetMonths);
 
     // 먼저 해당 구의 region_gu_id를 찾기
     const { data: regionData, error: regionError } = await supabase
@@ -316,7 +306,7 @@ async function getBannerDisplaysByDistrict(districtName: string) {
           `
           )
           .in('banner_slot_id', bannerSlotIds)
-          .eq('region_gu_display_periods.year_month', targetYearMonth);
+          .in('region_gu_display_periods.year_month', targetMonths);
 
         const result = await slotInventoryQuery;
         slotInventoryData = result.data;
@@ -422,7 +412,7 @@ async function getBannerDisplaysByDistrict(districtName: string) {
     // console.log('🔍 조회 결과:', {
     //   district: districtName,
     //   totalCount: dataWithInventory?.length || 0,
-    //   targetYearMonth,
+    //   targetMonths,
     //   panelTypes:
     //     dataWithInventory?.map((item: BannerDisplayData) => ({
     //       panel_code: item.panel_code,
@@ -792,23 +782,13 @@ async function getAllDistrictsData() {
     const koreaTime = new Date(now.getTime() + 9 * 60 * 60 * 1000);
     const currentYear = koreaTime.getFullYear();
     const currentMonth = koreaTime.getMonth() + 1;
-    const currentDay = koreaTime.getDate();
 
-    // 현재 날짜에 따라 신청 가능한 기간 계산
-    let targetYear = currentYear;
-    let targetMonth = currentMonth;
-
-    if (currentDay >= 13) {
-      if (currentMonth === 12) {
-        targetYear = currentYear + 1;
-        targetMonth = 1;
-      } else {
-        targetMonth = currentMonth + 1;
-      }
-    }
-
-    const targetYearMonth = `${targetYear}년 ${targetMonth}월`;
-    console.log('🔍 Target year/month:', targetYearMonth);
+    // 현재 년도의 현재 월과 다음 월만 조회
+    const targetMonths = [
+      `${currentYear}-${String(currentMonth).padStart(2, '0')}`,
+      `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`,
+    ];
+    console.log('🔍 Target months:', targetMonths);
 
     // 1. region_gu 테이블에서 banner_display가 활성화된 구 목록 가져오기
     // region_gu 테이블이 직접 구 정보를 가지고 있는 구조
@@ -961,7 +941,7 @@ async function getAllDistrictsData() {
           .select('*')
           .eq('region_gu_id', region.id)
           .eq('display_type_id', (await getBannerDisplayTypeId()).id)
-          .eq('year_month', targetYearMonth)
+          .in('year_month', targetMonths)
           .order('period_from', { ascending: true });
 
         let currentPeriodData: {
@@ -1586,25 +1566,15 @@ async function getBannerDisplaysByDistrictWithSlotType(
     const koreaTime = new Date(now.getTime() + 9 * 60 * 60 * 1000);
     const currentYear = koreaTime.getFullYear();
     const currentMonth = koreaTime.getMonth() + 1;
-    const currentDay = koreaTime.getDate();
 
-    // 현재 날짜에 따라 신청 가능한 기간 계산
-    let targetYear = currentYear;
-    let targetMonth = currentMonth;
-
-    if (currentDay >= 13) {
-      if (currentMonth === 12) {
-        targetYear = currentYear + 1;
-        targetMonth = 1;
-      } else {
-        targetMonth = currentMonth + 1;
-      }
-    }
-
-    const targetYearMonth = `${targetYear}년 ${targetMonth}월`;
+    // 현재 년도의 현재 월과 다음 월만 조회
+    const targetMonths = [
+      `${currentYear}-${String(currentMonth).padStart(2, '0')}`,
+      `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`,
+    ];
     console.log(
       `🔍 Target year/month for ${districtName} ${slotType}:`,
-      targetYearMonth
+      targetMonths
     );
 
     // 먼저 해당 구의 region_gu_id를 찾기
@@ -1842,7 +1812,7 @@ async function getBannerDisplaysByDistrictWithSlotType(
           `
           )
           .in('banner_slot_id', bannerSlotIds)
-          .eq('region_gu_display_periods.year_month', targetYearMonth);
+          .in('region_gu_display_periods.year_month', targetMonths);
 
         const result = await slotInventoryQuery;
         slotInventoryData = result.data;
@@ -1899,7 +1869,7 @@ async function getBannerDisplaysByDistrictWithSlotType(
     //   district: districtName,
     //   slotType: slotType,
     //   totalCount: dataWithInventory?.length || 0,
-    //   targetYearMonth,
+    //   targetMonths,
     //   rawData: data,
     //   dataWithInventory: dataWithInventory,
     // });
@@ -1977,10 +1947,10 @@ async function getDistrictDataFromCache(districtName: string) {
     // 기간 정보는 캐시에서 가져오지 않고 API에서 실시간으로 가져오기
     let periodData = null;
     try {
+      const { getBaseUrl } = await import('@/src/lib/getBaseUrl');
+      const baseUrl = getBaseUrl();
       const periodResponse = await fetch(
-        `${
-          process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
-        }/api/display-period?district=${encodeURIComponent(
+        `${baseUrl}/api/display-period?district=${encodeURIComponent(
           districtName
         )}&display_type=banner_display`
       );

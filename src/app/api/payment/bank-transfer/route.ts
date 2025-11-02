@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/src/lib/supabase';
+import { getBaseUrlFromRequest } from '@/src/lib/getBaseUrl';
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,6 +25,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Base URL 동적으로 가져오기
+    const baseUrl = getBaseUrlFromRequest(request);
+
     // 계좌이체 결제 요청 생성 (실제 은행 API 연동 시 사용)
     const bankTransferRequest = {
       amount: amount,
@@ -32,11 +36,9 @@ export async function POST(request: NextRequest) {
       customerName: customerName,
       customerEmail: customerEmail,
       customerPhone: customerPhone,
-      successUrl:
-        successUrl || `${process.env.NEXT_PUBLIC_BASE_URL}/payment/success`,
-      failUrl: failUrl || `${process.env.NEXT_PUBLIC_BASE_URL}/payment/fail`,
-      cancelUrl:
-        cancelUrl || `${process.env.NEXT_PUBLIC_BASE_URL}/payment/cancel`,
+      successUrl: successUrl || `${baseUrl}/payment/success`,
+      failUrl: failUrl || `${baseUrl}/payment/fail`,
+      cancelUrl: cancelUrl || `${baseUrl}/payment/cancel`,
       paymentMethod: 'BANK_TRANSFER',
     };
 
@@ -47,9 +49,7 @@ export async function POST(request: NextRequest) {
     const bankTransferResponse = {
       success: true,
       paymentId: `bank_${Date.now()}`,
-      redirectUrl: `${
-        process.env.NEXT_PUBLIC_BASE_URL
-      }/payment/success?paymentId=bank_${Date.now()}&orderId=${orderId}&amount=${amount}&status=pending_deposit`,
+      redirectUrl: `${baseUrl}/payment/success?paymentId=bank_${Date.now()}&orderId=${orderId}&amount=${amount}&status=pending_deposit`,
       // 계좌이체는 입금확인중 상태로 저장
       status: 'pending_deposit',
     };

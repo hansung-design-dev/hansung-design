@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/src/lib/supabase';
+import { getBaseUrlFromRequest } from '@/src/lib/getBaseUrl';
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,6 +25,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Base URL 동적으로 가져오기
+    const baseUrl = getBaseUrlFromRequest(request);
+
     // 토스페이먼츠 결제 요청 생성 (실제 토스페이먼츠 SDK 연동 시 사용)
     const tossPaymentRequest = {
       amount: amount,
@@ -32,11 +36,9 @@ export async function POST(request: NextRequest) {
       customerName: customerName,
       customerEmail: customerEmail,
       customerPhone: customerPhone,
-      successUrl:
-        successUrl || `${process.env.NEXT_PUBLIC_BASE_URL}/payment/success`,
-      failUrl: failUrl || `${process.env.NEXT_PUBLIC_BASE_URL}/payment/fail`,
-      cancelUrl:
-        cancelUrl || `${process.env.NEXT_PUBLIC_BASE_URL}/payment/cancel`,
+      successUrl: successUrl || `${baseUrl}/payment/success`,
+      failUrl: failUrl || `${baseUrl}/payment/fail`,
+      cancelUrl: cancelUrl || `${baseUrl}/payment/cancel`,
       windowTarget: 'iframe',
       useInternationalCardOnly: false,
       flowMode: 'DEFAULT',
@@ -53,9 +55,7 @@ export async function POST(request: NextRequest) {
       paymentId: `toss_${Date.now()}`,
       redirectUrl:
         successUrl ||
-        `${
-          process.env.NEXT_PUBLIC_BASE_URL
-        }/payment/success?paymentId=toss_${Date.now()}&orderId=${orderId}`,
+        `${baseUrl}/payment/success?paymentId=toss_${Date.now()}&orderId=${orderId}`,
     };
 
     // 결제 정보를 데이터베이스에 저장

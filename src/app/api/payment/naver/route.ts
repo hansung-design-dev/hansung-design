@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/src/lib/supabase';
+import { getBaseUrlFromRequest } from '@/src/lib/getBaseUrl';
 
 // 네이버페이 API 설정
 const NAVER_API_URL = process.env.NAVER_API_URL || 'https://apis.naver.com';
@@ -44,6 +45,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Base URL 동적으로 가져오기
+    const baseUrl = getBaseUrlFromRequest(request);
+
     // 네이버페이 결제 예약 API 호출
     const idempotencyKey = generateIdempotencyKey();
     const paymentReservationUrl = `${NAVER_API_URL}/${NAVER_CHAIN_ID}/naverpay/payments/v2/reserve`;
@@ -54,11 +58,9 @@ export async function POST(request: NextRequest) {
       totalPayAmount: amount,
       taxScopeAmount: amount,
       taxExScopeAmount: 0,
-      returnUrl:
-        successUrl || `${process.env.NEXT_PUBLIC_BASE_URL}/payment/success`,
-      cancelUrl:
-        cancelUrl || `${process.env.NEXT_PUBLIC_BASE_URL}/payment/cancel`,
-      failUrl: failUrl || `${process.env.NEXT_PUBLIC_BASE_URL}/payment/fail`,
+      returnUrl: successUrl || `${baseUrl}/payment/success`,
+      cancelUrl: cancelUrl || `${baseUrl}/payment/cancel`,
+      failUrl: failUrl || `${baseUrl}/payment/fail`,
       productList: [
         {
           categoryType: 'MAIN',
