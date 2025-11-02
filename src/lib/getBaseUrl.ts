@@ -2,7 +2,7 @@
  * Base URL을 동적으로 가져오는 헬퍼 함수
  * - NEXT_PUBLIC_BASE_URL이 설정되어 있으면 우선 사용
  * - Vercel 배포 환경에서는 VERCEL_URL 사용
- * - 서버 사이드에서는 요청 헤더의 origin 사용
+ * - 클라이언트 사이드에서는 window.location 사용
  * - 그 외에는 localhost로 폴백
  */
 
@@ -18,28 +18,12 @@ export function getBaseUrl(): string {
     return `https://${process.env.VERCEL_URL}`;
   }
 
-  // 3. 서버 사이드에서 실행 중인 경우 (Next.js headers 사용)
-  if (typeof window === 'undefined') {
-    try {
-      // Next.js 13+ App Router에서 headers 사용
-      const { headers } = require('next/headers');
-      const headersList = headers();
-      const protocol = headersList.get('x-forwarded-proto') || 'https';
-      const host = headersList.get('host') || headersList.get('x-forwarded-host');
-      
-      if (host) {
-        return `${protocol}://${host}`;
-      }
-    } catch (error) {
-      // headers를 가져올 수 없는 경우 (초기 빌드 등)
-      console.warn('Could not get base URL from headers:', error);
-    }
-  } else {
-    // 4. 클라이언트 사이드에서는 window.location 사용
+  // 3. 클라이언트 사이드에서는 window.location 사용
+  if (typeof window !== 'undefined') {
     return window.location.origin;
   }
 
-  // 5. 기본값: localhost
+  // 4. 기본값: localhost
   return 'http://localhost:3000';
 }
 
