@@ -1362,9 +1362,10 @@ function PaymentPageContent() {
               ? currentUserProfiles
               : currentProfilesFromContext || [];
 
-          // 토스페이먼츠 SDK 동적 로드
-          const { loadTossPayments, ANONYMOUS } = await import(
-            '@tosspayments/tosspayments-sdk'
+          // 토스페이먼츠 통합결제창 SDK 동적 로드
+          // 문서: https://docs.tosspayments.com/guides/v2/payment-window/integration
+          const { loadTossPayments } = await import(
+            '@tosspayments/payment-sdk'
           );
 
           // 토스페이먼츠 클라이언트 키 가져오기
@@ -1410,252 +1411,20 @@ function PaymentPageContent() {
             );
           }
 
-          console.log('🔍 [로컬 디버깅] 토스페이먼츠 SDK 로드 시작...');
+          console.log('🔍 [통합결제창] 토스페이먼츠 SDK 로드 시작...');
           const tossPayments = await loadTossPayments(clientKey);
-          console.log('🔍 [로컬 디버깅] ✅ 토스페이먼츠 SDK 로드 성공');
+          console.log('🔍 [통합결제창] ✅ 토스페이먼츠 SDK 로드 성공');
 
-          const widgets = tossPayments.widgets({
-            customerKey: ANONYMOUS,
-          });
-
-          // ⚠️ 중요: 위젯 초기화 시 orderId를 미리 생성 (위젯 내부 버튼 클릭 대비)
-          // 토스페이먼츠 요구사항: 영문, 숫자, 언더스코어, 하이픈만 허용
-          const timestamp = Date.now();
-          const randomStr = Math.random().toString(36).substring(2, 11);
-          const tempOrderId = `temp_${timestamp}_${randomStr}`;
-
-          console.log('🔍 [토스 위젯 초기화] orderId 미리 생성:', {
-            tempOrderId,
-            timestamp,
-            randomStr,
-          });
-
-          // orderId를 전역 변수나 DOM에 저장하여 위젯 내부 버튼이 접근할 수 있도록 함
-          if (typeof window !== 'undefined') {
-            (
-              window as unknown as { currentTossOrderId?: string }
-            ).currentTossOrderId = tempOrderId;
-          }
-
-          // 결제 금액 설정
-          await widgets.setAmount({
-            currency: 'KRW',
-            value: tossWidgetData.totalPrice,
-          });
-
-          // 위젯 렌더링
-          await Promise.all([
-            widgets.renderPaymentMethods({
-              selector: '#toss-payment-methods',
-              variantKey: 'DEFAULT',
-            }),
-            widgets.renderAgreement({
-              selector: '#toss-agreement',
-              variantKey: 'AGREEMENT',
-            }),
-          ]);
-
-          // 🔍 디버깅: 위젯 내부 버튼 클릭 및 requestPayment 호출 감지
-          // 위젯이 자동으로 생성하는 결제 버튼 클릭 시 어떤 값이 전달되는지 확인
-          const widgetContainer = document.getElementById(
-            'toss-payment-methods'
-          );
-
-          // 위젯의 원본 requestPayment를 감시 (디버깅용)
-          const originalRequestPayment = widgets.requestPayment.bind(widgets);
-          (
-            widgets as unknown as {
-              requestPayment: (params: {
-                orderId?: string;
-                orderName?: string;
-                successUrl?: string;
-                failUrl?: string;
-                customerEmail?: string;
-                customerName?: string;
-                customerMobilePhone?: string;
-              }) => Promise<unknown>;
-            }
-          ).requestPayment = async (params) => {
-            // 🔍 디버깅: requestPayment 호출 시 파라미터 로깅
-            console.log('🔍 [토스 위젯] requestPayment 호출됨:', {
-              params: {
-                orderId: params.orderId || '(없음)',
-                orderName: params.orderName,
-                successUrl: params.successUrl,
-                failUrl: params.failUrl,
-                customerEmail: params.customerEmail,
-                customerName: params.customerName,
-                customerMobilePhone: params.customerMobilePhone,
-              },
-              hasOrderId: !!params.orderId,
-              orderIdType: typeof params.orderId,
-              orderIdLength: params.orderId?.length || 0,
-              orderIdStartsWithTemp:
-                params.orderId?.startsWith('temp_') || false,
-              storedOrderId:
-                typeof window !== 'undefined'
-                  ? (window as unknown as { currentTossOrderId?: string })
-                      .currentTossOrderId || '(없음)'
-                  : '(window 없음)',
-              widgetInitOrderId: tempOrderId,
-              timestamp: new Date().toISOString(),
-              stackTrace: new Error().stack,
-            });
-
-            // orderId가 없거나 잘못된 경우 경고
-            if (!params.orderId) {
-              console.error(
-                '🔍 [토스 위젯] ❌ orderId가 전달되지 않았습니다!',
-                {
-                  params,
-                  storedOrderId:
-                    typeof window !== 'undefined'
-                      ? (window as unknown as { currentTossOrderId?: string })
-                          .currentTossOrderId
-                      : null,
-                  widgetInitOrderId: tempOrderId,
-                }
-              );
-            } else if (!params.orderId.startsWith('temp_')) {
-              console.warn(
-                '🔍 [토스 위젯] ⚠️ orderId 형식이 예상과 다릅니다:',
-                {
-                  receivedOrderId: params.orderId,
-                  expectedFormat: 'temp_*',
-                  storedOrderId:
-                    typeof window !== 'undefined'
-                      ? (window as unknown as { currentTossOrderId?: string })
-                          .currentTossOrderId
-                      : null,
-                }
-              );
-            }
-
-            // 원본 requestPayment 호출 (가로채지 않고 그대로 전달)
-            try {
-              const result = await originalRequestPayment(
-                params as {
-                  orderId: string;
-                  orderName: string;
-                  successUrl: string;
-                  failUrl: string;
-                  customerEmail: string;
-                  customerName: string;
-                  customerMobilePhone: string;
-                }
-              );
-              console.log('🔍 [토스 위젯] requestPayment 성공:', {
-                orderId: params.orderId,
-                result,
-              });
-              return result;
-            } catch (error) {
-              console.error('🔍 [토스 위젯] ❌ requestPayment 실패:', {
-                orderId: params.orderId,
-                error,
-                errorMessage:
-                  error instanceof Error ? error.message : String(error),
-              });
-              throw error;
-            }
-          };
-
-          if (widgetContainer) {
-            // 위젯 내부의 모든 버튼에 클릭 이벤트 리스너 추가 (디버깅용)
-            const observeWidgetButtons = () => {
-              const buttons = widgetContainer.querySelectorAll('button');
-              console.log('🔍 [위젯 내부 버튼] 버튼 개수:', buttons.length);
-
-              buttons.forEach((button, index) => {
-                if (!button.hasAttribute('data-toss-listener-added')) {
-                  button.setAttribute('data-toss-listener-added', 'true');
-                  button.addEventListener('click', (event) => {
-                    const storedOrderId =
-                      typeof window !== 'undefined'
-                        ? (window as unknown as { currentTossOrderId?: string })
-                            .currentTossOrderId
-                        : null;
-
-                    console.log('🔍 [위젯 내부 버튼 클릭]', {
-                      buttonIndex: index,
-                      buttonText: button.textContent?.trim() || '(텍스트 없음)',
-                      buttonId: button.id || '(id 없음)',
-                      buttonClass: button.className || '(class 없음)',
-                      eventType: event.type,
-                      eventTarget: event.target,
-                      currentOrderId: tempOrderId,
-                      storedOrderId: storedOrderId || '(없음)',
-                      hasStoredOrderId: !!storedOrderId,
-                      timestamp: new Date().toISOString(),
-                      buttonHtml: button.outerHTML.substring(0, 200), // 처음 200자만
-                    });
-
-                    // orderId 상태 확인
-                    if (!storedOrderId) {
-                      console.warn(
-                        '🔍 [위젯 내부 버튼] ⚠️ 저장된 orderId가 없습니다.',
-                        {
-                          widgetInitOrderId: tempOrderId,
-                          note: '위젯이 requestPayment를 호출할 때 orderId가 없을 수 있습니다.',
-                        }
-                      );
-                    } else {
-                      console.log(
-                        '🔍 [위젯 내부 버튼] ✅ 저장된 orderId 확인:',
-                        storedOrderId
-                      );
-                    }
-
-                    // 버튼 클릭 후 잠시 후 requestPayment가 호출될 것을 예상
-                    setTimeout(() => {
-                      console.log('🔍 [위젯 내부 버튼] 클릭 후 상태 확인:', {
-                        storedOrderId:
-                          typeof window !== 'undefined'
-                            ? (
-                                window as unknown as {
-                                  currentTossOrderId?: string;
-                                }
-                              ).currentTossOrderId
-                            : null,
-                        note: 'requestPayment가 호출되었는지 위의 로그를 확인하세요.',
-                      });
-                    }, 100);
-                  });
-                }
-              });
-            };
-
-            // MutationObserver로 위젯이 동적으로 추가되는 버튼 감지
-            const observer = new MutationObserver((mutations) => {
-              console.log('🔍 [위젯 DOM 변경] 새로운 요소가 추가되었습니다:', {
-                mutationsCount: mutations.length,
-                timestamp: new Date().toISOString(),
-              });
-              observeWidgetButtons();
-            });
-            observer.observe(widgetContainer, {
-              childList: true,
-              subtree: true,
-            });
-
-            // 초기 버튼 확인 (여러 시점에 확인)
-            console.log('🔍 [위젯 초기화] 버튼 감지 시작...');
-            setTimeout(() => {
-              console.log('🔍 [위젯 초기화] 100ms 후 버튼 확인');
-              observeWidgetButtons();
-            }, 100);
-            setTimeout(() => {
-              console.log('🔍 [위젯 초기화] 500ms 후 버튼 확인');
-              observeWidgetButtons();
-            }, 500);
-            setTimeout(() => {
-              console.log('🔍 [위젯 초기화] 1000ms 후 버튼 확인');
-              observeWidgetButtons();
-            }, 1000);
-            setTimeout(() => {
-              console.log('🔍 [위젯 초기화] 2000ms 후 버튼 확인');
-              observeWidgetButtons();
-            }, 2000);
+          // 통합결제창 방식: 위젯 렌더링 없이 바로 결제 버튼만 표시
+          // 버튼 클릭 시 tossPayments.requestPayment()로 결제창 직접 열기
+          const container = document.getElementById('toss-payment-methods');
+          if (container) {
+            container.innerHTML = `
+              <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div class="text-blue-800 font-medium mb-2">통합결제창 방식</div>
+                <div class="text-blue-600 text-sm">결제하기 버튼을 클릭하면 토스페이먼츠 통합결제창이 열립니다.</div>
+              </div>
+            `;
           }
 
           // 결제 요청 버튼 이벤트 리스너
@@ -1666,14 +1435,13 @@ function PaymentPageContent() {
 
           paymentButton.addEventListener('click', async () => {
             try {
-              console.log('🔍 [우리 버튼 클릭] 결제 버튼 클릭됨:', {
+              console.log('🔍 [통합결제창] 결제 버튼 클릭됨:', {
                 timestamp: new Date().toISOString(),
                 storedOrderId:
                   typeof window !== 'undefined'
                     ? (window as unknown as { currentTossOrderId?: string })
                         .currentTossOrderId || '(없음)'
                     : '(window 없음)',
-                widgetInitOrderId: tempOrderId,
                 hasStoredOrderId:
                   typeof window !== 'undefined' &&
                   !!(window as unknown as { currentTossOrderId?: string })
@@ -2035,13 +1803,11 @@ function PaymentPageContent() {
                 return;
               }
 
-              // 위젯이 준비되었는지 확인
-              if (!widgets) {
-                console.error(
-                  '🔍 [결제 페이지] ❌ 토스 위젯이 초기화되지 않음'
-                );
+              // 통합결제창 SDK가 준비되었는지 확인
+              if (!tossPayments) {
+                console.error('🔍 [결제 페이지] ❌ 토스 SDK가 초기화되지 않음');
                 alert(
-                  '결제 위젯이 아직 준비되지 않았습니다. 잠시 후 다시 시도해주세요.'
+                  '결제 SDK가 아직 준비되지 않았습니다. 잠시 후 다시 시도해주세요.'
                 );
                 paymentButton.disabled = false;
                 paymentButton.textContent = '결제하기';
@@ -2099,14 +1865,30 @@ function PaymentPageContent() {
                 return;
               }
 
-              console.log('🔍 [결제 페이지] 결제 요청 시작:', {
+              console.log('🔍 [통합결제창] 결제 요청 시작:', {
                 orderId: paymentParams.orderId,
                 orderName: paymentParams.orderName,
-                hasWidgets: !!widgets,
+                amount: tossWidgetData.totalPrice,
+                hasTossPayments: !!tossPayments,
+                paymentMethod: 'CARD',
               });
 
-              // 임시 orderId로 토스 위젯 호출
-              await widgets.requestPayment(paymentParams);
+              // 통합결제창 방식: tossPayments.requestPayment() 직접 호출
+              // 문서: https://docs.tosspayments.com/guides/v2/payment-window/integration
+              await tossPayments.requestPayment('CARD', {
+                amount: tossWidgetData.totalPrice,
+                orderId: paymentParams.orderId,
+                orderName: paymentParams.orderName,
+                customerName: paymentParams.customerName,
+                customerEmail: paymentParams.customerEmail,
+                customerMobilePhone: paymentParams.customerMobilePhone,
+                successUrl: paymentParams.successUrl,
+                failUrl: paymentParams.failUrl,
+              });
+
+              console.log(
+                '🔍 [통합결제창] ✅ 결제창 열기 요청 완료 (리다이렉트 예상)'
+              );
             } catch (err) {
               console.error('🔍 [결제 페이지] ❌ 결제 요청 실패:', err);
               alert('결제 요청 중 오류가 발생했습니다.');
@@ -2765,12 +2547,8 @@ function PaymentPageContent() {
 
             {/* 토스 위젯이 렌더링될 영역 */}
             <div className="space-y-4">
-              <div id="toss-payment-methods" className="min-h-[200px]">
-                {/* 토스 위젯이 여기에 렌더링됩니다 */}
-              </div>
-
-              <div id="toss-agreement" className="min-h-[100px]">
-                {/* 토스 위젯 약관이 여기에 렌더링됩니다 */}
+              <div id="toss-payment-methods" className="min-h-[100px]">
+                {/* 통합결제창 안내 메시지가 여기에 표시됩니다 */}
               </div>
 
               <div id="toss-payment-button" className="mt-4">
