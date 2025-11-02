@@ -16,7 +16,12 @@ async function createOrderAfterPayment(
     draftDeliveryMethod: string;
     projectName: string;
   },
-  paymentMethodId: string
+  paymentMethodId: string,
+  paymentInfo?: {
+    transactionId?: string;
+    paymentProvider?: string;
+    amount?: number;
+  }
 ) {
   const { items, userAuthId, userProfileId, draftDeliveryMethod, projectName } =
     orderData;
@@ -76,18 +81,67 @@ async function createOrderAfterPayment(
   console.log('🔍 [주문 생성] ✅ orders 생성 성공:', order.id);
 
   // 2. payments 테이블에 결제 정보 생성
-  const { error: paymentError } = await supabase.from('payments').insert({
+  const paymentInsertData: {
+    order_id: string;
+    payment_method_id: string;
+    amount: number;
+    payment_status: string;
+    payment_date: string;
+    admin_approval_status: string;
+    transaction_id?: string;
+    payment_provider?: string;
+  } = {
     order_id: order.id,
     payment_method_id: paymentMethodId,
-    amount: totalPrice,
+    amount: paymentInfo?.amount || totalPrice,
     payment_status: 'completed',
     payment_date: new Date().toISOString(),
     admin_approval_status: 'approved',
+  };
+
+  // transaction_id와 payment_provider가 있으면 추가
+  if (paymentInfo?.transactionId) {
+    paymentInsertData.transaction_id = paymentInfo.transactionId;
+  }
+  if (paymentInfo?.paymentProvider) {
+    paymentInsertData.payment_provider = paymentInfo.paymentProvider;
+  }
+
+  console.log('🔍 [주문 생성] payments insert 시작:', {
+    order_id: paymentInsertData.order_id,
+    payment_method_id: paymentInsertData.payment_method_id,
+    amount: paymentInsertData.amount,
+    hasTransactionId: !!paymentInsertData.transaction_id,
+    hasPaymentProvider: !!paymentInsertData.payment_provider,
   });
 
+  const { data: paymentData, error: paymentError } = await supabase
+    .from('payments')
+    .insert(paymentInsertData)
+    .select('id, order_id, payment_status')
+    .single();
+
   if (paymentError) {
-    console.error('🔍 [주문 생성] ⚠️ payments 생성 실패:', paymentError);
+    console.error('🔍 [주문 생성] ❌ payments 생성 실패:', {
+      error: paymentError,
+      errorMessage: paymentError.message,
+      errorDetails: paymentError.details,
+      errorHint: paymentError.hint,
+      insertData: paymentInsertData,
+    });
+    throw new Error(`결제 정보 저장 실패: ${paymentError.message}`);
   }
+
+  if (!paymentData) {
+    console.error('🔍 [주문 생성] ❌ payments 생성 결과가 없음');
+    throw new Error('결제 정보가 생성되지 않았습니다.');
+  }
+
+  console.log('🔍 [주문 생성] ✅ payments 생성 성공:', {
+    paymentId: paymentData.id,
+    orderId: paymentData.order_id,
+    paymentStatus: paymentData.payment_status,
+  });
 
   // 3. order_details 및 panel_slot_usage 생성
   const orderDetails = [];
@@ -266,7 +320,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 토스페이먼츠 결제 확인
+    // ⚠️ 중요: 토스페이먼츠 결제 승인 API 호출 (이 호출이 실제로 카드에서 돈을 빠져나가게 함)
+    console.log('🔍 [결제 확인 API] 토스페이먼츠 결제 승인 API 호출 시작...', {
+      paymentKey: paymentKey ? `${paymentKey.substring(0, 30)}...` : '(없음)',
+      orderId,
+      amount,
+      timestamp: new Date().toISOString(),
+    });
+
     const basicToken = Buffer.from(`${secretKey}:`).toString('base64');
     const confirmResponse = await fetch(
       'https://api.tosspayments.com/v1/payments/confirm',
@@ -286,10 +347,35 @@ export async function POST(request: NextRequest) {
 
     const confirmData = await confirmResponse.json();
 
+    // 🔍 디버깅: 토스페이먼츠 응답 상세 로깅
+    console.log('🔍 [결제 확인 API] 토스페이먼츠 결제 승인 API 응답:', {
+      ok: confirmResponse.ok,
+      status: confirmResponse.status,
+      statusText: confirmResponse.statusText,
+      confirmData: confirmData ? {
+        code: confirmData.code || '(없음)',
+        message: confirmData.message || '(없음)',
+        status: confirmData.status || '(없음)',
+        totalAmount: confirmData.totalAmount || '(없음)',
+        method: confirmData.method || '(없음)',
+        approvedAt: confirmData.approvedAt || '(없음)',
+        requestedAt: confirmData.requestedAt || '(없음)',
+        orderId: confirmData.orderId || '(없음)',
+        paymentKey: confirmData.paymentKey ? `${confirmData.paymentKey.substring(0, 30)}...` : '(없음)',
+        allKeys: Object.keys(confirmData),
+      } : null,
+      fullResponse: confirmData,
+    });
+
+    // HTTP 응답 상태 확인
     if (!confirmResponse.ok) {
       console.error(
-        '🔍 [결제 확인 API] ❌ 토스페이먼츠 결제 승인 실패:',
-        confirmData
+        '🔍 [결제 확인 API] ❌ 토스페이먼츠 결제 승인 실패 (HTTP 에러):',
+        {
+          status: confirmResponse.status,
+          statusText: confirmResponse.statusText,
+          error: confirmData,
+        }
       );
       return NextResponse.json(
         { success: false, error: confirmData?.message || '결제 승인 실패' },
@@ -297,7 +383,71 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('🔍 [결제 확인 API] ✅ 토스페이먼츠 결제 승인 성공');
+    // ⚠️ 중요: 토스페이먼츠 응답에서 실제 결제 완료 상태 확인
+    // 토스페이먼츠 결제 승인 API 호출 자체가 실제 결제를 완료시키지만,
+    // 응답 코드와 상태를 확인하여 안전하게 처리
+    const responseCode = confirmData?.code;
+    const paymentStatus = confirmData?.status;
+    const hasError = confirmData?.message && !responseCode?.includes('SUCCESS');
+    
+    // 결제 승인 API가 성공적으로 호출되었는지 확인
+    // HTTP 200 응답이면 결제 승인이 완료된 것이지만, 에러 메시지가 있으면 확인 필요
+    if (hasError || (responseCode && !responseCode.includes('SUCCESS'))) {
+      console.error('🔍 [결제 확인 API] ❌ 토스페이먼츠 응답에 에러:', {
+        code: responseCode,
+        message: confirmData?.message,
+        status: paymentStatus,
+        note: '결제 승인이 실패했을 수 있습니다. 카드에서 돈이 빠져나가지 않았습니다.',
+        fullResponse: confirmData,
+      });
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: confirmData?.message || `결제 승인 실패. 코드: ${responseCode || '알 수 없음'}`,
+          code: responseCode,
+          status: paymentStatus,
+          confirmData,
+        },
+        { status: 400 }
+      );
+    }
+
+    // 결제 승인 성공 확인
+    // HTTP 200 응답이면 결제 승인이 완료된 것
+    // 단, status가 'CANCELED'나 'FAILED'면 제외
+    const isCancelledOrFailed = 
+      paymentStatus === 'CANCELED' || 
+      paymentStatus === 'FAILED' ||
+      paymentStatus === 'PARTIAL_CANCELED';
+
+    if (isCancelledOrFailed) {
+      console.error('🔍 [결제 확인 API] ❌ 결제가 취소되었거나 실패:', {
+        paymentStatus,
+        code: responseCode,
+        message: confirmData?.message,
+        note: '결제가 취소되었거나 실패했습니다. 카드에서 돈이 빠져나가지 않았습니다.',
+        fullResponse: confirmData,
+      });
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: `결제가 취소되었거나 실패했습니다. 상태: ${paymentStatus}`,
+          paymentStatus,
+          code: responseCode,
+          confirmData,
+        },
+        { status: 400 }
+      );
+    }
+
+    console.log('🔍 [결제 확인 API] ✅ 토스페이먼츠 결제 승인 성공 (실제 결제 완료):', {
+      paymentStatus,
+      amount: confirmData?.totalAmount || amount,
+      method: confirmData?.method,
+      approvedAt: confirmData?.approvedAt,
+      orderId: confirmData?.orderId,
+      note: '이 시점에서 실제로 카드에서 돈이 빠져나갔습니다.',
+    });
 
     // payment_methods 테이블에서 카드 결제 수단 ID 찾기
     const { error: paymentMethodError, data: paymentMethodData } =
@@ -338,26 +488,20 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // 실제 주문 생성 (orders, order_details, design_drafts, panel_slot_usage)
+      // 실제 주문 생성 (orders, order_details, design_drafts, panel_slot_usage, payments)
       try {
         const orderResult = await createOrderAfterPayment(
           orderData,
-          paymentMethodData.id
+          paymentMethodData.id,
+          {
+            transactionId: paymentKey,
+            paymentProvider: 'toss',
+            amount: amount,
+          }
         );
 
         console.log('🔍 [결제 확인 API] ✅ 주문 생성 성공:', orderResult);
-
-        // payments 테이블에 결제 정보 저장
-        await supabase.from('payments').insert({
-          order_id: orderResult.orderId,
-          payment_method_id: paymentMethodData.id,
-          amount: amount,
-          payment_status: 'completed',
-          transaction_id: paymentKey,
-          payment_provider: 'toss',
-          payment_date: new Date().toISOString(),
-          admin_approval_status: 'approved',
-        });
+        console.log('🔍 [결제 확인 API] ✅ payments 테이블에 데이터 저장 완료 (createOrderAfterPayment 내부에서 처리)');
 
         return NextResponse.json({
           success: true,
@@ -413,19 +557,47 @@ export async function POST(request: NextRequest) {
     }
 
     // payments 테이블에 결제 정보 저장/업데이트
-    await supabase.from('payments').upsert(
-      {
-        order_id: actualOrderId,
-        payment_method_id: paymentMethodData.id,
-        amount: amount,
-        payment_status: 'completed',
-        transaction_id: paymentKey,
-        payment_provider: 'toss',
-        payment_date: new Date().toISOString(),
-        admin_approval_status: 'approved',
-      },
-      { onConflict: 'order_id' }
-    );
+    console.log('🔍 [결제 확인 API] 기존 주문에 대한 payments 저장 시작:', {
+      orderId: actualOrderId,
+      paymentKey: paymentKey.substring(0, 20) + '...',
+      amount,
+    });
+
+    const { data: upsertedPayment, error: paymentUpsertError } = await supabase
+      .from('payments')
+      .upsert(
+        {
+          order_id: actualOrderId,
+          payment_method_id: paymentMethodData.id,
+          amount: amount,
+          payment_status: 'completed',
+          transaction_id: paymentKey,
+          payment_provider: 'toss',
+          payment_date: new Date().toISOString(),
+          admin_approval_status: 'approved',
+        },
+        { onConflict: 'order_id' }
+      )
+      .select('id, order_id, payment_status')
+      .single();
+
+    if (paymentUpsertError) {
+      console.error('🔍 [결제 확인 API] ❌ payments upsert 실패:', {
+        error: paymentUpsertError,
+        errorMessage: paymentUpsertError.message,
+        errorDetails: paymentUpsertError.details,
+        orderId: actualOrderId,
+      });
+      // payments 저장 실패는 치명적이지 않을 수 있으므로 경고만 표시
+    } else if (upsertedPayment) {
+      console.log('🔍 [결제 확인 API] ✅ payments 저장 성공:', {
+        paymentId: upsertedPayment.id,
+        orderId: upsertedPayment.order_id,
+        paymentStatus: upsertedPayment.payment_status,
+      });
+    } else {
+      console.warn('🔍 [결제 확인 API] ⚠️ payments upsert 결과가 없음');
+    }
 
     // orders 테이블의 payment_status 업데이트
     await supabase
