@@ -82,12 +82,14 @@ interface DigitalSignageDetailClientProps {
   };
   isDigitalSignage?: boolean;
   isDigitalBillboard?: boolean;
+  isShoppingMall?: boolean; // 쇼핑몰(digital_products) 탭 여부
 }
 
 export default function DigitalSignageDetailClient({
   productData,
   isDigitalSignage = false,
   isDigitalBillboard = false,
+  isShoppingMall = false,
 }: DigitalSignageDetailClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -165,8 +167,10 @@ export default function DigitalSignageDetailClient({
     );
   }
 
-  // 디지털전광판 전용 레이아웃 (제목과 이미지만 표시)
-  if (isDigitalBillboard) {
+  // 디지털전광판 또는 디지털 사이니지 전용 레이아웃 (제목과 이미지만 표시)
+  // digital_media_billboards와 digital_media_signages 테이블 아이템은 모두 간단한 UI 사용
+  // 단, 쇼핑몰(digital_products) 탭 아이템은 제외 (상세 정보 UI 사용)
+  if ((isDigitalBillboard || isDigitalSignage) && !isShoppingMall) {
     return (
       <main className="min-h-screen bg-white">
         {/* Header Section */}
@@ -224,7 +228,7 @@ export default function DigitalSignageDetailClient({
     );
   }
 
-  // 디지털사이니지 전용 레이아웃
+  // 쇼핑몰(digital_products) 전용 레이아웃 - 상세한 제품 정보 UI
   return (
     <main className="min-h-screen bg-white">
       {/* Header Section */}

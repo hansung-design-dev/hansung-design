@@ -203,7 +203,8 @@ async function getProductByCode(productType: string, productCode: string) {
         tableName = 'digital_media_billboards';
         break;
       case 'digital-signage':
-        tableName = 'digital_products';
+        // digital-signage는 digital_products 또는 digital_media_signages 테이블에서 조회 가능
+        // 먼저 digital_media_signages에서 시도, 없으면 digital_products에서 시도
         break;
       default:
         throw new Error('Invalid product type');
@@ -220,8 +221,8 @@ async function getProductByCode(productType: string, productCode: string) {
         codeColumn = 'project_code';
         break;
       case 'digital-signage':
-        // digital_products 테이블은 product_group_code를 사용
-        codeColumn = 'product_group_code';
+        // digital_media_signages는 district_code를 사용, digital_products는 product_group_code를 사용
+        codeColumn = 'district_code'; // 우선 district_code로 시도
         break;
     }
 
@@ -262,12 +263,25 @@ async function getProductByCode(productType: string, productCode: string) {
       return data;
     }
 
-    // digital-signage 타입인 경우 product_group_code로 필터링
+    // digital-signage 타입인 경우 digital_media_signages 또는 digital_products에서 조회
     if (productType === 'digital-signage') {
-      const { data, error } = await supabase
-        .from(tableName)
+      // 먼저 digital_media_signages 테이블에서 district_code로 조회 시도
+      const { data: signageData, error: signageError } = await supabase
+        .from('digital_media_signages')
         .select('*')
-        .eq(codeColumn, productCode)
+        .eq('district_code', productCode)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (!signageError && signageData) {
+        return signageData;
+      }
+
+      // digital_media_signages에서 찾지 못한 경우 digital_products 테이블에서 product_group_code로 조회
+      const { data, error } = await supabase
+        .from('digital_products')
+        .select('*')
+        .eq('product_group_code', productCode)
         .eq('is_active', true)
         .order('display_order', { ascending: true });
 
