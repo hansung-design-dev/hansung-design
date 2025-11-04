@@ -49,13 +49,6 @@ export async function GET(
       .select(
         `
         *,
-        user_auth!orders_auth_user_id_fkey (
-          id,
-          username,
-          email,
-          name,
-          phone
-        ),
         user_profiles!orders_user_profile_id_fkey (
           id,
           profile_title,
@@ -94,13 +87,11 @@ export async function GET(
       .select(
         `
         *,
-        panels!order_details_panel_id_fkey (
+        panels!order_details_panel_info_id_fkey (
           id,
           nickname,
           address,
           photo_url,
-          location_url,
-          map_url,
           latitude,
           longitude,
           panel_code,
@@ -138,7 +129,15 @@ export async function GET(
             banner_type,
             price_unit,
             panel_slot_status,
-            notes
+            notes,
+            banner_slot_price_policy!banner_slot_price_policy_banner_slot_id_fkey (
+              id,
+              price_usage_type,
+              tax_price,
+              road_usage_fee,
+              advertising_fee,
+              total_price
+            )
           )
         )
       `
@@ -222,9 +221,9 @@ export async function GET(
     const calculateOrderPrice = () => {
       if (!orderDetails || orderDetails.length === 0) return null;
 
-      // panel_slot_snapshot에서 가격 정보 가져오기
+      // panel_slot_snapshot에서 가격 정보 가져오기 (우선순위 1)
       const snapshot = order.panel_slot_snapshot;
-      if (snapshot) {
+      if (snapshot && snapshot.policy_total_price) {
         return {
           totalPrice: Number(snapshot.policy_total_price || 0),
           totalTaxPrice: Number(snapshot.policy_tax_price || 0),
@@ -235,23 +234,68 @@ export async function GET(
         };
       }
 
-      // fallback: orderDetails에서 계산
+      // fallback: orderDetails에서 banner_slot_price_policy로 계산
       let totalPrice = 0;
+      let totalTaxPrice = 0;
+      let totalAdvertisingFee = 0;
+      let totalRoadUsageFee = 0;
+
+      // 사용자 타입 확인 (공공기관 여부)
+      const isPublicInstitution =
+        order.user_profiles?.is_public_institution || false;
+      const preferredPriceUsageType = isPublicInstitution
+        ? 'public_institution'
+        : 'default';
+
       orderDetails.forEach((detail) => {
-        if (detail.panel_slot_usage) {
-          if (detail.panel_slot_usage.unit_price) {
-            totalPrice +=
-              Number(detail.panel_slot_usage.unit_price) *
-              (detail.slot_order_quantity || 1);
+        const quantity = detail.slot_order_quantity || 1;
+
+        // banner_slot_price_policy에서 가격 정보 가져오기
+        if (
+          detail.panel_slot_usage?.banner_slots?.banner_slot_price_policy &&
+          detail.panel_slot_usage.banner_slots.banner_slot_price_policy.length >
+            0
+        ) {
+          // 사용자 타입에 따라 적절한 정책 선택
+          const policies =
+            detail.panel_slot_usage.banner_slots.banner_slot_price_policy;
+
+          // 우선순위: 사용자 타입에 맞는 정책 > default > 첫 번째 정책
+          let selectedPolicy = policies.find(
+            (p: { price_usage_type: string }) =>
+              p.price_usage_type === preferredPriceUsageType
+          );
+
+          if (!selectedPolicy) {
+            selectedPolicy = policies.find(
+              (p: { price_usage_type: string }) =>
+                p.price_usage_type === 'default'
+            );
           }
+
+          if (!selectedPolicy) {
+            selectedPolicy = policies[0];
+          }
+
+          if (selectedPolicy) {
+            totalPrice += Number(selectedPolicy.total_price || 0) * quantity;
+            totalTaxPrice += Number(selectedPolicy.tax_price || 0) * quantity;
+            totalAdvertisingFee +=
+              Number(selectedPolicy.advertising_fee || 0) * quantity;
+            totalRoadUsageFee +=
+              Number(selectedPolicy.road_usage_fee || 0) * quantity;
+          }
+        } else if (detail.panel_slot_usage?.unit_price) {
+          // banner_slot_price_policy가 없으면 unit_price 사용 (하위 호환성)
+          totalPrice += Number(detail.panel_slot_usage.unit_price) * quantity;
         }
       });
 
       return {
         totalPrice,
-        totalTaxPrice: 0,
-        totalAdvertisingFee: 0,
-        totalRoadUsageFee: 0,
+        totalTaxPrice,
+        totalAdvertisingFee,
+        totalRoadUsageFee,
         totalAdministrativeFee: 0,
         finalPrice: totalPrice,
       };
@@ -268,9 +312,19 @@ export async function GET(
       return '프로젝트명 없음';
     };
 
+    // user_auth 정보 별도 조회 (외래 키 관계 문제 해결)
+    let userAuth = null;
+    if (order.user_auth_id) {
+      const { data: authData } = await supabase
+        .from('user_auth')
+        .select('id, username, email, name, phone')
+        .eq('id', order.user_auth_id)
+        .single();
+      userAuth = authData;
+    }
+
     // 주문자 정보 정리
     const getCustomerData = () => {
-      const userAuth = order.user_auth;
       const userProfile = order.user_profiles;
 
       return {
@@ -285,18 +339,41 @@ export async function GET(
       };
     };
 
-    // 응답 데이터 구성
+    // 응답 데이터 구성 (프론트엔드 타입에 맞춤)
+    const priceInfo = calculateOrderPrice();
+    const customerInfo = getCustomerData();
+
+    console.log('🔍 [주문 상세 API] 계산된 정보:', {
+      priceInfo,
+      customerInfo,
+      orderNumber: order.order_number,
+      orderDetailsCount: orderDetails?.length || 0,
+      paymentsCount: payments?.length || 0,
+    });
+
     const responseData = {
       order: {
         ...order,
         projectName: getProjectName(),
-        customerData: getCustomerData(),
-        priceData: calculateOrderPrice(),
       },
-      orderDetails,
-      designDrafts,
-      payments,
+      orderDetails: orderDetails || [],
+      payments: payments || [],
+      customerInfo: {
+        name: customerInfo.name || '',
+        phone: customerInfo.phone || '',
+        company: customerInfo.company || '',
+      },
+      priceInfo: priceInfo || {
+        totalPrice: 0,
+        totalTaxPrice: 0,
+        totalAdvertisingFee: 0,
+        totalRoadUsageFee: 0,
+        totalAdministrativeFee: 0,
+        finalPrice: 0,
+      },
     };
+
+    console.log('🔍 [주문 상세 API] 최종 응답 데이터:', responseData);
 
     return NextResponse.json({
       success: true,

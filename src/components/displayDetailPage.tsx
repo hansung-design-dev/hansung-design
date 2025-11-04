@@ -1207,6 +1207,7 @@ export default function DisplayDetailPage({
                 src={item.photo_url || '/images/no_image.png'}
                 alt={item.name}
                 fill
+                sizes="(max-width: 768px) 50vw, 33vw"
                 className={`md:object-cover sm:object-cover `}
               />
             </div>
@@ -1243,7 +1244,7 @@ export default function DisplayDetailPage({
         ? filteredBillboards.find((b) => b.id === selectedIds[0])
         : null;
 
-    // 선택된 아이템만 지도에 표시 (단일 선택)
+    // 선택된 아이템이 있으면 그것만 표시, 없으면 모든 아이템 표시
     const mapMarkers =
       selectedItem && selectedItem.lat != null && selectedItem.lng != null
         ? [
@@ -1256,7 +1257,16 @@ export default function DisplayDetailPage({
               isSelected: true,
             },
           ]
-        : [];
+        : filteredBillboards
+            .filter((item) => item.lat != null && item.lng != null)
+            .map((item) => ({
+              id: item.id,
+              title: item.name,
+              lat: item.lat!,
+              lng: item.lng!,
+              type: item.type,
+              isSelected: selectedIds.includes(item.id),
+            }));
 
     // 지도 중심점: 선택된 아이템이 있으면 해당 위치, 없으면 모든 아이템의 중심
     const mapCenter =
@@ -1273,10 +1283,24 @@ export default function DisplayDetailPage({
           }
         : { lat: 37.5665, lng: 126.978 };
 
-    // 디버깅 로그 주석 처리
-    // console.log('🔍 선택된 아이템:', selectedItem);
-    // console.log('🔍 지도 마커 데이터:', mapMarkers);
-    // console.log('🔍 지도 중심점:', mapCenter);
+    // 디버깅 로그
+    console.log('🔍 renderLocationView:', {
+      selectedItem,
+      mapMarkersCount: mapMarkers.length,
+      mapCenter,
+      filteredBillboardsCount: filteredBillboards.length,
+      selectedIdsCount: selectedIds.length,
+      mapMarkers: mapMarkers.slice(0, 3), // 처음 3개만 로그
+      filteredBillboardsWithCoords: filteredBillboards
+        .filter((item) => item.lat != null && item.lng != null)
+        .slice(0, 3)
+        .map((item) => ({
+          id: item.id,
+          name: item.name,
+          lat: item.lat,
+          lng: item.lng,
+        })),
+    });
 
     return (
       <div className="flex gap-8" style={{ height: '700px' }}>
@@ -1331,6 +1355,7 @@ export default function DisplayDetailPage({
                       }
                       alt={item.name}
                       fill
+                      sizes="(max-width: 768px) 50vw, 33vw"
                       className="object-cover"
                     />
                   </div>

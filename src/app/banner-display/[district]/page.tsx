@@ -124,12 +124,16 @@ async function getBannerDisplaysByDistrict(
   districtName: string
 ): Promise<BannerDisplayData[]> {
   try {
+    const apiUrl = `/api/banner-display?action=getByDistrict&district=${encodeURIComponent(
+      districtName
+    )}`;
     console.log('🔍 Fetching banner displays for district:', districtName);
-    const response = await fetch(
-      `/api/banner-display?action=getByDistrict&district=${encodeURIComponent(
-        districtName
-      )}`
-    );
+    console.log('🔍 API URL:', apiUrl);
+    console.log('🔍 API 호출 시작 시간:', new Date().toISOString());
+
+    const response = await fetch(apiUrl);
+    console.log('🔍 API 응답 상태:', response.status, response.statusText);
+
     const result = await response.json();
     console.log('🔍 API response:', result);
 
@@ -155,6 +159,7 @@ async function getBannerDisplaysByDistrictWithSlotType(
       districtName
     )}&slot_type=${slotType}`;
     console.log(`🔍 API URL:`, url);
+    console.log(`🔍 API 호출 시작 시간:`, new Date().toISOString());
 
     const response = await fetch(url);
     console.log(`🔍 Response status:`, response.status, response.statusText);
@@ -270,21 +275,44 @@ export default function BannerDisplayPage({
   // 구 정보 가져오기 함수 (로고 + 계좌번호 포함) - 캐시 테이블 사용
   async function getDistrictData(districtName: string) {
     try {
+      const apiUrl = `/api/banner-display?action=getDistrictData&district=${encodeURIComponent(
+        districtName
+      )}`;
+      console.log('🔍 getDistrictData 호출:', apiUrl);
+      console.log('🔍 getDistrictData 시작 시간:', new Date().toISOString());
+
       // banner_display_cache 테이블에서 해당 구의 정보 가져오기
-      const response = await fetch(
-        `/api/banner-display?action=getDistrictData&district=${encodeURIComponent(
-          districtName
-        )}`
+      const response = await fetch(apiUrl);
+      console.log(
+        '🔍 getDistrictData 응답 상태:',
+        response.status,
+        response.statusText
       );
+
       const result = await response.json();
+      console.log('🔍 getDistrictData 응답:', result);
       return result.success ? result.data : null;
     } catch (err) {
-      console.warn(`Failed to fetch district data for ${districtName}:`, err);
+      console.error(
+        `❌ Failed to fetch district data for ${districtName}:`,
+        err
+      );
       return null;
     }
   }
 
   useEffect(() => {
+    // 디버깅: useEffect 실행 확인
+    console.log('🔍 useEffect 실행됨:', {
+      district,
+      districtObj: districtObj
+        ? { name: districtObj.name, code: districtObj.code }
+        : null,
+      panelTypeFilter,
+      hasDistrict: !!district,
+      hasDistrictObj: !!districtObj,
+    });
+
     async function fetchBannerData() {
       try {
         setLoading(true);
@@ -295,6 +323,20 @@ export default function BannerDisplayPage({
         // 1. 현수막 데이터 가져오기
         let data: BannerDisplayData[];
         const districtName = districtObj?.name || district;
+
+        // districtName이 없으면 API 호출 중단
+        if (!districtName || districtName.trim() === '') {
+          console.error('❌ districtName이 없어서 API 호출을 중단합니다:', {
+            district,
+            districtObj: districtObj?.name,
+            districtName,
+          });
+          setError('구 정보를 찾을 수 없습니다.');
+          setLoading(false);
+          return;
+        }
+
+        console.log('✅ districtName 확인됨:', districtName);
 
         // 송파구, 용산구는 slot_type별로 API 호출
         if (districtName === '송파구' || districtName === '용산구') {
@@ -611,6 +653,24 @@ export default function BannerDisplayPage({
               const slotWidth = slotSize.width;
               const slotHeight = slotSize.height;
 
+              // 재고 정보 계산: inventory_info가 있으면 available_slots 사용, 없으면 maxBanners 사용
+              let availableFaces = maxBanners;
+              if (item.inventory_info) {
+                // 현재 기간의 재고가 있으면 사용
+                if (item.inventory_info.current_period) {
+                  availableFaces =
+                    item.inventory_info.current_period.available_slots;
+                } else if (item.inventory_info.first_half) {
+                  // 첫 번째 반기가 있으면 사용
+                  availableFaces =
+                    item.inventory_info.first_half.available_slots;
+                } else if (item.inventory_info.second_half) {
+                  // 두 번째 반기가 있으면 사용
+                  availableFaces =
+                    item.inventory_info.second_half.available_slots;
+                }
+              }
+
               return {
                 id: combinedId, // "gwanak-01-uuid123", "mapo-01-uuid456" 등
                 type: 'banner',
@@ -623,7 +683,7 @@ export default function BannerDisplayPage({
                 price: price,
                 total_price: totalPrice,
                 size: `${slotWidth}x${slotHeight}` || 'no size',
-                faces: maxBanners,
+                faces: availableFaces, // 가용 재고로 설정 (주문 후 줄어드는 재고)
                 lat: item.latitude || 37.5665, // 실제 데이터베이스 좌표 사용
                 lng: item.longitude || 126.978,
                 panel_width: slotWidth,
@@ -813,8 +873,18 @@ export default function BannerDisplayPage({
       }
     }
 
-    if (district) {
+    // district 또는 districtObj가 있을 때만 API 호출
+    if (district || districtObj) {
+      console.log('✅ fetchBannerData 실행 조건 만족:', {
+        district,
+        districtObj: districtObj?.name,
+      });
       fetchBannerData();
+    } else {
+      console.warn('⚠️ fetchBannerData 실행 조건 불만족:', {
+        district,
+        districtObj,
+      });
     }
   }, [district, districtObj, panelTypeFilter]);
 

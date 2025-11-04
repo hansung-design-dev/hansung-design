@@ -142,6 +142,7 @@ export default function DigitalSignageDetailClient({
                     src={image}
                     alt={`${productData.title} - 이미지 ${index + 1}`}
                     fill
+                    sizes="(max-width: 768px) 100vw, 80vw"
                     className="object-cover"
                   />
                 </div>
@@ -153,6 +154,7 @@ export default function DigitalSignageDetailClient({
                 src={productData.image}
                 alt={productData.title}
                 fill
+                sizes="(max-width: 768px) 100vw, 80vw"
                 className="object-cover"
                 priority
               />
@@ -199,6 +201,7 @@ export default function DigitalSignageDetailClient({
                     src={image}
                     alt={`${productData.title} - 이미지 ${index + 1}`}
                     fill
+                    sizes="(max-width: 768px) 100vw, 80vw"
                     className="object-cover"
                   />
                 </div>
@@ -210,6 +213,7 @@ export default function DigitalSignageDetailClient({
                 src={productData.image}
                 alt={productData.title}
                 fill
+                sizes="(max-width: 768px) 100vw, 80vw"
                 className="object-cover"
                 priority
               />
@@ -258,6 +262,7 @@ export default function DigitalSignageDetailClient({
                   src={productData.image}
                   alt={productData.title}
                   fill
+                  sizes="(max-width: 768px) 100vw, 80vw"
                   className="object-contain"
                   priority
                 />

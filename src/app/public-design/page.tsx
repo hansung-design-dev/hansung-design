@@ -267,6 +267,7 @@ export default function PublicDesignPage() {
             }
             alt="공공디자인 메인 이미지"
             fill
+            sizes="100vw"
             className="object-cover sm:object-left-top"
             priority
           />
@@ -345,6 +346,7 @@ export default function PublicDesignPage() {
                     src={project.listImages[0]}
                     alt={project.name}
                     fill
+                    sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     className="object-cover rounded-[1rem]"
                     quality={85}
                   />

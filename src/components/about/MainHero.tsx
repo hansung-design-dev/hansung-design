@@ -7,6 +7,7 @@ export default function MainHero() {
         src="/images/company-intro/main-image.png"
         alt="한성디자인 메인 이미지"
         fill
+        sizes="100vw"
         className="object-cover object-center pt-24 "
         priority
       />

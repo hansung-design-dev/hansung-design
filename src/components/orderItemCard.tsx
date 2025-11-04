@@ -31,13 +31,19 @@ interface OrderItemCardProps {
   orderDetail: OrderDetail;
   onClose?: () => void; // 아코디언 닫기 콜백 추가
   onCancel?: () => void; // 신청취소 콜백 추가
+  onPaymentClick?: () => void; // 결제하기 콜백 추가
+  paymentStatus?: string; // 결제여부 상태
 }
 
 export default function OrderItemCard({
   orderDetail,
   onClose,
   onCancel,
+  onPaymentClick,
+  paymentStatus,
 }: OrderItemCardProps) {
+  const isPaymentPending =
+    paymentStatus === '대기' || paymentStatus === 'pending_payment';
   return (
     <div className="rounded-lg overflow-hidden py-[2rem] sm:py-4">
       <div className="flex items-center justify-center ">
@@ -159,7 +165,17 @@ export default function OrderItemCard({
           </div>
           {/* 버튼 */}
           <div className="flex flex-col gap-2 py-[3rem] items-center justify-center sm:py-6">
-            <div className="flex gap-[1rem] sm:w-full items-center justify-center">
+            <div className="flex gap-[1rem] sm:w-full items-center justify-center flex-wrap">
+              {isPaymentPending && onPaymentClick && (
+                <Button
+                  variant="filledBlack"
+                  size="xs"
+                  className="text-white sm:text-0.75 rounded-full bg-blue-600 hover:bg-blue-700"
+                  onClick={onPaymentClick}
+                >
+                  결제하기
+                </Button>
+              )}
               <Button
                 variant="outlinedGray"
                 size="xs"

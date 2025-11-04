@@ -477,9 +477,12 @@ export default async function DigitalSignageDetailPage({
       'cheorwon-labor',
     ].includes(district_id) || tab === 'digital-billboard';
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const typedProductData = productData as any;
+
   return (
     <DigitalSignageDetailClient
-      productData={productData as any}
+      productData={typedProductData}
       isDigitalSignage={isDigitalSignageItem}
       isDigitalBillboard={isDigitalBillboardItem}
     />

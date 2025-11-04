@@ -86,15 +86,17 @@ export default function DesignPage() {
         body: formData,
       });
 
-      if (response.ok) {
+      const result = await response.json();
+
+      if (response.ok && result.success) {
         // 업로드 성공 후 주문 목록 새로고침
         fetchOrders();
       } else {
-        alert('파일 업로드에 실패했습니다.');
+        alert(result.error || '파일 업로드에 실패했습니다.');
       }
     } catch (error) {
       console.error('File upload failed:', error);
-      alert('파일 업로드에 실패했습니다.');
+      alert('파일 업로드 중 오류가 발생했습니다.');
     } finally {
       setUploadingFile(null);
     }
@@ -206,18 +208,11 @@ export default function DesignPage() {
                   {/* 이메일로 보내기 신청한 경우 안내 메시지 */}
                   {order.draft_delivery_method === 'email' && (
                     <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          id={`upload-checkbox-${order.id}`}
-                          className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                        />
-                        <label
-                          htmlFor={`upload-checkbox-${order.id}`}
-                          className="text-sm text-blue-700"
-                        >
-                          홈페이지에서도 시안 업로드하기
-                        </label>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-sm text-blue-700">
+                          이메일로 시안을 보내셨지만, 홈페이지에서도 업로드할 수
+                          있습니다.
+                        </span>
                       </div>
                     </div>
                   )}
@@ -239,7 +234,7 @@ export default function DesignPage() {
                       </div>
                     )}
 
-                  {/* 커스텀 파일 업로드 */}
+                  {/* 커스텀 파일 업로드 - 이메일 선택 시에도 업로드 가능 */}
                   <CustomFileUpload
                     onFileSelect={(file) => handleFileUpload(order.id, file)}
                     disabled={uploadingFile === order.id}

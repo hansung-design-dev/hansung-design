@@ -178,11 +178,14 @@ interface DisplayItem {
   id: number;
   title: string;
   location: string;
-  status: string;
+  status: string; // 마감여부
+  paymentStatus: string; // 결제여부
   orderId: string;
   totalAmount: string;
   startDate?: string;
   endDate?: string;
+  isClosed?: boolean; // 마감 여부
+  order?: Order; // 전체 주문 정보
 }
 
 interface OrderCardData {
@@ -218,6 +221,9 @@ export default function OrdersPage() {
   const [expandedItemId, setExpandedItemId] = useState<number | null>(null);
   const [selectedOrderDetail, setSelectedOrderDetail] =
     useState<OrderDetailResponse | null>(null);
+  const [loadingOrderDetail, setLoadingOrderDetail] = useState<string | null>(
+    null
+  );
   const { user } = useAuth();
 
   // 신청취소 관련 상태
@@ -312,6 +318,37 @@ export default function OrdersPage() {
     setPendingPaymentOrders(pendingOrders);
   }, [orders]);
 
+  // 마감여부 판단 함수
+  const getClosureStatus = (item: OrderDetail, order: Order): string => {
+    // panel_slot_usage의 is_closed가 true이거나 order_status가 completed이면 완료
+    if (item.panel_slot_usage?.is_closed === true) {
+      return '완료';
+    }
+    // order_status가 completed인 경우도 완료로 표시
+    if (order?.order_status === 'completed') {
+      return '완료';
+    }
+    return '진행중';
+  };
+
+  // 결제여부 표시 함수
+  const getPaymentStatusDisplay = (paymentStatus: string): string => {
+    switch (paymentStatus) {
+      case 'completed':
+        return '완료';
+      case 'pending_payment':
+        return '대기';
+      case 'cancelled':
+      case 'rejected':
+        return '거절';
+      case 'pending':
+      case 'pending_deposit':
+        return '대기';
+      default:
+        return '대기';
+    }
+  };
+
   // 리스트에 표시할 데이터 변환
   const transformOrdersForDisplay = (): DisplayItem[] => {
     let globalIndex = 1;
@@ -324,12 +361,16 @@ export default function OrdersPage() {
           (item.panels?.nickname ? ` (${item.panels.nickname})` : ''),
         // 행정동
         location: item.panels?.region_gu?.name || '',
-        // 마감여부(주문상태)
-        status: getStatusDisplay(order.payment_status),
+        // 마감여부
+        status: getClosureStatus(item, order),
+        // 결제여부
+        paymentStatus: getPaymentStatusDisplay(order.payment_status),
         orderId: order.order_number,
         totalAmount: (order.payments?.[0]?.amount || 0).toLocaleString() + '원',
         startDate: item.display_start_date,
         endDate: item.display_end_date,
+        isClosed: item.panel_slot_usage?.is_closed === true,
+        order: order,
       }))
     );
   };
@@ -356,25 +397,51 @@ export default function OrdersPage() {
 
   // 상세 정보 fetch (orderId 기준)
   const handleOrderClick = async (orderId: string, itemId: number) => {
-    setExpandedItemId(expandedItemId === itemId ? null : itemId);
-    if (expandedItemId !== itemId) {
+    const isExpanding = expandedItemId !== itemId;
+    setExpandedItemId(isExpanding ? itemId : null);
+
+    if (isExpanding) {
+      // 기존 데이터 초기화 및 로딩 시작
+      setSelectedOrderDetail(null);
+      setLoadingOrderDetail(orderId);
+
       try {
+        console.log('🔍 [주문 상세 조회] API 호출:', `/api/orders/${orderId}`);
         const response = await fetch(`/api/orders/${orderId}`);
         const data = await response.json();
+        console.log('🔍 [주문 상세 조회] API 응답:', data);
+
         if (data.success && data.data) {
+          console.log('🔍 [주문 상세 조회] 데이터 확인:', {
+            order: data.data.order,
+            orderDetails: data.data.orderDetails,
+            customerInfo: data.data.customerInfo,
+            priceInfo: data.data.priceInfo,
+            payments: data.data.payments,
+          });
           setSelectedOrderDetail(data.data);
-          console.log('selectedOrderDetail', data.data);
         } else {
-          setSelectedOrderDetail({} as OrderDetailResponse); // 실패해도 빈 객체로 설정해 아코디언이 열리게
-          console.log('selectedOrderDetail', {});
+          console.error(
+            '🔍 [주문 상세 조회] API 실패:',
+            data.error || '알 수 없는 오류'
+          );
+          alert(
+            `주문 상세 정보를 불러올 수 없습니다: ${
+              data.error || '알 수 없는 오류'
+            }`
+          );
+          setSelectedOrderDetail(null);
         }
       } catch (error) {
-        console.error('주문 상세 조회 에러:', error);
-        setSelectedOrderDetail({} as OrderDetailResponse); // 에러 시에도 빈 객체
-        console.log('selectedOrderDetail', {});
+        console.error('🔍 [주문 상세 조회] 에러:', error);
+        alert('주문 상세 조회 중 오류가 발생했습니다.');
+        setSelectedOrderDetail(null);
+      } finally {
+        setLoadingOrderDetail(null);
       }
     } else {
       setSelectedOrderDetail(null);
+      setLoadingOrderDetail(null);
     }
   };
 
@@ -451,7 +518,13 @@ export default function OrdersPage() {
 
   // 상세 데이터 → OrderItemCard용 데이터로 변환
   function mapOrderDetailToCard(detail: OrderDetailResponse): OrderCardData {
-    console.log('mapOrderDetailToCard input:', detail);
+    console.log('🔍 [mapOrderDetailToCard] 입력 데이터:', detail);
+
+    // 빈 객체인지 확인
+    if (!detail || Object.keys(detail).length === 0) {
+      console.error('🔍 [mapOrderDetailToCard] 빈 데이터 전달됨');
+      return dummyOrderDetail;
+    }
 
     const order = detail.order || ({} as Order);
     const orderDetails = detail.orderDetails || [];
@@ -461,13 +534,22 @@ export default function OrdersPage() {
     const priceInfo = detail.priceInfo || {};
     const payments = detail.payments || [];
 
+    console.log('🔍 [mapOrderDetailToCard] 파싱된 데이터:', {
+      order: order.order_number,
+      orderDetailsCount: orderDetails.length,
+      panelInfo: panelInfo.address,
+      customerInfo,
+      priceInfo,
+      paymentsCount: payments.length,
+    });
+
     // 최신 결제 정보 (created_at 기준으로 정렬된 첫 번째)
     const latestPayment = payments.length > 0 ? payments[0] : null;
 
     const displayStartDate = orderDetail.display_start_date ?? '-';
     const displayEndDate = orderDetail.display_end_date ?? '-';
 
-    return {
+    const result = {
       id: order.id ?? '-',
       order_number: order.order_number ?? '-',
       title: order.projectName ?? '-',
@@ -476,7 +558,7 @@ export default function OrdersPage() {
             panelInfo.nickname ? ` (${panelInfo.nickname})` : ''
           }`
         : '-',
-      status: getStatusDisplay(order.payment_status),
+      status: getStatusDisplay(order.payment_status || ''),
       category: formatDisplayType(panelInfo.display_types?.name || ''),
       customerName: customerInfo.name ?? '-',
       phone: customerInfo.phone ?? '-',
@@ -497,6 +579,9 @@ export default function OrdersPage() {
       displayStartDate: formatDisplayPeriod(displayStartDate, displayEndDate),
       displayEndDate: displayEndDate,
     };
+
+    console.log('🔍 [mapOrderDetailToCard] 결과:', result);
+    return result;
   }
 
   if (loading) {
@@ -575,22 +660,52 @@ export default function OrdersPage() {
           }}
           onCancelOrder={(item) => handleCancelClick(item.orderId || '')}
           expandedContent={
-            expandedItemId ? (
-              <OrderItemCard
-                orderDetail={
-                  selectedOrderDetail
-                    ? mapOrderDetailToCard(selectedOrderDetail)
-                    : dummyOrderDetail
-                }
-                onClose={() => setExpandedItemId(null)}
-                onCancel={() =>
-                  handleCancelClick(
-                    selectedOrderDetail?.order?.order_number || ''
-                  )
-                }
-              />
-            ) : null
+            expandedItemId
+              ? (() => {
+                  const item = items.find((i) => i.id === expandedItemId);
+                  const currentOrder = item?.order;
+                  const paymentStatus = item?.paymentStatus || '대기';
+                  const isLoading = loadingOrderDetail === item?.orderId;
+
+                  // 로딩 중이거나 데이터가 없으면 로딩 표시
+                  if (isLoading || !selectedOrderDetail) {
+                    return (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="text-center">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                          <p className="text-gray-600">
+                            주문 정보를 불러오는 중...
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <OrderItemCard
+                      orderDetail={mapOrderDetailToCard(selectedOrderDetail)}
+                      paymentStatus={paymentStatus}
+                      onClose={() => setExpandedItemId(null)}
+                      onCancel={() =>
+                        handleCancelClick(
+                          selectedOrderDetail?.order?.order_number || ''
+                        )
+                      }
+                      onPaymentClick={() => {
+                        if (currentOrder) {
+                          handlePaymentClick(currentOrder);
+                        }
+                      }}
+                    />
+                  );
+                })()
+              : null
           }
+          onPaymentClick={(item) => {
+            if (item.order) {
+              handlePaymentClick(item.order);
+            }
+          }}
         />
       </MypageContainer>
 

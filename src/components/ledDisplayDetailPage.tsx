@@ -524,6 +524,7 @@ export default function LEDDisplayDetailPage({
                 src={item.photo_url || '/images/led-display.jpeg'}
                 alt={item.name}
                 fill
+                sizes="(max-width: 768px) 50vw, 33vw"
                 className={`md:object-cover sm:object-cover `}
               />
             </div>
@@ -648,6 +649,7 @@ export default function LEDDisplayDetailPage({
                       src={item.photo_url || '/images/led-display.jpeg'}
                       alt={item.name}
                       fill
+                      sizes="(max-width: 768px) 50vw, 33vw"
                       className="object-cover"
                     />
                   </div>

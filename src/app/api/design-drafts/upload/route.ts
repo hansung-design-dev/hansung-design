@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/src/app/api/supabase';
+import { supabaseAdmin } from '@/src/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -62,8 +63,8 @@ export async function POST(request: NextRequest) {
       fileType: file.type,
     });
 
-    // Supabase Storage에 파일 업로드
-    const { error: uploadError } = await supabase.storage
+    // Supabase Storage에 파일 업로드 (관리자 권한 사용하여 RLS 우회)
+    const { error: uploadError } = await supabaseAdmin.storage
       .from(bucketName)
       .upload(filePath, file, {
         cacheControl: '3600',
@@ -73,13 +74,35 @@ export async function POST(request: NextRequest) {
     if (uploadError) {
       console.error('🔍 [시안 업로드] ❌ Storage 업로드 실패:', uploadError);
 
+      // 버킷이 존재하지 않는 경우
+      const errorMessage = uploadError.message.toLowerCase();
+      if (
+        errorMessage.includes('bucket not found') ||
+        errorMessage.includes('not found') ||
+        errorMessage.includes('404')
+      ) {
+        console.error(
+          '🔍 [시안 업로드] ❌ Storage 버킷이 존재하지 않음:',
+          bucketName
+        );
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Storage 버킷 '${bucketName}'이 존재하지 않습니다. Supabase Dashboard에서 버킷을 생성해주세요.`,
+            bucketName,
+            help: 'Supabase Dashboard > Storage > Create Bucket > 이름: design-drafts > Public으로 설정',
+          },
+          { status: 404 }
+        );
+      }
+
       // 이미 존재하는 파일인 경우 (upsert로 재시도)
       if (
         uploadError.message.includes('already exists') ||
         uploadError.message.includes('duplicate')
       ) {
         console.log('🔍 [시안 업로드] 파일이 이미 존재, upsert로 재시도...');
-        const { error: upsertError } = await supabase.storage
+        const { error: upsertError } = await supabaseAdmin.storage
           .from(bucketName)
           .upload(filePath, file, {
             cacheControl: '3600',
@@ -102,7 +125,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 공개 URL 생성
-    const { data: urlData } = supabase.storage
+    const { data: urlData } = supabaseAdmin.storage
       .from(bucketName)
       .getPublicUrl(filePath);
 

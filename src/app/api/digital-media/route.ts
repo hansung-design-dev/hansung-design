@@ -65,7 +65,21 @@ async function getDigitalSignageProducts() {
     }
 
     // product_group_code별로 그룹화
-    const groupedProducts: Record<string, any> = {};
+    interface ProductItem {
+      product_group_code: string | null;
+      display_order: number | null;
+      product_code?: string;
+      title?: string;
+      main_image_url?: string;
+      image_urls?: string[] | string;
+      product_type?: string;
+      series_name?: string;
+      model_name?: string;
+      description?: string;
+      contact_info?: string;
+      bracket_note?: string;
+    }
+    const groupedProducts: Record<string, ProductItem> = {};
 
     data.forEach((product) => {
       const groupCode = product.product_group_code;
@@ -168,7 +182,7 @@ async function getProductByCode(productType: string, productCode: string) {
     // digital-billboard 타입의 경우 project_code 또는 district_code로 조회 시도
     if (productType === 'digital-billboard') {
       // 먼저 project_code로 시도
-      let { data, error } = await supabase
+      const { data, error } = await supabase
         .from(tableName)
         .select('*')
         .eq('project_code', productCode)

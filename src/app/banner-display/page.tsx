@@ -279,6 +279,7 @@ export default function BannerDisplayPage() {
             }
             alt="현수막게시대 메인 이미지"
             fill
+            sizes="100vw"
             className="object-cover"
             priority
           />

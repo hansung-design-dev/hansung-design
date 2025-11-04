@@ -37,6 +37,7 @@ export default function DetailImageSlider({
           src={images[0]}
           alt={alt}
           fill
+          sizes="(max-width: 768px) 100vw, 80vw"
           className="object-contain"
           priority
         />
@@ -51,6 +52,7 @@ export default function DetailImageSlider({
           src={images[currentIndex]}
           alt={`${alt} ${currentIndex + 1}`}
           fill
+          sizes="(max-width: 768px) 100vw, 80vw"
           className="object-contain transition-opacity duration-300"
           priority
         />

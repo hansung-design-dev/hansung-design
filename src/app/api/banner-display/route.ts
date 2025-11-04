@@ -193,6 +193,19 @@ async function getBannerDisplayTypeId() {
 // 특정 구의 현수막 게시대 데이터 조회
 async function getBannerDisplaysByDistrict(districtName: string) {
   try {
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('🔍 getBannerDisplaysByDistrict 함수 시작');
+    console.log('📍 District Name:', districtName);
+    console.log('📍 Timestamp:', new Date().toISOString());
+
+    if (!districtName || districtName.trim() === '') {
+      console.error('❌ districtName이 비어있습니다!');
+      return NextResponse.json(
+        { success: false, error: 'District name is required' },
+        { status: 400 }
+      );
+    }
+
     // 동적으로 현재 날짜 기준으로 대상 월 계산
     const now = new Date();
     const koreaTime = new Date(now.getTime() + 9 * 60 * 60 * 1000);
@@ -206,19 +219,43 @@ async function getBannerDisplaysByDistrict(districtName: string) {
     ];
     console.log('🔍 Target months for district:', targetMonths);
 
+    // display_type_id 가져오기
+    console.log('🔍 display_type_id 조회 중...');
+    const displayTypeId = await getBannerDisplayTypeId();
+    console.log('🔍 display_type_id:', displayTypeId.id);
+
     // 먼저 해당 구의 region_gu_id를 찾기
+    console.log('🔍 Supabase 쿼리 시작: region_gu 테이블 조회');
     const { data: regionData, error: regionError } = await supabase
       .from('region_gu')
       .select('id')
       .eq('name', districtName)
-      .eq('display_type_id', (await getBannerDisplayTypeId()).id)
+      .eq('display_type_id', displayTypeId.id)
       .eq('is_active', 'true')
       .single();
 
+    console.log('🔍 region_gu 쿼리 완료:', {
+      hasData: !!regionData,
+      hasError: !!regionError,
+      regionId: regionData?.id,
+      error: regionError,
+    });
+
     if (regionError || !regionData) {
+      console.error('❌ 구를 찾을 수 없습니다:', {
+        districtName,
+        regionError,
+        regionData,
+      });
       throw new Error(`구를 찾을 수 없습니다: ${districtName}`);
     }
 
+    console.log('✅ 구 정보 확인됨:', {
+      districtName,
+      regionId: regionData.id,
+    });
+
+    console.log('🔍 Supabase 쿼리 시작: panels 테이블 조회');
     const query = supabase
       .from('panels')
       .select(
@@ -273,9 +310,21 @@ async function getBannerDisplaysByDistrict(districtName: string) {
       ascending: true,
     });
 
+    console.log('🔍 panels 쿼리 완료:', {
+      dataLength: data?.length || 0,
+      hasError: !!error,
+      error: error,
+    });
+
     if (error) {
+      console.error('❌ panels 쿼리 에러:', error);
       throw error;
     }
+
+    console.log('✅ 데이터 조회 성공:', {
+      districtName,
+      panelCount: data?.length || 0,
+    });
 
     // 슬롯별 개별 재고 정보 조회 (banner_slots와 직접 연결)
     let slotInventoryData = null;
@@ -289,13 +338,30 @@ async function getBannerDisplaysByDistrict(districtName: string) {
       );
 
       if (bannerSlotIds.length > 0) {
-        const slotInventoryQuery = supabase
-          .from('banner_slot_inventory')
-          .select(
-            `
+        // 먼저 targetMonths에 해당하는 period_id들을 조회
+        const { data: periodData, error: periodError } = await supabase
+          .from('region_gu_display_periods')
+          .select('id')
+          .eq('region_gu_id', regionData.id)
+          .eq('display_type_id', (await getBannerDisplayTypeId()).id)
+          .in('year_month', targetMonths);
+
+        if (periodError) {
+          console.error('기간 조회 오류:', periodError);
+        }
+
+        const periodIds = periodData?.map((p) => p.id) || [];
+
+        if (periodIds.length > 0) {
+          // period_id로 재고 조회 (nested filter 대신 직접 필터링)
+          const slotInventoryQuery = supabase
+            .from('banner_slot_inventory')
+            .select(
+              `
             banner_slot_id,
             is_available,
             is_closed,
+            region_gu_display_period_id,
             region_gu_display_periods (
               id,
               year_month,
@@ -304,13 +370,19 @@ async function getBannerDisplaysByDistrict(districtName: string) {
               period_to
             )
           `
-          )
-          .in('banner_slot_id', bannerSlotIds)
-          .in('region_gu_display_periods.year_month', targetMonths);
+            )
+            .in('banner_slot_id', bannerSlotIds)
+            .in('region_gu_display_period_id', periodIds);
 
-        const result = await slotInventoryQuery;
-        slotInventoryData = result.data;
-        slotInventoryError = result.error;
+          const result = await slotInventoryQuery;
+          slotInventoryData = result.data;
+          slotInventoryError = result.error;
+        } else {
+          console.warn(
+            '해당 기간에 대한 period를 찾을 수 없습니다:',
+            targetMonths
+          );
+        }
       }
     }
 
@@ -729,9 +801,44 @@ export async function GET(request: NextRequest) {
   const action = searchParams.get('action');
   const district = searchParams.get('district');
 
-  // console.log('🔍 Banner Display API called with action:', action);
+  // 기본 디버깅 로그
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('🔍 Banner Display API 호출됨');
+  console.log('📍 URL:', request.url);
+  console.log('📍 Action:', action);
+  console.log('📍 District:', district);
+  console.log('📍 Timestamp:', new Date().toISOString());
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+  // Supabase 연결 확인
+  try {
+    if (!supabase) {
+      console.error('❌ Supabase 클라이언트가 없습니다!');
+      return NextResponse.json(
+        { success: false, error: 'Supabase client not initialized' },
+        { status: 500 }
+      );
+    }
+    console.log('✅ Supabase 클라이언트 확인됨');
+  } catch (supabaseError) {
+    console.error('❌ Supabase 클라이언트 초기화 오류:', supabaseError);
+    return NextResponse.json(
+      { success: false, error: 'Supabase client error' },
+      { status: 500 }
+    );
+  }
+
+  // action이 없으면 에러 반환
+  if (!action) {
+    console.error('❌ action 파라미터가 없습니다');
+    return NextResponse.json(
+      { success: false, error: 'action parameter is required' },
+      { status: 400 }
+    );
+  }
 
   try {
+    console.log(`🔍 Action "${action}" 처리 시작...`);
     switch (action) {
       case 'getAllDistrictsData':
         return await getAllDistrictsData();
@@ -756,15 +863,30 @@ export async function GET(request: NextRequest) {
           slotType!
         );
       default:
+        console.error(`❌ 알 수 없는 action: ${action}`);
         return NextResponse.json(
-          { success: false, error: 'Invalid action' },
+          { success: false, error: `Invalid action: ${action}` },
           { status: 400 }
         );
     }
   } catch (error) {
-    console.error('❌ Banner Display API error:', error);
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.error('❌ Banner Display API 에러 발생!');
+    console.error('📍 Action:', action);
+    console.error('📍 District:', district);
+    console.error('📍 Error:', error);
+    if (error instanceof Error) {
+      console.error('📍 Error message:', error.message);
+      console.error('📍 Error stack:', error.stack);
+    }
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Internal server error',
+        details:
+          process.env.NODE_ENV === 'development' ? String(error) : undefined,
+      },
       { status: 500 }
     );
   }
@@ -1795,13 +1917,30 @@ async function getBannerDisplaysByDistrictWithSlotType(
       );
 
       if (bannerSlotIds.length > 0) {
-        const slotInventoryQuery = supabase
-          .from('banner_slot_inventory')
-          .select(
-            `
+        // 먼저 targetMonths에 해당하는 period_id들을 조회
+        const { data: periodData, error: periodError } = await supabase
+          .from('region_gu_display_periods')
+          .select('id')
+          .eq('region_gu_id', regionData.id)
+          .eq('display_type_id', (await getBannerDisplayTypeId()).id)
+          .in('year_month', targetMonths);
+
+        if (periodError) {
+          console.error('기간 조회 오류:', periodError);
+        }
+
+        const periodIds = periodData?.map((p) => p.id) || [];
+
+        if (periodIds.length > 0) {
+          // period_id로 재고 조회 (nested filter 대신 직접 필터링)
+          const slotInventoryQuery = supabase
+            .from('banner_slot_inventory')
+            .select(
+              `
             banner_slot_id,
             is_available,
             is_closed,
+            region_gu_display_period_id,
             region_gu_display_periods (
               id,
               year_month,
@@ -1810,13 +1949,19 @@ async function getBannerDisplaysByDistrictWithSlotType(
               period_to
             )
           `
-          )
-          .in('banner_slot_id', bannerSlotIds)
-          .in('region_gu_display_periods.year_month', targetMonths);
+            )
+            .in('banner_slot_id', bannerSlotIds)
+            .in('region_gu_display_period_id', periodIds);
 
-        const result = await slotInventoryQuery;
-        slotInventoryData = result.data;
-        slotInventoryError = result.error;
+          const result = await slotInventoryQuery;
+          slotInventoryData = result.data;
+          slotInventoryError = result.error;
+        } else {
+          console.warn(
+            '해당 기간에 대한 period를 찾을 수 없습니다:',
+            targetMonths
+          );
+        }
       }
     }
 
@@ -1898,7 +2043,20 @@ async function getBannerDisplaysByDistrictWithSlotType(
 // 특정 구의 데이터를 캐시 테이블에서 가져오기
 async function getDistrictDataFromCache(districtName: string) {
   try {
-    console.log('🔍 Fetching district data from cache for:', districtName);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('🔍 getDistrictDataFromCache 함수 시작');
+    console.log('📍 District Name:', districtName);
+    console.log('📍 Timestamp:', new Date().toISOString());
+
+    if (!districtName || districtName.trim() === '') {
+      console.error('❌ districtName이 비어있습니다!');
+      return NextResponse.json(
+        { success: false, error: 'District name is required' },
+        { status: 400 }
+      );
+    }
+
+    console.log('🔍 Supabase 쿼리 시작: banner_display_cache 테이블 조회');
 
     // banner_display_cache 테이블에서 해당 구의 정보 가져오기
     const { data: cacheData, error: cacheError } = await supabase
@@ -1906,6 +2064,12 @@ async function getDistrictDataFromCache(districtName: string) {
       .select('*')
       .eq('region_name', districtName)
       .single();
+
+    console.log('🔍 Supabase 쿼리 완료:', {
+      hasData: !!cacheData,
+      hasError: !!cacheError,
+      error: cacheError,
+    });
 
     if (cacheError) {
       console.error('❌ Error fetching cache data:', cacheError);

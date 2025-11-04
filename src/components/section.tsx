@@ -132,6 +132,7 @@ const Section = ({
                 src={imageSrc}
                 alt={imageAlt}
                 fill
+                sizes="(max-width: 768px) 100vw, 50vw"
                 className="object-cover md:object-contain"
               />
             </motion.div>

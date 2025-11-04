@@ -479,7 +479,7 @@ CREATE TABLE public.public_design_contents (
   project_category USER-DEFINED NOT NULL,
   CONSTRAINT public_design_contents_pkey PRIMARY KEY (id)
 );
-CREATE TABLE public.digital_media_billboards (
+CREATE TABLE public.digital_media_signages (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   district_code character varying NOT NULL UNIQUE,
   title character varying NOT NULL,
@@ -500,9 +500,10 @@ CREATE TABLE public.digital_media_billboards (
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT digital_media_billboards_pkey PRIMARY KEY (id)
 );
-CREATE TABLE public.digital_signage_products (
+CREATE TABLE public.digital_products (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   product_code character varying NOT NULL UNIQUE,
+  product_group_code character varying,
   title character varying NOT NULL,
   main_image_url text NOT NULL,
   image_urls text[] DEFAULT '{}'::text[],
@@ -529,7 +530,7 @@ CREATE TABLE public.digital_signage_products (
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT digital_signage_products_pkey PRIMARY KEY (id)
 );
-CREATE TABLE public.media_landscape_displays (
+CREATE TABLE public.digital_media_billboards  (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   project_code character varying NOT NULL UNIQUE,
   title character varying NOT NULL,
