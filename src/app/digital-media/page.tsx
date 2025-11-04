@@ -37,66 +37,20 @@ interface DigitalProductItem {
   district_code?: string;
 }
 
-type TabType = 'media-display' | 'digital-billboard' | 'digital-signage';
+type TabType =
+  | 'digital_media_billboards'
+  | 'digital_media_signages'
+  | 'digital_products';
 
-// 제품별 이미지 매핑 (같은 번호로 시작하는 이미지들)
-const productImageMap: Record<string, string[]> = {
-  'samsung-single': [
-    '/images/digital-media/digital_signage/1_samsung_singleSignage.jpg',
-  ],
-  'samsung-multivision': [
-    '/images/digital-media/digital_signage/2_samsung_multiVision.jpg',
-  ],
-  'samsung-electronic-board': [
-    '/images/digital-media/digital_signage/3_samsung_digitalBoard.jpg',
-  ],
-  'lg-single': ['/images/digital-media/digital_signage/4_LG_signage.jpg'],
-  'stand-signage': [
-    '/images/digital-media/digital_signage/5_chinese_standard.jpg',
-  ],
-  kiosk: ['/images/digital-media/digital_signage/6_samsung_paymentKiosk.jpg'],
-  'multivision-cismate': [
-    '/images/digital-media/digital_signage/7_multiVision_1.jpg',
-    '/images/digital-media/digital_signage/7_multiVision_2.jpg',
-    '/images/digital-media/digital_signage/7_multiVision_3.jpg',
-  ],
-  'digital-frame': [
-    '/images/digital-media/digital_signage/8_AIDA_digitalFrame.jpg',
-  ],
-  'the-gallery': ['/images/digital-media/digital_signage/10_theGallery.png'],
-  'q-series-stand': [
-    '/images/digital-media/digital_signage/11_Qseries_standardSignage.jpg',
-  ],
-  'q-series-touch': [
-    '/images/digital-media/digital_signage/12_Qseries_touchMonitor.jpg',
-  ],
-  bracket: [
-    '/images/digital-media/digital_signage/13_bracket_NSV-01.jpg',
-    '/images/digital-media/digital_signage/13_bracket_PV-70.jpg',
-  ],
-  'outdoor-wall': [
-    '/images/digital-media/digital_signage/14_outdoor_wallType.jpg',
-  ],
-  'outdoor-stand': [
-    '/images/digital-media/digital_signage/15_outdoor_standard2.jpg',
-  ],
-  'led-display': ['/images/digital-media/digital_signage/16_LEDdisplay.jpg'],
-  'led-controller': [
-    '/images/digital-media/digital_signage/17-1-controller_PC.jpg',
-    '/images/digital-media/digital_signage/17-2_controller_HD.jpg',
-    '/images/digital-media/digital_signage/17-3-controller_FHD.jpg',
-    '/images/digital-media/digital_signage/17-4_controller_FHD.jpg',
-  ],
-  'led-installation': [
-    '/images/digital-media/digital_signage/18_LEDdisplay_installation.png',
-  ],
-};
+// (unused) product image map removed to satisfy linter
 
 function DigitalSignagePageContent() {
   const [homepageContent, setHomepageContent] =
     useState<HomepageContent | null>(null);
-  const [activeTab, setActiveTab] = useState<TabType>('media-display');
-  const [mediaDisplayItems, setMediaDisplayItems] = useState<
+  const [activeTab, setActiveTab] = useState<TabType>(
+    'digital_media_billboards'
+  );
+  const [digitalProductsItems, setDigitalProductsItems] = useState<
     DigitalMediaItem[]
   >([]);
   const [digitalBillboardItems, setDigitalBillboardItems] = useState<
@@ -136,34 +90,34 @@ function DigitalSignagePageContent() {
     const fetchDigitalMediaData = async () => {
       setLoading(true);
       try {
-        // 미디어 경관 디스플레이 조회
-        const mediaResponse = await fetch(
-          '/api/digital-media?action=getMediaLandscape'
+        // 디지털 제품(상품) 조회
+        const productsResponse = await fetch(
+          '/api/digital-media?action=getDigitalProducts'
         );
-        if (mediaResponse.ok) {
-          const mediaData =
-            (await mediaResponse.json()) as DigitalProductItem[];
-          const formattedMedia = mediaData.map((item) => {
-            // image_urls 파싱 처리 (배열이면 그대로, 문자열이면 JSON 파싱)
+        if (productsResponse.ok) {
+          const productsData =
+            (await productsResponse.json()) as DigitalProductItem[];
+          const formattedProducts = productsData.map((item) => {
             let imageUrls: string[] = [];
-            if (Array.isArray(item.image_urls)) {
-              imageUrls = item.image_urls;
-            } else if (typeof item.image_urls === 'string') {
+            if (Array.isArray(item.image_urls)) imageUrls = item.image_urls;
+            else if (typeof item.image_urls === 'string') {
               try {
                 imageUrls = JSON.parse(item.image_urls);
               } catch {
                 imageUrls = [item.image_urls];
               }
             }
-
+            const allImages = [item.main_image_url, ...imageUrls];
+            const uniqueImages = Array.from(new Set(allImages.filter(Boolean)));
             return {
-              id: item.project_code || item.id || '',
+              id: item.product_group_code || item.product_code || item.id || '',
               title: item.title,
-              src: item.main_image_url,
-              images: imageUrls.length > 0 ? imageUrls : [item.main_image_url],
+              src: uniqueImages[0] || item.main_image_url,
+              images:
+                uniqueImages.length > 0 ? uniqueImages : [item.main_image_url],
             };
           });
-          setMediaDisplayItems(formattedMedia);
+          setDigitalProductsItems(formattedProducts);
         }
 
         // 디지털 전광판 조회
@@ -201,47 +155,43 @@ function DigitalSignagePageContent() {
           setDigitalBillboardItems(formattedBillboard);
         }
 
-        // 디지털 사이니지 제품 조회 - 데이터베이스에서 가져오기 (쇼핑몰)
+        // 디지털 사이니지 제품 조회 - digital_media_signages 테이블에서 가져오기
         const signageResponse = await fetch(
           '/api/digital-media?action=getDigitalSignage'
         );
         if (signageResponse.ok) {
-          const signageData =
-            (await signageResponse.json()) as DigitalProductItem[];
-          const formattedSignage = signageData.map((item) => {
-            // image_urls 파싱 처리 (배열이면 그대로, 문자열이면 JSON 파싱)
-            let imageUrls: string[] = [];
-            if (Array.isArray(item.image_urls)) {
-              imageUrls = item.image_urls;
-            } else if (typeof item.image_urls === 'string') {
-              try {
-                imageUrls = JSON.parse(item.image_urls);
-              } catch {
-                imageUrls = [item.image_urls];
-              }
-            }
-
-            // product_group_code가 있으면 해당 그룹의 이미지 맵에서 가져오기
-            const groupCode = item.product_group_code || '';
-            const mappedImages = groupCode
-              ? productImageMap[groupCode] || []
+          const signageData = await signageResponse.json();
+          const formattedSignage = (
+            signageData as {
+              image_urls?: string[] | string;
+              main_image_url: string;
+              district_code?: string;
+              id?: string;
+              title: string;
+            }[]
+          ).map((item) => {
+            const imageUrls: string[] = Array.isArray(item.image_urls)
+              ? item.image_urls
+              : typeof item.image_urls === 'string'
+              ? (() => {
+                  try {
+                    return JSON.parse(item.image_urls);
+                  } catch {
+                    return item.image_urls ? [item.image_urls] : [];
+                  }
+                })()
               : [];
 
-            // 이미지 배열 합치기 (중복 제거)
-            const allImages = [
-              item.main_image_url,
-              ...imageUrls,
-              ...mappedImages,
-            ];
+            const allImages = [item.main_image_url, ...imageUrls];
             const uniqueImages = Array.from(new Set(allImages.filter(Boolean)));
 
             return {
-              id: item.product_group_code || item.product_code || item.id || '', // product_group_code를 id로 사용
+              id: item.district_code || item.id || '',
               title: item.title,
-              src: uniqueImages[0] || item.main_image_url, // 첫 번째 이미지를 메인 이미지로
+              src: uniqueImages[0] || item.main_image_url,
               images:
                 uniqueImages.length > 0 ? uniqueImages : [item.main_image_url],
-            };
+            } as DigitalMediaItem;
           });
           setDigitalSignageItems(formattedSignage);
         }
@@ -256,22 +206,30 @@ function DigitalSignagePageContent() {
   }, []);
 
   useEffect(() => {
-    const initialTab = searchParams.get('tab') as TabType;
-    if (initialTab) {
+    const initialTab = searchParams.get('tab') as TabType | null;
+    if (
+      initialTab === 'digital_media_billboards' ||
+      initialTab === 'digital_media_signages' ||
+      initialTab === 'digital_products'
+    ) {
       setActiveTab(initialTab);
+    } else {
+      // 기본 탭을 디지털전광판으로 강제 세팅하고 URL도 동기화
+      setActiveTab('digital_media_billboards');
+      router.replace(`/digital-media?tab=digital_media_billboards`);
     }
-  }, [searchParams]);
+  }, [searchParams, router]);
 
   const getCurrentItems = () => {
     switch (activeTab) {
-      case 'media-display':
-        return mediaDisplayItems;
-      case 'digital-billboard':
+      case 'digital_media_billboards':
         return digitalBillboardItems;
-      case 'digital-signage':
+      case 'digital_media_signages':
         return digitalSignageItems;
+      case 'digital_products':
+        return digitalProductsItems;
       default:
-        return mediaDisplayItems;
+        return digitalBillboardItems;
     }
   };
 
@@ -307,11 +265,11 @@ function DigitalSignagePageContent() {
         <div className="flex border-b border-gray-200">
           <button
             onClick={() => {
-              setActiveTab('media-display');
-              router.push(`/digital-media?tab=media-display`);
+              setActiveTab('digital_media_billboards');
+              router.push(`/digital-media?tab=digital_media_billboards`);
             }}
             className={`px-6 py-3 text-lg font-medium transition-colors ${
-              activeTab === 'media-display'
+              activeTab === 'digital_media_billboards'
                 ? 'text-blue-600 border-b-2 border-blue-600'
                 : 'text-gray-500 hover:text-gray-700'
             }`}
@@ -320,11 +278,11 @@ function DigitalSignagePageContent() {
           </button>
           <button
             onClick={() => {
-              setActiveTab('digital-billboard');
-              router.push(`/digital-media?tab=digital-billboard`);
+              setActiveTab('digital_media_signages');
+              router.push(`/digital-media?tab=digital_media_signages`);
             }}
             className={`px-6 py-3 text-lg font-medium transition-colors ${
-              activeTab === 'digital-billboard'
+              activeTab === 'digital_media_signages'
                 ? 'text-blue-600 border-b-2 border-blue-600'
                 : 'text-gray-500 hover:text-gray-700'
             }`}
@@ -333,11 +291,11 @@ function DigitalSignagePageContent() {
           </button>
           <button
             onClick={() => {
-              setActiveTab('digital-signage');
-              router.push(`/digital-media?tab=digital-signage`);
+              setActiveTab('digital_products');
+              router.push(`/digital-media?tab=digital_products`);
             }}
             className={`px-6 py-3 text-lg font-medium transition-colors ${
-              activeTab === 'digital-signage'
+              activeTab === 'digital_products'
                 ? 'text-blue-600 border-b-2 border-blue-600'
                 : 'text-gray-500 hover:text-gray-700'
             }`}

@@ -45,8 +45,8 @@ async function getDigitalBillboards() {
   }
 }
 
-// 디지털 사이니지 제품 조회 (digital_products 테이블에서 product_group_code별로 그룹화)
-async function getDigitalSignageProducts() {
+// 디지털 제품 목록 조회 (digital_products 테이블에서 product_group_code별로 그룹화)
+async function getDigitalProducts() {
   try {
     const { data, error } = await supabase
       .from('digital_products')
@@ -56,7 +56,7 @@ async function getDigitalSignageProducts() {
       .order('display_order', { ascending: true });
 
     if (error) {
-      console.error('Error fetching digital signage products:', error);
+      console.error('Error fetching digital products:', error);
       throw error;
     }
 
@@ -137,7 +137,41 @@ async function getDigitalSignageProducts() {
 
     return result;
   } catch (error) {
-    console.error('Error in getDigitalSignageProducts:', error);
+    console.error('Error in getDigitalProducts:', error);
+    throw error;
+  }
+}
+
+// 디지털 사이니지 목록 조회 (digital_media_signages 테이블)
+async function getDigitalSignages() {
+  try {
+    const { data, error } = await supabase
+      .from('digital_media_signages')
+      .select('*')
+      .eq('is_active', true)
+      .order('display_order', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching digital media signages:', error);
+      throw error;
+    }
+
+    const result = (data || []).map((row: any) => {
+      let imageUrls: string[] = [];
+      if (Array.isArray(row.image_urls)) imageUrls = row.image_urls;
+      else if (typeof row.image_urls === 'string') {
+        try {
+          imageUrls = JSON.parse(row.image_urls);
+        } catch {
+          imageUrls = row.image_urls ? [row.image_urls] : [];
+        }
+      }
+      return { ...row, image_urls: imageUrls };
+    });
+
+    return result;
+  } catch (error) {
+    console.error('Error in getDigitalSignages:', error);
     throw error;
   }
 }
@@ -274,8 +308,13 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(billboardData);
 
       case 'getDigitalSignage':
-        const signageData = await getDigitalSignageProducts();
+        // 디지털사이니지 = digital_media_signages
+        const signageData = await getDigitalSignages();
         return NextResponse.json(signageData);
+      case 'getDigitalProducts':
+        // 상품 = digital_products (grouped)
+        const products = await getDigitalProducts();
+        return NextResponse.json(products);
 
       case 'getProductDetail':
         if (!productType || !productCode) {
