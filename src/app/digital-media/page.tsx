@@ -7,249 +7,105 @@ import ItemCard from '../../components/itemCard';
 import DraggableNoticePopup from '@/src/components/DraggableNoticePopup';
 import { useAdvancedNoticePopup } from '@/src/components/hooks/useAdvancedNoticePopup';
 import { HomepageContent } from '@/src/types/homepage-content';
+// 로컬 데이터는 fallback으로만 사용 (필요시)
+// import { digitalSignageData } from './[district_id]/data/digitalSignageData';
 
-// 미디어경관디자인 데이터
-const mediaDisplayItems = [
-  {
-    id: 'gansong-art-museum',
-    title: '간송미술관',
-    src: '/images/digital-media/media_display/간송미술관/2025_간송미술관-무기명_1.jpg',
-    images: [
-      '/images/digital-media/media_display/간송미술관/2025_간송미술관-무기명_1.jpg',
-      '/images/digital-media/media_display/간송미술관/2025_간송미술관-무기명_2.jpg',
-      '/images/digital-media/media_display/간송미술관/2025_간송미술관-무기명_3.jpg',
-      '/images/digital-media/media_display/간송미술관/2025_간송미술관-무기명_4.jpg',
-      '/images/digital-media/media_display/간송미술관/2025_간송미술관-무기명_5.jpg',
-    ],
-  },
-  {
-    id: 'red-road',
-    title: '레드로드',
-    src: '/images/digital-media/media_display/레드로드/홍대 전광판 제안서_1.jpg',
-    images: [
-      '/images/digital-media/media_display/레드로드/홍대 전광판 제안서_1.jpg',
-      '/images/digital-media/media_display/레드로드/홍대 전광판 제안서_3.jpg',
-      '/images/digital-media/media_display/레드로드/홍대 전광판 제안서_4.jpg',
-      '/images/digital-media/media_display/레드로드/홍대 전광판 제안서_5.jpg',
-    ],
-  },
-  {
-    id: 'baengnyeon-market',
-    title: '백년시장',
-    src: '/images/digital-media/media_display/백년시장/백년시장01.jpg',
-    images: [
-      '/images/digital-media/media_display/백년시장/백년시장01.jpg',
-      '/images/digital-media/media_display/백년시장/백년시장02.jpg',
-      '/images/digital-media/media_display/백년시장/백년시장03.jpg',
-    ],
-  },
-  {
-    id: 'bulgwangcheon',
-    title: '불광천 방송문화거리',
-    src: '/images/digital-media/media_display/불광천 방송문화거리/불광천 방송문화거리_가로최종_깬것 [Repaired]_1.jpg',
-    images: [
-      '/images/digital-media/media_display/불광천 방송문화거리/불광천 방송문화거리_가로최종_깬것 [Repaired]_1.jpg',
-      '/images/digital-media/media_display/불광천 방송문화거리/불광천 방송문화거리_가로최종_깬것 [Repaired]_2.jpg',
-      '/images/digital-media/media_display/불광천 방송문화거리/불광천 방송문화거리_가로최종_깬것 [Repaired]_3.jpg',
-      '/images/digital-media/media_display/불광천 방송문화거리/불광천 방송문화거리_가로최종_깬것 [Repaired]_4.jpg',
-    ],
-  },
-  {
-    id: 'seocho-media-pole',
-    title: '서초구 미디어폴',
-    src: '/images/digital-media/media_display/서초구 미디어폴/서초구 심의도서3_압축_7.jpg',
-    images: [
-      '/images/digital-media/media_display/서초구 미디어폴/서초구 심의도서3_압축_7.jpg',
-      '/images/digital-media/media_display/서초구 미디어폴/서초구 심의도서3_압축_8.jpg',
-      '/images/digital-media/media_display/서초구 미디어폴/서초구 심의도서3_압축_9.jpg',
-      '/images/digital-media/media_display/서초구 미디어폴/서초구 심의도서3_압축_10.jpg',
-    ],
-  },
-  {
-    id: 'seongdong-media-tunnel',
-    title: '성동구 미디어터널',
-    src: '/images/digital-media/media_display/성동구 미디어터널/성동구 미디어터널01..jpg',
-    images: [
-      '/images/digital-media/media_display/성동구 미디어터널/성동구 미디어터널01..jpg',
-      '/images/digital-media/media_display/성동구 미디어터널/성동구 미디어터널02.jpg',
-      '/images/digital-media/media_display/성동구 미디어터널/성동구 미디어터널03.jpg',
-      '/images/digital-media/media_display/성동구 미디어터널/성동구 미디어터널04.jpg',
-    ],
-  },
-  {
-    id: 'hampyeong-electronic',
-    title: '함평전자게시대',
-    src: '/images/digital-media/media_display/함평전자게시대/함평01.jpg',
-    images: [
-      '/images/digital-media/media_display/함평전자게시대/함평01.jpg',
-      '/images/digital-media/media_display/함평전자게시대/함평02.jpg',
-      '/images/digital-media/media_display/함평전자게시대/함평03.jpg',
-      '/images/digital-media/media_display/함평전자게시대/함평04.jpg',
-    ],
-  },
-];
-
-// 디지털전광판 데이터 (기존 데이터 활용)
-const digitalBillboardItems = [
-  {
-    id: 'guro-rodeo',
-    title: '구월 로데오광장',
-    src: '/images/digital-media/digital_banner/구월로데오광장/구월동01.jpg',
-  },
-  {
-    id: 'starlight-proposal',
-    title: '별빛프로포즈 탐방로',
-    src: '/images/digital-media/digital_banner/별빛프로포즈탐방로/2025_영천_별빛탐방로-2차-2-복사_1.jpg',
-  },
-  {
-    id: 'byeongjeom-plaza',
-    title: '병점광장',
-    src: '/images/digital-media/digital_banner/병점광장/야간 미디어.png',
-  },
-  {
-    id: 'janghang-lafesta',
-    title: '장항동 라페스타',
-    src: '/images/digital-media/digital_banner/장항동_라페스타/페이지 원본 2025_장항동관광특구_1.jpg',
-  },
-  {
-    id: 'junggu-yaksu',
-    title: '중구 약수역',
-    src: '/images/digital-media/digital_banner/중구_약수역/2025_약수역_옥외광고물_1.jpg',
-  },
-  {
-    id: 'cheorwon-labor',
-    title: '철원 노동당사',
-    src: '/images/digital-media/digital_banner/철원_노동당사/페이지 원본 2025_철원_미디어아트_1.jpg',
-  },
-];
-
-// 디지털사이니지 데이터 (실제 제품 정보 포함)
-interface DigitalSignageItem {
+// 디지털 미디어 아이템 타입
+interface DigitalMediaItem {
   id: string;
   title: string;
   src: string;
   images?: string[];
 }
 
-const digitalSignageItems: DigitalSignageItem[] = [
-  {
-    id: 'samsung-single',
-    title: '싱글 사이니지(삼성)',
-    src: '/images/digital-media/digital_signage/1_삼성 싱글사이니지.jpg',
-  },
-  {
-    id: 'lg-single',
-    title: '싱글 사이니지(LG)',
-    src: '/images/digital-media/digital_signage/4_LG사이니지.jpg',
-  },
-  {
-    id: 'samsung-multivision',
-    title: '멀티비전',
-    src: '/images/digital-media/digital_signage/2_삼성멀티비전.jpg',
-  },
-  {
-    id: 'samsung-electronic-board',
-    title: '전자칠판',
-    src: '/images/digital-media/digital_signage/3_삼성전지칠판.jpg',
-  },
-  {
-    id: 'stand-signage',
-    title: '스탠드 사이니지',
-    src: '/images/digital-media/digital_signage/5_중국산 스탠드.jpg',
-  },
-  {
-    id: 'kiosk',
-    title: '결제키오스크(삼성)',
-    src: '/images/digital-media/digital_signage/6_삼성전자결제-키오스크.jpg',
-  },
-  {
-    id: 'multivision-cismate',
-    title: '멀티비전(비디오월)',
-    src: '/images/digital-media/digital_signage/7_멀티비전 이미지1.jpg',
-    images: [
-      '/images/digital-media/digital_signage/7_멀티비전 이미지1.jpg',
-      '/images/digital-media/digital_signage/7_멀티비전 이미지2.jpg',
-      '/images/digital-media/digital_signage/7_멀티비전 이미지3.jpg',
-    ],
-  },
-  {
-    id: 'digital-frame',
-    title: '디지털액자',
-    src: '/images/digital-media/digital_signage/8_AIDA 디지털액자.jpg',
-  },
-  {
-    id: 'q-series-stand',
-    title: 'Q시리즈 스탠드 사이니지',
-    src: '/images/digital-media/digital_signage/9_스탠드사이니지(피벗타입).jpg',
-  },
-  {
-    id: 'the-gallery',
-    title: '더갤러리(삼성)',
-    src: '/images/digital-media/digital_signage/10_더갤러리.png',
-  },
-  {
-    id: 'q-series-stand',
-    title: '스탠드 사이니지(Q시리즈)',
-    src: '/images/digital-media/digital_signage/11_Q시리즈 스탠드사이니지.jpg',
-  },
-  {
-    id: 'q-series-touch',
-    title: '터치모니터(Q시리즈)',
-    src: '/images/digital-media/digital_signage/12_Q시리즈 터치모니터.jpg',
-  },
-  {
-    id: 'bracket',
-    title: '브라켓',
-    src: '/images/digital-media/digital_signage/13_브라켓 NSV-01.jpg',
-    images: [
-      '/images/digital-media/digital_signage/13_브라켓 NSV-01.jpg',
-      '/images/digital-media/digital_signage/13_브라켓 PV-70.jpg',
-    ],
-  },
-  {
-    id: 'outdoor-wall',
-    title: '옥외형 벽부타입',
-    src: '/images/digital-media/digital_signage/14_옥외형 벽부형.jpg',
-    images: ['/images/digital-media/digital_signage/14_옥외형 벽부형.jpg'],
-  },
-  {
-    id: 'outdoor-stand',
-    title: '옥외형 스탠드타입',
-    src: '/images/digital-media/digital_signage/15_옥외형 스탠드형1.jpg',
-    images: [
-      '/images/digital-media/digital_signage/15_옥외형 스탠드형1.jpg',
-      '/images/digital-media/digital_signage/14_옥외형 스탠드형2.png',
-    ],
-  },
-  {
-    id: 'led-display',
-    title: 'LED 디스플레이 시리즈',
-    src: '/images/digital-media/digital_signage/16_LED디스플레이.jpg',
-  },
-  {
-    id: 'led-controller',
-    title: 'LED 디스플레이 컨트롤러',
-    src: '/images/digital-media/digital_signage/17_1-컨트롤러-PC형.jpg',
-    images: [
-      '/images/digital-media/digital_signage/17_1-컨트롤러-PC형.jpg',
-      '/images/digital-media/digital_signage/17_2 컨트롤러 HD용.jpg',
-      '/images/digital-media/digital_signage/17_3-컨트롤러-FHD용.jpg',
-      '/images/digital-media/digital_signage/17_4-컨트롤러-FHD용.jpg',
-    ],
-  },
-  {
-    id: 'led-installation',
-    title: 'LED 디스플레이 설치비',
-    src: '/images/digital-media/digital_signage/18_LED 디스플레이 설치비.png',
-  },
-];
+// API 응답 타입
+interface DigitalProductItem {
+  id?: string;
+  product_code?: string;
+  product_group_code?: string;
+  title: string;
+  main_image_url: string;
+  image_urls?: string[] | string;
+  product_type?: string;
+  series_name?: string;
+  model_name?: string;
+  description?: string;
+  contact_info?: string;
+  bracket_note?: string;
+  display_order?: number;
+  project_code?: string;
+  district_code?: string;
+}
 
 type TabType = 'media-display' | 'digital-billboard' | 'digital-signage';
+
+// 제품별 이미지 매핑 (같은 번호로 시작하는 이미지들)
+const productImageMap: Record<string, string[]> = {
+  'samsung-single': [
+    '/images/digital-media/digital_signage/1_samsung_singleSignage.jpg',
+  ],
+  'samsung-multivision': [
+    '/images/digital-media/digital_signage/2_samsung_multiVision.jpg',
+  ],
+  'samsung-electronic-board': [
+    '/images/digital-media/digital_signage/3_samsung_digitalBoard.jpg',
+  ],
+  'lg-single': ['/images/digital-media/digital_signage/4_LG_signage.jpg'],
+  'stand-signage': [
+    '/images/digital-media/digital_signage/5_chinese_standard.jpg',
+  ],
+  kiosk: ['/images/digital-media/digital_signage/6_samsung_paymentKiosk.jpg'],
+  'multivision-cismate': [
+    '/images/digital-media/digital_signage/7_multiVision_1.jpg',
+    '/images/digital-media/digital_signage/7_multiVision_2.jpg',
+    '/images/digital-media/digital_signage/7_multiVision_3.jpg',
+  ],
+  'digital-frame': [
+    '/images/digital-media/digital_signage/8_AIDA_digitalFrame.jpg',
+  ],
+  'the-gallery': ['/images/digital-media/digital_signage/10_theGallery.png'],
+  'q-series-stand': [
+    '/images/digital-media/digital_signage/11_Qseries_standardSignage.jpg',
+  ],
+  'q-series-touch': [
+    '/images/digital-media/digital_signage/12_Qseries_touchMonitor.jpg',
+  ],
+  bracket: [
+    '/images/digital-media/digital_signage/13_bracket_NSV-01.jpg',
+    '/images/digital-media/digital_signage/13_bracket_PV-70.jpg',
+  ],
+  'outdoor-wall': [
+    '/images/digital-media/digital_signage/14_outdoor_wallType.jpg',
+  ],
+  'outdoor-stand': [
+    '/images/digital-media/digital_signage/15_outdoor_standard2.jpg',
+  ],
+  'led-display': ['/images/digital-media/digital_signage/16_LEDdisplay.jpg'],
+  'led-controller': [
+    '/images/digital-media/digital_signage/17-1-controller_PC.jpg',
+    '/images/digital-media/digital_signage/17-2_controller_HD.jpg',
+    '/images/digital-media/digital_signage/17-3-controller_FHD.jpg',
+    '/images/digital-media/digital_signage/17-4_controller_FHD.jpg',
+  ],
+  'led-installation': [
+    '/images/digital-media/digital_signage/18_LEDdisplay_installation.png',
+  ],
+};
 
 function DigitalSignagePageContent() {
   const [homepageContent, setHomepageContent] =
     useState<HomepageContent | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('media-display');
+  const [mediaDisplayItems, setMediaDisplayItems] = useState<
+    DigitalMediaItem[]
+  >([]);
+  const [digitalBillboardItems, setDigitalBillboardItems] = useState<
+    DigitalMediaItem[]
+  >([]);
+  const [digitalSignageItems, setDigitalSignageItems] = useState<
+    DigitalMediaItem[]
+  >([]);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -274,6 +130,129 @@ function DigitalSignagePageContent() {
     };
 
     fetchHomepageContent();
+  }, []);
+
+  useEffect(() => {
+    const fetchDigitalMediaData = async () => {
+      setLoading(true);
+      try {
+        // 미디어 경관 디스플레이 조회
+        const mediaResponse = await fetch(
+          '/api/digital-media?action=getMediaLandscape'
+        );
+        if (mediaResponse.ok) {
+          const mediaData =
+            (await mediaResponse.json()) as DigitalProductItem[];
+          const formattedMedia = mediaData.map((item) => {
+            // image_urls 파싱 처리 (배열이면 그대로, 문자열이면 JSON 파싱)
+            let imageUrls: string[] = [];
+            if (Array.isArray(item.image_urls)) {
+              imageUrls = item.image_urls;
+            } else if (typeof item.image_urls === 'string') {
+              try {
+                imageUrls = JSON.parse(item.image_urls);
+              } catch {
+                imageUrls = [item.image_urls];
+              }
+            }
+
+            return {
+              id: item.project_code || item.id || '',
+              title: item.title,
+              src: item.main_image_url,
+              images: imageUrls.length > 0 ? imageUrls : [item.main_image_url],
+            };
+          });
+          setMediaDisplayItems(formattedMedia);
+        }
+
+        // 디지털 전광판 조회
+        const billboardResponse = await fetch(
+          '/api/digital-media?action=getDigitalBillboards'
+        );
+        if (billboardResponse.ok) {
+          const billboardData =
+            (await billboardResponse.json()) as DigitalProductItem[];
+          const formattedBillboard = billboardData.map((item) => {
+            // image_urls 파싱 처리 (배열이면 그대로, 문자열이면 JSON 파싱)
+            let imageUrls: string[] = [];
+            if (Array.isArray(item.image_urls)) {
+              imageUrls = item.image_urls;
+            } else if (typeof item.image_urls === 'string') {
+              try {
+                imageUrls = JSON.parse(item.image_urls);
+              } catch {
+                imageUrls = [item.image_urls];
+              }
+            }
+
+            // main_image_url과 image_urls 배열을 합쳐서 images 배열 생성 (중복 제거)
+            const allImages = [item.main_image_url, ...imageUrls];
+            const uniqueImages = Array.from(new Set(allImages.filter(Boolean)));
+
+            return {
+              id: item.district_code || item.project_code || item.id || '',
+              title: item.title,
+              src: item.main_image_url,
+              images:
+                uniqueImages.length > 0 ? uniqueImages : [item.main_image_url],
+            };
+          });
+          setDigitalBillboardItems(formattedBillboard);
+        }
+
+        // 디지털 사이니지 제품 조회 - 데이터베이스에서 가져오기 (쇼핑몰)
+        const signageResponse = await fetch(
+          '/api/digital-media?action=getDigitalSignage'
+        );
+        if (signageResponse.ok) {
+          const signageData =
+            (await signageResponse.json()) as DigitalProductItem[];
+          const formattedSignage = signageData.map((item) => {
+            // image_urls 파싱 처리 (배열이면 그대로, 문자열이면 JSON 파싱)
+            let imageUrls: string[] = [];
+            if (Array.isArray(item.image_urls)) {
+              imageUrls = item.image_urls;
+            } else if (typeof item.image_urls === 'string') {
+              try {
+                imageUrls = JSON.parse(item.image_urls);
+              } catch {
+                imageUrls = [item.image_urls];
+              }
+            }
+
+            // product_group_code가 있으면 해당 그룹의 이미지 맵에서 가져오기
+            const groupCode = item.product_group_code || '';
+            const mappedImages = groupCode
+              ? productImageMap[groupCode] || []
+              : [];
+
+            // 이미지 배열 합치기 (중복 제거)
+            const allImages = [
+              item.main_image_url,
+              ...imageUrls,
+              ...mappedImages,
+            ];
+            const uniqueImages = Array.from(new Set(allImages.filter(Boolean)));
+
+            return {
+              id: item.product_group_code || item.product_code || item.id || '', // product_group_code를 id로 사용
+              title: item.title,
+              src: uniqueImages[0] || item.main_image_url, // 첫 번째 이미지를 메인 이미지로
+              images:
+                uniqueImages.length > 0 ? uniqueImages : [item.main_image_url],
+            };
+          });
+          setDigitalSignageItems(formattedSignage);
+        }
+      } catch (error) {
+        console.error('Error fetching digital media data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDigitalMediaData();
   }, []);
 
   useEffect(() => {
@@ -369,11 +348,21 @@ function DigitalSignagePageContent() {
       </section>
 
       <div className="lg:container lg:mx-auto lg:px-[8rem] sm:px-[1.5rem] py-12">
-        <div className="grid lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-1 gap-8 justify-items-center">
-          {getCurrentItems().map((item) => (
-            <ItemCard item={item} key={item.id} />
-          ))}
-        </div>
+        {loading ? (
+          <div className="flex justify-center items-center py-20">
+            <div className="text-lg text-gray-500">데이터를 불러오는 중...</div>
+          </div>
+        ) : getCurrentItems().length === 0 ? (
+          <div className="flex justify-center items-center py-20">
+            <div className="text-lg text-gray-500">표시할 항목이 없습니다.</div>
+          </div>
+        ) : (
+          <div className="grid lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-1 gap-8 justify-items-center">
+            {getCurrentItems().map((item) => (
+              <ItemCard item={item} key={item.id} />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 팝업 공지사항 */}
