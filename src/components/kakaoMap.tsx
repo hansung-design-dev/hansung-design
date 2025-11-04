@@ -164,10 +164,10 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
         }
       }, 100);
 
-      // 최대 5초 대기
+      // 최대 30초 대기
       const timeout = setTimeout(() => {
         clearInterval(checkInterval);
-      }, 5000);
+      }, 30000);
 
       return () => {
         clearInterval(checkInterval);
@@ -496,7 +496,9 @@ const RoadviewOverlay: React.FC<RoadviewOverlayProps> = ({
         const event = window.kakao.maps.event;
 
         if (!Roadview || !LatLng || !event) {
-          onError('로드뷰를 초기화할 수 없습니다. SDK가 완전히 로드되지 않았습니다.');
+          onError(
+            '로드뷰를 초기화할 수 없습니다. SDK가 완전히 로드되지 않았습니다.'
+          );
           return;
         }
 

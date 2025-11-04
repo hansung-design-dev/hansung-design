@@ -1,21 +1,30 @@
 import type { NextConfig } from 'next';
+import type { RemotePattern } from 'next/dist/shared/lib/image-config';
+
+// Derive Supabase hostname from env to avoid hardcoding per environment
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseHost = supabaseUrl ? new URL(supabaseUrl).hostname : undefined;
 
 const nextConfig: NextConfig = {
   images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'eklijrstdcgsxtbjxjra.supabase.co',
-        port: '',
-        pathname: '/storage/v1/object/public/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'eklijrstdcgsxtbjxjra.supabase.co',
-        port: '',
-        pathname: '/storage/v1/object/sign/**',
-      },
-    ],
+    remotePatterns: ((): RemotePattern[] => {
+      if (!supabaseHost) return [];
+      const patterns: RemotePattern[] = [
+        {
+          protocol: 'https',
+          hostname: supabaseHost,
+          port: '',
+          pathname: '/storage/v1/object/public/**',
+        },
+        {
+          protocol: 'https',
+          hostname: supabaseHost,
+          port: '',
+          pathname: '/storage/v1/object/sign/**',
+        },
+      ];
+      return patterns;
+    })(),
   },
   webpack(config) {
     config.module.rules.push({

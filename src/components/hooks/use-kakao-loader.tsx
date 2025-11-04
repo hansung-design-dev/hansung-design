@@ -92,7 +92,7 @@ export default function useKakaoLoader() {
         } else {
           // 재확인 실패 시 재시도
           let retryCount = 0;
-          const maxRetries = 30;
+          const maxRetries = 300; // 100ms x 300 = 30s
           const retryCheck = () => {
             retryCount++;
             if (checkExisting()) {
@@ -145,6 +145,9 @@ export default function useKakaoLoader() {
     // 프로토콜 없는 형식 사용 (현재 페이지의 프로토콜 자동 사용)
     const scriptUrl = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${appkey}&libraries=clusterer,drawing,services,roadview`;
     script.src = scriptUrl;
+    // Next.js 환경에서 document.write() 문제 방지를 위해 async 속성 제거
+    // 동기적으로 로드하여 SDK가 정상적으로 초기화되도록 함
+    script.async = false;
 
     // 디버깅 정보 출력 (개발 환경)
     if (process.env.NODE_ENV === 'development') {
@@ -175,9 +178,9 @@ export default function useKakaoLoader() {
           }
         }
 
-        // SDK가 준비되지 않았으면 재시도 (최대 3초)
+        // SDK가 준비되지 않았으면 재시도 (최대 30초)
         let retryCount = 0;
-        const maxRetries = 30;
+        const maxRetries = 300; // 100ms x 300 = 30s
 
         const checkKakao = () => {
           retryCount++;
