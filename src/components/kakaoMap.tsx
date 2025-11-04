@@ -1,8 +1,15 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Map, MapMarker } from 'react-kakao-maps-sdk';
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+} from 'react';
 import useKakaoLoader from './hooks/use-kakao-loader';
+// 카카오맵 공식 가이드: https://apis.map.kakao.com/web/guide/#start
+// 공식 가이드에 명시된 방법으로만 사용 (순수 JavaScript API)
 
 export interface MarkerType {
   id: string;
@@ -17,7 +24,7 @@ interface KakaoMapProps {
   markers: MarkerType[];
   selectedIds: string[];
   center?: { lat: number; lng: number };
-  onMarkerClick?: (markerId: string) => void; // 마커 클릭 이벤트 추가
+  onMarkerClick?: (markerId: string) => void;
 }
 
 const KakaoMap: React.FC<KakaoMapProps> = ({
@@ -28,6 +35,11 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
 }) => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const mapRef = useRef<HTMLDivElement>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mapInstanceRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const markersRef = useRef<Map<string, any>>(new Map());
 
   // 로드뷰 오버레이 상태
   const [roadviewVisible, setRoadviewVisible] = useState(false);
@@ -39,133 +51,350 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
 
   const { isLoaded: kakaoLoaded } = useKakaoLoader();
 
-  // 카카오맵 로딩 체크 개선
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
+  // 카카오맵 SDK가 완전히 준비되었는지 확인하는 함수
+  const isKakaoSDKReady = useCallback(() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
 
-    const checkKakaoMapLoading = () => {
-      if (window.kakao && window.kakao.maps) {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('✅ 카카오맵 SDK 로딩 완료');
-          console.log(
-            '🔍 로드뷰 라이브러리 확인:',
-            !!window.kakao.maps.Roadview
-          );
-        }
-        setIsLoading(false);
-        setError(null);
-      } else {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('⏳ 카카오맵 SDK 로딩 중...');
-        }
-        // 5초 후에도 로딩되지 않으면 에러 표시
-        setTimeout(() => {
-          if (!window.kakao || !window.kakao.maps) {
-            console.error('❌ 카카오맵 SDK 로딩 실패');
-            setError('카카오맵을 불러올 수 없습니다. API 키를 확인해주세요.');
-            setIsLoading(false);
-          }
-        }, 5000);
-      }
-    };
+    if (!window.kakao || !window.kakao.maps) {
+      return false;
+    }
 
-    // 초기 체크
-    checkKakaoMapLoading();
+    const kakaoMaps = window.kakao.maps;
 
-    // 주기적으로 체크 (최대 8초)
-    const interval = setInterval(() => {
-      if (window.kakao && window.kakao.maps) {
-        clearInterval(interval);
-        setIsLoading(false);
-        setError(null);
-      }
-    }, 1000);
+    // 지도 초기화에 필요한 최소한의 생성자만 확인
+    // LatLng와 Map만 확인 (나머지는 사용할 때 체크)
+    const hasLatLng =
+      kakaoMaps.LatLng && typeof kakaoMaps.LatLng === 'function';
+    const hasMap = kakaoMaps.Map && typeof kakaoMaps.Map === 'function';
 
-    // 8초 후 타임아웃
-    const timeout = setTimeout(() => {
-      clearInterval(interval);
-      if (!window.kakao || !window.kakao.maps) {
-        setError('카카오맵 로딩 시간이 초과되었습니다.');
-        setIsLoading(false);
-      }
-    }, 8000);
-
-    return () => {
-      clearInterval(interval);
-      clearTimeout(timeout);
-    };
+    const ready = hasLatLng && hasMap;
+    return ready;
   }, [kakaoLoaded]);
 
+  // 중심점 계산 (메모이제이션)
+  const mapCenter = useMemo(() => {
+    return (
+      center ||
+      (markers.length
+        ? {
+            lat:
+              markers.reduce((sum, marker) => sum + marker.lat, 0) /
+              markers.length,
+            lng:
+              markers.reduce((sum, marker) => sum + marker.lng, 0) /
+              markers.length,
+          }
+        : { lat: 37.5665, lng: 126.978 })
+    );
+  }, [center, markers]);
+
+  // mapRef callback에서 지도 초기화 시도 (useCallback으로 메모이제이션) - hooks 규칙을 위해 여기에 정의
+  const handleMapRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      mapRef.current = el;
+
+      // mapRef 설정 시 디버그 로그 제거 (너무 많은 로그 방지)
+
+      // mapRef가 설정되고, 카카오 SDK가 완전히 준비되었는데 지도 인스턴스가 없으면 초기화 시도
+      if (el && !mapInstanceRef.current && kakaoLoaded && isKakaoSDKReady()) {
+        try {
+          const container = el;
+
+          // 컨테이너 크기 확인 (경고만, 지도는 생성 가능)
+
+          if (!window.kakao?.maps?.LatLng || !window.kakao?.maps?.Map) {
+            throw new Error('카카오맵 SDK가 완전히 로드되지 않았습니다.');
+          }
+
+          const options = {
+            center: new window.kakao.maps.LatLng(mapCenter.lat, mapCenter.lng),
+            level: 3,
+          };
+
+          const map = new window.kakao.maps.Map(container, options);
+
+          // 지도가 생성되면 크기를 조정
+          if (map && (!container.offsetWidth || !container.offsetHeight)) {
+            setTimeout(() => {
+              if (map && map.relayout) {
+                map.relayout();
+              }
+            }, 100);
+          }
+          mapInstanceRef.current = map;
+          setIsLoading(false);
+          setError(null);
+        } catch (err) {
+          console.error('❌ mapRef callback에서 카카오맵 생성 실패:', err);
+          setError('카카오맵을 생성할 수 없습니다.');
+          setIsLoading(false);
+        }
+      }
+    },
+    [kakaoLoaded, mapCenter, isKakaoSDKReady]
+  );
+
+  // 카카오맵 초기화 (공식 가이드 방식) - useEffect로 백업 시도
+  useEffect(() => {
+    // 이미 지도 인스턴스가 있으면 스킵
+    if (mapInstanceRef.current) {
+      return;
+    }
+
+    if (typeof window === 'undefined' || !mapRef.current) {
+      return;
+    }
+
+    // SDK가 준비될 때까지 polling
+    if (!kakaoLoaded || !isKakaoSDKReady()) {
+      // SDK가 로드되었다고 표시되었지만 실제로는 아직 준비되지 않은 경우
+      // polling으로 준비 상태 확인
+      const checkInterval = setInterval(() => {
+        if (
+          kakaoLoaded &&
+          isKakaoSDKReady() &&
+          mapRef.current &&
+          !mapInstanceRef.current
+        ) {
+          clearInterval(checkInterval);
+          // SDK가 준비되면 지도 초기화 시도
+          // 이 useEffect가 다시 실행되도록 하기 위해 의존성 배열에 의해 자동 재실행됨
+        }
+      }, 100);
+
+      // 최대 5초 대기
+      const timeout = setTimeout(() => {
+        clearInterval(checkInterval);
+      }, 5000);
+
+      return () => {
+        clearInterval(checkInterval);
+        clearTimeout(timeout);
+      };
+    }
+
+    try {
+      // 공식 가이드: 지도 생성
+      // 참고: https://apis.map.kakao.com/web/guide/#start
+      const container = mapRef.current;
+
+      // 컨테이너 크기 확인 (경고만, 지도는 생성 가능)
+
+      if (!window.kakao?.maps?.LatLng || !window.kakao?.maps?.Map) {
+        throw new Error('카카오맵 SDK가 완전히 로드되지 않았습니다.');
+      }
+
+      const options = {
+        center: new window.kakao.maps.LatLng(mapCenter.lat, mapCenter.lng),
+        level: 3,
+      };
+
+      const map = new window.kakao.maps.Map(container, options);
+
+      // 지도가 생성되면 크기를 조정
+      if (map && (!container.offsetWidth || !container.offsetHeight)) {
+        setTimeout(() => {
+          if (map && map.relayout) {
+            map.relayout();
+          }
+        }, 100);
+      }
+      mapInstanceRef.current = map;
+      setIsLoading(false);
+      setError(null);
+    } catch (err) {
+      console.error('❌ useEffect에서 카카오맵 생성 실패:', err);
+      setError('카카오맵을 생성할 수 없습니다.');
+      setIsLoading(false);
+    }
+  }, [kakaoLoaded, mapCenter, isKakaoSDKReady]);
+
   // 로드뷰 오버레이 열기
-  const openRoadview = (lat: number, lng: number) => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🔍 로드뷰 열기 시도:', { lat, lng });
-      console.log(
-        '🔍 카카오맵 API 키 확인:',
-        process.env.NEXT_PUBLIC_KAKAO_KEY ? '설정됨' : '설정되지 않음'
-      );
-    }
+  const openRoadview = useCallback(
+    (lat: number, lng: number) => {
+      if (!isKakaoSDKReady()) {
+        console.error('❌ 카카오맵 SDK가 준비되지 않았습니다.');
+        setRoadviewError('카카오맵 SDK가 준비되지 않았습니다.');
+        return;
+      }
 
-    // 카카오맵 SDK 로딩 상태 확인
-    if (!window.kakao || !window.kakao.maps) {
-      console.error('❌ 카카오맵 SDK가 로드되지 않았습니다.');
-      setRoadviewError('카카오맵 SDK가 로드되지 않았습니다.');
+      if (!window.kakao?.maps?.Roadview) {
+        console.error('❌ 로드뷰 라이브러리가 로드되지 않았습니다.');
+        setRoadviewError('로드뷰 라이브러리가 로드되지 않았습니다.');
+        return;
+      }
+
+      setRoadviewError(null);
+      setRoadviewPosition({ lat, lng });
+      setRoadviewVisible(true);
+    },
+    [isKakaoSDKReady]
+  );
+
+  // 마커 업데이트
+  useEffect(() => {
+    if (!mapInstanceRef.current) {
       return;
     }
 
-    if (!window.kakao.maps.Roadview) {
-      console.error('❌ 로드뷰 라이브러리가 로드되지 않았습니다.');
-      setRoadviewError('로드뷰 라이브러리가 로드되지 않았습니다.');
+    if (!isKakaoSDKReady()) {
       return;
     }
 
-    setRoadviewError(null);
-    setRoadviewPosition({ lat, lng });
-    setRoadviewVisible(true);
+    const map = mapInstanceRef.current;
+
+    // 기존 마커 제거
+    markersRef.current.forEach((marker) => {
+      marker.setMap(null);
+    });
+    markersRef.current.clear();
+
+    // 새 마커 생성
+    if (!window.kakao?.maps) {
+      console.error('❌ 카카오맵 SDK가 없습니다.');
+      return;
+    }
+
+    const { LatLng, Marker, CustomOverlay, event } = window.kakao.maps;
+
+    // 타입 가드: 필수 속성 확인
+    if (!LatLng || !Marker || !CustomOverlay || !event) {
+      console.error('❌ 카카오맵 SDK의 필수 생성자가 없습니다.');
+      return;
+    }
+
+    markers.forEach((marker) => {
+      const isSelected = selectedIds.includes(marker.id);
+      const position = new LatLng(marker.lat, marker.lng);
+
+      // 마커 생성
+      const kakaoMarker = new Marker({
+        position: position,
+      });
+
+      // 커스텀 오버레이 생성 (마커 위 텍스트 표시)
+      const overlay = new CustomOverlay({
+        position: position,
+        content: createMarkerContent(
+          marker,
+          isSelected,
+          () => {
+            if (onMarkerClick) {
+              onMarkerClick(marker.id);
+            }
+          },
+          () => {
+            openRoadview(marker.lat, marker.lng);
+          }
+        ),
+        yAnchor: 2.2,
+      });
+
+      // 마커 클릭 이벤트
+      event.addListener(kakaoMarker, 'click', () => {
+        if (onMarkerClick) {
+          onMarkerClick(marker.id);
+        }
+      });
+
+      // 지도에 마커와 오버레이 추가
+      kakaoMarker.setMap(map);
+      overlay.setMap(map);
+
+      markersRef.current.set(marker.id, kakaoMarker);
+    });
+
+    // 선택된 마커가 있으면 중심점 이동
+    if (selectedIds.length > 0) {
+      const selectedMarker = markers.find((m) => selectedIds.includes(m.id));
+      if (selectedMarker && window.kakao?.maps?.LatLng) {
+        const moveLatLon = new window.kakao.maps.LatLng(
+          selectedMarker.lat,
+          selectedMarker.lng
+        );
+        map.setCenter(moveLatLon);
+        map.setLevel(3);
+      }
+    }
+  }, [markers, selectedIds, onMarkerClick, isKakaoSDKReady, openRoadview]);
+
+  // 마커 컨텐츠 생성 함수
+  const createMarkerContent = (
+    marker: MarkerType,
+    isSelected: boolean,
+    onMarkerClick: () => void,
+    onRoadviewClick: () => void
+  ) => {
+    const div = document.createElement('div');
+    div.style.cssText = `
+      padding: 8px 12px;
+      background-color: ${isSelected ? '#238CFA' : '#666'};
+      color: white;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+      white-space: nowrap;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      min-width: 60px;
+      text-align: center;
+      cursor: pointer;
+    `;
+    div.textContent =
+      marker.title.length > 10
+        ? marker.title.substring(0, 10) + '...'
+        : marker.title;
+
+    div.addEventListener('click', (e) => {
+      e.stopPropagation();
+      onMarkerClick();
+    });
+
+    if (isSelected) {
+      const button = document.createElement('button');
+      button.style.cssText = `
+        display: block;
+        margin-top: 6px;
+        padding: 4px 8px;
+        background-color: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 4px;
+        color: #238CFA;
+        font-size: 11px;
+        font-weight: bold;
+        cursor: pointer;
+        width: 100%;
+        min-width: 100%;
+        box-sizing: border-box;
+        transition: all 0.2s ease;
+      `;
+      button.textContent = '🚗 로드뷰 보기';
+      button.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        onRoadviewClick();
+      });
+      button.addEventListener('mouseenter', () => {
+        button.style.backgroundColor = 'white';
+        button.style.transform = 'scale(1.05)';
+      });
+      button.addEventListener('mouseleave', () => {
+        button.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+        button.style.transform = 'scale(1)';
+      });
+      div.appendChild(button);
+    }
+
+    return div;
   };
 
   // 로드뷰 오버레이 닫기
   const closeRoadview = () => {
-    console.log('🔍 로드뷰 닫기');
     setRoadviewVisible(false);
     setRoadviewPosition(null);
     setRoadviewError(null);
   };
-
-  // 마커 클릭 핸들러
-  const handleMarkerClick = (markerId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    console.log('🔍 마커 클릭:', markerId);
-    if (onMarkerClick) {
-      onMarkerClick(markerId);
-    }
-  };
-
-  // 로드뷰 버튼 클릭 핸들러
-  const handleRoadviewClick = (
-    lat: number,
-    lng: number,
-    e: React.MouseEvent
-  ) => {
-    e.stopPropagation();
-    e.preventDefault();
-    console.log('🔍 로드뷰 버튼 클릭:', { lat, lng });
-    openRoadview(lat, lng);
-  };
-
-  // 중심점 계산
-  const mapCenter =
-    center ||
-    (markers.length
-      ? {
-          lat:
-            markers.reduce((sum, marker) => sum + marker.lat, 0) /
-            markers.length,
-          lng:
-            markers.reduce((sum, marker) => sum + marker.lng, 0) /
-            markers.length,
-        }
-      : { lat: 37.5665, lng: 126.978 });
 
   if (error) {
     return (
@@ -175,152 +404,33 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
           <p className="text-sm text-gray-600 mb-4">
             개발자 도구의 콘솔을 확인하여 자세한 오류 정보를 확인하세요.
           </p>
-          <div className="text-xs text-gray-600 mb-4 text-left">
-            <p>🔍 디버그 정보:</p>
-            <p>
-              • API 키:{' '}
-              {process.env.NEXT_PUBLIC_KAKAO_KEY ? '설정됨' : '설정되지 않음'}
-            </p>
-            <p>
-              • 도메인:{' '}
-              {typeof window !== 'undefined' ? window.location.hostname : 'SSR'}
-            </p>
-            <p>• 환경: {process.env.NODE_ENV}</p>
-            <p>
-              • kakao 객체:{' '}
-              {typeof window !== 'undefined'
-                ? window.kakao
-                  ? '존재'
-                  : '없음'
-                : 'SSR'}
-            </p>
-            <p>
-              • kakao.maps:{' '}
-              {typeof window !== 'undefined'
-                ? window.kakao?.maps
-                  ? '존재'
-                  : '없음'
-                : 'SSR'}
-            </p>
-          </div>
           <p className="text-xs text-orange-600 mb-4">
-            💡 카카오맵 API 키가 설정되지 않았을 수 있습니다.
+            💡 카카오 개발자 콘솔에서 도메인 등록 확인
             <br />
-            .env.local 파일에 NEXT_PUBLIC_KAKAO_KEY를 추가해주세요.
-          </p>
-          <div className="space-y-2">
-            <button
-              onClick={() => {
-                setError(null);
-                window.location.reload();
-              }}
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors mr-2"
-            >
-              다시 시도
-            </button>
-            <button
-              onClick={() => {
-                const mapCenter = center || { lat: 37.5665, lng: 126.978 };
-                const googleMapsUrl = `https://www.google.com/maps?q=${mapCenter.lat},${mapCenter.lng}`;
-                window.open(googleMapsUrl, '_blank');
-              }}
-              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
-            >
-              Google Maps로 보기
-            </button>
-          </div>
-          <p className="text-xs text-gray-500 mt-4">
-            카카오맵 로딩에 문제가 있는 경우 Google Maps를 사용할 수 있습니다.
+            📖 공식 가이드: https://apis.map.kakao.com/web/guide/#start
           </p>
         </div>
       </div>
     );
   }
 
-  // 로딩 중일 때 스켈레톤 표시
-  if (isLoading) {
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-lg">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">카카오맵 로딩 중...</p>
-        </div>
-      </div>
-    );
-  }
+  // 렌더링 시 디버그 로그 제거 (너무 많은 로그 방지)
 
   return (
     <div className="relative w-full h-full">
-      <Map
-        center={mapCenter}
-        style={{ width: '100%', height: '100%' }}
-        level={3}
-      >
-        {markers.map((marker) => {
-          const isSelected = selectedIds.includes(marker.id);
-          return (
-            <MapMarker
-              key={marker.id}
-              position={{ lat: marker.lat, lng: marker.lng }}
-            >
-              <div
-                onClick={(e) => handleMarkerClick(marker.id, e)}
-                style={{
-                  padding: '8px 12px',
-                  backgroundColor: isSelected ? '#238CFA' : '#666',
-                  color: 'white',
-                  borderRadius: '4px',
-                  fontSize: '12px',
-                  fontWeight: 'bold',
-                  whiteSpace: 'nowrap',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                  minWidth: '60px',
-                  textAlign: 'center',
-                  cursor: 'pointer',
-                }}
-              >
-                {marker.title.length > 10
-                  ? marker.title.substring(0, 10) + '...'
-                  : marker.title}
-                {isSelected && (
-                  <button
-                    onClick={(e) =>
-                      handleRoadviewClick(marker.lat, marker.lng, e)
-                    }
-                    style={{
-                      display: 'block',
-                      marginTop: '6px',
-                      padding: '4px 8px',
-                      backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                      border: '1px solid rgba(255, 255, 255, 0.3)',
-                      borderRadius: '4px',
-                      color: '#238CFA',
-                      fontSize: '11px',
-                      fontWeight: 'bold',
-                      cursor: 'pointer',
-                      width: '100%',
-                      minWidth: '100%',
-                      boxSizing: 'border-box',
-                      transition: 'all 0.2s ease',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = 'white';
-                      e.currentTarget.style.transform = 'scale(1.05)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor =
-                        'rgba(255, 255, 255, 0.9)';
-                      e.currentTarget.style.transform = 'scale(1)';
-                    }}
-                  >
-                    🚗 로드뷰 보기
-                  </button>
-                )}
-              </div>
-            </MapMarker>
-          );
-        })}
-      </Map>
+      {/* 지도 컨테이너 (공식 가이드 방식) - 항상 렌더링 */}
+      <div ref={handleMapRef} style={{ width: '100%', height: '100%' }} />
+
+      {/* 로딩 오버레이 */}
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 bg-opacity-75 z-10">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p className="text-gray-600">카카오맵 로딩 중...</p>
+          </div>
+        </div>
+      )}
+
       {/* 로드뷰 오버레이 */}
       {roadviewVisible && roadviewPosition && (
         <RoadviewOverlay
@@ -329,6 +439,7 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
           onError={setRoadviewError}
         />
       )}
+
       {/* 로드뷰 에러 메시지 */}
       {roadviewError && (
         <div className="absolute top-4 left-4 right-4 z-40 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
@@ -360,128 +471,64 @@ const RoadviewOverlay: React.FC<RoadviewOverlayProps> = ({
   onError,
 }) => {
   const roadviewRef = useRef<HTMLDivElement>(null);
-  const roadviewInstanceRef = useRef<kakao.maps.Roadview | null>(null);
-  const retryCountRef = useRef(0);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const roadviewInstanceRef = useRef<any>(null);
 
   useEffect(() => {
-    // DOM이 준비될 때까지 대기
     const initRoadview = () => {
       if (!roadviewRef.current || !window.kakao || !window.kakao.maps) {
-        console.error('❌ 로드뷰 초기화 실패: 필수 조건 불충족');
         onError('로드뷰를 초기화할 수 없습니다.');
         return;
       }
 
-      // 재시도 카운터 리셋
-      retryCountRef.current = 0;
-
-      console.log('🔍 로드뷰 인스턴스 생성 시작:', position);
-
       try {
-        // 기존 인스턴스 제거
         if (roadviewInstanceRef.current) {
-          console.log('🔍 기존 로드뷰 인스턴스 제거');
           roadviewInstanceRef.current = null;
         }
 
-        // 로드뷰 컨테이너 초기화
         if (roadviewRef.current) {
           roadviewRef.current.innerHTML = '';
         }
 
-        // 새 인스턴스 생성
-        const roadview = new window.kakao.maps.Roadview(roadviewRef.current, {
-          position: new window.kakao.maps.LatLng(position.lat, position.lng),
+        // 타입 가드: 필수 속성 확인
+        const Roadview = window.kakao.maps.Roadview;
+        const LatLng = window.kakao.maps.LatLng;
+        const event = window.kakao.maps.event;
+
+        if (!Roadview || !LatLng || !event) {
+          onError('로드뷰를 초기화할 수 없습니다. SDK가 완전히 로드되지 않았습니다.');
+          return;
+        }
+
+        // 공식 가이드 방식으로 로드뷰 생성
+        const roadview = new Roadview(roadviewRef.current, {
+          position: new LatLng(position.lat, position.lng),
           pov: { pan: 0, tilt: 0, zoom: 1 },
-        } as kakao.maps.RoadviewOptions);
+        });
 
         roadviewInstanceRef.current = roadview;
         onError(null);
-        console.log('✅ 로드뷰 인스턴스 생성 성공');
 
-        // 로드뷰 로드 상태 확인 (단순화된 버전)
-        setTimeout(() => {
-          if (roadviewInstanceRef.current) {
-            const roadviewElement =
-              roadviewRef.current?.querySelector('iframe');
-            if (!roadviewElement) {
-              console.warn('⚠️ 로드뷰 iframe이 생성되지 않았습니다.');
-              // 에러 메시지를 더 구체적으로 표시
-              onError(
-                '로드뷰를 불러올 수 없습니다. 해당 위치에서 로드뷰가 제공되지 않거나 카카오맵 API 키에 문제가 있을 수 있습니다.'
-              );
-            } else {
-              console.log('✅ 로드뷰 iframe 생성 확인됨');
-            }
-          }
-        }, 8000); // 8초로 조정
-
-        // 로드뷰 로드 완료 이벤트
-        window.kakao.maps.event.addListener(roadview, 'init', () => {
-          console.log('✅ 로드뷰 초기화 완료');
-          onError(null); // 에러 상태 초기화
+        event.addListener(roadview, 'init', () => {
+          onError(null);
         });
 
-        // 로드뷰 에러 이벤트
-        window.kakao.maps.event.addListener(
-          roadview,
-          'error',
-          (error: unknown) => {
-            console.error('❌ 로드뷰 에러:', error);
-            onError(
-              '로드뷰를 불러올 수 없습니다. 해당 위치에서 로드뷰가 제공되지 않거나 네트워크 문제가 있을 수 있습니다.'
-            );
-          }
-        );
-
-        // 로드뷰 위치 변경 이벤트
-        window.kakao.maps.event.addListener(
-          roadview,
-          'position_changed',
-          () => {
-            console.log('🔍 로드뷰 위치 변경됨');
-          }
-        );
-
-        // 로드뷰 로드 타임아웃 설정
-        setTimeout(() => {
-          if (roadviewInstanceRef.current) {
-            const roadviewElement =
-              roadviewRef.current?.querySelector('iframe');
-            if (!roadviewElement) {
-              console.warn('⚠️ 로드뷰 로드 타임아웃');
-              onError(
-                '로드뷰 로딩이 시간 초과되었습니다. 잠시 후 다시 시도해주세요.'
-              );
-            } else {
-              console.log('✅ 로드뷰 iframe 확인됨');
-            }
-          }
-        }, 10000); // 타임아웃을 10초로 설정
+        event.addListener(roadview, 'error', () => {
+          onError(
+            '로드뷰를 불러올 수 없습니다. 해당 위치에서 로드뷰가 제공되지 않을 수 있습니다.'
+          );
+        });
       } catch (error) {
-        console.error('❌ 로드뷰 인스턴스 생성 실패:', error);
-        console.error('❌ 에러 상세 정보:', {
-          error: error,
-          kakaoExists: !!window.kakao,
-          kakaoMapsExists: !!(window.kakao && window.kakao.maps),
-          roadviewRefExists: !!roadviewRef.current,
-          position: position,
-        });
-        onError(
-          '로드뷰를 생성할 수 없습니다. 카카오맵 API 키를 확인하거나 잠시 후 다시 시도해주세요.'
-        );
+        console.error('❌ 로드뷰 생성 실패:', error);
+        onError('로드뷰를 생성할 수 없습니다.');
       }
     };
 
-    // DOM이 준비될 때까지 대기
-    const timer = setTimeout(() => {
-      initRoadview();
-    }, 100);
+    const timer = setTimeout(initRoadview, 100);
 
     return () => {
       clearTimeout(timer);
       if (roadviewInstanceRef.current) {
-        console.log('🔍 로드뷰 인스턴스 정리');
         roadviewInstanceRef.current = null;
       }
     };
@@ -489,15 +536,15 @@ const RoadviewOverlay: React.FC<RoadviewOverlayProps> = ({
 
   return (
     <div
-      className="absolute inset-0 z-50 bg-white shadow-xl flex flex-col"
+      className="fixed inset-0 z-[9999] bg-white shadow-xl flex flex-col"
       style={{
-        minWidth: 0,
-        minHeight: 0,
-        position: 'absolute',
+        position: 'fixed',
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
+        width: '100%',
+        height: '100%',
       }}
     >
       <div className="flex items-center justify-between p-3 border-b bg-gray-50">

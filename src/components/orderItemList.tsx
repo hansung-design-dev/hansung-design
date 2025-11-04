@@ -69,9 +69,12 @@ interface ListItem {
   title: string;
   subtitle?: string;
   location?: string;
-  status: string;
+  status: string; // 마감여부
+  paymentStatus?: string; // 결제여부
   quantity?: number;
   orderId?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  order?: any; // 전체 주문 정보
 }
 
 const statusColorMap: Record<string, string> = {
@@ -97,6 +100,7 @@ interface ItemTableProps {
   onExpandItem?: (itemId: number | null) => void;
   expandedContent?: React.ReactNode;
   onCancelOrder?: (item: ListItem) => void;
+  onPaymentClick?: (item: ListItem) => void; // 결제하기 콜백
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -112,6 +116,7 @@ const OrderItemList: React.FC<ItemTableProps> = ({
   onExpandItem,
   expandedContent,
   onCancelOrder,
+  onPaymentClick,
 }) => {
   const [page, setPage] = useState(1);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
@@ -261,6 +266,7 @@ const OrderItemList: React.FC<ItemTableProps> = ({
                     <th className="text-left pl-10">게시대 명</th>
                     <th className="text-center">행정동</th>
                     <th className="text-center">마감여부</th>
+                    <th className="text-center">결제여부</th>
                     <th className="text-center">&nbsp;</th>
                   </tr>
                 </thead>
@@ -308,6 +314,9 @@ const OrderItemList: React.FC<ItemTableProps> = ({
                     >
                       {item.status}
                     </td>
+                    <td className="text-center text-1.25 font-500">
+                      {item.paymentStatus || '-'}
+                    </td>
                     <td className="text-center">
                       <Button
                         size="xs"
@@ -331,7 +340,7 @@ const OrderItemList: React.FC<ItemTableProps> = ({
                 {/* 확장된 상세 정보 표시 */}
                 {expandedItemId && expandedContent && (
                   <tr>
-                    <td colSpan={showCheckbox ? 5 : 4} className="p-0">
+                    <td colSpan={showCheckbox ? 6 : 5} className="p-0">
                       <div>{expandedContent}</div>
                     </td>
                   </tr>
@@ -342,7 +351,7 @@ const OrderItemList: React.FC<ItemTableProps> = ({
                   length: ITEMS_PER_PAGE - paginatedItems.length,
                 }).map((_, i) => (
                   <tr key={`empty-${i}`} className="h-[3.5rem]">
-                    <td colSpan={showCheckbox ? 5 : 4} />
+                    <td colSpan={showCheckbox ? 6 : 5} />
                   </tr>
                 ))}
               </tbody>
@@ -382,7 +391,7 @@ const OrderItemList: React.FC<ItemTableProps> = ({
                   행정동: {item.location}
                 </div>
                 <div className="text-1.25 font-500">
-                  상태:&nbsp;
+                  마감여부:&nbsp;
                   <span
                     className={`text-1.25 font-500 ${getStatusClass(
                       item.status
@@ -391,23 +400,31 @@ const OrderItemList: React.FC<ItemTableProps> = ({
                     {item.status}
                   </span>
                 </div>
-                <button
-                  className={`border px-4 py-1 rounded mt-2 text-black border-black hover:bg-gray-100`}
-                  // 테스트 중이므로 모든 상태에서 취소 가능
-                  // TODO: 실제 운영 시에는 아래 주석을 해제
-                  // className={`border px-4 py-1 rounded mt-2 ${
-                  //   item.status === '마감' || item.status === '송출중'
-                  //     ? 'text-gray-400 border-gray-200 bg-gray-100 cursor-not-allowed'
-                  //     : 'text-black border-black hover:bg-gray-100'
-                  // }`}
-                  // disabled={item.status === '마감' || item.status === '송출중'}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCancelClick(item);
-                  }}
-                >
-                  신청 취소
-                </button>
+                <div className="text-1.25 font-500">
+                  결제여부: {item.paymentStatus || '-'}
+                </div>
+                <div className="flex gap-2 mt-2">
+                  {item.paymentStatus === '대기' && onPaymentClick && (
+                    <button
+                      className="bg-blue-600 text-white px-4 py-1 rounded hover:bg-blue-700 transition-colors text-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onPaymentClick(item);
+                      }}
+                    >
+                      결제하기
+                    </button>
+                  )}
+                  <button
+                    className={`border px-4 py-1 rounded text-black border-black hover:bg-gray-100 text-sm`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCancelClick(item);
+                    }}
+                  >
+                    신청 취소
+                  </button>
+                </div>
 
                 {/* 모바일에서 확장된 상세 정보 표시 */}
                 {expandedItemId === item.id && expandedContent && (
