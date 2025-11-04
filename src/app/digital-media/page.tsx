@@ -216,7 +216,9 @@ function DigitalSignagePageContent() {
     } else {
       // 기본 탭을 디지털전광판으로 강제 세팅하고 URL도 동기화
       setActiveTab('digital_media_billboards');
-      router.replace(`/digital-media?tab=digital_media_billboards`);
+      router.replace(`/digital-media?tab=digital_media_billboards`, {
+        scroll: false,
+      });
     }
   }, [searchParams, router]);
 
@@ -266,7 +268,9 @@ function DigitalSignagePageContent() {
           <button
             onClick={() => {
               setActiveTab('digital_media_billboards');
-              router.push(`/digital-media?tab=digital_media_billboards`);
+              router.push(`/digital-media?tab=digital_media_billboards`, {
+                scroll: false,
+              });
             }}
             className={`px-6 py-3 text-lg font-medium transition-colors ${
               activeTab === 'digital_media_billboards'
@@ -279,7 +283,9 @@ function DigitalSignagePageContent() {
           <button
             onClick={() => {
               setActiveTab('digital_media_signages');
-              router.push(`/digital-media?tab=digital_media_signages`);
+              router.push(`/digital-media?tab=digital_media_signages`, {
+                scroll: false,
+              });
             }}
             className={`px-6 py-3 text-lg font-medium transition-colors ${
               activeTab === 'digital_media_signages'
@@ -292,7 +298,9 @@ function DigitalSignagePageContent() {
           <button
             onClick={() => {
               setActiveTab('digital_products');
-              router.push(`/digital-media?tab=digital_products`);
+              router.push(`/digital-media?tab=digital_products`, {
+                scroll: false,
+              });
             }}
             className={`px-6 py-3 text-lg font-medium transition-colors ${
               activeTab === 'digital_products'

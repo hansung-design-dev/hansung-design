@@ -156,18 +156,30 @@ async function getDigitalSignages() {
       throw error;
     }
 
-    const result = (data || []).map((row: any) => {
-      let imageUrls: string[] = [];
-      if (Array.isArray(row.image_urls)) imageUrls = row.image_urls;
-      else if (typeof row.image_urls === 'string') {
-        try {
-          imageUrls = JSON.parse(row.image_urls);
-        } catch {
-          imageUrls = row.image_urls ? [row.image_urls] : [];
+    interface DigitalMediaSignageRow {
+      id?: string;
+      district_code?: string;
+      title?: string;
+      main_image_url?: string;
+      image_urls?: string[] | string;
+      display_order?: number;
+      [key: string]: unknown;
+    }
+
+    const result = ((data || []) as DigitalMediaSignageRow[]).map(
+      (row: DigitalMediaSignageRow) => {
+        let imageUrls: string[] = [];
+        if (Array.isArray(row.image_urls)) imageUrls = row.image_urls;
+        else if (typeof row.image_urls === 'string') {
+          try {
+            imageUrls = JSON.parse(row.image_urls);
+          } catch {
+            imageUrls = row.image_urls ? [row.image_urls] : [];
+          }
         }
+        return { ...row, image_urls: imageUrls };
       }
-      return { ...row, image_urls: imageUrls };
-    });
+    );
 
     return result;
   } catch (error) {
