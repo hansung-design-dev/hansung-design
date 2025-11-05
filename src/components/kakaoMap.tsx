@@ -71,7 +71,7 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
 
     const ready = hasLatLng && hasMap;
     return ready;
-  }, [kakaoLoaded]);
+  }, []);
 
   // 중심점 계산 (메모이제이션)
   const mapCenter = useMemo(() => {
@@ -135,6 +135,40 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
     },
     [kakaoLoaded, mapCenter, isKakaoSDKReady]
   );
+
+  // SDK 로드 감시 타이머: 일정 시간 내 준비되지 않으면 에러 표시
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    // 이미 지도 생성됐거나 에러가 있으면 스킵
+    if (mapInstanceRef.current || error) return;
+
+    let timeoutId: number | null = null;
+    // 12초 내 준비 안되면 에러 노출
+    timeoutId = window.setTimeout(() => {
+      if (!isKakaoSDKReady()) {
+        console.error('❌ 카카오맵 SDK 준비 시간 초과 (12s)');
+        // 디버깅용 상태 로그
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const w: any = window as any;
+        console.error('kakao presence', {
+          hasKakao: !!w?.kakao,
+          hasMaps: !!w?.kakao?.maps,
+          hasLatLng: !!w?.kakao?.maps?.LatLng,
+          hasMapCtor: !!w?.kakao?.maps?.Map,
+          kakaoLoaded,
+        });
+        setError(
+          '카카오맵 SDK 로드가 지연되고 있습니다. 새로고침 후 다시 시도해주세요.'
+        );
+        setIsLoading(false);
+      }
+    }, 12000);
+
+    return () => {
+      if (timeoutId) window.clearTimeout(timeoutId);
+    };
+    // kakaoLoaded나 준비 체크가 바뀔 때마다 타이머 재설정
+  }, [kakaoLoaded, isKakaoSDKReady, error]);
 
   // 카카오맵 초기화 (공식 가이드 방식) - useEffect로 백업 시도
   useEffect(() => {
@@ -210,6 +244,56 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
       setIsLoading(false);
     }
   }, [kakaoLoaded, mapCenter, isKakaoSDKReady]);
+
+  // 컨테이너 크기 변화에 따라 재레이아웃 (탭 전환/아코디언 열림 등 가시화 시)
+  useEffect(() => {
+    if (!mapRef.current) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const map: any = mapInstanceRef.current;
+    if (!map || typeof window === 'undefined') return;
+
+    let ro: ResizeObserver | null = null;
+    if ('ResizeObserver' in window) {
+      ro = new ResizeObserver(() => {
+        try {
+          if (map && map.relayout) {
+            map.relayout();
+          }
+        } catch {
+          // ignore
+        }
+      });
+      ro.observe(mapRef.current);
+    } else {
+      // fallback: window resize
+      const onResize = () => {
+        try {
+          if (map && map.relayout) {
+            map.relayout();
+          }
+        } catch {
+          // ignore
+        }
+      };
+      (globalThis as Window & typeof globalThis).addEventListener(
+        'resize',
+        onResize
+      );
+      return () => {
+        (globalThis as Window & typeof globalThis).removeEventListener(
+          'resize',
+          onResize
+        );
+      };
+    }
+
+    return () => {
+      if (ro && mapRef.current) {
+        ro.unobserve(mapRef.current);
+        ro.disconnect();
+      }
+    };
+  }, [mapInstanceRef]);
 
   // 로드뷰 오버레이 열기
   const openRoadview = useCallback(
