@@ -46,7 +46,7 @@ const nextConfig: NextConfig = {
           {
             key: 'Content-Security-Policy',
             value:
-              "frame-src 'self' http://*.kakao.com https://*.kakao.com http://*.kakao.co.kr https://*.kakao.co.kr https://*.tosspayments.com; script-src 'self' 'unsafe-eval' 'unsafe-inline' http://*.kakao.com https://*.kakao.com http://*.kakao.co.kr https://*.kakao.co.kr https://*.tosspayments.com; connect-src 'self' http://*.kakao.com https://*.kakao.com http://*.kakao.co.kr https://*.kakao.co.kr https://*.tosspayments.com https://api.tosspayments.com;",
+              "frame-src 'self' http://*.kakao.com https://*.kakao.com http://*.kakao.co.kr https://*.kakao.co.kr https://*.tosspayments.com; script-src 'self' 'unsafe-eval' 'unsafe-inline' http://*.kakao.com https://*.kakao.com http://*.kakao.co.kr https://*.kakao.co.kr https://*.tosspayments.com http://*.daumcdn.net https://*.daumcdn.net http://t1.daumcdn.net https://t1.daumcdn.net; connect-src 'self' http://*.kakao.com https://*.kakao.com http://*.kakao.co.kr https://*.kakao.co.kr https://*.tosspayments.com https://api.tosspayments.com;",
           },
         ],
       },
