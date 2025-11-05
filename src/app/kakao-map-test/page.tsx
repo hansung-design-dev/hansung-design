@@ -84,7 +84,6 @@ export default function KakaoMapTestPage() {
         });
 
         // Always initialize inside kakao.maps.load when autoload=false
-        let loadedViaLoad = false;
         try {
           await new Promise<void>((resolve, reject) => {
             let loadCalled = false;
@@ -108,8 +107,7 @@ export default function KakaoMapTestPage() {
               reject(e as Error);
             }
           });
-          loadedViaLoad = true;
-        } catch (e) {
+        } catch {
           console.warn('[kakao-test] falling back to autoload=true path');
           // Fallback: try loading SDK again with autoload=true
           const fallbackExisting = document.querySelector(

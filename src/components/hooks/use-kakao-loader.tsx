@@ -180,12 +180,23 @@ export default function useKakaoLoader() {
           window.kakao.maps.load(() => {
             done = true;
             window.clearTimeout(timeout);
-            const hasLatLng =
-              window.kakao.maps.LatLng &&
-              typeof window.kakao.maps.LatLng === 'function';
-            const hasMap =
-              window.kakao.maps.Map &&
-              typeof window.kakao.maps.Map === 'function';
+            type KakaoWindow = {
+              kakao?: {
+                maps?: {
+                  LatLng?: unknown;
+                  Map?: unknown;
+                };
+              };
+            };
+            const w = window as unknown as KakaoWindow;
+            const hasLatLng = !!(
+              w.kakao?.maps?.LatLng &&
+              typeof w.kakao.maps.LatLng === 'function'
+            );
+            const hasMap = !!(
+              w.kakao?.maps?.Map &&
+              typeof w.kakao.maps.Map === 'function'
+            );
             if (hasLatLng && hasMap) {
               setIsLoaded(true);
             } else {
