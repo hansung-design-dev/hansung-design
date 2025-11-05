@@ -247,6 +247,43 @@ async function getProductByCode(productType: string, productCode: string) {
         throw signageError;
       }
 
+      // Normalize image_urls to string[]
+      if (signageData) {
+        const raw = (signageData as unknown as { image_urls?: unknown })
+          .image_urls;
+        let imageUrls: string[] = [];
+        if (Array.isArray(raw)) {
+          // Already an array
+          imageUrls = raw.filter((x): x is string => typeof x === 'string');
+        } else if (typeof raw === 'string') {
+          // Try JSON parse first
+          try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              imageUrls = parsed.filter(
+                (x): x is string => typeof x === 'string'
+              );
+            }
+          } catch {
+            // Fallback for Postgres array literal format: {"a","b"}
+            const trimmed = raw.trim();
+            if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+              const inner = trimmed.slice(1, -1);
+              imageUrls = inner
+                .split(',')
+                .map((s) => s.trim())
+                .map((s) => s.replace(/^"|"$/g, ''))
+                .filter(Boolean);
+            } else if (trimmed) {
+              imageUrls = [trimmed];
+            }
+          }
+        }
+
+        (signageData as unknown as { image_urls?: string[] }).image_urls =
+          imageUrls;
+      }
+
       return signageData;
     }
 
