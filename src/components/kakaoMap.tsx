@@ -211,6 +211,50 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
     }
   }, [kakaoLoaded, mapCenter, isKakaoSDKReady]);
 
+  // 컨테이너 크기 변화에 따라 재레이아웃 (탭 전환/아코디언 열림 등 가시화 시)
+  useEffect(() => {
+    if (!mapRef.current) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const map: any = mapInstanceRef.current;
+    if (!map || typeof window === 'undefined') return;
+
+    let ro: ResizeObserver | null = null;
+    if ('ResizeObserver' in window) {
+      ro = new ResizeObserver(() => {
+        try {
+          if (map && map.relayout) {
+            map.relayout();
+          }
+        } catch (_) {
+          // ignore
+        }
+      });
+      ro.observe(mapRef.current);
+    } else {
+      // fallback: window resize
+      const onResize = () => {
+        try {
+          if (map && map.relayout) {
+            map.relayout();
+          }
+        } catch (_) {
+          // ignore
+        }
+      };
+      window.addEventListener('resize', onResize);
+      return () => {
+        window.removeEventListener('resize', onResize);
+      };
+    }
+
+    return () => {
+      if (ro && mapRef.current) {
+        ro.unobserve(mapRef.current);
+        ro.disconnect();
+      }
+    };
+  }, [mapInstanceRef.current]);
+
   // 로드뷰 오버레이 열기
   const openRoadview = useCallback(
     (lat: number, lng: number) => {

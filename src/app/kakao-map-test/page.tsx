@@ -10,6 +10,8 @@ type KakaoTestConfig = {
 export default function KakaoMapTestPage() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [status, setStatus] = useState<string>('Initializing...');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mapRef = useRef<any>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -175,6 +177,7 @@ export default function KakaoMapTestPage() {
 
           setStatus('Kakao Map loaded');
           console.debug('[kakao-test] map rendered');
+          mapRef.current = map;
         } else {
           setStatus('Container not ready');
           console.error('[kakao-test] containerRef is null');
@@ -195,6 +198,53 @@ export default function KakaoMapTestPage() {
     <div className="p-4" style={{ marginTop: '5rem' }}>
       <h1 style={{ fontSize: 20, fontWeight: 700 }}>Kakao Map SDK Test</h1>
       <p style={{ margin: '8px 0 16px', color: 'red' }}>Status: {status}</p>
+      <button
+        onClick={async () => {
+          try {
+            setStatus('Fetching Seodaemun coords...');
+            const res = await fetch(
+              '/api/banner-display?action=getByDistrict&district=' +
+                encodeURIComponent('서대문구'),
+              { cache: 'no-store' }
+            );
+            if (!res.ok) throw new Error('Failed to fetch seodaemun');
+            const json = await res.json();
+            console.debug('[kakao-test] seodaemun raw', json);
+            const arr = Array.isArray(json)
+              ? json
+              : json?.data || json?.items || [];
+            const first = Array.isArray(arr) && arr.length > 0 ? arr[0] : null;
+            const lat = first?.lat ?? first?.latitude;
+            const lng = first?.lng ?? first?.longitude;
+            if (typeof lat === 'number' && typeof lng === 'number') {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const w = window as any;
+              const pos = new w.kakao.maps.LatLng(lat, lng);
+              if (mapRef.current) {
+                mapRef.current.setCenter(pos);
+                mapRef.current.setLevel(4);
+                new w.kakao.maps.Marker({ position: pos, map: mapRef.current });
+                setStatus('Centered to Seodaemun');
+              } else {
+                setStatus('Map not ready');
+              }
+            } else {
+              setStatus('No coords in response');
+            }
+          } catch (e) {
+            console.error('[kakao-test] seodaemun fetch error', e);
+            setStatus('Fetch error');
+          }
+        }}
+        style={{
+          padding: '8px 12px',
+          border: '1px solid #ddd',
+          borderRadius: 6,
+          marginBottom: 12,
+        }}
+      >
+        Load Seodaemun coords
+      </button>
       <div
         ref={containerRef}
         style={{
