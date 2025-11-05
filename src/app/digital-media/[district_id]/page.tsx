@@ -183,20 +183,24 @@ export default async function DigitalSignageDetailPage({
 
   let productData: ProductData | null = null;
 
-  // 디지털 전광판 아이템 ID 목록 (digital_media_billboards 테이블의 district_code 또는 project_code)
-  const digitalBillboardIds = [
-    'starlight-proposal',
-    'byeongjeom-plaza',
-    'janghang-lafesta',
-    'junggu-yaksu',
-    'cheorwon-labor',
+  // digital_media_billboards 테이블 아이템 ID 목록 (project_code 사용)
+  // 실제 DB에 있는 데이터만 포함
+  const digitalBillboardIds: string[] = [
+    // digital_media_billboards 테이블에 실제로 있는 project_code들
   ];
 
-  // 디지털 사이니지 아이템 ID 목록
-  // - digital_products 테이블의 product_group_code
-  // - digital_media_signages 테이블의 district_code
-  const digitalSignageIds = [
-    'guro-rodeo', // digital_media_signages 테이블에 있음
+  // digital_media_signages 테이블 아이템 ID 목록 (district_code 사용)
+  const digitalMediaSignageIds = [
+    'guro-rodeo',
+    'starlight-proposal',
+    'cheorwon-labor',
+    'junggu-yaksu',
+    'byeongjeom-plaza',
+    'janghang-lafesta',
+  ];
+
+  // digital_products 테이블 아이템 ID 목록 (product_group_code 사용)
+  const digitalProductsIds = [
     'samsung-single',
     'lg-single',
     'samsung-multivision',
@@ -220,19 +224,21 @@ export default async function DigitalSignageDetailPage({
 
   // district_id를 기반으로 자동 판단 (우선순위가 가장 높음)
   const isDigitalBillboard = digitalBillboardIds.includes(district_id);
-  const isDigitalSignage = digitalSignageIds.includes(district_id);
-  const isMediaDisplay = !isDigitalBillboard && !isDigitalSignage;
+  const isDigitalMediaSignage = digitalMediaSignageIds.includes(district_id);
+  const isDigitalProduct = digitalProductsIds.includes(district_id);
+  const isMediaDisplay =
+    !isDigitalBillboard && !isDigitalMediaSignage && !isDigitalProduct;
 
   // 우선순위: district_id 기반 판단 > tab 파라미터
-  // 1. 디지털 전광판 아이템이면 무조건 전광판 처리
+  // 1. digital_media_billboards 테이블 아이템 처리
   if (isDigitalBillboard) {
-    // 디지털 전광판 처리
-    const productType = 'digital-billboard';
+    // digital_media_billboards 처리
+    const productType = 'digital_media_billboards';
     try {
       const baseUrl =
         process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
       const apiUrl = `${baseUrl}/api/digital-media?action=getProductDetail&productType=${productType}&productCode=${district_id}`;
-      console.log('🔍 Fetching product detail (digital-billboard):', {
+      console.log('🔍 Fetching product detail (digital_media_billboards):', {
         productType,
         district_id,
         apiUrl,
@@ -255,7 +261,7 @@ export default async function DigitalSignageDetailPage({
           return;
         }
 
-        console.log('✅ API response received (digital-billboard):', {
+        console.log('✅ API response received (digital_media_billboards):', {
           title: dbData.title,
           main_image_url: dbData.main_image_url,
           image_urls_type: typeof dbData.image_urls,
@@ -319,27 +325,58 @@ export default async function DigitalSignageDetailPage({
 
     if (!productData) {
       console.error(
-        `Failed to fetch product data for ${district_id} (detected as digital-billboard)`
+        `Failed to fetch product data for ${district_id} (detected as digital_media_billboards)`
       );
     }
-  } else if (
-    isDigitalSignage ||
-    tab === 'digital-signage' ||
-    tab === 'digital_media_signages'
-  ) {
-    // 디지털 사이니지 처리
+  } else if (isDigitalMediaSignage || tab === 'digital_media_signages') {
+    // digital_media_signages 테이블 처리
     try {
       const baseUrl =
         process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-      const response = await fetch(
-        `${baseUrl}/api/digital-media?action=getProductDetail&productType=digital-signage&productCode=${district_id}`,
-        { cache: 'no-store' }
-      );
+      const apiUrl = `${baseUrl}/api/digital-media?action=getProductDetail&productType=digital_media_signages&productCode=${district_id}`;
+      console.log('🔍 Fetching digital_media_signages detail:', {
+        district_id,
+        apiUrl,
+      });
+      const response = await fetch(apiUrl, { cache: 'no-store' });
 
-      if (response.ok) {
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ API response not OK:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText,
+        });
+      } else {
         const responseData = await response.json();
+        console.log('✅ Digital_media_signages API response:', {
+          isArray: Array.isArray(responseData),
+          length: Array.isArray(responseData) ? responseData.length : 1,
+          hasData: !!responseData,
+          firstItem: Array.isArray(responseData)
+            ? responseData[0]
+              ? {
+                  id: responseData[0].id,
+                  district_code: responseData[0].district_code,
+                  title: responseData[0].title,
+                }
+              : null
+            : responseData
+            ? {
+                id: responseData.id,
+                district_code: responseData.district_code,
+                title: responseData.title,
+              }
+            : null,
+        });
 
         // digital_media_signages는 단일 객체, digital_products는 배열 반환 가능
+        // null이나 undefined 체크
+        if (!responseData) {
+          console.error('❌ No data in response');
+          return;
+        }
+
         const dbDataArray = Array.isArray(responseData)
           ? responseData
           : [responseData];
@@ -507,23 +544,234 @@ export default async function DigitalSignageDetailPage({
                 firstProduct.inquiry_phone || firstProduct.contact_info || '',
             },
           };
+        } else {
+          console.error('❌ No product data in response:', {
+            district_id,
+            responseData,
+          });
         }
       }
     } catch (error) {
       console.error(
-        'Error fetching product data from API (digital-signage):',
+        '❌ Error fetching product data from API (digital_media_signages):',
         error
       );
-      // 에러 발생 시 로컬 데이터로 fallback
-      const localData =
-        digitalSignageData[district_id as keyof typeof digitalSignageData];
-      if (localData) {
-        const images = productImageMap[district_id] || [localData.image];
-        productData = {
-          ...localData,
-          images: images,
-        };
+    }
+  } else if (isDigitalProduct || tab === 'digital_products') {
+    // digital_products 테이블 처리 (쇼핑몰)
+    try {
+      const baseUrl =
+        process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+      const apiUrl = `${baseUrl}/api/digital-media?action=getProductDetail&productType=digital_products&productCode=${district_id}`;
+      console.log('🔍 Fetching digital_products detail:', {
+        district_id,
+        apiUrl,
+      });
+      const response = await fetch(apiUrl, { cache: 'no-store' });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ API response not OK:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText,
+        });
+      } else {
+        const responseData = await response.json();
+        console.log('✅ Digital_products API response:', {
+          isArray: Array.isArray(responseData),
+          length: Array.isArray(responseData) ? responseData.length : 1,
+          hasData: !!responseData,
+          firstItem: Array.isArray(responseData)
+            ? responseData[0]
+              ? {
+                  id: responseData[0].id,
+                  product_group_code: responseData[0].product_group_code,
+                  title: responseData[0].title,
+                }
+              : null
+            : responseData
+            ? {
+                id: responseData.id,
+                product_group_code: responseData.product_group_code,
+                title: responseData.title,
+              }
+            : null,
+        });
+
+        if (!responseData) {
+          console.error('❌ No data in response');
+          return;
+        }
+
+        const dbDataArray = Array.isArray(responseData)
+          ? responseData
+          : [responseData];
+        const firstProduct = dbDataArray[0];
+
+        if (firstProduct) {
+          // image_urls 파싱 처리
+          let imageUrls: string[] = [];
+          if (Array.isArray(firstProduct.image_urls)) {
+            imageUrls = firstProduct.image_urls;
+          } else if (typeof firstProduct.image_urls === 'string') {
+            try {
+              imageUrls = JSON.parse(firstProduct.image_urls);
+            } catch {
+              imageUrls = [firstProduct.image_urls];
+            }
+          }
+
+          const groupCode =
+            firstProduct.product_group_code ||
+            firstProduct.district_code ||
+            district_id;
+          const mappedImages = productImageMap[groupCode] || [];
+
+          const allImages = [
+            firstProduct.main_image_url,
+            ...imageUrls,
+            ...mappedImages,
+          ];
+          const uniqueImages = Array.from(new Set(allImages.filter(Boolean)));
+
+          // digital_products는 배열이므로 series 구조 생성
+          const series: Record<
+            string,
+            {
+              name: string;
+              description: string;
+              operatingLineup: string;
+              models: Array<{
+                modelName: string;
+                brand: string;
+                inch: string;
+                size: string;
+                specifications: string;
+                resolution: string;
+                brightness: string;
+                usage: string;
+                installation: string;
+                vesaHole: string;
+                price: string;
+                specialFeatures?: string;
+              }>;
+            }
+          > = {};
+
+          if (Array.isArray(responseData) && responseData.length > 1) {
+            const seriesMap: Record<
+              string,
+              {
+                name: string;
+                description: string;
+                operatingLineup: string;
+                models: Array<{
+                  modelName: string;
+                  brand: string;
+                  inch: string;
+                  size: string;
+                  specifications: string;
+                  resolution: string;
+                  brightness: string;
+                  usage: string;
+                  installation: string;
+                  vesaHole: string;
+                  price: string;
+                  specialFeatures?: string;
+                }>;
+              }
+            > = {};
+
+            dbDataArray.forEach((product: DBProductItem) => {
+              const seriesName = product.series_name || 'Default';
+              if (!seriesMap[seriesName]) {
+                seriesMap[seriesName] = {
+                  name: seriesName,
+                  description: seriesName,
+                  operatingLineup: product.operating_lineup || '',
+                  models: [],
+                };
+              }
+
+              seriesMap[seriesName].models.push({
+                modelName: product.model_name || '',
+                brand: product.brand || '',
+                inch: product.inch_size || '',
+                size: product.physical_size || '',
+                specifications: product.specifications || '',
+                resolution: product.resolution || '',
+                brightness: product.brightness || '',
+                usage: product.usage || '',
+                installation: product.installation_method || '',
+                vesaHole: product.vesa_hole || '',
+                price: product.price || '',
+                specialFeatures: product.special_features || undefined,
+              });
+
+              if (product.inch_size) {
+                const currentLineup = seriesMap[seriesName].operatingLineup;
+                if (!currentLineup.includes(product.inch_size)) {
+                  seriesMap[seriesName].operatingLineup = currentLineup
+                    ? `${currentLineup}, ${product.inch_size}`
+                    : product.inch_size;
+                }
+              }
+            });
+
+            Object.keys(seriesMap).forEach((seriesName) => {
+              const firstModel = seriesMap[seriesName].models[0];
+              if (firstModel) {
+                seriesMap[seriesName].description = `${seriesName} (${
+                  firstModel.resolution || ''
+                }, ${firstModel.brightness || ''})`;
+              }
+              series[seriesName] = seriesMap[seriesName];
+            });
+          }
+
+          productData = {
+            id: groupCode,
+            title: firstProduct.title || '',
+            image: uniqueImages[0] || firstProduct.main_image_url,
+            images:
+              uniqueImages.length > 0
+                ? uniqueImages
+                : [firstProduct.main_image_url],
+            modelName: firstProduct.model_name || '',
+            description: firstProduct.description || '',
+            type: firstProduct.product_type || '',
+            contactInfo: firstProduct.contact_info || '',
+            bracketNote: firstProduct.bracket_note || '',
+            series: series,
+            specifications: {
+              operatingLineup: firstProduct.operating_lineup || '',
+              modelName: firstProduct.model_name || '',
+              productSize:
+                firstProduct.product_size || firstProduct.physical_size || '',
+              resolutionBrightness: `${firstProduct.resolution || ''} / ${
+                firstProduct.brightness || ''
+              }`,
+              keyFeatures:
+                firstProduct.key_features || firstProduct.specifications || '',
+              usage: firstProduct.usage || '',
+              installationMethod: firstProduct.installation_method || '',
+              inquiry:
+                firstProduct.inquiry_phone || firstProduct.contact_info || '',
+            },
+          };
+        } else {
+          console.error('❌ No product data in response:', {
+            district_id,
+            responseData,
+          });
+        }
       }
+    } catch (error) {
+      console.error(
+        '❌ Error fetching product data from API (digital_products):',
+        error
+      );
     }
   } else if (isMediaDisplay || tab === 'media-display') {
     // 미디어경관디자인 처리
@@ -727,15 +975,14 @@ export default async function DigitalSignageDetailPage({
     return <div>Product not found</div>;
   }
 
-  // 디지털사이니지 아이템인지 확인
-  const isDigitalSignageItem = isDigitalSignage;
+  // digital_media_signages 아이템인지 확인
+  const isDigitalSignageItem = isDigitalMediaSignage;
 
-  // 디지털전광판 아이템인지 확인 (미디어경관디자인과 같은 UI 사용)
+  // digital_media_billboards 아이템인지 확인 (미디어경관디자인과 같은 UI 사용)
   const isDigitalBillboardItem = isDigitalBillboard;
 
   // 쇼핑몰(digital_products) 탭 여부 확인
-  const isShoppingMall =
-    tab === 'digital_products' || tab === 'digital-products';
+  const isShoppingMall = tab === 'digital_products' || isDigitalProduct;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const typedProductData = productData as any;
