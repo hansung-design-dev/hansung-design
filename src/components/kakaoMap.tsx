@@ -274,23 +274,19 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
         position: position,
       });
 
-      // 커스텀 오버레이 생성 (마커 위 텍스트 표시)
-      const overlay = new CustomOverlay({
-        position: position,
-        content: createMarkerContent(
-          marker,
-          isSelected,
-          () => {
-            if (onMarkerClick) {
-              onMarkerClick(marker.id);
-            }
-          },
-          () => {
-            openRoadview(marker.lat, marker.lng);
+      // 커스텀 오버레이 생성 (선택된 마커만 텍스트 표시)
+      const markerContent = createMarkerContent(
+        marker,
+        isSelected,
+        () => {
+          if (onMarkerClick) {
+            onMarkerClick(marker.id);
           }
-        ),
-        yAnchor: 2.2,
-      });
+        },
+        () => {
+          openRoadview(marker.lat, marker.lng);
+        }
+      );
 
       // 마커 클릭 이벤트
       event.addListener(kakaoMarker, 'click', () => {
@@ -299,9 +295,18 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
         }
       });
 
-      // 지도에 마커와 오버레이 추가
+      // 지도에 마커 추가
       kakaoMarker.setMap(map);
-      overlay.setMap(map);
+
+      // 선택된 마커만 오버레이 추가
+      if (markerContent) {
+        const overlay = new CustomOverlay({
+          position: position,
+          content: markerContent,
+          yAnchor: 1.7, // 핀과 박스 사이 거리 조정 (값이 작을수록 가까움)
+        });
+        overlay.setMap(map);
+      }
 
       markersRef.current.set(marker.id, kakaoMarker);
     });
@@ -327,10 +332,15 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
     onMarkerClick: () => void,
     onRoadviewClick: () => void
   ) => {
+    // 선택되지 않은 마커는 오버레이 표시하지 않음
+    if (!isSelected) {
+      return null;
+    }
+
     const div = document.createElement('div');
     div.style.cssText = `
       padding: 8px 12px;
-      background-color: ${isSelected ? '#238CFA' : '#666'};
+      background-color: #238CFA;
       color: white;
       border-radius: 4px;
       font-size: 12px;
@@ -351,40 +361,38 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
       onMarkerClick();
     });
 
-    if (isSelected) {
-      const button = document.createElement('button');
-      button.style.cssText = `
-        display: block;
-        margin-top: 6px;
-        padding: 4px 8px;
-        background-color: rgba(255, 255, 255, 0.9);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        border-radius: 4px;
-        color: #238CFA;
-        font-size: 11px;
-        font-weight: bold;
-        cursor: pointer;
-        width: 100%;
-        min-width: 100%;
-        box-sizing: border-box;
-        transition: all 0.2s ease;
-      `;
-      button.textContent = '🚗 로드뷰 보기';
-      button.addEventListener('click', (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        onRoadviewClick();
-      });
-      button.addEventListener('mouseenter', () => {
-        button.style.backgroundColor = 'white';
-        button.style.transform = 'scale(1.05)';
-      });
-      button.addEventListener('mouseleave', () => {
-        button.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
-        button.style.transform = 'scale(1)';
-      });
-      div.appendChild(button);
-    }
+    const button = document.createElement('button');
+    button.style.cssText = `
+      display: block;
+      margin-top: 6px;
+      padding: 4px 8px;
+      background-color: rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 4px;
+      color: #238CFA;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+      width: 100%;
+      min-width: 100%;
+      box-sizing: border-box;
+      transition: all 0.2s ease;
+    `;
+    button.textContent = '🚗 로드뷰 보기';
+    button.addEventListener('click', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      onRoadviewClick();
+    });
+    button.addEventListener('mouseenter', () => {
+      button.style.backgroundColor = 'white';
+      button.style.transform = 'scale(1.05)';
+    });
+    button.addEventListener('mouseleave', () => {
+      button.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+      button.style.transform = 'scale(1)';
+    });
+    div.appendChild(button);
 
     return div;
   };
