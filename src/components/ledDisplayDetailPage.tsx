@@ -9,7 +9,7 @@ import ViewTypeButton from '@/src/components/viewTypeButton';
 import MapPinIcon from '@/src/icons/map-pin.svg';
 import GalleryIcon from '@/src/icons/gallery.svg';
 import ListIcon from '@/src/icons/list.svg';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useCart } from '../contexts/cartContext';
 import { useProfile } from '../contexts/profileContext';
 import { useAuth } from '../contexts/authContext';
@@ -79,8 +79,6 @@ export default function LEDDisplayDetailPage({
     displayName?: string;
   }[];
 }) {
-  const isAllDistrictsView = district === 'all';
-
   const [selectedOption, setSelectedOption] = useState<{
     id: number;
     option: string;
@@ -92,10 +90,6 @@ export default function LEDDisplayDetailPage({
         (option) => option.option === districtObj.name
       );
       return matchingOption || null;
-    }
-    // 전체보기 페이지인 경우 기본값 설정
-    if (isAllDistrictsView) {
-      return { id: 0, option: '전체보기' };
     }
     return null;
   });
@@ -118,20 +112,10 @@ export default function LEDDisplayDetailPage({
     console.log('🔍 LED Detail - dropdownOptions:', dropdownOptions);
     console.log('🔍 LED Detail - selectedOption:', selectedOption);
 
-    if (dropdownOptions.length > 0) {
-      let matchingOption = null;
-
-      // 전체보기 페이지인 경우
-      if (isAllDistrictsView) {
-        matchingOption = dropdownOptions.find(
-          (option) => option.option === '전체보기'
-        );
-      } else if (districtObj?.name) {
-        // 특정 구 페이지인 경우
-        matchingOption = dropdownOptions.find(
-          (option) => option.option === districtObj.name
-        );
-      }
+    if (dropdownOptions.length > 0 && districtObj?.name) {
+      const matchingOption = dropdownOptions.find(
+        (option) => option.option === districtObj.name
+      );
 
       console.log('🔍 LED Detail - matchingOption:', matchingOption);
 
@@ -146,13 +130,7 @@ export default function LEDDisplayDetailPage({
         setSelectedOption(matchingOption);
       }
     }
-  }, [
-    dropdownOptions,
-    districtObj?.name,
-    selectedOption,
-    districtObj,
-    isAllDistrictsView,
-  ]);
+  }, [dropdownOptions, districtObj?.name, selectedOption, districtObj]);
 
   // selectedIds 상태 변화 추적 (디버깅용 - 주석 처리)
   // useEffect(() => {
@@ -213,14 +191,10 @@ export default function LEDDisplayDetailPage({
     return result;
   };
 
-  const filteredByDistrict =
-    isAllDistrictsView && selectedOption && selectedOption.option !== '전체보기'
-      ? billboards.filter((item) => item.district === selectedOption.option)
-      : billboards;
+  const filteredByDistrict = billboards;
 
   // 디버깅: 원본 데이터 확인
   console.log('🔍 원본 billboards 데이터:', billboards);
-  console.log('🔍 isAllDistrictsView:', isAllDistrictsView);
   console.log('🔍 selectedOption:', selectedOption);
   console.log('🔍 filteredByDistrict:', filteredByDistrict);
 
@@ -231,11 +205,7 @@ export default function LEDDisplayDetailPage({
     faces: item.faces,
   }));
 
-  const filteredBillboards = isAllDistrictsView
-    ? [...filteredByHalfPeriod].sort((a, b) =>
-        a.district.localeCompare(b.district)
-      )
-    : filteredByHalfPeriod;
+  const filteredBillboards = filteredByHalfPeriod;
 
   console.log('🔍 filteredBillboards:', filteredBillboards);
 
@@ -252,31 +222,12 @@ export default function LEDDisplayDetailPage({
 
   const handleDropdownChange = async (item: { id: number; option: string }) => {
     console.log('🔍 handleDropdownChange called with:', item);
-    setSelectedOption(item);
 
-    if (item.option === '전체보기') {
-      // 전체보기 페이지인 경우 필터만 해제하고 페이지 이동하지 않음
-      if (isAllDistrictsView) {
-        console.log('🔍 Already on all districts page, just resetting filter');
-        return;
-      }
-      // 일반 구 페이지인 경우 전체보기 페이지로 이동
-      console.log('🔍 Navigating to all districts');
-      router.push('/led-display/all');
-      return;
-    }
-
-    // 구 이름 그대로 사용 (이미 (준비 중) 텍스트가 제거됨)
+    // 구 이름 그대로 사용
     const districtName = item.option;
     console.log('🔍 Selected district name:', districtName);
 
-    // 전체보기 페이지에서 특정 구를 선택한 경우 필터만 적용 (페이지 이동 안 함)
-    if (isAllDistrictsView) {
-      console.log('🔍 On all districts page, filtering by:', districtName);
-      return;
-    }
-
-    // 일반 구 페이지에서 다른 구를 선택한 경우 해당 구의 페이지로 이동
+    // 구를 선택한 경우 해당 구의 페이지로 이동
     const districtCode = getDistrictCode(districtName);
     console.log(
       '🔍 Converting district name to code:',
@@ -561,15 +512,18 @@ export default function LEDDisplayDetailPage({
     </div>
   );
 
-  const renderLocationView = () => {
-    // 지도 뷰에서는 단일 선택만 가능하므로 첫 번째 선택된 아이템만 사용
-    const selectedItem =
+  // 지도 뷰에서는 단일 선택만 가능하므로 첫 번째 선택된 아이템만 사용
+  const selectedItem = useMemo(
+    () =>
       selectedIds.length > 0
         ? filteredBillboards.find((b) => b.id === selectedIds[0])
-        : null;
+        : null,
+    [selectedIds, filteredBillboards]
+  );
 
-    // 선택된 아이템만 지도에 표시 (단일 선택)
-    const mapMarkers =
+  // 선택된 아이템만 지도에 표시 (단일 선택) - 메모이제이션
+  const mapMarkers = useMemo(
+    () =>
       selectedItem &&
       selectedItem.latitude != null &&
       selectedItem.longitude != null
@@ -581,12 +535,18 @@ export default function LEDDisplayDetailPage({
               lng: selectedItem.longitude!,
               type: selectedItem.type,
               isSelected: true,
+              number: selectedItem.panel_code
+                ? Number(selectedItem.panel_code)
+                : undefined, // 실제 게시대 번호 사용
             },
           ]
-        : [];
+        : [],
+    [selectedItem]
+  );
 
-    // 지도 중심점: 선택된 아이템이 있으면 해당 위치, 없으면 모든 아이템의 중심
-    const mapCenter =
+  // 지도 중심점: 선택된 아이템이 있으면 해당 위치, 없으면 모든 아이템의 중심 - 메모이제이션
+  const mapCenter = useMemo(
+    () =>
       selectedItem &&
       selectedItem.latitude != null &&
       selectedItem.longitude != null
@@ -604,8 +564,11 @@ export default function LEDDisplayDetailPage({
                 0
               ) / filteredBillboards.length,
           }
-        : { lat: 37.5665, lng: 126.978 };
+        : { lat: 37.5665, lng: 126.978 },
+    [selectedItem, filteredBillboards]
+  );
 
+  const renderLocationView = () => {
     console.log('🔍 선택된 아이템:', selectedItem);
     console.log('🔍 지도 마커 데이터:', mapMarkers);
     console.log('🔍 지도 중심점:', mapCenter);
@@ -740,12 +703,9 @@ export default function LEDDisplayDetailPage({
             {(districtObj || selectedOption || districtData) && (
               <Image
                 src={
-                  selectedOption?.option === '전체보기' ||
-                  districtObj?.name === '전체보기'
-                    ? '/svg/all.svg'
-                    : districtData?.logo_image_url ||
-                      districtObj?.logo ||
-                      `/images/district-icon/${district}-gu.png`
+                  districtData?.logo_image_url ||
+                  districtObj?.logo ||
+                  `/images/district-icon/${district}-gu.png`
                 }
                 alt={
                   districtData?.name ||
@@ -776,13 +736,10 @@ export default function LEDDisplayDetailPage({
               />
             )}
             <h2 className="text-2.25 font-900 font-gmarket inline-block align-middle">
-              {selectedOption?.option === '전체보기' ||
-              districtObj?.name === '전체보기'
-                ? '전체보기'
-                : districtData?.name ||
-                  selectedOption?.option ||
-                  districtObj?.name ||
-                  '도봉구'}
+              {districtData?.name ||
+                selectedOption?.option ||
+                districtObj?.name ||
+                '도봉구'}
             </h2>
           </div>
 
@@ -831,7 +788,9 @@ export default function LEDDisplayDetailPage({
             <DropdownMenu
               data={dropdownOptions}
               onChange={handleDropdownChange}
-              title={selectedOption?.option || '전체보기'}
+              title={
+                selectedOption?.option || dropdownOptions[0]?.option || '선택'
+              }
               selectedOption={selectedOption}
             />
           </div>
@@ -859,7 +818,7 @@ export default function LEDDisplayDetailPage({
               selectedIds={selectedIds}
               onItemSelect={(id, checked) => handleItemSelect(id, checked)}
               enableRowClick={false}
-              isAllDistrictsView={isAllDistrictsView}
+              isAllDistrictsView={false}
             />
           ) : (
             renderGalleryView()

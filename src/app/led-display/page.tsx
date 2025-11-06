@@ -89,12 +89,15 @@ export default function LEDDisplayPage() {
 
         let result;
         try {
-          const response = await fetch('/api/led-display?action=getAll', {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          });
+          const response = await fetch(
+            '/api/led-display?action=getAllDistrictsData',
+            {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+            }
+          );
 
           console.log('🔍 Response status:', response.status);
 
@@ -115,6 +118,14 @@ export default function LEDDisplayPage() {
 
         const data = result.data;
         console.log('🔍 Optimized LED data received:', data);
+
+        // 데이터가 없거나 districts가 없으면 빈 배열로 처리
+        if (!data || !data.districts) {
+          console.warn('⚠️ No districts data found, using empty array');
+          setUpdatedDistricts([]);
+          setIsLoading(false);
+          return;
+        }
 
         // 데이터 변환 및 처리
         const processedDistricts: District[] = data.districts.map(

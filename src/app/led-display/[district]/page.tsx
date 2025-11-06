@@ -5,7 +5,6 @@ import { useParams } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 import bannerDistricts from '@/src/mock/banner-district';
 import { LEDBillboard } from '@/src/types/leddetail';
-import useKakaoLoader from '@/src/components/hooks/use-kakao-loader';
 
 import { DropdownOption } from '@/src/types/displaydetail';
 
@@ -80,32 +79,25 @@ async function getLEDDisplaysByDistrict(
         districtName
       )}`
     );
+
+    if (!response.ok) {
+      console.error(
+        `❌ API 응답 오류: ${response.status} ${response.statusText}`
+      );
+      return [];
+    }
+
     const result = await response.json();
 
     if (result.success) {
-      return result.data;
+      return result.data || [];
     } else {
-      throw new Error(result.error);
+      console.error('❌ API 응답 오류:', result.error);
+      return [];
     }
   } catch (error) {
-    console.error('Error fetching LED displays by district:', error);
-    throw error;
-  }
-}
-
-async function getAllLEDDisplays(): Promise<LEDDisplayData[]> {
-  try {
-    const response = await fetch('/api/led-display?action=getAll');
-    const result = await response.json();
-
-    if (result.success) {
-      return result.data;
-    } else {
-      throw new Error(result.error);
-    }
-  } catch (error) {
-    console.error('Error fetching all LED displays:', error);
-    throw error;
+    console.error('❌ Error fetching LED displays by district:', error);
+    return [];
   }
 }
 
@@ -113,34 +105,14 @@ export default function LEDDisplayPage() {
   const params = useParams();
   const encodedDistrict = params.district as string;
   const district = decodeURIComponent(encodedDistrict);
-  const isAllDistricts = district === 'all';
-
-  // 카카오맵 SDK 로딩 보장 (현수막 게시대와 동일한 방식)
-  useKakaoLoader();
 
   const districtObj = useMemo(
-    () =>
-      isAllDistricts
-        ? {
-            id: 0,
-            name: '전체보기',
-            code: 'all',
-            icon: '/svg/all.svg',
-            description: '모든 자치구',
-            count: 0,
-            size: '',
-            led_count: 0,
-            banner_count: 0,
-            sizeOfPeople: '',
-            logo: '/svg/all.svg',
-            src: '',
-          }
-        : bannerDistricts.find((d) => d.code === district),
-    [isAllDistricts, district]
+    () => bannerDistricts.find((d) => d.code === district),
+    [district]
   );
 
   const [billboards, setBillboards] = useState<LEDBillboard[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // 초기값을 false로 변경
   const [error, setError] = useState<string | null>(null);
   // LED 전자게시대는 항상 상시접수이므로 period 상태 불필요
   const [bankInfo, setBankInfo] = useState<BankInfo | null>(null);
@@ -154,7 +126,6 @@ export default function LEDDisplayPage() {
   } | null>(null);
 
   const [dropdownOptions, setDropdownOptions] = useState<DropdownOption[]>([
-    { id: 0, option: '전체보기' },
     { id: 1, option: '관악구' },
     { id: 2, option: '마포구' },
   ]);
@@ -241,20 +212,19 @@ export default function LEDDisplayPage() {
         const result = await response.json();
 
         if (result.success && result.data) {
-          const options = [
-            { id: 0, option: '전체보기' },
-            ...result.data.map((district: { name: string }, index: number) => ({
+          // 전체보기 옵션 제거
+          const options = result.data.map(
+            (district: { name: string }, index: number) => ({
               id: index + 1,
               option: district.name,
-            })),
-          ];
+            })
+          );
           setDropdownOptions(options);
         }
       } catch (error) {
         console.error('Failed to fetch available districts:', error);
-        // 에러가 발생해도 기본 옵션 설정
+        // 에러가 발생해도 기본 옵션 설정 (전체보기 제외)
         setDropdownOptions([
-          { id: 0, option: '전체보기' },
           { id: 1, option: '관악구' },
           { id: 2, option: '마포구' },
         ]);
@@ -283,6 +253,12 @@ export default function LEDDisplayPage() {
           districtName
         )}&displayType=led_display`
       );
+
+      if (!response.ok) {
+        console.warn(`API 응답 오류: ${response.status}`);
+        return null;
+      }
+
       const result = await response.json();
       return result.success ? result.data : null;
     } catch (err) {
@@ -292,9 +268,34 @@ export default function LEDDisplayPage() {
   }
 
   useEffect(() => {
+    // district가 없으면 즉시 종료
+    if (!district || district.trim() === '' || district === 'all') {
+      console.warn('⚠️ district가 없거나 전체보기입니다.');
+      setLoading(false);
+      setBillboards([]);
+      setDistrictData({
+        id: '0',
+        name: district || '알 수 없음',
+        code: district || '',
+        logo_image_url: '/images/no_image.png',
+        panel_status: 'active',
+      });
+      return;
+    }
+
+    let cancelled = false; // 취소 플래그
+    let loadingSet = false; // 로딩 상태가 설정되었는지 추적
+
     async function fetchLEDData() {
       try {
+        loadingSet = true;
         setLoading(true);
+        setError(null);
+        console.log('🔄 데이터 로딩 시작:', district);
+
+        const currentDistrictObj = bannerDistricts.find(
+          (d) => d.code === district
+        );
 
         // URL에서 구 이름 추출 (dobong -> 도봉구)
         const getDistrictNameFromCode = (code: string): string => {
@@ -329,126 +330,144 @@ export default function LEDDisplayPage() {
         };
 
         const districtName =
-          districtObj?.name || getDistrictNameFromCode(district);
-        console.log('🔍 Using district name:', districtName);
+          currentDistrictObj?.name || getDistrictNameFromCode(district);
+        console.log(
+          '🔍 Using district name:',
+          districtName,
+          'district:',
+          district
+        );
 
-        // 1. LED 데이터 가져오기
-        try {
-          const data = isAllDistricts
-            ? await getAllLEDDisplays()
-            : await getLEDDisplaysByDistrict(districtName);
-
-          console.log('🔍 LED 데이터 로드 결과:', {
-            isAllDistricts,
-            dataLength: data?.length || 0,
-            hasData: !!(data && data.length > 0),
-          });
-
-          if (data && data.length > 0) {
-            const transformed = transformLEDData(data);
-            console.log('🔍 변환된 billboards:', {
-              count: transformed.length,
-              firstItem: transformed[0],
-            });
-            setBillboards(transformed);
-          } else {
-            // 데이터가 없으면 빈 배열로 설정
-            console.log('🔍 LED 데이터가 없습니다.');
-            setBillboards([]);
+        // 1. LED 데이터 가져오기 (타임아웃 3초)
+        const ledDataPromise = (async () => {
+          if (cancelled) return [];
+          try {
+            if (districtName) {
+              console.log('🔍 구별 LED 데이터 조회 시작:', districtName);
+              return await getLEDDisplaysByDistrict(districtName);
+            }
+            return [];
+          } catch (error) {
+            console.error('❌ Failed to fetch LED data:', error);
+            return [];
           }
-        } catch (error) {
-          console.error('Failed to fetch LED data:', error);
-          // 에러가 발생해도 빈 배열로 설정하여 페이지가 로드되도록 함
+        })();
+
+        const ledDataTimeout = new Promise<LEDDisplayData[]>((resolve) =>
+          setTimeout(() => {
+            console.warn('⏱️ LED 데이터 타임아웃 (3초)');
+            resolve([]);
+          }, 3000)
+        );
+
+        const data = await Promise.race([ledDataPromise, ledDataTimeout]);
+
+        if (cancelled) return;
+
+        console.log('🔍 LED 데이터 로드 결과:', {
+          districtName,
+          dataLength: data?.length || 0,
+        });
+
+        if (data && data.length > 0) {
+          const transformed = transformLEDData(data);
+          setBillboards(transformed);
+        } else {
           setBillboards([]);
         }
 
-        // 2. 구 정보와 계좌번호 정보 가져오기
-        // 전체보기 페이지인 경우 기본 districtData 설정
-        if (isAllDistricts) {
-          setDistrictData({
-            id: '0',
-            name: '전체보기',
-            code: 'all',
-            logo_image_url: '/svg/all.svg',
-            panel_status: 'active',
-            phone_number: undefined,
-          });
-        } else if (districtName) {
-          try {
-            const districtDataResult = await getDistrictData(districtName);
+        // 2. 구 정보 설정
+        // 기본 정보 즉시 설정
+        const defaultLogoUrl = `/images/district-icon/${district}-gu.png`;
+        setDistrictData({
+          id: '0',
+          name: districtName || district,
+          code: district,
+          logo_image_url: defaultLogoUrl,
+          panel_status: 'active',
+          phone_number: undefined,
+        });
+        setBankInfo(null);
+
+        // 구 정보는 백그라운드에서 가져오기 (타임아웃 2초)
+        if (districtName) {
+          Promise.race([
+            getDistrictData(districtName),
+            new Promise<null>((resolve) =>
+              setTimeout(() => {
+                console.warn('⏱️ getDistrictData 타임아웃 (2초)');
+                resolve(null);
+              }, 2000)
+            ),
+          ]).then((districtDataResult) => {
+            if (cancelled) return;
             if (districtDataResult) {
               setDistrictData({
                 id: districtDataResult.id,
                 name: districtDataResult.name,
                 code: districtDataResult.code,
-                logo_image_url: districtDataResult.logo_image_url,
-                panel_status: 'active', // 임시로 active 설정, 나중에 billboards 상태에 따라 업데이트
+                logo_image_url:
+                  districtDataResult.logo_image_url || defaultLogoUrl,
+                panel_status: 'active',
+                phone_number: districtDataResult.phone_number,
               });
-              console.log(
-                '🔍 Bank info from API:',
-                districtDataResult.bank_accounts
-              );
-              console.log(
-                '🔍 District logo URL:',
-                districtDataResult.logo_image_url
-              );
               setBankInfo(districtDataResult.bank_accounts);
-            } else {
-              // API에서 데이터를 가져오지 못한 경우에도 기본 정보 생성
-              const defaultLogoUrl = isAllDistricts
-                ? '/svg/all.svg'
-                : `/images/district-icon/${district}-gu.png`;
-              console.log('🔍 Using default logo URL:', defaultLogoUrl);
-              setDistrictData({
-                id: '0',
-                name: districtName,
-                code: district,
-                logo_image_url: defaultLogoUrl,
-                panel_status: 'active', // 임시로 active 설정
-              });
             }
-          } catch (error) {
-            console.warn('Failed to fetch district data:', error);
-            // 에러가 발생해도 기본 정보 생성
-            setDistrictData({
-              id: '0',
-              name: districtName,
-              code: district,
-              logo_image_url: isAllDistricts
-                ? '/svg/all.svg'
-                : `/images/district-icon/${district}-gu.png`,
-              panel_status: 'active', // 임시로 active 설정
-            });
-          }
+          });
         }
       } catch (err) {
         console.error('❌ Error fetching LED data:', err);
         setError(`데이터를 불러오는 중 오류가 발생했습니다: ${err}`);
-        // 에러가 발생해도 로딩 상태를 해제하여 페이지가 표시되도록 함
+        // 에러 발생 시 즉시 로딩 해제
+        if (!cancelled && loadingSet) {
+          setLoading(false);
+          console.log('✅ 에러 발생 - 로딩 해제');
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled && loadingSet) {
+          setLoading(false);
+          console.log('✅ 로딩 완료');
+        }
       }
     }
 
-    if (district) {
-      fetchLEDData();
-    }
-  }, [district, districtObj, isAllDistricts]);
+    // 안전장치: 3초 후에도 로딩이 true이면 강제로 해제
+    const safetyTimeout = setTimeout(() => {
+      if (!cancelled && loadingSet) {
+        console.warn('⚠️ 3초 안전장치 - 강제로 로딩 상태 해제');
+        setLoading(false);
+      }
+    }, 3000);
+
+    fetchLEDData();
+
+    return () => {
+      cancelled = true;
+      loadingSet = false;
+      clearTimeout(safetyTimeout);
+      // cleanup 시에도 로딩 해제
+      setLoading(false);
+    };
+  }, [district]); // district 변경 시에만 실행
 
   // billboards 상태가 변경될 때마다 panel_status 업데이트
   useEffect(() => {
-    if (districtData && !isAllDistricts) {
+    if (districtData) {
       const hasLEDData = billboards.length > 0;
-      setDistrictData((prev) =>
-        prev
-          ? {
-              ...prev,
-              panel_status: hasLEDData ? 'active' : 'maintenance',
-            }
-          : prev
-      );
+      const newStatus = hasLEDData ? 'active' : 'maintenance';
+      // panel_status가 실제로 변경될 때만 업데이트
+      setDistrictData((prev) => {
+        if (!prev || prev.panel_status === newStatus) {
+          return prev; // 변경사항이 없으면 그대로 반환
+        }
+        return {
+          ...prev,
+          panel_status: newStatus,
+        };
+      });
     }
-  }, [billboards.length, isAllDistricts, districtData]); // districtData도 의존성에 포함
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [billboards.length, districtData?.id]); // districtData.id만 의존성에 포함 (무한 루프 방지)
 
   if (loading) {
     return (
@@ -509,7 +528,7 @@ export default function LEDDisplayPage() {
               count: billboards.length,
               logo:
                 districtData.logo_image_url ||
-                (isAllDistricts
+                (district === 'all'
                   ? '/svg/all.svg'
                   : `/images/district-icon/${districtData.code}-gu.png`),
               src: '/images/led/landing.png',
@@ -521,9 +540,10 @@ export default function LEDDisplayPage() {
               code: district,
               description: `${district} LED 전자게시대`,
               count: billboards.length,
-              logo: isAllDistricts
-                ? '/svg/all.svg'
-                : `/images/district-icon/${district}-gu.png`,
+              logo:
+                district === 'all'
+                  ? '/svg/all.svg'
+                  : `/images/district-icon/${district}-gu.png`,
               src: '/images/led/landing.png',
               phone_number: undefined,
             }
@@ -544,9 +564,7 @@ export default function LEDDisplayPage() {
           id: '0',
           name: district,
           code: district,
-          logo_image_url: isAllDistricts
-            ? '/svg/all.svg'
-            : `/images/district-icon/${district}-gu.png`,
+          logo_image_url: `/images/district-icon/${district}-gu.png`,
           panel_status: 'active',
           phone_number: undefined,
         }

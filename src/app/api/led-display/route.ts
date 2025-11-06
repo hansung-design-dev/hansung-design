@@ -242,24 +242,50 @@ async function getLEDDisplayCountsByDistrict() {
 // 사용 가능한 구 목록 조회
 async function getAvailableDistricts() {
   try {
+    const displayTypeId = (await getLEDDisplayTypeId()).id;
+
+    // panels 테이블에서 LED 전자게시대가 있는 구만 조회
+    // DISTINCT를 사용하여 중복 제거
     const { data, error } = await supabase
-      .from('region_gu')
-      .select('name')
-      .eq('display_type_id', '3119f6ed-81e4-4d62-b785-6a33bc7928f9')
-      .in('is_active', ['true', 'maintenance'])
-      .order('name', { ascending: true });
+      .from('panels')
+      .select('region_gu!inner(id, name, code)')
+      .eq('display_type_id', displayTypeId)
+      .eq('panel_status', 'active');
 
     if (error) {
-      throw error;
+      console.error('❌ Error fetching available districts:', error);
+      // 에러 발생 시 빈 배열 반환
+      return NextResponse.json({
+        success: true,
+        data: [],
+      });
     }
+
+    // 중복 제거 및 정렬
+    const uniqueDistricts = new Map<string, { name: string }>();
+    (data || []).forEach((item) => {
+      if (item.region_gu && item.region_gu.name) {
+        uniqueDistricts.set(item.region_gu.name, {
+          name: item.region_gu.name,
+        });
+      }
+    });
+
+    const districtNames = Array.from(uniqueDistricts.values()).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
 
     return NextResponse.json({
       success: true,
-      data: data || [],
+      data: districtNames,
     });
   } catch (error) {
     console.error('❌ Error in getAvailableDistricts:', error);
-    throw error;
+    // 에러 발생 시 빈 배열 반환
+    return NextResponse.json({
+      success: true,
+      data: [],
+    });
   }
 }
 

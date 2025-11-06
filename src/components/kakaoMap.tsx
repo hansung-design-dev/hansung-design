@@ -18,6 +18,7 @@ export interface MarkerType {
   lng: number;
   type: string;
   isSelected?: boolean;
+  number?: number; // 게시대 번호 (선택적)
 }
 
 interface KakaoMapProps {
@@ -40,6 +41,8 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
   const mapInstanceRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const markersRef = useRef<Map<string, any>>(new Map());
+  const mapCenterRef = useRef<{ lat: number; lng: number } | null>(null);
+  const loadingStateRef = useRef(false); // 로딩 상태 추적용 ref
 
   // 로드뷰 오버레이 상태
   const [roadviewVisible, setRoadviewVisible] = useState(false);
@@ -71,11 +74,11 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
 
     const ready = hasLatLng && hasMap;
     return ready;
-  }, [kakaoLoaded]);
+  }, []); // kakaoLoaded는 내부에서 확인하지 않으므로 의존성 제거
 
-  // 중심점 계산 (메모이제이션)
-  const mapCenter = useMemo(() => {
-    return (
+  // 중심점 계산 (메모이제이션) - ref에 저장하여 최신 값 참조
+  useMemo(() => {
+    const centerPoint =
       center ||
       (markers.length
         ? {
@@ -86,8 +89,10 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
               markers.reduce((sum, marker) => sum + marker.lng, 0) /
               markers.length,
           }
-        : { lat: 37.5665, lng: 126.978 })
-    );
+        : { lat: 37.5665, lng: 126.978 });
+    // ref에 최신 값 저장
+    mapCenterRef.current = centerPoint;
+    return centerPoint;
   }, [center, markers]);
 
   // mapRef callback에서 지도 초기화 시도 (useCallback으로 메모이제이션) - hooks 규칙을 위해 여기에 정의
@@ -95,51 +100,59 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
     (el: HTMLDivElement | null) => {
       mapRef.current = el;
 
-      // mapRef 설정 시 디버그 로그 제거 (너무 많은 로그 방지)
-
       // mapRef가 설정되고, 카카오 SDK가 완전히 준비되었는데 지도 인스턴스가 없으면 초기화 시도
-      if (el && !mapInstanceRef.current && kakaoLoaded && isKakaoSDKReady()) {
-        try {
-          const container = el;
+      if (el && !mapInstanceRef.current) {
+        // SDK가 준비되었는지 확인
+        if (
+          typeof window !== 'undefined' &&
+          window.kakao?.maps?.LatLng &&
+          window.kakao?.maps?.Map &&
+          mapCenterRef.current
+        ) {
+          try {
+            const container = el;
+            const currentCenter = mapCenterRef.current; // ref에서 최신 값 참조
 
-          // 컨테이너 크기 확인 (경고만, 지도는 생성 가능)
+            const options = {
+              center: new window.kakao.maps.LatLng(
+                currentCenter.lat,
+                currentCenter.lng
+              ),
+              level: 3,
+            };
 
-          if (!window.kakao?.maps?.LatLng || !window.kakao?.maps?.Map) {
-            throw new Error('카카오맵 SDK가 완전히 로드되지 않았습니다.');
+            const map = new window.kakao.maps.Map(container, options);
+
+            // 지도가 생성되면 크기를 조정
+            if (map && (!container.offsetWidth || !container.offsetHeight)) {
+              setTimeout(() => {
+                if (map && map.relayout) {
+                  map.relayout();
+                }
+              }, 100);
+            }
+            mapInstanceRef.current = map;
+            setIsLoading(false);
+            setError(null);
+          } catch (err) {
+            console.error('❌ mapRef callback에서 카카오맵 생성 실패:', err);
+            setError('카카오맵을 생성할 수 없습니다.');
+            setIsLoading(false);
           }
-
-          const options = {
-            center: new window.kakao.maps.LatLng(mapCenter.lat, mapCenter.lng),
-            level: 3,
-          };
-
-          const map = new window.kakao.maps.Map(container, options);
-
-          // 지도가 생성되면 크기를 조정
-          if (map && (!container.offsetWidth || !container.offsetHeight)) {
-            setTimeout(() => {
-              if (map && map.relayout) {
-                map.relayout();
-              }
-            }, 100);
-          }
-          mapInstanceRef.current = map;
-          setIsLoading(false);
-          setError(null);
-        } catch (err) {
-          console.error('❌ mapRef callback에서 카카오맵 생성 실패:', err);
-          setError('카카오맵을 생성할 수 없습니다.');
-          setIsLoading(false);
         }
       }
     },
-    [kakaoLoaded, mapCenter, isKakaoSDKReady]
+    [] // 의존성 배열 비움 - ref를 통해 최신 값 참조
   );
 
   // 카카오맵 초기화 (공식 가이드 방식) - useEffect로 백업 시도
   useEffect(() => {
-    // 이미 지도 인스턴스가 있으면 스킵
+    // 이미 지도 인스턴스가 있으면 로딩 상태만 확인하고 스킵
     if (mapInstanceRef.current) {
+      if (!loadingStateRef.current && isLoading) {
+        loadingStateRef.current = true;
+        setIsLoading(false);
+      }
       return;
     }
 
@@ -147,69 +160,59 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
       return;
     }
 
-    // SDK가 준비될 때까지 polling
+    // SDK가 준비될 때까지 대기
     if (!kakaoLoaded || !isKakaoSDKReady()) {
-      // SDK가 로드되었다고 표시되었지만 실제로는 아직 준비되지 않은 경우
-      // polling으로 준비 상태 확인
-      const checkInterval = setInterval(() => {
-        if (
-          kakaoLoaded &&
-          isKakaoSDKReady() &&
-          mapRef.current &&
-          !mapInstanceRef.current
-        ) {
-          clearInterval(checkInterval);
-          // SDK가 준비되면 지도 초기화 시도
-          // 이 useEffect가 다시 실행되도록 하기 위해 의존성 배열에 의해 자동 재실행됨
+      return;
+    }
+
+    // 지도 초기화는 handleMapRef에서 처리하므로 여기서는 스킵
+    // handleMapRef가 실행되지 않은 경우를 대비한 백업 로직
+    if (!mapInstanceRef.current && mapRef.current) {
+      try {
+        const container = mapRef.current;
+
+        if (!window.kakao?.maps?.LatLng || !window.kakao?.maps?.Map) {
+          return; // SDK가 아직 준비되지 않음
         }
-      }, 100);
 
-      // 최대 30초 대기
-      const timeout = setTimeout(() => {
-        clearInterval(checkInterval);
-      }, 30000);
+        const currentCenter = mapCenterRef.current || {
+          lat: 37.5665,
+          lng: 126.978,
+        };
 
-      return () => {
-        clearInterval(checkInterval);
-        clearTimeout(timeout);
-      };
-    }
+        const options = {
+          center: new window.kakao.maps.LatLng(
+            currentCenter.lat,
+            currentCenter.lng
+          ),
+          level: 3,
+        };
 
-    try {
-      // 공식 가이드: 지도 생성
-      // 참고: https://apis.map.kakao.com/web/guide/#start
-      const container = mapRef.current;
+        const map = new window.kakao.maps.Map(container, options);
 
-      // 컨테이너 크기 확인 (경고만, 지도는 생성 가능)
+        // 지도가 생성되면 크기를 조정
+        if (map && (!container.offsetWidth || !container.offsetHeight)) {
+          setTimeout(() => {
+            if (map && map.relayout) {
+              map.relayout();
+            }
+          }, 100);
+        }
 
-      if (!window.kakao?.maps?.LatLng || !window.kakao?.maps?.Map) {
-        throw new Error('카카오맵 SDK가 완전히 로드되지 않았습니다.');
+        mapInstanceRef.current = map;
+        if (!loadingStateRef.current) {
+          loadingStateRef.current = true;
+          setIsLoading(false);
+        }
+        setError(null);
+      } catch (err) {
+        console.error('❌ useEffect에서 카카오맵 생성 실패:', err);
+        setError('카카오맵을 생성할 수 없습니다.');
+        setIsLoading(false);
       }
-
-      const options = {
-        center: new window.kakao.maps.LatLng(mapCenter.lat, mapCenter.lng),
-        level: 3,
-      };
-
-      const map = new window.kakao.maps.Map(container, options);
-
-      // 지도가 생성되면 크기를 조정
-      if (map && (!container.offsetWidth || !container.offsetHeight)) {
-        setTimeout(() => {
-          if (map && map.relayout) {
-            map.relayout();
-          }
-        }, 100);
-      }
-      mapInstanceRef.current = map;
-      setIsLoading(false);
-      setError(null);
-    } catch (err) {
-      console.error('❌ useEffect에서 카카오맵 생성 실패:', err);
-      setError('카카오맵을 생성할 수 없습니다.');
-      setIsLoading(false);
     }
-  }, [kakaoLoaded, mapCenter, isKakaoSDKReady]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kakaoLoaded]); // isKakaoSDKReady는 함수이므로 의존성에서 제외
 
   // 로드뷰 오버레이 열기
   const openRoadview = useCallback(
@@ -323,6 +326,11 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
         map.setLevel(3);
       }
     }
+
+    // 마커 업데이트 후 로딩 상태 확실히 해제
+    if (mapInstanceRef.current) {
+      setIsLoading(false);
+    }
   }, [markers, selectedIds, onMarkerClick, isKakaoSDKReady, openRoadview]);
 
   // 마커 컨텐츠 생성 함수
@@ -351,10 +359,15 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
       text-align: center;
       cursor: pointer;
     `;
-    div.textContent =
-      marker.title.length > 10
-        ? marker.title.substring(0, 10) + '...'
+    // 번호가 있으면 "1. 제목" 형식으로 표시
+    const displayTitle =
+      marker.number !== undefined
+        ? `${marker.number}. ${marker.title}`
         : marker.title;
+    div.textContent =
+      displayTitle.length > 10
+        ? displayTitle.substring(0, 10) + '...'
+        : displayTitle;
 
     div.addEventListener('click', (e) => {
       e.stopPropagation();

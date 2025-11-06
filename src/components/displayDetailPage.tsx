@@ -1255,6 +1255,9 @@ export default function DisplayDetailPage({
               lng: selectedItem.lng!,
               type: selectedItem.type,
               isSelected: true,
+              number: selectedItem.panel_code
+                ? Number(selectedItem.panel_code)
+                : undefined, // 실제 게시대 번호 사용
             },
           ]
         : filteredBillboards
@@ -1265,6 +1268,7 @@ export default function DisplayDetailPage({
               lat: item.lat!,
               lng: item.lng!,
               type: item.type,
+              number: item.panel_code ? Number(item.panel_code) : undefined, // 실제 게시대 번호 사용
               isSelected: selectedIds.includes(item.id),
             }));
 
