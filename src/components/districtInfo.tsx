@@ -42,6 +42,7 @@ interface DistrictInfoProps {
     total_price: number;
     displayName?: string;
   }[];
+  isAllDistrictsView?: boolean;
 }
 
 export default function DistrictInfo({
@@ -53,6 +54,7 @@ export default function DistrictInfo({
   phoneNumber,
   displayTypeId,
   pricePolicies,
+  isAllDistrictsView = false,
 }: DistrictInfoProps) {
   // 디버깅용 로그
   console.log('🔍 DistrictInfo 상세 디버깅:', {
@@ -125,13 +127,15 @@ export default function DistrictInfo({
         </div>
       )}
 
-      {/* 입금계좌 */}
-      <div>
-        <div className="text-0.875 font-medium text-gray-500 mb-1">
-          입금계좌
+      {/* 입금계좌 - 전체보기일 때는 숨김 */}
+      {!isAllDistrictsView && (
+        <div>
+          <div className="text-0.875 font-medium text-gray-500 mb-1">
+            입금계좌
+          </div>
+          <BankInfo flexRow={flexRow} bankInfo={bankInfo} />
         </div>
-        <BankInfo flexRow={flexRow} bankInfo={bankInfo} />
-      </div>
+      )}
 
       {/* 가격정보 (현수막게시대만 표시, LED 전자게시대는 숨김) */}
       {!isLEDDisplay && pricePolicies && pricePolicies.length > 0 && (

@@ -788,6 +788,7 @@ export default function LEDDisplayDetailPage({
             isLEDDisplay={true}
             pricePolicies={pricePolicies}
             phoneNumber={districtObj?.phone_number}
+            isAllDistrictsView={isAllDistrictsView}
           />
         </div>
         {/* 상하반기 탭 - 개별 구 페이지에서만 표시

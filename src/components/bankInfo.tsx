@@ -32,7 +32,7 @@ export default function BankInfo({ bankInfo, flexRow = false }: BankInfoProps) {
           </div>
         </div>
       ) : (
-        <div className="text-sm text-gray-400">계좌정보 없음</div>
+        <div className="text-sm text-gray-400">-</div>
       )}
     </div>
   );
