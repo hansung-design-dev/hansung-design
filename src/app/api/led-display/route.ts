@@ -264,9 +264,18 @@ async function getAvailableDistricts() {
     // 중복 제거 및 정렬
     const uniqueDistricts = new Map<string, { name: string }>();
     (data || []).forEach((item) => {
-      if (item.region_gu && item.region_gu.name) {
-        uniqueDistricts.set(item.region_gu.name, {
-          name: item.region_gu.name,
+      const regionGu = item.region_gu as unknown as
+        | { id: string; name: string; code: string }
+        | null
+        | undefined;
+      if (
+        regionGu &&
+        typeof regionGu === 'object' &&
+        !Array.isArray(regionGu) &&
+        regionGu.name
+      ) {
+        uniqueDistricts.set(regionGu.name, {
+          name: regionGu.name,
         });
       }
     });
