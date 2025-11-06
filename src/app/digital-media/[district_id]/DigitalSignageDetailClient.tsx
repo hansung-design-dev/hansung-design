@@ -109,7 +109,8 @@ export default function DigitalSignageDetailClient({
   };
 
   // 미디어경관디자인 전용 레이아웃 (제목과 이미지만 표시)
-  if (!isDigitalSignage && !isDigitalBillboard) {
+  // 쇼핑몰 아이템은 제외 (상세 정보 UI 사용)
+  if (!isDigitalSignage && !isDigitalBillboard && !isShoppingMall) {
     return (
       <main className="min-h-screen bg-white">
         {/* Header Section */}
