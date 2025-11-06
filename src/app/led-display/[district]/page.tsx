@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 import bannerDistricts from '@/src/mock/banner-district';
 import { LEDBillboard } from '@/src/types/leddetail';
+import useKakaoLoader from '@/src/components/hooks/use-kakao-loader';
 
 import { DropdownOption } from '@/src/types/displaydetail';
 
@@ -28,7 +29,6 @@ export interface LEDDisplayData {
   region_dong: {
     id: string;
     name: string;
-    district_code: string;
   };
   led_panel_details: {
     id: string;
@@ -114,6 +114,10 @@ export default function LEDDisplayPage() {
   const encodedDistrict = params.district as string;
   const district = decodeURIComponent(encodedDistrict);
   const isAllDistricts = district === 'all';
+
+  // 카카오맵 SDK 로딩 보장 (현수막 게시대와 동일한 방식)
+  useKakaoLoader();
+
   const districtObj = useMemo(
     () =>
       isAllDistricts
@@ -334,11 +338,22 @@ export default function LEDDisplayPage() {
             ? await getAllLEDDisplays()
             : await getLEDDisplaysByDistrict(districtName);
 
+          console.log('🔍 LED 데이터 로드 결과:', {
+            isAllDistricts,
+            dataLength: data?.length || 0,
+            hasData: !!(data && data.length > 0),
+          });
+
           if (data && data.length > 0) {
             const transformed = transformLEDData(data);
+            console.log('🔍 변환된 billboards:', {
+              count: transformed.length,
+              firstItem: transformed[0],
+            });
             setBillboards(transformed);
           } else {
             // 데이터가 없으면 빈 배열로 설정
+            console.log('🔍 LED 데이터가 없습니다.');
             setBillboards([]);
           }
         } catch (error) {
@@ -347,8 +362,18 @@ export default function LEDDisplayPage() {
           setBillboards([]);
         }
 
-        // 2. 구 정보와 계좌번호 정보 가져오기 (전체보기가 아닌 경우에만)
-        if (!isAllDistricts && districtName) {
+        // 2. 구 정보와 계좌번호 정보 가져오기
+        // 전체보기 페이지인 경우 기본 districtData 설정
+        if (isAllDistricts) {
+          setDistrictData({
+            id: '0',
+            name: '전체보기',
+            code: 'all',
+            logo_image_url: '/svg/all.svg',
+            panel_status: 'active',
+            phone_number: undefined,
+          });
+        } else if (districtName) {
           try {
             const districtDataResult = await getDistrictData(districtName);
             if (districtDataResult) {
@@ -423,7 +448,7 @@ export default function LEDDisplayPage() {
           : prev
       );
     }
-  }, [billboards.length, isAllDistricts]); // districtData 의존성 제거
+  }, [billboards.length, isAllDistricts, districtData]); // districtData도 의존성에 포함
 
   if (loading) {
     return (

@@ -492,10 +492,11 @@ const RoadviewOverlay: React.FC<RoadviewOverlayProps> = ({
 
         // 타입 가드: 필수 속성 확인
         const Roadview = window.kakao.maps.Roadview;
+        const RoadviewClient = window.kakao.maps.RoadviewClient;
         const LatLng = window.kakao.maps.LatLng;
         const event = window.kakao.maps.event;
 
-        if (!Roadview || !LatLng || !event) {
+        if (!Roadview || !RoadviewClient || !LatLng || !event) {
           onError(
             '로드뷰를 초기화할 수 없습니다. SDK가 완전히 로드되지 않았습니다.'
           );
@@ -503,13 +504,29 @@ const RoadviewOverlay: React.FC<RoadviewOverlayProps> = ({
         }
 
         // 공식 가이드 방식으로 로드뷰 생성
-        const roadview = new Roadview(roadviewRef.current, {
-          position: new LatLng(position.lat, position.lng),
-          pov: { pan: 0, tilt: 0, zoom: 1 },
-        });
+        // 참고: https://apis.map.kakao.com/web/sample/basicRoadview/
+        const roadview = new Roadview(roadviewRef.current);
+        const roadviewClient = new RoadviewClient();
+        const roadviewPosition = new LatLng(position.lat, position.lng);
 
         roadviewInstanceRef.current = roadview;
-        onError(null);
+
+        // 특정 위치의 좌표와 가까운 로드뷰의 panoId를 추출하여 로드뷰를 띄운다.
+        roadviewClient.getNearestPanoId(
+          roadviewPosition,
+          50,
+          (panoId: number) => {
+            if (panoId === null) {
+              onError(
+                '로드뷰를 불러올 수 없습니다. 해당 위치에서 로드뷰가 제공되지 않을 수 있습니다.'
+              );
+              return;
+            }
+            // panoId와 중심좌표를 통해 로드뷰 실행
+            roadview.setPanoId(panoId, roadviewPosition);
+            onError(null);
+          }
+        );
 
         event.addListener(roadview, 'init', () => {
           onError(null);
@@ -538,9 +555,9 @@ const RoadviewOverlay: React.FC<RoadviewOverlayProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[9999] bg-white shadow-xl flex flex-col"
+      className="absolute inset-0 z-[9999] bg-white shadow-xl flex flex-col"
       style={{
-        position: 'fixed',
+        position: 'absolute',
         top: 0,
         left: 0,
         right: 0,
@@ -549,7 +566,7 @@ const RoadviewOverlay: React.FC<RoadviewOverlayProps> = ({
         height: '100%',
       }}
     >
-      <div className="flex items-center justify-between p-3 border-b bg-gray-50">
+      <div className="flex items-center justify-end p-2 border-b bg-gray-50">
         <button
           onClick={onClose}
           className="bg-white rounded-full p-1.5 shadow-lg hover:bg-gray-100 transition-colors"
@@ -574,7 +591,7 @@ const RoadviewOverlay: React.FC<RoadviewOverlayProps> = ({
         ref={roadviewRef}
         style={{
           width: '100%',
-          height: 'calc(100% - 60px)',
+          height: 'calc(100% - 50px)',
           flex: 1,
         }}
       />

@@ -255,6 +255,12 @@ export default function LEDDisplayDetailPage({
     setSelectedOption(item);
 
     if (item.option === '전체보기') {
+      // 전체보기 페이지인 경우 필터만 해제하고 페이지 이동하지 않음
+      if (isAllDistrictsView) {
+        console.log('🔍 Already on all districts page, just resetting filter');
+        return;
+      }
+      // 일반 구 페이지인 경우 전체보기 페이지로 이동
       console.log('🔍 Navigating to all districts');
       router.push('/led-display/all');
       return;
@@ -264,18 +270,22 @@ export default function LEDDisplayDetailPage({
     const districtName = item.option;
     console.log('🔍 Selected district name:', districtName);
 
-    // 구를 선택했을 때 해당 구의 페이지로 이동
-    if (item.option !== '전체보기') {
-      const districtCode = getDistrictCode(districtName);
-      console.log(
-        '🔍 Converting district name to code:',
-        districtName,
-        '->',
-        districtCode
-      );
-      console.log('🔍 Navigating to:', `/led-display/${districtCode}`);
-      router.push(`/led-display/${districtCode}`);
+    // 전체보기 페이지에서 특정 구를 선택한 경우 필터만 적용 (페이지 이동 안 함)
+    if (isAllDistrictsView) {
+      console.log('🔍 On all districts page, filtering by:', districtName);
+      return;
     }
+
+    // 일반 구 페이지에서 다른 구를 선택한 경우 해당 구의 페이지로 이동
+    const districtCode = getDistrictCode(districtName);
+    console.log(
+      '🔍 Converting district name to code:',
+      districtName,
+      '->',
+      districtCode
+    );
+    console.log('🔍 Navigating to:', `/led-display/${districtCode}`);
+    router.push(`/led-display/${districtCode}`);
   };
 
   const handleItemSelect = (id: string, checked?: boolean) => {
