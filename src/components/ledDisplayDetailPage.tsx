@@ -79,11 +79,20 @@ export default function LEDDisplayDetailPage({
     displayName?: string;
   }[];
 }) {
+  // 전체보기 상태 확인
+  const isAllDistrictsView = district === 'all';
   const [selectedOption, setSelectedOption] = useState<{
     id: number;
     option: string;
     panel_status?: string;
   } | null>(() => {
+    // 전체보기인 경우
+    if (district === 'all') {
+      const allOption = dropdownOptions.find(
+        (option) => option.option === '전체보기'
+      );
+      return allOption || null;
+    }
     // 현재 구에 해당하는 옵션 찾기
     if (districtObj?.name) {
       const matchingOption = dropdownOptions.find(
@@ -108,29 +117,51 @@ export default function LEDDisplayDetailPage({
 
   // dropdownOptions가 변경될 때 selectedOption 업데이트
   useEffect(() => {
+    console.log('🔍 LED Detail - district:', district);
     console.log('🔍 LED Detail - districtObj:', districtObj);
     console.log('🔍 LED Detail - dropdownOptions:', dropdownOptions);
     console.log('🔍 LED Detail - selectedOption:', selectedOption);
 
-    if (dropdownOptions.length > 0 && districtObj?.name) {
-      const matchingOption = dropdownOptions.find(
-        (option) => option.option === districtObj.name
-      );
-
-      console.log('🔍 LED Detail - matchingOption:', matchingOption);
-
-      if (
-        matchingOption &&
-        (!selectedOption || selectedOption.option !== matchingOption.option)
-      ) {
-        console.log(
-          '🔍 LED Detail - setting selectedOption to:',
-          matchingOption
+    if (dropdownOptions.length > 0) {
+      // 전체보기인 경우
+      if (district === 'all') {
+        const allOption = dropdownOptions.find(
+          (option) => option.option === '전체보기'
         );
-        setSelectedOption(matchingOption);
+        if (
+          allOption &&
+          (!selectedOption || selectedOption.option !== '전체보기')
+        ) {
+          console.log('🔍 LED Detail - setting selectedOption to 전체보기');
+          setSelectedOption(allOption);
+        }
+      } else if (districtObj?.name) {
+        // 구별 페이지인 경우
+        const matchingOption = dropdownOptions.find(
+          (option) => option.option === districtObj.name
+        );
+
+        console.log('🔍 LED Detail - matchingOption:', matchingOption);
+
+        if (
+          matchingOption &&
+          (!selectedOption || selectedOption.option !== matchingOption.option)
+        ) {
+          console.log(
+            '🔍 LED Detail - setting selectedOption to:',
+            matchingOption
+          );
+          setSelectedOption(matchingOption);
+        }
       }
     }
-  }, [dropdownOptions, districtObj?.name, selectedOption, districtObj]);
+  }, [
+    dropdownOptions,
+    districtObj?.name,
+    selectedOption,
+    districtObj,
+    district,
+  ]);
 
   // selectedIds 상태 변화 추적 (디버깅용 - 주석 처리)
   // useEffect(() => {
@@ -226,6 +257,13 @@ export default function LEDDisplayDetailPage({
     // 구 이름 그대로 사용
     const districtName = item.option;
     console.log('🔍 Selected district name:', districtName);
+
+    // 전체보기 선택 시
+    if (districtName === '전체보기') {
+      console.log('🔍 전체보기 선택 - Navigating to:', '/led-display/all');
+      router.push('/led-display/all');
+      return;
+    }
 
     // 구를 선택한 경우 해당 구의 페이지로 이동
     const districtCode = getDistrictCode(districtName);
@@ -818,7 +856,7 @@ export default function LEDDisplayDetailPage({
               selectedIds={selectedIds}
               onItemSelect={(id, checked) => handleItemSelect(id, checked)}
               enableRowClick={false}
-              isAllDistrictsView={false}
+              isAllDistrictsView={isAllDistrictsView}
             />
           ) : (
             renderGalleryView()
