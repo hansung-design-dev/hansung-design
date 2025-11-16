@@ -193,9 +193,10 @@ export default function LiveCart() {
                 >
                   <div className="flex flex-col gap-2">
                     <div>
-                      {/* 디지털사이니지와 공공디자인이 아닌 경우에만 no. 표시 */}
-                      {item.type !== 'digital-signage' &&
-                        item.type !== 'public-design' && (
+                      {/* 현수막, LED 전용 번호 표시 (쇼핑몰, 디지털사이니지 등은 제외) */}
+                      {(item.type === 'banner-display' ||
+                        item.type === 'led-display') &&
+                        item.panel_code && (
                           <span className="mr-2 text-gray-600 font-medium text-sm">
                             no.{item.panel_code}
                           </span>

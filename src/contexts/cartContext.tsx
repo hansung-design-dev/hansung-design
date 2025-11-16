@@ -3,7 +3,12 @@ import React, { createContext, useContext, useReducer, useEffect } from 'react';
 
 export interface CartItem {
   id: string;
-  type: 'led-display' | 'banner-display' | 'digital-signage' | 'public-design';
+  type:
+    | 'led-display'
+    | 'banner-display'
+    | 'digital-signage'
+    | 'public-design'
+    | 'digital-product';
   name: string;
   district: string;
   price: number;

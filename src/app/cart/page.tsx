@@ -171,6 +171,7 @@ function CartItemRow({
       case 'led-display':
         return item.photo_url || '/images/led-display.jpeg';
       case 'digital-signage':
+      case 'digital-product':
         return item.photo_url || '/images/digital-media/landing.png';
       default:
         return item.photo_url || '/images/banner-display/landing.png';
@@ -613,11 +614,12 @@ function CartContent() {
     const panelType =
       item.panel_type || item.panel_slot_snapshot?.banner_type || 'panel';
 
-    // 상담신청: LED 전자게시대 전체, 상단광고(용산구/송파구), 디지털미디어, 공공디자인
+    // 상담신청: LED 전자게시대 전체, 상단광고(용산구/송파구), 디지털미디어, 공공디자인, 디지털미디어 쇼핑몰 상품
     if (
       item.type === 'led-display' ||
       (item.type === 'banner-display' && panelType === 'top_fixed') ||
       item.type === 'digital-signage' ||
+      item.type === 'digital-product' ||
       item.type === 'public-design'
     ) {
       consultingItems.push(item);
@@ -666,6 +668,15 @@ function CartContent() {
       //   return false;
       // }
       return item.type === 'digital-signage';
+    }
+  );
+  const digitalProductConsultingItems = groupedItems.consulting.filter(
+    (item) => {
+      // const inquiryStatus = inquiryStatuses[item.id];
+      // if (inquiryStatus && inquiryStatus.status === 'answered') {
+      //   return false;
+      // }
+      return item.type === 'digital-product';
     }
   );
   const publicDesignConsultingItems = groupedItems.consulting.filter((item) => {
@@ -1869,6 +1880,74 @@ function CartContent() {
                       );
                     })}
                   </>
+                )}
+
+                {digitalProductConsultingItems.length > 0 && (
+                  <CartGroupCard
+                    title="디지털미디어 쇼핑몰"
+                    phoneList={['1533-0570', '1899-0596', '02-719-0083']}
+                    isSelected={isGroupSelected('general', '')}
+                    onSelect={(selected) =>
+                      handleGroupSelect('general', '', selected)
+                    }
+                    onDelete={() =>
+                      handleGroupDeleteClick(
+                        'general',
+                        '',
+                        '디지털미디어 쇼핑몰'
+                      )
+                    }
+                    isConsulting={true}
+                  >
+                    {digitalProductConsultingItems.map((item) => {
+                      // 주문자정보 수정 여부 확인
+                      const hasModifiedProfile =
+                        item.user_profile_id ||
+                        (item.contact_person_name &&
+                          item.phone &&
+                          item.company_name);
+
+                      const userInfo = hasModifiedProfile
+                        ? {
+                            name: item.contact_person_name || '',
+                            phone: item.phone || '',
+                            company_name: item.company_name || '',
+                          }
+                        : {
+                            name:
+                              defaultProfile?.contact_person_name ||
+                              userWithPhone?.name ||
+                              '',
+                            phone:
+                              defaultProfile?.phone ||
+                              userWithPhone?.phone ||
+                              '',
+                            company_name:
+                              defaultProfile?.company_name ||
+                              userWithPhone?.company_name ||
+                              '-',
+                          };
+                      return (
+                        <CartItemRow
+                          key={item.id}
+                          item={item}
+                          user={userInfo}
+                          isSelected={selectedItems.has(item.id)}
+                          onSelect={(selected) =>
+                            handleItemSelect(item.id, selected)
+                          }
+                          isConsulting={true}
+                          onOrderModify={() => handleOrderModify(item.id)}
+                          onConsultation={() =>
+                            handleConsultation(item.name, item.id)
+                          }
+                          onDelete={() => handleDelete(item)}
+                          inquiryStatus={undefined}
+                          getPanelTypeDisplay={getPanelTypeDisplay}
+                        />
+                      );
+                    })}
+                  </CartGroupCard>
                 )}
 
                 {publicDesignConsultingItems.length > 0 && (
