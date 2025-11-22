@@ -231,12 +231,39 @@ export default function OrdersPage() {
   const [isCancelSuccessModalOpen, setIsCancelSuccessModalOpen] =
     useState(false);
   const [orderToCancel, setOrderToCancel] = useState<string | null>(null);
+  const [isCancelNotAllowedModalOpen, setIsCancelNotAllowedModalOpen] =
+    useState(false);
   const [pendingPaymentOrders, setPendingPaymentOrders] = useState<Order[]>([]);
 
   // 신청취소 핸들러
-  const handleCancelClick = (orderNumber: string) => {
-    setOrderToCancel(orderNumber);
-    setIsCancelModalOpen(true);
+  const handleCancelClick = (order: Order) => {
+    if (!order) return;
+
+    try {
+      const createdAt = order.created_at ? new Date(order.created_at) : null;
+
+      if (createdAt) {
+        const now = new Date();
+        const diffMs = now.getTime() - createdAt.getTime();
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+        // 주문일로부터 2일(48시간) 이상 경과한 경우: 취소 불가
+        if (diffDays >= 2) {
+          setOrderToCancel(null);
+          setIsCancelModalOpen(false);
+          setIsCancelNotAllowedModalOpen(true);
+          return;
+        }
+      }
+
+      // 2일 이내인 경우에만 실제 취소 확인 모달 표시
+      setOrderToCancel(order.order_number);
+      setIsCancelModalOpen(true);
+    } catch (e) {
+      console.error('신청 취소 가능 여부 판단 중 오류:', e);
+      setOrderToCancel(null);
+      setIsCancelModalOpen(false);
+    }
   };
 
   const handleCancelConfirm = async () => {
@@ -264,7 +291,13 @@ export default function OrdersPage() {
         setSelectedOrderDetail(null);
       } else {
         console.error('주문 취소 실패:', data.error);
-        alert('주문 취소에 실패했습니다.');
+
+        // 취소 가능 기간 초과 에러 처리
+        if (data.code === 'CANCEL_PERIOD_EXPIRED') {
+          setIsCancelNotAllowedModalOpen(true);
+        } else {
+          alert('주문 취소에 실패했습니다.');
+        }
       }
     } catch (error) {
       console.error('주문 취소 중 오류:', error);
@@ -276,8 +309,8 @@ export default function OrdersPage() {
   };
 
   const handleCancelModalClose = () => {
-    setIsCancelModalOpen(false);
-    setOrderToCancel(null);
+      setIsCancelModalOpen(false);
+      setOrderToCancel(null);
   };
 
   // 결제하기 핸들러
@@ -313,7 +346,7 @@ export default function OrdersPage() {
   // 결제대기 상태의 주문 필터링
   useEffect(() => {
     const pendingOrders = orders.filter(
-      (order) => order.payment_status === 'pending_payment'
+      (order) => order.payment_status === 'pending'
     );
     setPendingPaymentOrders(pendingOrders);
   }, [orders]);
@@ -379,7 +412,8 @@ export default function OrdersPage() {
   const getStatusDisplay = (status: string): string => {
     switch (status) {
       case 'pending':
-        return '입금확인 중';
+        // 주문만 생성되어 있고 아직 결제하지 않은 상태
+        return '결제대기 중';
       case 'pending_payment':
         return '결제대기 중';
       case 'pending_deposit':
@@ -387,7 +421,8 @@ export default function OrdersPage() {
       case 'confirmed':
         return '결제완료';
       case 'completed':
-        return '완료';
+        // 결제까지 모두 완료된 상태
+        return '결제완료';
       case 'cancelled':
         return '취소';
       default:
@@ -549,6 +584,19 @@ export default function OrdersPage() {
     const displayStartDate = orderDetail.display_start_date ?? '-';
     const displayEndDate = orderDetail.display_end_date ?? '-';
 
+    // 주문일 기준 취소 가능 여부 및 경과 일수 계산
+    const createdAt = order.created_at ? new Date(order.created_at) : null;
+    let daysSinceOrder = 0;
+    let canCancel = true;
+
+    if (createdAt) {
+      const now = new Date();
+      const diffMs = now.getTime() - createdAt.getTime();
+      daysSinceOrder = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      // 주문일로부터 2일(48시간) 이상 경과한 경우: 취소 불가
+      canCancel = daysSinceOrder < 2;
+    }
+
     const result = {
       id: order.id ?? '-',
       order_number: order.order_number ?? '-',
@@ -572,8 +620,8 @@ export default function OrdersPage() {
       paymentMethod: latestPayment?.payment_methods?.name ?? '-',
       depositorName: latestPayment?.depositor_name ?? '-',
       orderDate: order.created_at ?? '-',
-      canCancel: order.payment_status === 'pending',
-      daysSinceOrder: 0,
+      canCancel,
+      daysSinceOrder,
       // 추가 필드들
       projectName: order.projectName ?? '-',
       displayStartDate: formatDisplayPeriod(displayStartDate, displayEndDate),
@@ -658,7 +706,11 @@ export default function OrdersPage() {
             if (item) handleOrderClick(item.orderId, itemId!);
             else setExpandedItemId(null);
           }}
-          onCancelOrder={(item) => handleCancelClick(item.orderId || '')}
+          onCancelOrder={(item) => {
+            if (item.order) {
+              handleCancelClick(item.order);
+            }
+          }}
           expandedContent={
             expandedItemId
               ? (() => {
@@ -686,11 +738,11 @@ export default function OrdersPage() {
                       orderDetail={mapOrderDetailToCard(selectedOrderDetail)}
                       paymentStatus={paymentStatus}
                       onClose={() => setExpandedItemId(null)}
-                      onCancel={() =>
-                        handleCancelClick(
-                          selectedOrderDetail?.order?.order_number || ''
-                        )
-                      }
+                      onCancel={() => {
+                        if (selectedOrderDetail?.order) {
+                          handleCancelClick(selectedOrderDetail.order);
+                        }
+                      }}
                       onPaymentClick={() => {
                         if (currentOrder) {
                           handlePaymentClick(currentOrder);
@@ -751,6 +803,28 @@ export default function OrdersPage() {
                 size="md"
                 variant="filledBlack"
                 onClick={() => setIsCancelSuccessModalOpen(false)}
+                className="w-full"
+              >
+                확인
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 신청취소 불가 안내 모달 (주문일로부터 2일 경과) */}
+      {isCancelNotAllowedModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
+          <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+            <div className="text-center">
+              <h3 className="text-xl font-bold mb-4">신청 취소 불가</h3>
+              <p className="text-gray-600 mb-6">
+                구매 후 2일 뒤부터는 취소가 불가합니다. 고객센터로 문의해주세요.
+              </p>
+              <Button
+                size="md"
+                variant="filledBlack"
+                onClick={() => setIsCancelNotAllowedModalOpen(false)}
                 className="w-full"
               >
                 확인

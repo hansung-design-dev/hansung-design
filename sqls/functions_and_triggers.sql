@@ -1013,8 +1013,6 @@ $$ LANGUAGE plpgsql;
 
 -- 8. generate_specific_month_periods
 
-
-
 DECLARE
     target_date DATE;
     target_year_month TEXT;

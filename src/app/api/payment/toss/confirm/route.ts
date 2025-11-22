@@ -19,9 +19,13 @@ async function createOrderAfterPayment(
   paymentMethodId: string,
   paymentInfo?: {
     transactionId?: string;
-    paymentProvider?: string;
+    paymentProviderMethod?: string;
     amount?: number;
-  }
+    paymentType?: string;
+    approveNo?: string;
+    installmentMonths?: number;
+  },
+  externalOrderId?: string
 ) {
   const { items, userAuthId, userProfileId, draftDeliveryMethod, projectName } =
     orderData;
@@ -48,10 +52,15 @@ async function createOrderAfterPayment(
   }
 
   // 주문 번호 생성
-  const now = new Date();
-  const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
-  const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
-  const orderNumber = `${dateStr}-${randomStr}`;
+  // - externalOrderId가 있으면 (예: 토스 orderId) 그 값을 그대로 사용
+  // - 없으면 기존 방식(날짜 + 랜덤 문자열)으로 생성
+  let orderNumber = externalOrderId;
+  if (!orderNumber) {
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+    const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
+    orderNumber = `${dateStr}-${randomStr}`;
+  }
 
   // 총 가격 계산
   const totalPrice = items.reduce(
@@ -64,6 +73,7 @@ async function createOrderAfterPayment(
     .from('orders')
     .insert({
       order_number: orderNumber,
+      payment_method_id: paymentMethodId,
       user_auth_id: userAuthId,
       user_profile_id: userProfileId || null,
       payment_status: 'completed', // 결제 완료 상태
@@ -86,10 +96,13 @@ async function createOrderAfterPayment(
     payment_method_id: string;
     amount: number;
     payment_status: string;
+    payment_provider?: string;
     payment_date: string;
     admin_approval_status: string;
     transaction_id?: string;
-    payment_provider?: string;
+    payment_type?: string;
+    approve_no?: string;
+    installment_months?: number;
   } = {
     order_id: order.id,
     payment_method_id: paymentMethodId,
@@ -103,8 +116,17 @@ async function createOrderAfterPayment(
   if (paymentInfo?.transactionId) {
     paymentInsertData.transaction_id = paymentInfo.transactionId;
   }
-  if (paymentInfo?.paymentProvider) {
-    paymentInsertData.payment_provider = paymentInfo.paymentProvider;
+  if (paymentInfo?.paymentProviderMethod) {
+    paymentInsertData.payment_provider = paymentInfo.paymentProviderMethod;
+  }
+  if (paymentInfo?.paymentType) {
+    paymentInsertData.payment_type = paymentInfo.paymentType;
+  }
+  if (paymentInfo?.approveNo) {
+    paymentInsertData.approve_no = paymentInfo.approveNo;
+  }
+  if (typeof paymentInfo?.installmentMonths === 'number') {
+    paymentInsertData.installment_months = paymentInfo.installmentMonths;
   }
 
   console.log('🔍 [주문 생성] payments insert 시작:', {
@@ -433,9 +455,80 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 결제 승인 성공 확인
-    // HTTP 200 응답이면 결제 승인이 완료된 것
-    // 단, status가 'CANCELED'나 'FAILED'면 제외
+    // ✅ 토스 Payment 원본 정보 정리 및 DB에 저장할 메타 계산
+    const tossStatus = confirmData?.status as string | undefined;
+    const tossMethod = confirmData?.method as string | undefined;
+    const tossOrderId = confirmData?.orderId as string | undefined;
+
+    type TossCancelInfo = {
+      cancelAmount?: number;
+      canceledAt?: string;
+      cancelStatus?: string;
+    };
+
+    const tossCancels: TossCancelInfo[] | null =
+      Array.isArray(confirmData?.cancels) && confirmData.cancels.length > 0
+        ? confirmData.cancels.map(
+            (c: TossCancelInfo): TossCancelInfo => ({
+              cancelAmount: c.cancelAmount,
+              canceledAt: c.canceledAt,
+              cancelStatus: c.cancelStatus,
+            })
+          )
+        : null;
+
+    // 카드 상세 정보 (승인번호, 할부 개월 수, 카드 타입 등) 추출
+    type TossCardInfo = {
+      approveNo?: string;
+      installmentPlanMonths?: number;
+      cardType?: string;
+    };
+
+    const cardMeta: TossCardInfo | null = confirmData?.card
+      ? {
+          approveNo: (confirmData.card as TossCardInfo).approveNo,
+          installmentPlanMonths: (confirmData.card as TossCardInfo)
+            .installmentPlanMonths,
+          cardType: (confirmData.card as TossCardInfo).cardType,
+        }
+      : null;
+
+    // DB에 저장할 메타 정보 정리
+    const paymentProviderForDb = tossMethod || undefined; // 토스 method를 그대로 provider에 사용
+
+    let paymentTypeForDb: string | undefined = undefined;
+    let approveNoForDb: string | undefined = undefined;
+    let installmentMonthsForDb: number | undefined = undefined;
+
+    if (cardMeta) {
+      paymentTypeForDb = cardMeta.cardType || undefined;
+      approveNoForDb = cardMeta.approveNo || undefined;
+
+      let isCreditCard = false;
+      if (cardMeta.cardType) {
+        const cardTypeLower = cardMeta.cardType.toLowerCase();
+        isCreditCard =
+          cardTypeLower.includes('신용') || cardTypeLower.includes('credit');
+      }
+
+      if (isCreditCard && typeof cardMeta.installmentPlanMonths === 'number') {
+        installmentMonthsForDb = cardMeta.installmentPlanMonths;
+      }
+    }
+
+    console.log('🔍 [결제 확인 API] 토스 원본 메타 정보 정리:', {
+      tossStatus,
+      tossMethod,
+      tossOrderId,
+      tossCancels,
+      cardMeta,
+      paymentProviderForDb,
+      paymentTypeForDb,
+      approveNoForDb,
+      installmentMonthsForDb,
+    });
+
+    // 결제 승인/실패 상태 분기
     const isCancelledOrFailed =
       paymentStatus === 'CANCELED' ||
       paymentStatus === 'FAILED' ||
@@ -446,9 +539,67 @@ export async function POST(request: NextRequest) {
         paymentStatus,
         code: responseCode,
         message: confirmData?.message,
-        note: '결제가 취소되었거나 실패했습니다. 카드에서 돈이 빠져나가지 않았습니다.',
+        note: '결제가 취소되었거나 실패했습니다. 카드에서 돈이 빠져나가지 않았을 수 있습니다.',
         fullResponse: confirmData,
       });
+
+      // 기존 주문 기준으로 payments / orders 상태를 실패로 업데이트
+      let actualOrderIdForFail = orderId;
+
+      if (
+        !orderId.match(
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+        )
+      ) {
+        const { data: orderByNumber } = await supabase
+          .from('orders')
+          .select('id, order_number')
+          .eq('order_number', orderId)
+          .single();
+
+        if (orderByNumber) {
+          actualOrderIdForFail = orderByNumber.id;
+        } else {
+          // 주문을 찾지 못하면 DB 업데이트 없이 에러만 반환
+          return NextResponse.json(
+            {
+              success: false,
+              error: `결제가 취소되었거나 실패했습니다. 상태: ${paymentStatus}`,
+              paymentStatus,
+              code: responseCode,
+              confirmData,
+            },
+            { status: 400 }
+          );
+        }
+      }
+
+      // payments 테이블에 실패 상태 upsert
+      await supabase.from('payments').upsert(
+        {
+          order_id: actualOrderIdForFail,
+          amount: amount,
+          payment_status: 'failed',
+          transaction_id: paymentKey,
+          payment_provider: paymentProviderForDb,
+          payment_date: new Date().toISOString(),
+          admin_approval_status: 'pending',
+          payment_type: paymentTypeForDb,
+          approve_no: approveNoForDb,
+          installment_months: installmentMonthsForDb,
+        },
+        { onConflict: 'order_id' }
+      );
+
+      // orders 테이블의 payment_status를 실패/취소로 표시
+      await supabase
+        .from('orders')
+        .update({
+          payment_status: 'failed',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', actualOrderIdForFail);
+
       return NextResponse.json(
         {
           success: false,
@@ -461,51 +612,73 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(
-      '🔍 [결제 확인 API] ✅ 토스페이먼츠 결제 승인 성공 (실제 결제 완료):',
-      {
-        paymentStatus,
-        amount: confirmData?.totalAmount || amount,
-        method: confirmData?.method,
-        approvedAt: confirmData?.approvedAt,
-        orderId: confirmData?.orderId,
-        note: '이 시점에서 실제로 카드에서 돈이 빠져나갔습니다.',
-      }
-    );
-
     // payment_methods 테이블에서 카드 결제 수단 ID 찾기
     // 토스페이먼츠 응답에서 결제 수단 확인
     // 토스페이먼츠 응답: method: "카드" (한글), "카드", "간편결제" 등
     const tossPaymentMethod = confirmData?.method || '';
     let methodCode = 'card'; // 기본값
-    
+
     console.log('🔍 [결제 확인 API] 토스페이먼츠 결제 수단 정보:', {
       method: confirmData?.method,
       hasCard: !!confirmData?.card,
       hasVirtualAccount: !!confirmData?.virtualAccount,
       hasTransfer: !!confirmData?.transfer,
       hasMobilePhone: !!confirmData?.mobilePhone,
-      cardInfo: confirmData?.card ? {
-        cardType: confirmData.card.cardType,
-        ownerType: confirmData.card.ownerType,
-      } : null,
+      cardInfo: confirmData?.card
+        ? {
+            cardType: confirmData.card.cardType,
+            ownerType: confirmData.card.ownerType,
+          }
+        : null,
     });
-    
+
     // 토스페이먼츠 method를 우리 DB method_code로 변환
     // 토스페이먼츠는 한글로 "카드", "간편결제" 등으로 반환
     const methodLower = tossPaymentMethod.toLowerCase();
-    
-    if (methodLower.includes('카드') || methodLower.includes('card') || confirmData?.card) {
+
+    if (
+      methodLower.includes('카드') ||
+      methodLower.includes('card') ||
+      confirmData?.card
+    ) {
       // 카드 결제인 경우 (method가 "카드"이거나 card 객체가 있는 경우)
       methodCode = 'card';
-    } else if (methodLower.includes('kakao') || methodLower.includes('카카오')) {
+    } else if (
+      methodLower.includes('kakao') ||
+      methodLower.includes('카카오')
+    ) {
       methodCode = 'kakao';
-    } else if (methodLower.includes('naver') || methodLower.includes('네이버')) {
+    } else if (
+      methodLower.includes('naver') ||
+      methodLower.includes('네이버')
+    ) {
       methodCode = 'naver';
-    } else if (methodLower.includes('bank') || methodLower.includes('계좌') || confirmData?.transfer) {
+    } else if (
+      methodLower.includes('bank') ||
+      methodLower.includes('계좌') ||
+      confirmData?.transfer
+    ) {
       methodCode = 'bank_transfer';
     } else if (confirmData?.virtualAccount) {
       methodCode = 'bank_transfer';
+    }
+
+    // 카드 타입(신용/체크 등)에 따라 methodCode를 한 번 더 세분화
+    // - 현재 정책:
+    //   - 기본 카드(methodCode === 'card') 중에서
+    //   - 토스 card.cardType 이 '신용'이면 methodCode를 'credit_card'로 변경
+    //   - 그 외(체크/기프트/미확인)는 그대로 'card' 사용
+    const cardInfo = confirmData?.card as
+      | {
+          cardType?: string;
+        }
+      | undefined;
+
+    if (methodCode === 'card' && cardInfo?.cardType) {
+      const cardTypeLower = String(cardInfo.cardType).toLowerCase();
+      if (cardTypeLower.includes('신용') || cardTypeLower.includes('credit')) {
+        methodCode = 'credit_card';
+      }
     }
 
     console.log('🔍 [결제 확인 API] 결제 수단 매핑 결과:', {
@@ -517,11 +690,12 @@ export async function POST(request: NextRequest) {
 
     // payment_methods 테이블에서 결제 수단 조회 (없으면 자동 생성)
     let paymentMethodData;
-    const { error: paymentMethodError, data: foundPaymentMethod } = await supabase
-      .from('payment_methods')
-      .select('id, method_code, name')
-      .eq('method_code', methodCode)
-      .single();
+    const { error: paymentMethodError, data: foundPaymentMethod } =
+      await supabase
+        .from('payment_methods')
+        .select('id, method_code, name')
+        .eq('method_code', methodCode)
+        .single();
 
     if (paymentMethodError || !foundPaymentMethod) {
       console.warn(
@@ -624,14 +798,21 @@ export async function POST(request: NextRequest) {
 
       // 실제 주문 생성 (orders, order_details, design_drafts, panel_slot_usage, payments)
       try {
+        const externalOrderId =
+          (confirmData?.orderId as string | undefined) || orderId;
+
         const orderResult = await createOrderAfterPayment(
           orderData,
           paymentMethodData.id,
           {
             transactionId: paymentKey,
-            paymentProvider: 'toss',
+            paymentProviderMethod: paymentProviderForDb,
             amount: amount,
-          }
+            paymentType: paymentTypeForDb,
+            approveNo: approveNoForDb,
+            installmentMonths: installmentMonthsForDb,
+          },
+          externalOrderId
         );
 
         console.log('🔍 [결제 확인 API] ✅ 주문 생성 성공:', orderResult);
@@ -708,9 +889,12 @@ export async function POST(request: NextRequest) {
           amount: amount,
           payment_status: 'completed',
           transaction_id: paymentKey,
-          payment_provider: 'toss',
+          payment_provider: paymentProviderForDb,
           payment_date: new Date().toISOString(),
           admin_approval_status: 'approved',
+          payment_type: paymentTypeForDb,
+          approve_no: approveNoForDb,
+          installment_months: installmentMonthsForDb,
         },
         { onConflict: 'order_id' }
       )
@@ -740,6 +924,7 @@ export async function POST(request: NextRequest) {
       .from('orders')
       .update({
         payment_status: 'completed',
+        payment_method_id: paymentMethodData.id,
         updated_at: new Date().toISOString(),
       })
       .eq('id', actualOrderId);
