@@ -215,6 +215,17 @@ interface OrderCardData {
   displayEndDate?: string; // 송출 종료일
 }
 
+// 상담문의 데이터 (주문내역 페이지에서 사용)
+interface InquiryForOrders {
+  id: string;
+  title: string;
+  content: string;
+  status: string;
+  product_name?: string;
+  answered_at?: string;
+  created_at: string;
+}
+
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -233,7 +244,7 @@ export default function OrdersPage() {
   const [orderToCancel, setOrderToCancel] = useState<string | null>(null);
   const [isCancelNotAllowedModalOpen, setIsCancelNotAllowedModalOpen] =
     useState(false);
-  const [pendingPaymentOrders, setPendingPaymentOrders] = useState<Order[]>([]);
+  const [inquiries, setInquiries] = useState<InquiryForOrders[]>([]);
 
   // 신청취소 핸들러
   const handleCancelClick = (order: Order) => {
@@ -309,8 +320,8 @@ export default function OrdersPage() {
   };
 
   const handleCancelModalClose = () => {
-      setIsCancelModalOpen(false);
-      setOrderToCancel(null);
+    setIsCancelModalOpen(false);
+    setOrderToCancel(null);
   };
 
   // 결제하기 핸들러
@@ -343,13 +354,30 @@ export default function OrdersPage() {
     if (user) fetchOrders();
   }, [user, fetchOrders]);
 
-  // 결제대기 상태의 주문 필터링
+  // 상담신청 데이터도 함께 가져와서 INQ-* 주문과 매칭
   useEffect(() => {
-    const pendingOrders = orders.filter(
-      (order) => order.payment_status === 'pending'
-    );
-    setPendingPaymentOrders(pendingOrders);
-  }, [orders]);
+    const fetchInquiriesForOrders = async () => {
+      if (!user?.id) return;
+
+      try {
+        const response = await fetch('/api/customer-service?page=1&limit=100');
+        const data = await response.json();
+
+        if (data.success && Array.isArray(data.inquiries)) {
+          setInquiries(data.inquiries as InquiryForOrders[]);
+        } else {
+          console.error(
+            '주문내역용 상담 데이터 조회 실패:',
+            data.error || data
+          );
+        }
+      } catch (error) {
+        console.error('주문내역용 상담 데이터 조회 중 오류:', error);
+      }
+    };
+
+    fetchInquiriesForOrders();
+  }, [user?.id]);
 
   // 마감여부 판단 함수
   const getClosureStatus = (item: OrderDetail, order: Order): string => {
@@ -382,30 +410,99 @@ export default function OrdersPage() {
     }
   };
 
+  // INQ-* 주문과 상담신청 매칭
+  const findInquiryForOrder = (order: Order): InquiryForOrders | undefined => {
+    if (!order.order_number?.startsWith('INQ-')) return undefined;
+    const prefix = order.order_number.replace('INQ-', '');
+    return inquiries.find((inq) => inq.id?.startsWith(prefix));
+  };
+
+  // "수유사거리 앞 - 서울 강북구 도봉로 316-1" 형태를
+  // { alias: '수유사거리 앞', address: '서울 강북구 도봉로 316-1' } 로 분리
+  const splitProductName = (
+    productName: string
+  ): { alias: string; address: string } => {
+    if (!productName) {
+      return { alias: '', address: '' };
+    }
+    const parts = productName.split(' - ');
+    if (parts.length === 1) {
+      const trimmed = productName.trim();
+      return { alias: trimmed, address: trimmed };
+    }
+    const alias = parts[0].trim();
+    const address = parts.slice(1).join(' - ').trim();
+    return { alias, address };
+  };
+
   // 리스트에 표시할 데이터 변환
   const transformOrdersForDisplay = (): DisplayItem[] => {
     let globalIndex = 1;
-    return orders.flatMap((order) =>
-      (order.order_details || []).map((item: OrderDetail) => ({
-        id: globalIndex++,
-        // 게시대명: address (nickname)
-        title:
-          (item.panels?.address || '') +
-          (item.panels?.nickname ? ` (${item.panels.nickname})` : ''),
-        // 행정동
-        location: item.panels?.region_gu?.name || '',
-        // 마감여부
-        status: getClosureStatus(item, order),
-        // 결제여부
-        paymentStatus: getPaymentStatusDisplay(order.payment_status),
-        orderId: order.order_number,
-        totalAmount: (order.payments?.[0]?.amount || 0).toLocaleString() + '원',
-        startDate: item.display_start_date,
-        endDate: item.display_end_date,
-        isClosed: item.panel_slot_usage?.is_closed === true,
-        order: order,
-      }))
-    );
+    const displayItems: DisplayItem[] = [];
+
+    orders.forEach((order) => {
+      const orderDetails = order.order_details || [];
+
+      if (orderDetails.length > 0) {
+        // 일반 주문: order_details 기준으로 행 생성
+        orderDetails.forEach((item: OrderDetail) => {
+          displayItems.push({
+            id: globalIndex++,
+            // 게시대명: address (nickname)
+            title:
+              (item.panels?.address || '') +
+              (item.panels?.nickname ? ` (${item.panels.nickname})` : ''),
+            // 행정동
+            location: item.panels?.region_gu?.name || '',
+            // 마감여부
+            status: getClosureStatus(item, order),
+            // 결제여부
+            paymentStatus: getPaymentStatusDisplay(order.payment_status),
+            orderId: order.order_number,
+            totalAmount:
+              (order.payments?.[0]?.amount || 0).toLocaleString() + '원',
+            startDate: item.display_start_date,
+            endDate: item.display_end_date,
+            isClosed: item.panel_slot_usage?.is_closed === true,
+            order: order,
+          });
+        });
+      } else {
+        // 상담신청 기반 등 order_details가 없는 주문도 목록에 표시
+        const inquiry = findInquiryForOrder(order);
+
+        let title = order.projectName || '상담신청 주문';
+        let location = order.user_profiles?.company_name || '';
+
+        if (inquiry?.product_name) {
+          const { alias, address } = splitProductName(inquiry.product_name);
+          // 게시대명 컬럼: "수유사거리 앞 - 서울 강북구 도봉로 316-1"
+          title = `${alias}${address ? ` - ${address}` : ''}`;
+
+          // 행정동 컬럼: 주소에서 "강북구" 같은 구 이름만 추출
+          const addressParts = address.split(' ');
+          const guName =
+            addressParts.length >= 2 ? addressParts[1] : address || '';
+          location = guName;
+        } else if (inquiry?.title) {
+          title = inquiry.title;
+        }
+
+        displayItems.push({
+          id: globalIndex++,
+          title,
+          location,
+          status: '진행중',
+          paymentStatus: getPaymentStatusDisplay(order.payment_status),
+          orderId: order.order_number,
+          totalAmount:
+            (order.payments?.[0]?.amount || 0).toLocaleString() + '원',
+          order: order,
+        });
+      }
+    });
+
+    return displayItems;
   };
 
   // 상태 변환
@@ -507,7 +604,7 @@ export default function OrdersPage() {
     displayEndDate: '-',
   };
 
-  // 송출기간 포맷팅 함수
+  // 송출기간 포맷팅 함수 (현수막게시대는 상/하반기까지 표시)
   const formatDisplayPeriod = (startDate: string, endDate: string): string => {
     if (!startDate || !endDate || startDate === '-' || endDate === '-') {
       return '-';
@@ -519,8 +616,17 @@ export default function OrdersPage() {
 
       const startYear = start.getFullYear();
       const startMonth = start.getMonth() + 1;
+      const startDay = start.getDate();
       const endYear = end.getFullYear();
       const endMonth = end.getMonth() + 1;
+      const endDay = end.getDate();
+
+      // 같은 년/월이고, 날짜 범위가 한 달 안에서 끝나는 경우에는 상/하반기까지 표시
+      if (startYear === endYear && startMonth === endMonth) {
+        const isFirstHalf = startDay <= 15 && endDay <= 15;
+        const halfLabel = isFirstHalf ? '상반기' : '하반기';
+        return `${startYear}년 ${startMonth}월 ${halfLabel}`;
+      }
 
       // 같은 년도인 경우
       if (startYear === endYear) {
@@ -543,9 +649,9 @@ export default function OrdersPage() {
       case 'banner_display':
         return '현수막게시대';
       case 'led_display':
-        return 'LED 전자게시대';
+        return '전자게시대';
       case 'digital_signage':
-        return '디지털 사이니지';
+        return '디지털미디어 쇼핑몰';
       default:
         return displayType || '-';
     }
@@ -597,17 +703,51 @@ export default function OrdersPage() {
       canCancel = daysSinceOrder < 2;
     }
 
-    const result = {
-      id: order.id ?? '-',
-      order_number: order.order_number ?? '-',
-      title: order.projectName ?? '-',
-      location: panelInfo.address
+    // INQ-* 주문의 경우 대응되는 상담 데이터를 찾아서 위치/게시대명을 보완
+    const inquiryForOrder = findInquiryForOrder(order);
+    let inquiryAddress = '';
+    if (inquiryForOrder?.product_name) {
+      const { address } = splitProductName(inquiryForOrder.product_name);
+      inquiryAddress = address;
+    }
+
+    // 파일이름(프로젝트명) 기본값:
+    // - 실제 프로젝트명이 있으면 그대로 사용
+    // - 없거나 '프로젝트명 없음'인 경우 게시대 주소/별칭을 사용
+    const hasRealProjectName =
+      order.projectName && order.projectName !== '프로젝트명 없음';
+    let defaultProjectName =
+      hasRealProjectName && order.projectName
+        ? order.projectName
+        : panelInfo.address
         ? `${panelInfo.address}${
             panelInfo.nickname ? ` (${panelInfo.nickname})` : ''
           }`
-        : '-',
+        : '프로젝트명 없음';
+
+    // 상담신청(INQ-*) 주문이고 패널 정보가 없으면
+    // - 파일이름: '미정'
+    // - 위치: 상담신청 주소
+    // - 품명: 전자게시대 (상담신청 아이템 기본값)
+    const isInquiryOrder = order.order_number?.startsWith('INQ-');
+
+    let finalLocation = panelInfo.address || '-';
+    let finalCategory = formatDisplayType(panelInfo.display_types?.name || '');
+
+    if (isInquiryOrder && !panelInfo.address && inquiryAddress) {
+      defaultProjectName = '미정';
+      finalLocation = inquiryAddress;
+      finalCategory = '전자게시대';
+    }
+
+    const result = {
+      id: order.id ?? '-',
+      order_number: order.order_number ?? '-',
+      title: defaultProjectName,
+      // 위치는 순수 주소만 표시 (상담신청 주문이면 상담 주소)
+      location: finalLocation,
       status: getStatusDisplay(order.payment_status || ''),
-      category: formatDisplayType(panelInfo.display_types?.name || ''),
+      category: finalCategory,
       customerName: customerInfo.name ?? '-',
       phone: customerInfo.phone ?? '-',
       companyName: customerInfo.company ?? '-',
@@ -623,7 +763,7 @@ export default function OrdersPage() {
       canCancel,
       daysSinceOrder,
       // 추가 필드들
-      projectName: order.projectName ?? '-',
+      projectName: defaultProjectName,
       displayStartDate: formatDisplayPeriod(displayStartDate, displayEndDate),
       displayEndDate: displayEndDate,
     };
@@ -651,52 +791,6 @@ export default function OrdersPage() {
       <Nav variant="default" className="bg-white sm:px-0" />
       <MypageContainer activeTab="주문내역">
         <h1 className="text-2xl font-bold mb-8">주문내역</h1>
-
-        {/* 결제대기 상태의 주문들 */}
-        {pendingPaymentOrders.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-lg font-semibold mb-4 text-blue-600">
-              결제대기 주문
-            </h2>
-            <div className="space-y-4">
-              {pendingPaymentOrders.map((order) => (
-                <div
-                  key={order.id}
-                  className="bg-white border border-gray-200 rounded-lg p-4"
-                >
-                  <div className="flex justify-between items-center mb-3">
-                    <div>
-                      <h3 className="font-medium text-gray-900">
-                        주문번호: {order.order_number}
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        {order.order_details?.[0]?.panels?.address || '상품명'}
-                        {order.order_details?.[0]?.panels?.nickname &&
-                          ` (${order.order_details[0].panels.nickname})`}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm text-gray-600">
-                        {(order.payments?.[0]?.amount || 0).toLocaleString()}원
-                      </p>
-                      <span className="inline-block bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">
-                        결제대기 중
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex justify-end space-x-2">
-                    <button
-                      onClick={() => handlePaymentClick(order)}
-                      className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
-                    >
-                      결제하기
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         <OrderItemList
           items={items}

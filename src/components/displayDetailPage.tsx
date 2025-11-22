@@ -329,10 +329,11 @@ export default function DisplayDetailPage({
 
     // 2. 재고 확인: 선택된 기간의 재고가 0인지 확인
     let hasStock = true;
+    const totalFaces = item.faces || 1;
     if (selectedHalfPeriod === 'first_half') {
-      hasStock = (item.first_half_closure_quantity || 0) < (item.faces || 1);
+      hasStock = (item.first_half_closure_quantity || 0) < totalFaces;
     } else if (selectedHalfPeriod === 'second_half') {
-      hasStock = (item.second_half_closure_quantity || 0) < (item.faces || 1);
+      hasStock = (item.second_half_closure_quantity || 0) < totalFaces;
     }
 
     return isPeriodValid && hasStock;
@@ -429,32 +430,34 @@ export default function DisplayDetailPage({
     isMapoDistrict && mapoFilter === 'simin'
       ? filteredByDistrict // 시민게시대는 기간/재고 필터링 없이 전체 출력
       : filteredByDistrict.map((item) => {
-          // 실시간 재고 정보가 있으면 사용, 없으면 기존 방식 사용
-          let faces = item.faces;
+          // 실시간 재고 정보 기반 남은 수량 계산 (faces는 총 면수 그대로 유지)
+          let remainingFaces = item.available_faces ?? item.faces;
 
           if (item.inventory_info) {
             if (
               selectedHalfPeriod === 'first_half' &&
               item.inventory_info.first_half
             ) {
-              faces = item.inventory_info.first_half.available_slots;
+              remainingFaces = item.inventory_info.first_half.available_slots;
             } else if (
               selectedHalfPeriod === 'second_half' &&
               item.inventory_info.second_half
             ) {
-              faces = item.inventory_info.second_half.available_slots;
+              remainingFaces = item.inventory_info.second_half.available_slots;
             }
           } else {
-            // 기존 방식: 선택된 상하반기에 따른 마감수 표시
-            faces =
+            // 기존 방식: 선택된 상하반기에 따른 남은 수량 추정
+            const totalFaces = item.faces || 1;
+            const closed =
               selectedHalfPeriod === 'first_half'
-                ? item.first_half_closure_quantity || item.faces
-                : item.second_half_closure_quantity || item.faces;
+                ? item.first_half_closure_quantity || 0
+                : item.second_half_closure_quantity || 0;
+            remainingFaces = Math.max(totalFaces - closed, 0);
           }
 
           return {
             ...item,
-            faces,
+            available_faces: remainingFaces,
           };
         });
 

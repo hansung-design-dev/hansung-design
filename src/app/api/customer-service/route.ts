@@ -6,12 +6,31 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+// 쿠키에서 로그인된 사용자 ID(user_auth_id) 가져오기
+function getUserIdFromRequest(request: NextRequest): string | null {
+  try {
+    const cookieUserId = request.cookies.get('user_id')?.value;
+    if (!cookieUserId) {
+      return null;
+    }
+    return cookieUserId;
+  } catch {
+    return null;
+  }
+}
+
 // 1:1 상담 내역 조회
 export async function GET(request: NextRequest) {
   try {
-    // 임시 사용자 ID 사용 (실제로는 인증된 사용자 ID를 사용해야 함)
-    // UUID 형식으로 변경
-    const userId = '00000000-0000-0000-0000-000000000000';
+    // 로그인된 사용자 ID 조회
+    const userId = getUserIdFromRequest(request);
+
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: '로그인이 필요합니다.' },
+        { status: 401 }
+      );
+    }
 
     // URL 파라미터에서 페이지네이션 정보와 product_id 가져오기
     const { searchParams } = new URL(request.url);
@@ -74,6 +93,7 @@ export async function GET(request: NextRequest) {
         answer: inquiry.answer_content,
         answered_at: inquiry.answered_at,
         created_at: inquiry.created_at,
+        product_name: inquiry.product_name,
       })) || [];
 
     return NextResponse.json({
@@ -99,9 +119,15 @@ export async function GET(request: NextRequest) {
 // 1:1 상담 문의 생성
 export async function POST(request: NextRequest) {
   try {
-    // 임시 사용자 ID 사용 (실제로는 인증된 사용자 ID를 사용해야 함)
-    // UUID 형식으로 변경
-    const userId = '00000000-0000-0000-0000-000000000000';
+    // 로그인된 사용자 ID 조회
+    const userId = getUserIdFromRequest(request);
+
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: '로그인이 필요합니다.' },
+        { status: 401 }
+      );
+    }
 
     const { title, content, product_name, product_id } = await request.json();
 
@@ -144,6 +170,7 @@ export async function POST(request: NextRequest) {
       answer_content: inquiry.answer_content,
       answered_at: inquiry.answered_at,
       created_at: inquiry.created_at,
+      product_name: inquiry.product_name,
     };
 
     return NextResponse.json({
@@ -163,6 +190,16 @@ export async function POST(request: NextRequest) {
 // 1:1 상담 문의 삭제 (취소)
 export async function DELETE(request: NextRequest) {
   try {
+    // 로그인된 사용자 ID 조회
+    const userId = getUserIdFromRequest(request);
+
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: '로그인이 필요합니다.' },
+        { status: 401 }
+      );
+    }
+
     const { inquiryId } = await request.json();
 
     if (!inquiryId) {
@@ -171,9 +208,6 @@ export async function DELETE(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    // 임시 사용자 ID 사용 (실제로는 인증된 사용자 ID를 사용해야 함)
-    const userId = '00000000-0000-0000-0000-000000000000';
 
     // 상담 내역이 해당 사용자의 것인지 확인
     const { data: existingInquiry, error: checkError } = await supabase

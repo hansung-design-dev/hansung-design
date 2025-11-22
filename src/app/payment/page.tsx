@@ -655,11 +655,12 @@ function PaymentPageContent() {
 
         return {
           id: `group_${groupKey}`,
-          name: `${firstItem.district} 현수막게시대`,
+          // name은 구 이름만; 상세 라벨은 getDisplayTypeLabel에서 처리
+          name: firstItem.district,
           items: group,
           totalPrice,
           district: firstItem.district,
-          type: 'banner-display' as const,
+          type: firstItem.type || 'banner-display',
           panel_type: firstItem.panel_type || 'panel',
           is_public_institution:
             firstItem.is_public_institution ||
@@ -1092,6 +1093,17 @@ function PaymentPageContent() {
         const payments = data.data.payments;
 
         // 주문 정보를 GroupedCartItem 형태로 변환
+        // 주문 상세의 디스플레이 타입을 그룹 타입으로 매핑
+        let groupType: GroupedCartItem['type'] = 'banner-display';
+        const firstDetail = orderDetails?.[0];
+        const displayTypeName =
+          firstDetail?.panels?.display_types?.name || null;
+        if (displayTypeName === 'led_display') {
+          groupType = 'led-display';
+        } else if (displayTypeName === 'digital_signage') {
+          groupType = 'digital-signage';
+        }
+
         const groupedItem: GroupedCartItem = {
           id: order.id,
           name: order.projectName || '상담신청 주문',
@@ -1122,7 +1134,7 @@ function PaymentPageContent() {
           ),
           totalPrice: payments?.[0]?.amount || 0,
           district: orderDetails?.[0]?.panels?.region_gu?.name || '상담신청',
-          type: 'banner-display', // 기본값
+          type: groupType, // 주문 타입에 따라 현수막/전자/디지털 구분
           panel_type: orderDetails?.[0]?.panels?.panel_type || '상담신청',
           contact_person_name: order.user_profiles?.contact_person_name || '',
           phone: order.user_profiles?.phone || '',
@@ -1828,9 +1840,16 @@ function PaymentPageContent() {
                 note: '로컬 환경에서는 localhost를 사용해야 하며, 토스페이먼츠 테스트 키가 필요합니다.',
               });
 
+              const isConsultingGroup =
+                currentTossWidgetData.district === '상담신청';
+
+              const displayTypeLabel = getDisplayTypeLabel(currentTossWidgetData);
+
               const paymentParams = {
                 orderId: finalOrderId,
-                orderName: `${currentTossWidgetData.district} 현수막게시대`,
+                orderName: isConsultingGroup
+                  ? '상담신청'
+                  : `${currentTossWidgetData.district} ${displayTypeLabel}`,
                 successUrl,
                 failUrl,
                 customerEmail:
@@ -1928,6 +1947,26 @@ function PaymentPageContent() {
 
   // 모든 그룹 보여주기 (토스 위젯에서 직접 처리)
   const visibleGroups = groupedItems;
+
+  // 그룹(구별)별 디스플레이 타입 라벨
+  const getDisplayTypeLabel = (group: GroupedCartItem): string => {
+    // 상단광고: panel_type 또는 banner_type이 top_fixed 인 경우
+    const hasTopFixed =
+      group.panel_type === 'top_fixed' ||
+      group.items.some(
+        (item) =>
+          item.panel_type === 'top_fixed' ||
+          item.panel_slot_snapshot?.banner_type === 'top_fixed'
+      );
+
+    if (hasTopFixed) return '상단광고';
+
+    if (group.type === 'banner-display') return '현수막게시대';
+    if (group.type === 'led-display') return '전자게시대';
+    if (group.type === 'digital-signage') return '디지털미디어 쇼핑몰';
+
+    return '상품';
+  };
 
   // 디버깅: visibleGroups 상태 확인
   useEffect(() => {
@@ -2107,17 +2146,39 @@ function PaymentPageContent() {
             </section>
           )}
           {/* 구별 카드 */}
-          {visibleGroups.map((group) => (
+          {visibleGroups.map((group) => {
+            // 디스플레이 타입 라벨
+            const displayTypeLabel = getDisplayTypeLabel(group);
+
+            // 상담신청을 통해 결제페이지로 온 상품들 (구 이름이 '상담신청'인 그룹)
+            const isConsultingGroup = group.district === '상담신청';
+
+            // 헤더 제목
+            const headerTitle = isConsultingGroup
+              ? '상담신청'
+              : `${group.district} ${displayTypeLabel}`;
+
+            // 항목 개수 (상담신청 등 items가 비어있어도 최소 1개로 표시)
+            const itemCount = group.items.length > 0 ? group.items.length : 1;
+            const unitLabel = isConsultingGroup
+              ? '상품'
+              : group.items.length === 0
+              ? '상품'
+              : group.type === 'banner-display' || group.type === 'led-display'
+              ? '패널'
+              : '상품';
+
+            return (
             <section
               key={group.id}
               className="p-6 border rounded-lg shadow-sm flex flex-col gap-4 sm:p-2"
             >
               <div className="flex items-center mb-2">
                 <span className="text-1.25 font-700 text-[#222] sm:text-0.875">
-                  {group.district} 현수막게시대
+                  {headerTitle}
                 </span>
                 <span className="text-gray-500 text-0.875 ml-2">
-                  ({group.items.length}개 패널)
+                  ({itemCount}개 {unitLabel})
                 </span>
               </div>
               {/* 구별 개별 입력 필드들 */}
@@ -2335,7 +2396,8 @@ function PaymentPageContent() {
                 })()}
               </div>
             </section>
-          ))}
+          );
+          })}
         </div>
         {/* 우측 - 유의사항 및 전체 가격 정보 */}
         <div className="space-y-8 border border-solid border-gray-3 rounded-[0.375rem] p-[2.5rem] sm:p-[1.5rem]">
@@ -2516,7 +2578,11 @@ function PaymentPageContent() {
                 <span>{tossWidgetData.totalPrice.toLocaleString()}원</span>
               </div>
               <div className="text-sm text-gray-600 mt-1">
-                {tossWidgetData.district} 현수막게시대
+                {tossWidgetData.district === '상담신청'
+                  ? '상담신청'
+                  : `${tossWidgetData.district} ${getDisplayTypeLabel(
+                      tossWidgetData
+                    )}`}
               </div>
               <div className="text-sm text-gray-600 mt-2">
                 <div className="font-medium mb-1">결제할 게시대 목록:</div>

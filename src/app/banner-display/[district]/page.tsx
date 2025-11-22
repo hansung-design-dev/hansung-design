@@ -653,19 +653,26 @@ export default function BannerDisplayPage({
               const slotWidth = slotSize.width;
               const slotHeight = slotSize.height;
 
-              // 재고 정보 계산: inventory_info가 있으면 available_slots 사용, 없으면 maxBanners 사용
+              // 재고 정보 계산
+              // - faces: 총 면수 (total_slots 또는 maxBanners)
+              // - available_faces: 남은 면수(가용 재고)
+              let totalFaces = maxBanners;
               let availableFaces = maxBanners;
+
               if (item.inventory_info) {
-                // 현재 기간의 재고가 있으면 사용
+                // 현재 기간의 총/가용 재고가 있으면 사용
                 if (item.inventory_info.current_period) {
+                  totalFaces = item.inventory_info.current_period.total_slots;
                   availableFaces =
                     item.inventory_info.current_period.available_slots;
                 } else if (item.inventory_info.first_half) {
                   // 첫 번째 반기가 있으면 사용
+                  totalFaces = item.inventory_info.first_half.total_slots;
                   availableFaces =
                     item.inventory_info.first_half.available_slots;
                 } else if (item.inventory_info.second_half) {
                   // 두 번째 반기가 있으면 사용
+                  totalFaces = item.inventory_info.second_half.total_slots;
                   availableFaces =
                     item.inventory_info.second_half.available_slots;
                 }
@@ -683,7 +690,8 @@ export default function BannerDisplayPage({
                 price: price,
                 total_price: totalPrice,
                 size: `${slotWidth}x${slotHeight}` || 'no size',
-                faces: availableFaces, // 가용 재고로 설정 (주문 후 줄어드는 재고)
+                faces: totalFaces, // 총 면수
+                available_faces: availableFaces, // 남은 수량(가용 재고)
                 lat: item.latitude || 37.5665, // 실제 데이터베이스 좌표 사용
                 lng: item.longitude || 126.978,
                 panel_width: slotWidth,

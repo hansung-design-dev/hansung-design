@@ -219,9 +219,27 @@ export async function GET(
 
     // 가격 정보 계산
     const calculateOrderPrice = () => {
-      if (!orderDetails || orderDetails.length === 0) return null;
+      // 1) order_details가 없고, 결제 정보만 있는 경우 (상담신청 기반 주문 등)
+      if (!orderDetails || orderDetails.length === 0) {
+        const latestPayment =
+          payments && payments.length > 0 ? payments[0] : null;
 
-      // panel_slot_snapshot에서 가격 정보 가져오기 (우선순위 1)
+        if (latestPayment) {
+          const amount = Number(latestPayment.amount || 0);
+          return {
+            totalPrice: amount,
+            totalTaxPrice: 0,
+            totalAdvertisingFee: 0,
+            totalRoadUsageFee: 0,
+            totalAdministrativeFee: 0,
+            finalPrice: amount,
+          };
+        }
+
+        return null;
+      }
+
+      // 2) panel_slot_snapshot에서 가격 정보 가져오기 (우선순위 1)
       const snapshot = order.panel_slot_snapshot;
       if (snapshot && snapshot.policy_total_price) {
         return {
@@ -234,7 +252,7 @@ export async function GET(
         };
       }
 
-      // fallback: orderDetails에서 banner_slot_price_policy로 계산
+      // 3) fallback: orderDetails에서 banner_slot_price_policy로 계산
       let totalPrice = 0;
       let totalTaxPrice = 0;
       let totalAdvertisingFee = 0;
