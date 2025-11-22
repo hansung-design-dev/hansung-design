@@ -929,6 +929,120 @@ export async function POST(request: NextRequest) {
       })
       .eq('id', actualOrderId);
 
+    // 🔍 기존 주문에 대해 projectName(파일이름) / draft_delivery_method 업데이트
+    if (orderData?.projectName) {
+      try {
+        console.log(
+          '🔍 [결제 확인 API] 기존 주문의 projectName 업데이트 시도:',
+          {
+            orderId: actualOrderId,
+            orderNumber,
+            projectName: orderData.projectName,
+            draftDeliveryMethod: orderData.draftDeliveryMethod,
+            userProfileIdFromOrderData: orderData.userProfileId,
+          }
+        );
+
+        // 1) 현재 주문 정보 조회 (user_profile_id, design_drafts_id 필요)
+        const { data: existingOrder, error: existingOrderError } =
+          await supabase
+            .from('orders')
+            .select('id, user_profile_id, design_drafts_id')
+            .eq('id', actualOrderId)
+            .single();
+
+        if (existingOrderError) {
+          console.error(
+            '🔍 [결제 확인 API] 기존 주문 조회 실패 (projectName 업데이트 건너뜀):',
+            existingOrderError
+          );
+        } else if (existingOrder) {
+          const userProfileId =
+            existingOrder.user_profile_id || orderData.userProfileId || null;
+          let designDraftId = existingOrder.design_drafts_id || null;
+
+          // 2) design_drafts가 없으면 새로 생성, 있으면 project_name 업데이트
+          if (userProfileId) {
+            if (!designDraftId) {
+              const { data: newDraft, error: draftInsertError } = await supabase
+                .from('design_drafts')
+                .insert({
+                  user_profile_id: userProfileId,
+                  draft_category: 'initial',
+                  project_name: orderData.projectName,
+                  notes: `기존 주문 결제 시 자동 생성 (전송방식: ${
+                    orderData.draftDeliveryMethod || 'upload'
+                  })`,
+                })
+                .select('id')
+                .single();
+
+              if (draftInsertError) {
+                console.error(
+                  '🔍 [결제 확인 API] 기존 주문용 design_drafts 생성 실패:',
+                  draftInsertError
+                );
+              } else if (newDraft) {
+                designDraftId = newDraft.id;
+              }
+            } else {
+              const { error: draftUpdateError } = await supabase
+                .from('design_drafts')
+                .update({
+                  project_name: orderData.projectName,
+                })
+                .eq('id', designDraftId);
+
+              if (draftUpdateError) {
+                console.error(
+                  '🔍 [결제 확인 API] 기존 주문용 design_drafts 업데이트 실패:',
+                  draftUpdateError
+                );
+              }
+            }
+
+            // 3) orders.design_drafts_id 및 draft_delivery_method 업데이트
+            if (designDraftId) {
+              const { error: orderUpdateError } = await supabase
+                .from('orders')
+                .update({
+                  design_drafts_id: designDraftId,
+                  draft_delivery_method:
+                    orderData.draftDeliveryMethod || 'upload',
+                })
+                .eq('id', actualOrderId);
+
+              if (orderUpdateError) {
+                console.error(
+                  '🔍 [결제 확인 API] 기존 주문의 design_drafts_id 업데이트 실패:',
+                  orderUpdateError
+                );
+              } else {
+                console.log(
+                  '🔍 [결제 확인 API] 기존 주문의 projectName / design_drafts 연결 완료:',
+                  {
+                    orderId: actualOrderId,
+                    designDraftId,
+                    projectName: orderData.projectName,
+                  }
+                );
+              }
+            }
+          } else {
+            console.warn(
+              '🔍 [결제 확인 API] 기존 주문에 user_profile_id가 없어 projectName을 design_drafts에 연결할 수 없음:',
+              { orderId: actualOrderId }
+            );
+          }
+        }
+      } catch (e) {
+        console.error(
+          '🔍 [결제 확인 API] 기존 주문 projectName 업데이트 중 예외 발생:',
+          e
+        );
+      }
+    }
+
     return NextResponse.json({
       success: true,
       data: {

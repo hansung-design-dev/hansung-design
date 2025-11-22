@@ -1047,38 +1047,41 @@ function PaymentPageContent() {
 
   // 실시간 유효성 검사
   useEffect(() => {
-    if (selectedItems.length > 0) {
-      const errors = {
-        projectName: '',
-        fileUpload: '',
-        agreement: '',
-      };
+    // 일반 장바구니 결제(selectedItems) 또는 상담신청 기반 결제(groupedItems) 모두 검사 대상
+    const hasItems = selectedItems.length > 0 || groupedItems.length > 0;
+    if (!hasItems) return;
 
-      // 1. 작업이름 검사
-      if (!projectName.trim()) {
-        errors.projectName = '작업이름을 입력해주세요.';
-      }
+    const errors = {
+      projectName: '',
+      fileUpload: '',
+      agreement: '',
+    };
 
-      // 2. 파일업로드 방식 검사 (일괄적용이 켜져있을 때만)
-      if (bulkApply.fileUpload || bulkApply.emailMethod) {
-        if (!selectedFile && !bulkApply.emailMethod) {
-          errors.fileUpload = '파일을 업로드하거나 이메일 전송을 선택해주세요.';
-        }
-      }
-
-      // 3. 유의사항 동의 검사
-      if (!isAgreedCaution) {
-        errors.agreement = '유의사항에 동의해주세요.';
-      }
-
-      setValidationErrors(errors);
+    // 1. 작업이름 검사
+    if (!projectName.trim()) {
+      errors.projectName = '작업이름을 입력해주세요.';
     }
+
+    // 2. 파일업로드 방식 검사 (일괄적용이 켜져있을 때만)
+    if (bulkApply.fileUpload || bulkApply.emailMethod) {
+      if (!selectedFile && !bulkApply.emailMethod) {
+        errors.fileUpload = '파일을 업로드하거나 이메일 전송을 선택해주세요.';
+      }
+    }
+
+    // 3. 유의사항 동의 검사
+    if (!isAgreedCaution) {
+      errors.agreement = '유의사항에 동의해주세요.';
+    }
+
+    setValidationErrors(errors);
   }, [
     projectName,
     selectedFile,
     bulkApply,
     isAgreedCaution,
     selectedItems.length,
+    groupedItems.length,
   ]);
 
   // 결제대기 주문 정보 가져오기
@@ -1144,6 +1147,13 @@ function PaymentPageContent() {
 
         setGroupedItems([groupedItem]);
         setIsApprovedOrder(true);
+
+        // 기존 결제대기 주문의 경우: Toss orderId로 기존 order_number를 사용하도록 설정
+        if (typeof window !== 'undefined') {
+          (
+            window as unknown as { currentTossOrderId?: string }
+          ).currentTossOrderId = order.order_number;
+        }
       }
     } catch (error) {
       console.error('결제대기 주문 조회 실패:', error);
@@ -1843,7 +1853,9 @@ function PaymentPageContent() {
               const isConsultingGroup =
                 currentTossWidgetData.district === '상담신청';
 
-              const displayTypeLabel = getDisplayTypeLabel(currentTossWidgetData);
+              const displayTypeLabel = getDisplayTypeLabel(
+                currentTossWidgetData
+              );
 
               const paymentParams = {
                 orderId: finalOrderId,
@@ -2169,234 +2181,241 @@ function PaymentPageContent() {
               : '상품';
 
             return (
-            <section
-              key={group.id}
-              className="p-6 border rounded-lg shadow-sm flex flex-col gap-4 sm:p-2"
-            >
-              <div className="flex items-center mb-2">
-                <span className="text-1.25 font-700 text-[#222] sm:text-0.875">
-                  {headerTitle}
-                </span>
-                <span className="text-gray-500 text-0.875 ml-2">
-                  ({itemCount}개 {unitLabel})
-                </span>
-              </div>
-              {/* 구별 개별 입력 필드들 */}
-              <div className="space-y-4 mb-4">
-                {/* 구별 작업이름 - 일괄적용이 꺼져있을 때만 표시 */}
-                {!bulkApply.projectName && (
-                  <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
-                    <label className="w-full sm:w-[8rem] text-gray-600 font-medium text-sm">
-                      작업이름
-                    </label>
-                    <div className="flex-1">
-                      <input
-                        type="text"
-                        value={groupStates[group.id]?.projectName || ''}
-                        onChange={(e) =>
-                          handleGroupProjectNameChange(group.id, e.target.value)
-                        }
-                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                        placeholder="작업 이름을 입력하세요"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* 구별 시안 업로드 - 일괄적용이 꺼져있을 때만 표시 */}
-                {!bulkApply.projectName && (
-                  <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
-                    <label className="w-full sm:w-[8rem] text-gray-600 font-medium text-sm">
-                      시안 업로드
-                    </label>
-                    <div className="flex-1 space-y-2">
-                      <CustomFileUpload
-                        onFileSelect={(file) =>
-                          handleGroupFileSelect(group.id, file)
-                        }
-                        disabled={groupStates[group.id]?.sendByEmail}
-                        placeholder="시안 파일을 선택해주세요"
-                        className="w-full"
-                      />
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          id={`email-${group.id}`}
-                          checked={groupStates[group.id]?.sendByEmail || false}
-                          onChange={(e) =>
-                            handleGroupEmailSelect(group.id, e.target.checked)
-                          }
-                          className="w-4 h-4"
-                        />
-                        <label
-                          htmlFor={`email-${group.id}`}
-                          className="text-sm text-gray-500"
-                        >
-                          이메일로 파일 보낼게요
-                        </label>
-                      </div>
-                      {groupStates[group.id]?.sendByEmail && (
-                        <p className="text-xs text-gray-500 ml-6">
-                          banner114@hanmail.net로 시안을 보내주세요.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* 구별 아이템 목록 */}
-              <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-                <h3 className="text-sm font-semibold mb-2 text-gray-700">
-                  결제할 게시대 목록:
-                </h3>
-                <div className="space-y-1">
-                  {group.items.map((item, index) => {
-                    // 상하반기 정보 표시
-                    const itemHalfPeriod = item.halfPeriod || 'first_half';
-                    const itemYear =
-                      item.selectedYear || new Date().getFullYear();
-                    const itemMonth =
-                      item.selectedMonth || new Date().getMonth() + 1;
-                    const itemPeriodText = `${itemYear}년 ${itemMonth}월 ${
-                      itemHalfPeriod === 'first_half' ? '상반기' : '하반기'
-                    }`;
-
-                    return (
-                      <div
-                        key={item.id}
-                        className="text-sm text-gray-600 flex flex-col sm:flex-row sm:justify-between items-center"
-                      >
-                        <span>
-                          {index + 1}. 패널번호:{' '}
-                          {item.panel_code || item.panel_id || '-'} / 이름:{' '}
-                          {item.name || '-'} / 구: {item.district} / 기간:{' '}
-                          {itemPeriodText}
-                        </span>
-                      </div>
-                    );
-                  })}
+              <section
+                key={group.id}
+                className="p-6 border rounded-lg shadow-sm flex flex-col gap-4 sm:p-2"
+              >
+                <div className="flex items-center mb-2">
+                  <span className="text-1.25 font-700 text-[#222] sm:text-0.875">
+                    {headerTitle}
+                  </span>
+                  <span className="text-gray-500 text-0.875 ml-2">
+                    ({itemCount}개 {unitLabel})
+                  </span>
                 </div>
-              </div>
-              {/* 구별 상세 가격표 */}
-              <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                <h4 className="font-semibold text-gray-800 mb-3 text-sm">
-                  {group.district} 가격 상세
-                </h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">도로점용료:</span>
-                    <span className="font-medium">
-                      {group.items
-                        .reduce(
-                          (sum, item) =>
-                            sum +
-                            (item.panel_slot_snapshot?.road_usage_fee || 0),
-                          0
-                        )
-                        .toLocaleString()}
-                      원
-                    </span>
+                {/* 구별 개별 입력 필드들 */}
+                <div className="space-y-4 mb-4">
+                  {/* 구별 작업이름 - 일괄적용이 꺼져있을 때만 표시 */}
+                  {!bulkApply.projectName && (
+                    <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
+                      <label className="w-full sm:w-[8rem] text-gray-600 font-medium text-sm">
+                        작업이름
+                      </label>
+                      <div className="flex-1">
+                        <input
+                          type="text"
+                          value={groupStates[group.id]?.projectName || ''}
+                          onChange={(e) =>
+                            handleGroupProjectNameChange(
+                              group.id,
+                              e.target.value
+                            )
+                          }
+                          className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                          placeholder="작업 이름을 입력하세요"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 구별 시안 업로드 - 일괄적용이 꺼져있을 때만 표시 */}
+                  {!bulkApply.projectName && (
+                    <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
+                      <label className="w-full sm:w-[8rem] text-gray-600 font-medium text-sm">
+                        시안 업로드
+                      </label>
+                      <div className="flex-1 space-y-2">
+                        <CustomFileUpload
+                          onFileSelect={(file) =>
+                            handleGroupFileSelect(group.id, file)
+                          }
+                          disabled={groupStates[group.id]?.sendByEmail}
+                          placeholder="시안 파일을 선택해주세요"
+                          className="w-full"
+                        />
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            id={`email-${group.id}`}
+                            checked={
+                              groupStates[group.id]?.sendByEmail || false
+                            }
+                            onChange={(e) =>
+                              handleGroupEmailSelect(group.id, e.target.checked)
+                            }
+                            className="w-4 h-4"
+                          />
+                          <label
+                            htmlFor={`email-${group.id}`}
+                            className="text-sm text-gray-500"
+                          >
+                            이메일로 파일 보낼게요
+                          </label>
+                        </div>
+                        {groupStates[group.id]?.sendByEmail && (
+                          <p className="text-xs text-gray-500 ml-6">
+                            banner114@hanmail.net로 시안을 보내주세요.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 구별 아이템 목록 */}
+                <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                  <h3 className="text-sm font-semibold mb-2 text-gray-700">
+                    결제할 게시대 목록:
+                  </h3>
+                  <div className="space-y-1">
+                    {group.items.map((item, index) => {
+                      // 상하반기 정보 표시
+                      const itemHalfPeriod = item.halfPeriod || 'first_half';
+                      const itemYear =
+                        item.selectedYear || new Date().getFullYear();
+                      const itemMonth =
+                        item.selectedMonth || new Date().getMonth() + 1;
+                      const itemPeriodText = `${itemYear}년 ${itemMonth}월 ${
+                        itemHalfPeriod === 'first_half' ? '상반기' : '하반기'
+                      }`;
+
+                      return (
+                        <div
+                          key={item.id}
+                          className="text-sm text-gray-600 flex flex-col sm:flex-row sm:justify-between items-center"
+                        >
+                          <span>
+                            {index + 1}. 패널번호:{' '}
+                            {item.panel_code || item.panel_id || '-'} / 이름:{' '}
+                            {item.name || '-'} / 구: {item.district} / 기간:{' '}
+                            {itemPeriodText}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">광고료:</span>
-                    <span className="font-medium">
-                      {group.items
-                        .reduce(
-                          (sum, item) =>
-                            sum +
-                            (item.panel_slot_snapshot?.advertising_fee || 0),
-                          0
-                        )
-                        .toLocaleString()}
-                      원
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">부가세:</span>
-                    <span className="font-medium">
-                      {group.items
-                        .reduce(
-                          (sum, item) =>
-                            sum + (item.panel_slot_snapshot?.tax_price || 0),
-                          0
-                        )
-                        .toLocaleString()}
-                      원
-                    </span>
-                  </div>
-                  <div className="border-t pt-2 mt-2">
-                    <div className="flex justify-between font-semibold">
-                      <span>총 결제 금액:</span>
-                      <span className="text-blue-700">
-                        {group.totalPrice.toLocaleString()}원
+                </div>
+                {/* 구별 상세 가격표 */}
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                  <h4 className="font-semibold text-gray-800 mb-3 text-sm">
+                    {group.district} 가격 상세
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">도로점용료:</span>
+                      <span className="font-medium">
+                        {group.items
+                          .reduce(
+                            (sum, item) =>
+                              sum +
+                              (item.panel_slot_snapshot?.road_usage_fee || 0),
+                            0
+                          )
+                          .toLocaleString()}
+                        원
                       </span>
                     </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">광고료:</span>
+                      <span className="font-medium">
+                        {group.items
+                          .reduce(
+                            (sum, item) =>
+                              sum +
+                              (item.panel_slot_snapshot?.advertising_fee || 0),
+                            0
+                          )
+                          .toLocaleString()}
+                        원
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">부가세:</span>
+                      <span className="font-medium">
+                        {group.items
+                          .reduce(
+                            (sum, item) =>
+                              sum + (item.panel_slot_snapshot?.tax_price || 0),
+                            0
+                          )
+                          .toLocaleString()}
+                        원
+                      </span>
+                    </div>
+                    <div className="border-t pt-2 mt-2">
+                      <div className="flex justify-between font-semibold">
+                        <span>총 결제 금액:</span>
+                        <span className="text-blue-700">
+                          {group.totalPrice.toLocaleString()}원
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-              {/* 세금계산서 */}
-              <div className="mb-4">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="modal-tax"
-                    checked={modalTaxInvoice}
-                    onChange={(e) => setModalTaxInvoice(e.target.checked)}
-                    className="w-4 h-4"
-                  />
-                  <label htmlFor="modal-tax">세금계산서 발급을 원합니다</label>
+                {/* 세금계산서 */}
+                <div className="mb-4">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="modal-tax"
+                      checked={modalTaxInvoice}
+                      onChange={(e) => setModalTaxInvoice(e.target.checked)}
+                      className="w-4 h-4"
+                    />
+                    <label htmlFor="modal-tax">
+                      세금계산서 발급을 원합니다
+                    </label>
+                  </div>
                 </div>
-              </div>
-              {/* 결제 버튼 */}
-              <div className="mt-2">
-                {/* 결제 조건 확인 */}
-                {(() => {
-                  const groupState = groupStates[group.id];
-                  const hasProjectName =
-                    groupState?.projectName &&
-                    groupState.projectName.trim() !== '';
-                  const hasFileUploadMethod =
-                    groupState?.selectedFile || groupState?.sendByEmail;
-                  const hasAgreedToTerms = isAgreedCaution;
+                {/* 결제 버튼 */}
+                <div className="mt-2">
+                  {/* 결제 조건 확인 */}
+                  {(() => {
+                    const groupState = groupStates[group.id];
+                    const hasProjectName =
+                      groupState?.projectName &&
+                      groupState.projectName.trim() !== '';
+                    const hasFileUploadMethod =
+                      groupState?.selectedFile || groupState?.sendByEmail;
+                    const hasAgreedToTerms = isAgreedCaution;
 
-                  const isButtonEnabled =
-                    hasProjectName && hasFileUploadMethod && hasAgreedToTerms;
+                    const isButtonEnabled =
+                      hasProjectName && hasFileUploadMethod && hasAgreedToTerms;
 
-                  return (
-                    <>
-                      <Button
-                        onClick={() => openTossWidget(group)}
-                        disabled={!isButtonEnabled}
-                        className={`w-full py-2 rounded-lg ${
-                          isButtonEnabled
-                            ? 'bg-blue-600 text-white hover:bg-blue-700'
-                            : 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                        }`}
-                      >
-                        {group.name} 결제하기
-                      </Button>
+                    return (
+                      <>
+                        <Button
+                          onClick={() => openTossWidget(group)}
+                          disabled={!isButtonEnabled}
+                          className={`w-full py-2 rounded-lg ${
+                            isButtonEnabled
+                              ? 'bg-blue-600 text-white hover:bg-blue-700'
+                              : 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                          }`}
+                        >
+                          {group.name} 결제하기
+                        </Button>
 
-                      {/* 조건 미충족 시 안내 메시지 */}
-                      {!isButtonEnabled && (
-                        <div className="mt-2 text-xs text-red">
-                          {!hasProjectName && (
-                            <div>• 작업이름을 입력해주세요</div>
-                          )}
-                          {!hasFileUploadMethod && (
-                            <div>• 파일 업로드 방법을 선택해주세요</div>
-                          )}
-                          {!hasAgreedToTerms && (
-                            <div>• 유의사항에 동의해주세요</div>
-                          )}
-                        </div>
-                      )}
-                    </>
-                  );
-                })()}
-              </div>
-            </section>
-          );
+                        {/* 조건 미충족 시 안내 메시지 */}
+                        {!isButtonEnabled && (
+                          <div className="mt-2 text-xs text-red">
+                            {!hasProjectName && (
+                              <div>• 작업이름을 입력해주세요</div>
+                            )}
+                            {!hasFileUploadMethod && (
+                              <div>• 파일 업로드 방법을 선택해주세요</div>
+                            )}
+                            {!hasAgreedToTerms && (
+                              <div>• 유의사항에 동의해주세요</div>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+              </section>
+            );
           })}
         </div>
         {/* 우측 - 유의사항 및 전체 가격 정보 */}

@@ -53,8 +53,8 @@ export interface BaseBillboard {
       total_slots: number;
       available_slots: number;
       closed_slots: number;
-      period: string;
-      year_month: string;
+      period?: string;
+      year_month?: string;
     } | null;
     first_half: {
       total_slots: number;
