@@ -61,59 +61,55 @@ function PaymentSuccessContent() {
 
       const confirmPayment = async () => {
         try {
-          // 임시 orderId인 경우 localStorage에서 주문 정보 가져오기
+          // localStorage에서 주문 정보 가져오기 (임시/기존 주문 공통)
           let orderData = null;
-          if (orderId.startsWith('temp_')) {
-            console.log(
-              '🔍 [결제 성공 페이지] 임시 orderId 감지, localStorage 확인 중...'
-            );
-            const pendingOrderData = localStorage.getItem('pending_order_data');
-            if (pendingOrderData) {
-              try {
-                orderData = JSON.parse(pendingOrderData);
-                console.log(
-                  '🔍 [결제 성공 페이지] ✅ localStorage에서 주문 정보 가져옴:',
-                  {
-                    hasOrderData: !!orderData,
-                    itemsCount: orderData?.items?.length || 0,
-                    userAuthId: orderData?.userAuthId || '(없음)',
-                    userProfileId: orderData?.userProfileId || '(없음)',
-                    projectName: orderData?.projectName || '(없음)',
-                    draftDeliveryMethod:
-                      orderData?.draftDeliveryMethod || '(없음)',
-                    tempOrderId: orderData?.tempOrderId || '(없음)',
-                    orderDataKeys: orderData ? Object.keys(orderData) : [],
-                  }
-                );
-                // 사용 후 삭제
-                localStorage.removeItem('pending_order_data');
-              } catch (e) {
-                console.error(
-                  '🔍 [결제 성공 페이지] ❌ localStorage 파싱 실패:',
-                  {
-                    error: e,
-                    rawData: pendingOrderData.substring(0, 200),
-                  }
-                );
-              }
-            } else {
-              console.error(
-                '🔍 [결제 성공 페이지] ❌ localStorage에 주문 정보가 없습니다.',
+          const pendingOrderData = localStorage.getItem('pending_order_data');
+          if (pendingOrderData) {
+            try {
+              orderData = JSON.parse(pendingOrderData);
+              console.log(
+                '🔍 [결제 성공 페이지] ✅ localStorage에서 주문 정보 가져옴:',
                 {
-                  orderId,
-                  localStorageKeys:
-                    typeof window !== 'undefined'
-                      ? Object.keys(localStorage)
-                      : [],
+                  hasOrderData: !!orderData,
+                  itemsCount: orderData?.items?.length || 0,
+                  userAuthId: orderData?.userAuthId || '(없음)',
+                  userProfileId: orderData?.userProfileId || '(없음)',
+                  projectName: orderData?.projectName || '(없음)',
+                  draftDeliveryMethod:
+                    orderData?.draftDeliveryMethod || '(없음)',
+                  tempOrderId: orderData?.tempOrderId || '(없음)',
+                  orderDataKeys: orderData ? Object.keys(orderData) : [],
                 }
               );
-              setError('주문 정보를 찾을 수 없습니다.');
-              setIsProcessing(false);
-              return;
+              // 사용 후 삭제
+              localStorage.removeItem('pending_order_data');
+            } catch (e) {
+              console.error(
+                '🔍 [결제 성공 페이지] ❌ localStorage 파싱 실패:',
+                {
+                  error: e,
+                  rawData: pendingOrderData.substring(0, 200),
+                }
+              );
             }
+          } else if (orderId.startsWith('temp_')) {
+            // 임시 주문인데도 로컬 주문 정보가 없으면 오류
+            console.error(
+              '🔍 [결제 성공 페이지] ❌ localStorage에 주문 정보가 없습니다.',
+              {
+                orderId,
+                localStorageKeys:
+                  typeof window !== 'undefined'
+                    ? Object.keys(localStorage)
+                    : [],
+              }
+            );
+            setError('주문 정보를 찾을 수 없습니다.');
+            setIsProcessing(false);
+            return;
           } else {
             console.log(
-              '🔍 [결제 성공 페이지] 임시 orderId가 아님, 기존 주문 정보 사용'
+              '🔍 [결제 성공 페이지] 임시 orderId가 아니며, 추가 주문 데이터 없음 (기존 주문 정보만 사용)'
             );
           }
 

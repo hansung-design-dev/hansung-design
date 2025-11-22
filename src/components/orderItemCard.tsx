@@ -212,8 +212,8 @@ export default function OrderItemCard({
             </div>
             {!orderDetail.canCancel && (
               <div className="text-sm text-gray-500 text-center mt-2 flex items-center justify-center">
-                * 신청취소는 신청후 3일이내만 취소 가능합니다. 3일 이후 취소시
-                고객센터에 문의 부탁드립니다.
+                * 신청취소는 신청 후 2일 이내만 취소 가능합니다. 2일 이후 취소
+                시 고객센터에 문의 부탁드립니다.
               </div>
             )}
           </div>

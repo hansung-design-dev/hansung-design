@@ -207,7 +207,7 @@ const ItemList: React.FC<ItemTableProps> = ({
                     <th className="text-center pl-4">기간</th>
                     <th className="text-center pl-4">구분</th>
                     {!hideQuantityColumns && (
-                      <th className="text-center pl-4">수량</th>
+                      <th className="text-center pl-4">남은수량</th>
                     )}
                     {!hideStatusColumn && (
                       <th className="text-center pl-4">상태</th>
@@ -377,6 +377,7 @@ const ItemList: React.FC<ItemTableProps> = ({
                       </td>
                       {!hideQuantityColumns && (
                         <td className="text-center pl-4">
+                          {/* 면수: 총 면수 */}
                           {item.faces ? `${item.faces}` : '-'}
                         </td>
                       )}
@@ -397,7 +398,18 @@ const ItemList: React.FC<ItemTableProps> = ({
                       <td className="text-center pl-4">{categoryDisplay}</td>
                       {!hideQuantityColumns && (
                         <td className="text-center pl-4">
-                          {item.faces ? `${item.faces}` : '-'}
+                          {/* 남은수량: available_faces가 있으면 사용, 없으면 faces */}
+                          {typeof item.available_faces === 'number'
+                            ? `${item.available_faces}`
+                            : item.inventory_info?.current_period
+                            ? `${item.inventory_info.current_period.available_slots}`
+                            : item.inventory_info?.first_half
+                            ? `${item.inventory_info.first_half.available_slots}`
+                            : item.inventory_info?.second_half
+                            ? `${item.inventory_info.second_half.available_slots}`
+                            : item.faces
+                            ? `${item.faces}`
+                            : '-'}
                         </td>
                       )}
                       {!hideStatusColumn && (
@@ -648,7 +660,18 @@ const ItemList: React.FC<ItemTableProps> = ({
                       : item.period || '15일'}
                   </div>
                   {!hideQuantityColumns && (
-                    <div className="text-0.875">수량: {item.faces ?? '-'}</div>
+                    <div className="text-0.875">
+                      남은수량:{' '}
+                      {typeof item.available_faces === 'number'
+                        ? item.available_faces
+                        : item.inventory_info?.current_period
+                        ? item.inventory_info.current_period.available_slots
+                        : item.inventory_info?.first_half
+                        ? item.inventory_info.first_half.available_slots
+                        : item.inventory_info?.second_half
+                        ? item.inventory_info.second_half.available_slots
+                        : item.faces ?? '-'}
+                    </div>
                   )}
                   {!hideStatusColumn && (
                     <div className="text-0.875">

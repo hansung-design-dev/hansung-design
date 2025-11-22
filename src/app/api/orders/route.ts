@@ -159,7 +159,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 2. 각 주문에 대한 design_drafts 조회 (orders.design_drafts_id를 통해 연결)
-    const ordersWithDrafts = await Promise.all(
+    const ordersWithDraftsAndProjectName = await Promise.all(
       (orders || []).map(async (order: Order) => {
         let designDrafts: DesignDraft[] = [];
 
@@ -168,7 +168,7 @@ export async function GET(request: NextRequest) {
             .from('design_drafts')
             .select('*')
             .eq('id', order.design_drafts_id)
-            .order('created_at', { ascending: false });
+            .order('created_at', { ascending: true });
 
           if (draftError) {
             console.error(
@@ -189,14 +189,21 @@ export async function GET(request: NextRequest) {
           console.log(`🔍 주문 ${order.id}의 design_drafts_id가 없음`);
         }
 
+        // design_drafts에서 프로젝트명 추출 (주문 상세 API와 동일한 로직)
+        const projectName =
+          designDrafts && designDrafts.length > 0
+            ? designDrafts[0]?.project_name || '프로젝트명 없음'
+            : '프로젝트명 없음';
+
         return {
           ...order,
           design_drafts: designDrafts,
+          projectName,
         };
       })
     );
 
-    return NextResponse.json({ orders: ordersWithDrafts });
+    return NextResponse.json({ orders: ordersWithDraftsAndProjectName });
   } catch (error) {
     console.error('주문 조회 중 예외 발생:', error);
     return NextResponse.json(

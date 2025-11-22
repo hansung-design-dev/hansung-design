@@ -12,10 +12,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 주문 정보 조회
+    // 주문 정보 조회 (취소 가능 기간 검증을 위해 created_at 포함)
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select('id, design_drafts_id')
+      .select('id, design_drafts_id, created_at, order_number, payment_status')
       .eq('order_number', orderNumber)
       .single();
 
@@ -24,6 +24,125 @@ export async function POST(request: NextRequest) {
         { success: false, error: '주문을 찾을 수 없습니다.' },
         { status: 404 }
       );
+    }
+
+    // ✅ 주문일 기준 2일 경과 여부 검증 (서버 사이드 방어 로직)
+    if (order.created_at) {
+      const createdAt = new Date(order.created_at);
+      const now = new Date();
+      const diffMs = now.getTime() - createdAt.getTime();
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+      if (diffDays >= 2) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              '구매 후 2일이 지난 주문은 온라인에서 취소가 불가합니다. 고객센터로 문의해주세요.',
+            code: 'CANCEL_PERIOD_EXPIRED',
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    // ✅ 결제 정보 조회 (토스 결제 취소용)
+    const { data: paymentRecords, error: paymentFetchError } = await supabase
+      .from('payments')
+      .select('id, order_id, amount, payment_status, transaction_id')
+      .eq('order_id', order.id);
+
+    if (paymentFetchError) {
+      console.error('🔍 [주문 취소] 결제 정보 조회 실패:', paymentFetchError);
+      return NextResponse.json(
+        {
+          success: false,
+          error: '결제 정보 조회에 실패했습니다.',
+        },
+        { status: 500 }
+      );
+    }
+
+    const payment =
+      paymentRecords && paymentRecords.length > 0 ? paymentRecords[0] : null;
+
+    // ✅ 토스 결제 취소 처리 (결제가 완료된 카드/간편결제 건으로 가정)
+    if (
+      payment &&
+      payment.transaction_id &&
+      payment.payment_status === 'completed'
+    ) {
+      const secretKey = process.env.TOSS_PAYMENTS_SECRET_KEY;
+
+      if (!secretKey) {
+        console.error(
+          '🔍 [주문 취소] ❌ TOSS_PAYMENTS_SECRET_KEY 미설정 - 결제 취소 불가'
+        );
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              '결제 취소 설정이 완료되지 않았습니다. 고객센터로 문의해주세요.',
+          },
+          { status: 500 }
+        );
+      }
+
+      const basicToken = Buffer.from(`${secretKey}:`).toString('base64');
+
+      console.log('🔍 [주문 취소] 토스 결제 취소 API 호출 시작:', {
+        transactionId: payment.transaction_id.substring(0, 20) + '...',
+        amount: payment.amount,
+        orderNumber: order.order_number,
+      });
+
+      const tossCancelResponse = await fetch(
+        `https://api.tosspayments.com/v1/payments/${payment.transaction_id}/cancel`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Basic ${basicToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            cancelReason: '고객 주문 취소',
+            // 전체 취소 기준: cancelAmount를 생략하면 전체 금액 취소로 처리됨
+          }),
+        }
+      );
+
+      const tossCancelData = await tossCancelResponse.json();
+
+      console.log('🔍 [주문 취소] 토스 결제 취소 응답:', {
+        ok: tossCancelResponse.ok,
+        status: tossCancelResponse.status,
+        statusText: tossCancelResponse.statusText,
+        dataSummary: tossCancelData
+          ? {
+              status: tossCancelData.status,
+              cancels: tossCancelData.cancels,
+              code: tossCancelData.code,
+              message: tossCancelData.message,
+            }
+          : null,
+      });
+
+      if (!tossCancelResponse.ok) {
+        console.error(
+          '🔍 [주문 취소] ❌ 토스 결제 취소 실패:',
+          tossCancelData || tossCancelResponse.statusText
+        );
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              '결제 취소에 실패했습니다. 잠시 후 다시 시도하거나 고객센터로 문의해주세요.',
+            code: tossCancelData?.code,
+            toss: tossCancelData,
+          },
+          { status: 400 }
+        );
+      }
     }
 
     // 순차적으로 관련 데이터 삭제
@@ -81,7 +200,10 @@ export async function POST(request: NextRequest) {
           .single();
 
         if (draftFetchError) {
-          console.warn('🔍 [주문 취소] ⚠️ design_drafts 조회 실패 (레코드는 삭제):', draftFetchError);
+          console.warn(
+            '🔍 [주문 취소] ⚠️ design_drafts 조회 실패 (레코드는 삭제):',
+            draftFetchError
+          );
         }
 
         if (draft && draft.file_url) {
@@ -95,17 +217,20 @@ export async function POST(request: NextRequest) {
             // URL 형식: https://...supabase.co/storage/v1/object/public/design-drafts/drafts/filename
             // 필요한 부분: drafts/filename
             const url = new URL(draft.file_url);
-            
+
             // 방법 1: bucket name 이후의 경로를 직접 추출
             const segments = url.pathname.split('/').filter((s) => s);
             const bucketIndex = segments.findIndex((s) => s === bucketName);
-            
+
             if (bucketIndex !== -1 && bucketIndex < segments.length - 1) {
               // bucket name 이후의 모든 세그먼트를 경로로 사용
               filePath = segments.slice(bucketIndex + 1).join('/');
             } else {
               // 방법 2: 정규식으로 추출 시도
-              const pathMatch = url.pathname.match(/\/storage\/v1\/object\/public\/[^/]+\/(.+)$/);
+              const pathMatch =
+                url.pathname.match(
+                  /\/storage\/v1\/object\/public\/[^/]+\/(.+)$/
+                );
               if (pathMatch && pathMatch[1]) {
                 filePath = pathMatch[1];
               }
@@ -125,21 +250,33 @@ export async function POST(request: NextRequest) {
 
               if (storageDeleteError) {
                 // 파일 삭제 실패는 경고만 표시하고 계속 진행 (레코드는 삭제)
-                console.warn('🔍 [주문 취소] ⚠️ Storage 파일 삭제 실패 (레코드는 삭제):', {
-                  error: storageDeleteError,
-                  filePath,
-                });
+                console.warn(
+                  '🔍 [주문 취소] ⚠️ Storage 파일 삭제 실패 (레코드는 삭제):',
+                  {
+                    error: storageDeleteError,
+                    filePath,
+                  }
+                );
               } else {
-                console.log('🔍 [주문 취소] ✅ Storage 파일 삭제 성공:', filePath);
+                console.log(
+                  '🔍 [주문 취소] ✅ Storage 파일 삭제 성공:',
+                  filePath
+                );
               }
             } else {
-              console.warn('🔍 [주문 취소] ⚠️ 파일 경로를 추출할 수 없음:', draft.file_url);
+              console.warn(
+                '🔍 [주문 취소] ⚠️ 파일 경로를 추출할 수 없음:',
+                draft.file_url
+              );
             }
           } catch (urlError) {
-            console.warn('🔍 [주문 취소] ⚠️ URL 파싱 실패 (레코드는 삭제):', {
-              error: urlError,
-              fileUrl: draft.file_url,
-            });
+            console.warn(
+              '🔍 [주문 취소] ⚠️ URL 파싱 실패 (레코드는 삭제):',
+              {
+                error: urlError,
+                fileUrl: draft.file_url,
+              }
+            );
           }
         }
 

@@ -29,7 +29,8 @@ export interface BaseBillboard {
   period: string;
   price: string;
   size: string;
-  faces: number;
+  faces: number; // 총 면수
+  available_faces?: number; // 남은 면수(가용 재고)
   lat: number;
   lng: number;
   status: string;
@@ -52,8 +53,8 @@ export interface BaseBillboard {
       total_slots: number;
       available_slots: number;
       closed_slots: number;
-      period: string;
-      year_month: string;
+      period?: string;
+      year_month?: string;
     } | null;
     first_half: {
       total_slots: number;
