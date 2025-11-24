@@ -1098,6 +1098,14 @@ export default function DisplayDetailPage({
         ...(panelSlotSnapshot && { panel_slot_snapshot: panelSlotSnapshot }), // 가격 상세 정보 추가
         panel_code: targetItem.panel_code?.toString(),
         photo_url: targetItem.photo_url, // 게시대 사진 URL 추가
+        // 상담 중복 방지를 위한 공통 키
+        // - 상단광고: panel_id 기준
+        // - 일반 현수막게시대: 상반기/하반기까지 포함한 uniqueCartItemId 기준 (이후 확장 가능)
+        consultationKey: isTopFixed
+          ? targetItem.panel_id
+            ? `top_fixed:${targetItem.panel_id}`
+            : `top_fixed:${uniqueCartItemId}`
+          : `banner:${uniqueCartItemId}`,
         // 사용자 프로필 정보 추가 (프로필이 있으면 사용, 없으면 undefined - 장바구니에서 설정 가능)
         contact_person_name: profileToUse?.contact_person_name,
         phone: profileToUse?.phone,

@@ -3,12 +3,15 @@ import { useState, useEffect } from 'react';
 import ModalContainer from './ModalContainer';
 import { Button } from '../button/button';
 import { useAuth } from '@/src/contexts/authContext';
+import type { CartItem } from '@/src/contexts/cartContext';
 
 interface ConsultationModalProps {
   isOpen: boolean;
   onClose: () => void;
   productName: string;
   productId?: string;
+  productType?: CartItem['type'];
+  consultationKey?: string;
   onSuccess?: () => void;
 }
 
@@ -31,6 +34,7 @@ interface ExistingInquiry {
   title: string;
   content: string;
   status: string;
+  answer?: string;
   answer_content?: string;
   answered_at?: string;
   created_at: string;
@@ -118,6 +122,8 @@ export default function ConsultationModal({
   onClose,
   productName,
   productId,
+  productType,
+  consultationKey,
   onSuccess,
 }: ConsultationModalProps) {
   const [consultationContent, setConsultationContent] = useState('');
@@ -129,18 +135,45 @@ export default function ConsultationModal({
   const [showErrorModal, setShowErrorModal] = useState(false);
   const { user } = useAuth();
 
+  const isPendingExistingInquiry = existingInquiry?.status === 'pending';
+
   // 모달이 열릴 때 기존 문의 확인
   useEffect(() => {
-    if (isOpen && productId && user) {
+    if (isOpen && user && (consultationKey || productId || productName)) {
       checkExistingInquiry();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, productId, user]);
+  }, [isOpen, productId, productName, user, productType]);
 
   const checkExistingInquiry = async () => {
     try {
+      // 해당 상품(디지털미디어 쇼핑몰 아이템 등)에 대해
+      // 이미 상담신청한 내역이 있는지 확인
+      const params = new URLSearchParams();
+      params.set('page', '1');
+      params.set('limit', '1');
+      // consultationKey가 있으면 이것을 최우선 기준으로 사용
+      if (consultationKey) {
+        params.set('consultation_key', consultationKey);
+      }
+      // 쇼핑몰(digital-product)은 상품 코드(productId)를 기준으로 중복 여부 판단
+      if (!consultationKey && productType === 'digital-product' && productId) {
+        params.set('product_id', productId);
+        // 과거 데이터(상품명이 저장된 상담내역)와 신규 데이터(상품코드가 저장된 상담내역)를
+        // 모두 잡기 위해 상품명도 함께 전송
+        if (productName) {
+          params.set('product_name', productName);
+        }
+      } else if (productName) {
+        // 그 외(현수막/LED 등)는 기존처럼 화면용 상품명을 기준으로 조회
+        params.set('product_name', productName);
+      } else if (productId) {
+        // fallback: 최소한 productId라도 있으면 사용
+        params.set('product_id', productId);
+      }
+
       const response = await fetch(
-        `/api/customer-service?product_id=${productId}`
+        `/api/customer-service?${params.toString()}`
       );
       const data = await response.json();
 
@@ -165,6 +198,15 @@ export default function ConsultationModal({
       return;
     }
 
+    // 이미 같은 상품으로 상담신청이 접수되어 있는 경우(답변 대기중)
+    // 동일 상품에 대해서는 추가 상담신청을 막고 안내 메시지만 보여준다.
+    if (existingInquiry && existingInquiry.status === 'pending') {
+      setError(
+        '이미 이 상품으로 상담신청이 접수되어 있습니다. 다른 상품은 상담신청이 가능합니다.'
+      );
+      return;
+    }
+
     setLoading(true);
     setError('');
 
@@ -177,8 +219,10 @@ export default function ConsultationModal({
         body: JSON.stringify({
           title: `${productName} 상담문의`,
           content: consultationContent,
-          product_name: productName,
+          // 새로운 스키마에서는 product_name 컬럼에 consultationKey를 저장
+          product_name: consultationKey || productName,
           product_id: productId,
+          product_type: productType,
         }),
       });
 
@@ -255,9 +299,17 @@ export default function ConsultationModal({
             <textarea
               value={consultationContent}
               onChange={(e) => setConsultationContent(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[120px] resize-none"
-              placeholder="상담 내용을 입력하세요"
-              disabled={existingInquiry?.status === 'pending'}
+              className={`w-full p-3 border rounded-lg min-h-[120px] resize-none ${
+                isPendingExistingInquiry
+                  ? 'bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500'
+              }`}
+              placeholder={
+                isPendingExistingInquiry
+                  ? '이미 접수된 상담에 대한 답변을 기다리는 중입니다.'
+                  : '상담 내용을 입력하세요'
+              }
+              disabled={isPendingExistingInquiry}
             />
           </div>
 
@@ -299,7 +351,7 @@ export default function ConsultationModal({
               size="lg"
               variant="filledBlack"
               className="text-white rounded-lg hover:bg-blue-700"
-              disabled={loading || existingInquiry?.status === 'pending'}
+              disabled={loading}
             >
               {loading ? '전송중...' : '문의하기'}
             </Button>

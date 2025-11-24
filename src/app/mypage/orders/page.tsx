@@ -715,7 +715,9 @@ export default function OrdersPage() {
     // - 실제 프로젝트명이 있으면 그대로 사용
     // - 없거나 '프로젝트명 없음'인 경우 게시대 주소/별칭을 사용
     const hasRealProjectName =
-      order.projectName && order.projectName !== '프로젝트명 없음';
+      order.projectName &&
+      order.projectName !== '프로젝트명 없음' &&
+      order.projectName !== '미정';
     let defaultProjectName =
       hasRealProjectName && order.projectName
         ? order.projectName
@@ -726,7 +728,8 @@ export default function OrdersPage() {
         : '프로젝트명 없음';
 
     // 상담신청(INQ-*) 주문이고 패널 정보가 없으면
-    // - 파일이름: '미정'
+    // - 결제 전: 파일이름은 '미정'
+    // - 결제 후(projectName이 생긴 후): 파일이름은 실제 projectName 유지
     // - 위치: 상담신청 주소
     // - 품명: 전자게시대 (상담신청 아이템 기본값)
     const isInquiryOrder = order.order_number?.startsWith('INQ-');
@@ -735,7 +738,9 @@ export default function OrdersPage() {
     let finalCategory = formatDisplayType(panelInfo.display_types?.name || '');
 
     if (isInquiryOrder && !panelInfo.address && inquiryAddress) {
-      defaultProjectName = '미정';
+      if (!hasRealProjectName) {
+        defaultProjectName = '미정';
+      }
       finalLocation = inquiryAddress;
       finalCategory = '전자게시대';
     }

@@ -49,6 +49,8 @@ export default function ItemCard({ item }: ItemCardProps) {
         name: item.title,
         district: '', // 디지털미디어 쇼핑몰 상품은 district가 없음
         price: 0, // 상담신청이므로 가격 0
+        // 상담 중복 방지를 위한 공통 키 (쇼핑몰은 리스트 상품 id 기준)
+        consultationKey: `digital_product:${item.id}`,
         // 사용자 프로필 정보 추가
         contact_person_name: defaultProfile?.contact_person_name,
         phone: defaultProfile?.phone,

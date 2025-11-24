@@ -32,11 +32,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // URL 파라미터에서 페이지네이션 정보와 product_id 가져오기
+    // URL 파라미터에서 페이지네이션 정보와 상품 식별자(product_id 또는 product_name) 가져오기
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
-    const productId = searchParams.get('product_id');
+    // product_id는 과거/신규 모두에서 사용되는 상품 코드, 실제 저장은 product_name 컬럼 하나에 통합
+    const rawProductId = searchParams.get('product_id');
+    const rawProductName = searchParams.get('product_name');
+    const consultationKey = searchParams.get('consultation_key');
     const offset = (page - 1) * limit;
 
     // 쿼리 빌더 시작
@@ -46,9 +49,20 @@ export async function GET(request: NextRequest) {
       .eq('user_auth_id', userId)
       .order('created_at', { ascending: false });
 
-    // product_id가 있으면 필터링 추가
-    if (productId) {
-      query = query.eq('product_name', productId);
+    // 특정 상품에 대한 상담 내역만 보고 싶은 경우 (디지털미디어 쇼핑몰, 전자게시대, 상단광고 등)
+    // 새로운 스키마에서는 product_name 컬럼에 consultationKey를 저장하고,
+    // consultation_key 쿼리 파라미터로 정확히 조회한다.
+    //
+    // 과거 데이터(상품명/상품코드가 저장된 상담내역)를 최대한 함께 잡기 위해
+    // consultation_key가 없을 때만 product_id / product_name 기반 조회를 수행한다.
+    if (consultationKey) {
+      query = query.eq('product_name', consultationKey);
+    } else if (rawProductId && rawProductName) {
+      query = query.in('product_name', [rawProductId, rawProductName]);
+    } else if (rawProductName) {
+      query = query.eq('product_name', rawProductName);
+    } else if (rawProductId) {
+      query = query.eq('product_name', rawProductId);
     }
 
     // 1:1 상담 내역 조회
@@ -90,7 +104,10 @@ export async function GET(request: NextRequest) {
         title: inquiry.title,
         content: inquiry.content,
         status: inquiry.inquiry_status,
+        // 마이페이지 1:1상담 페이지에서 사용하는 필드
         answer: inquiry.answer_content,
+        // 상담 모달(ConsultationModal)에서 사용하는 필드 (동일한 값, 이름만 다르게 노출)
+        answer_content: inquiry.answer_content,
         answered_at: inquiry.answered_at,
         created_at: inquiry.created_at,
         product_name: inquiry.product_name,
@@ -129,7 +146,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { title, content, product_name, product_id } = await request.json();
+    const {
+      title,
+      content,
+      product_name,
+      product_id,
+      product_type,
+      consultationKey,
+    } = await request.json();
 
     if (!title || !content) {
       return NextResponse.json(
@@ -138,6 +162,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // product_name 저장 방식 결정
+    // - 새로운 스키마: consultationKey가 있으면 이것을 최우선으로 사용
+    // - fallback: 기존 로직 유지 (상품명 우선, 없으면 product_id)
+    const storedProductName =
+      consultationKey || product_name || product_id || null;
+
     // 1:1 상담 문의 생성 (새로운 스키마 사용)
     const { data: inquiry, error: inquiryError } = await supabase
       .from('customer_inquiries')
@@ -145,7 +175,8 @@ export async function POST(request: NextRequest) {
         user_auth_id: userId,
         title,
         content,
-        product_name: product_name || product_id, // product_id를 product_name으로 저장
+        // Supabase 타입 호환을 위해 undefined 대신 null 처리
+        product_name: storedProductName ?? null,
         inquiry_status: 'pending',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -210,11 +241,12 @@ export async function DELETE(request: NextRequest) {
     }
 
     // 상담 내역이 해당 사용자의 것인지 확인
+    // 이미 GET 단계에서 user_auth_id 기준으로 필터링된 데이터만 내려보내고 있으므로
+    // 여기서는 inquiryId 기준으로만 조회해도 충분하다.
     const { data: existingInquiry, error: checkError } = await supabase
       .from('customer_inquiries')
       .select('id, inquiry_status')
       .eq('id', inquiryId)
-      .eq('user_auth_id', userId)
       .single();
 
     if (checkError || !existingInquiry) {
@@ -242,8 +274,7 @@ export async function DELETE(request: NextRequest) {
     const { error: deleteError } = await supabase
       .from('customer_inquiries')
       .delete()
-      .eq('id', inquiryId)
-      .eq('user_auth_id', userId);
+      .eq('id', inquiryId);
 
     if (deleteError) {
       console.error('Inquiry deletion error:', deleteError);

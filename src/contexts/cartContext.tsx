@@ -12,6 +12,8 @@ export interface CartItem {
   name: string;
   district: string;
   price: number;
+  // 상담신청 중복 방지를 위한 공통 키 (타입별 + 실제 식별자 조합)
+  consultationKey?: string;
   total_price?: number; // LED 전자게시대의 실제 가격 정보
   halfPeriod?: 'first_half' | 'second_half';
   selectedYear?: number; // 선택한 년도 (예: 2025)
