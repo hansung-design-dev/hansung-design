@@ -38,6 +38,7 @@ interface OrderItemCardProps {
   onPaymentClick?: () => void; // 결제하기 콜백 추가
   paymentStatus?: string; // 결제여부 상태
   onResendFile?: () => void; // 파일재전송 콜백 추가
+  onReceiptClick?: () => void; // 영수증 콜백 추가
 }
 
 export default function OrderItemCard({
@@ -47,6 +48,7 @@ export default function OrderItemCard({
   onPaymentClick,
   paymentStatus,
   onResendFile,
+  onReceiptClick,
 }: OrderItemCardProps) {
   const isPaymentPending =
     paymentStatus === '대기' || paymentStatus === 'pending_payment';
@@ -219,6 +221,7 @@ export default function OrderItemCard({
                 variant="outlinedGray"
                 size="xs"
                 className="text-black sm:text-0.75 rounded-full"
+                onClick={onReceiptClick}
               >
                 영수증
               </Button>

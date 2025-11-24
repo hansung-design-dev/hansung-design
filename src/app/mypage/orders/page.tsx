@@ -249,6 +249,8 @@ export default function OrdersPage() {
   const [isCancelNotAllowedModalOpen, setIsCancelNotAllowedModalOpen] =
     useState(false);
   const [inquiries, setInquiries] = useState<InquiryForOrders[]>([]);
+  const [receiptModalOpen, setReceiptModalOpen] = useState(false);
+  const [receiptData, setReceiptData] = useState<OrderCardData | null>(null);
 
   // 신청취소 핸들러
   const handleCancelClick = (order: Order) => {
@@ -867,6 +869,10 @@ export default function OrdersPage() {
                           window.location.href = `/mypage/design?tab=upload`;
                         }
                       }}
+                      onReceiptClick={() => {
+                        setReceiptData(mapped);
+                        setReceiptModalOpen(true);
+                      }}
                     />
                   );
                 })()
@@ -949,6 +955,48 @@ export default function OrdersPage() {
                 확인
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 영수증 모달 */}
+      {receiptModalOpen && receiptData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
+          <div className="bg-white rounded-lg p-8 max-w-sm w-full mx-4">
+            <h3 className="text-xl font-bold mb-4">영수증</h3>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600">주문번호</span>
+                <span className="font-medium">{receiptData.order_number}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">주문일자</span>
+                <span className="font-medium">{receiptData.orderDate}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">결제수단</span>
+                <span className="font-medium">
+                  {receiptData.paymentMethod || '-'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">결제금액</span>
+                <span className="font-medium">
+                  {receiptData.totalAmount?.toLocaleString?.() ?? '0'}원
+                </span>
+              </div>
+            </div>
+            <Button
+              size="md"
+              variant="filledBlack"
+              className="mt-6 w-full"
+              onClick={() => {
+                setReceiptModalOpen(false);
+                setReceiptData(null);
+              }}
+            >
+              닫기
+            </Button>
           </div>
         </div>
       )}
