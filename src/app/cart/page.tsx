@@ -464,6 +464,10 @@ function CartContent() {
   const [isConsultationModalOpen, setIsConsultationModalOpen] = useState(false);
   const [selectedProductName, setSelectedProductName] = useState('');
   const [selectedProductId, setSelectedProductId] = useState('');
+  const [selectedProductType, setSelectedProductType] =
+    useState<CartItem['type'] | undefined>(undefined);
+  const [selectedConsultationKey, setSelectedConsultationKey] =
+    useState<string | undefined>(undefined);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<CartItem | null>(null);
   const [isGroupDeleteModalOpen, setIsGroupDeleteModalOpen] = useState(false);
@@ -931,9 +935,20 @@ function CartContent() {
     setIsUpdateSuccessModalOpen(true);
   };
 
-  const handleConsultation = (productName: string, productId: string) => {
+  const handleConsultation = (
+    productName: string,
+    productId: string,
+    productType: CartItem['type'],
+    consultationKey?: string
+  ) => {
     setSelectedProductName(productName);
     setSelectedProductId(productId);
+    setSelectedProductType(productType);
+    setSelectedConsultationKey(
+      consultationKey ||
+        // fallback: 타입 + ID 조합으로 기본 키 생성
+        `${productType}:${productId}`
+    );
     setIsConsultationModalOpen(true);
   };
 
@@ -1732,23 +1747,28 @@ function CartContent() {
                               '-',
                           };
                       return (
-                        <CartItemRow
-                          key={item.id}
-                          item={item}
-                          user={userInfo}
-                          isSelected={selectedItems.has(item.id)}
-                          onSelect={(selected) =>
-                            handleItemSelect(item.id, selected)
-                          }
-                          isConsulting={true}
-                          onOrderModify={() => handleOrderModify(item.id)}
-                          onConsultation={() =>
-                            handleConsultation(item.name, item.id)
-                          }
-                          onDelete={() => handleDelete(item)}
-                          inquiryStatus={undefined}
-                          getPanelTypeDisplay={getPanelTypeDisplay}
-                        />
+                          <CartItemRow
+                            key={item.id}
+                            item={item}
+                            user={userInfo}
+                            isSelected={selectedItems.has(item.id)}
+                            onSelect={(selected) =>
+                              handleItemSelect(item.id, selected)
+                            }
+                            isConsulting={true}
+                            onOrderModify={() => handleOrderModify(item.id)}
+                            onConsultation={() =>
+                              handleConsultation(
+                                item.name,
+                                item.id,
+                                item.type,
+                                item.consultationKey
+                              )
+                            }
+                            onDelete={() => handleDelete(item)}
+                            inquiryStatus={undefined}
+                            getPanelTypeDisplay={getPanelTypeDisplay}
+                          />
                       );
                     })}
                   </CartGroupCard>
@@ -1807,7 +1827,12 @@ function CartContent() {
                           isConsulting={true}
                           onOrderModify={() => handleOrderModify(item.id)}
                           onConsultation={() =>
-                            handleConsultation(item.name, item.id)
+                            handleConsultation(
+                              item.name,
+                              item.id,
+                              item.type,
+                              item.consultationKey
+                            )
                           }
                           onDelete={() => handleDelete(item)}
                           inquiryStatus={undefined}
@@ -1870,7 +1895,12 @@ function CartContent() {
                             isConsulting={true}
                             onOrderModify={() => handleOrderModify(item.id)}
                             onConsultation={() =>
-                              handleConsultation(item.name, item.id)
+                              handleConsultation(
+                                item.name,
+                                item.id,
+                                item.type,
+                                item.consultationKey
+                              )
                             }
                             onDelete={() => handleDelete(item)}
                             inquiryStatus={undefined}
@@ -1939,7 +1969,12 @@ function CartContent() {
                           isConsulting={true}
                           onOrderModify={() => handleOrderModify(item.id)}
                           onConsultation={() =>
-                            handleConsultation(item.name, item.id)
+                            handleConsultation(
+                              item.name,
+                              item.id,
+                              item.type,
+                              item.consultationKey
+                            )
                           }
                           onDelete={() => handleDelete(item)}
                           inquiryStatus={undefined}
@@ -2002,7 +2037,12 @@ function CartContent() {
                             isConsulting={true}
                             onOrderModify={() => handleOrderModify(item.id)}
                             onConsultation={() =>
-                              handleConsultation(item.name, item.id)
+                              handleConsultation(
+                                item.name,
+                                item.id,
+                                item.type,
+                                item.consultationKey
+                              )
                             }
                             onDelete={() => handleDelete(item)}
                             inquiryStatus={undefined}
@@ -2114,6 +2154,8 @@ function CartContent() {
         onClose={() => setIsConsultationModalOpen(false)}
         productName={selectedProductName}
         productId={selectedProductId}
+        productType={selectedProductType}
+        consultationKey={selectedConsultationKey}
         onSuccess={handleConsultationSuccess}
       />
 
