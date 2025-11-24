@@ -17,6 +17,7 @@ interface OrderDetail {
   roadUsageFee: number;
   totalAmount: number;
   paymentMethod: string;
+  paymentMethodCode?: string;
   depositorName: string;
   orderDate: string;
   canCancel: boolean;
@@ -36,6 +37,7 @@ interface OrderItemCardProps {
   onCancel?: () => void; // 신청취소 콜백 추가
   onPaymentClick?: () => void; // 결제하기 콜백 추가
   paymentStatus?: string; // 결제여부 상태
+  onResendFile?: () => void; // 파일재전송 콜백 추가
 }
 
 export default function OrderItemCard({
@@ -44,6 +46,7 @@ export default function OrderItemCard({
   onCancel,
   onPaymentClick,
   paymentStatus,
+  onResendFile,
 }: OrderItemCardProps) {
   const isPaymentPending =
     paymentStatus === '대기' || paymentStatus === 'pending_payment';
@@ -165,11 +168,18 @@ export default function OrderItemCard({
                     <path d="M828 1L2.00272e-05 1" stroke="#E0E0E0" />
                   </svg>
                 </div>
-                <div className="text-gray-500 col-span-2 sm:col-span-2 mb-2">
+                <div className="text-gray-600 mb-2">결제수단</div>
+                <div className="text-1.25 sm:text-1">
                   {orderDetail.paymentMethod}
                 </div>
-                <div className="text-gray-600 mb-2">입금자명</div>
-                <div className="sm:w-full">{orderDetail.depositorName}</div>
+                {orderDetail.paymentMethodCode === 'bank_transfer' && (
+                  <>
+                    <div className="text-gray-600 mb-2">입금자명</div>
+                    <div className="sm:w-full text-1.25 sm:text-1">
+                      {orderDetail.depositorName || '-'}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -201,6 +211,7 @@ export default function OrderItemCard({
                 variant="outlinedGray"
                 size="xs"
                 className="text-black sm:text-0.75 sm:w-[9rem] rounded-full"
+                onClick={onResendFile}
               >
                 파일재전송
               </Button>

@@ -205,6 +205,7 @@ interface OrderCardData {
   roadUsageFee: number;
   totalAmount: number;
   paymentMethod: string;
+  paymentMethodCode?: string;
   depositorName: string;
   orderDate: string;
   canCancel: boolean;
@@ -767,6 +768,7 @@ export default function OrdersPage() {
       roadUsageFee: priceInfo.totalRoadUsageFee ?? 0,
       totalAmount: priceInfo.finalPrice ?? 0,
       paymentMethod: latestPayment?.payment_methods?.name ?? '-',
+      paymentMethodCode: latestPayment?.payment_methods?.method_code,
       depositorName: latestPayment?.depositor_name ?? '-',
       orderDate: order.created_at ?? '-',
       canCancel,
@@ -839,9 +841,11 @@ export default function OrdersPage() {
                     );
                   }
 
+                  const mapped = mapOrderDetailToCard(selectedOrderDetail);
+
                   return (
                     <OrderItemCard
-                      orderDetail={mapOrderDetailToCard(selectedOrderDetail)}
+                      orderDetail={mapped}
                       paymentStatus={paymentStatus}
                       onClose={() => setExpandedItemId(null)}
                       onCancel={() => {
@@ -852,6 +856,15 @@ export default function OrdersPage() {
                       onPaymentClick={() => {
                         if (currentOrder) {
                           handlePaymentClick(currentOrder);
+                        }
+                      }}
+                      onResendFile={() => {
+                        if (mapped.order_number) {
+                          window.location.href = `/mypage/design?orderNumber=${encodeURIComponent(
+                            mapped.order_number
+                          )}&tab=upload`;
+                        } else {
+                          window.location.href = `/mypage/design?tab=upload`;
                         }
                       }}
                     />
