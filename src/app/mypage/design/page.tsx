@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import MypageContainer from '@/src/components/mypageContainer';
 import { useAuth } from '@/src/contexts/authContext';
 import CustomFileUpload from '@/src/components/ui/CustomFileUpload';
@@ -11,6 +12,7 @@ interface DesignDraft {
   project_name?: string;
   draft_category: string;
   file_name?: string;
+  file_url?: string;
   created_at: string;
   is_approved: boolean;
 }
@@ -29,10 +31,12 @@ interface Order {
 
 export default function DesignPage() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'upload' | 'view'>('upload');
   const [uploadingFile, setUploadingFile] = useState<string | null>(null);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [previewImageName, setPreviewImageName] = useState<string | null>(null);
 
   const fetchOrders = useCallback(async () => {
     if (!user) return;
@@ -136,37 +140,9 @@ export default function DesignPage() {
     <MypageContainer activeTab="시안관리">
       <h1 className="text-2xl font-bold mb-8">시안 관리</h1>
 
-      {/* 탭 네비게이션 */}
-      <div className="flex border-b border-gray-200 mb-6 gap-10 items-center justify-around">
-        <button
-          onClick={() => setActiveTab('upload')}
-          className={`px-6 py-3 font-medium text-sm  transition-colors ${
-            activeTab === 'upload'
-              ? 'border-blue-500 text-blue-600 border-solid rounded-full border-1'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          시안 업로드
-        </button>
-        <button
-          onClick={() => setActiveTab('view')}
-          className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
-            activeTab === 'view'
-              ? 'border-blue-500 text-blue-600 border-solid rounded-full border-1'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          업로드된 시안
-        </button>
-      </div>
-
       {orders.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-gray-500 mb-4">
-            {activeTab === 'upload'
-              ? '시안 업로드할 주문이 없습니다.'
-              : '업로드된 시안이 없습니다.'}
-          </p>
+          <p className="text-gray-500 mb-4">시안 업로드할 주문이 없습니다.</p>
         </div>
       ) : (
         <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -203,103 +179,111 @@ export default function DesignPage() {
                 </div>
               )}
 
-              {activeTab === 'upload' ? (
-                <div className="space-y-4">
-                  {/* 이메일로 보내기 신청한 경우 안내 메시지 */}
-                  {order.draft_delivery_method === 'email' && (
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-sm text-blue-700">
-                          이메일로 시안을 보내셨지만, 홈페이지에서도 업로드할 수
-                          있습니다.
-                        </span>
-                      </div>
+              <div className="space-y-4">
+                {/* 이메일로 보내기 신청한 경우 안내 메시지 */}
+                {order.draft_delivery_method === 'email' && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm text-blue-700">
+                        이메일로 시안을 보내셨지만, 홈페이지에서도 업로드할 수
+                        있습니다.
+                      </span>
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {/* 홈페이지 업로드한 경우 이미 업로드된 파일 표시 */}
-                  {order.draft_delivery_method === 'upload' &&
-                    order.design_drafts &&
-                    order.design_drafts.length > 0 &&
-                    order.design_drafts[0].file_name && (
-                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-green-700 font-medium">
-                            ✓ 이미 업로드된 시안:
-                          </span>
+                {/* 홈페이지 업로드한 경우 이미 업로드된 시안 미리보기 표시 */}
+                {order.draft_delivery_method === 'upload' &&
+                  order.design_drafts &&
+                  order.design_drafts.length > 0 &&
+                  order.design_drafts[0].file_name && (
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        {order.design_drafts[0].file_url &&
+                        order.design_drafts[0].file_name
+                          ?.toLowerCase()
+                          .match(/\.(jpg|jpeg|png)$/) ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPreviewImageUrl(
+                                order.design_drafts![0].file_url!
+                              );
+                              setPreviewImageName(
+                                order.design_drafts![0].file_name || null
+                              );
+                            }}
+                            className="cursor-pointer"
+                          >
+                            <img
+                              src={order.design_drafts[0].file_url!}
+                              alt={order.design_drafts[0].file_name || '시안'}
+                              className="h-16 w-auto rounded border border-green-300 object-contain bg-white"
+                            />
+                          </button>
+                        ) : (
                           <span className="text-sm text-green-600">
                             {order.design_drafts[0].file_name}
                           </span>
-                        </div>
-                      </div>
-                    )}
-
-                  {/* 커스텀 파일 업로드 - 이메일 선택 시에도 업로드 가능 */}
-                  <CustomFileUpload
-                    onFileSelect={(file) => handleFileUpload(order.id, file)}
-                    disabled={uploadingFile === order.id}
-                    placeholder="시안 파일을 선택해주세요"
-                    className="w-[13rem]"
-                  />
-
-                  {uploadingFile === order.id && (
-                    <div className="text-center py-2">
-                      <span className="text-sm text-gray-500">
-                        업로드 중...
-                      </span>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {/* 업로드된 시안 목록 */}
-                  {order.design_drafts && order.design_drafts.length > 0 ? (
-                    order.design_drafts.map((draft) => (
-                      <div
-                        key={draft.id}
-                        className="flex items-center justify-between p-3 bg-gray-50 rounded"
-                      >
-                        <div className="flex items-center space-x-3">
-                          <span
-                            className={`text-sm font-medium ${getStatusColor(
-                              draft
-                            )}`}
-                          >
-                            {getDraftStatus(draft)}
-                          </span>
-                          {draft.file_name ? (
-                            <span className="text-sm text-gray-600">
-                              {draft.file_name}
-                            </span>
-                          ) : order.draft_delivery_method === 'email' ? (
-                            <span className="text-sm text-blue-600">
-                              이메일로 전송됨
-                            </span>
-                          ) : (
-                            <span className="text-sm text-gray-500">
-                              파일 없음
-                            </span>
-                          )}
-                          <span className="text-xs text-gray-500">
-                            {new Date(draft.created_at).toLocaleDateString()}
-                          </span>
-                        </div>
-                        {draft.is_approved && (
-                          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                            승인됨
-                          </span>
                         )}
                       </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-4 text-gray-500">
-                      업로드된 시안이 없습니다.
                     </div>
                   )}
-                </div>
-              )}
+
+                {/* 커스텀 파일 업로드 - 이메일 선택 시에도 업로드 가능 */}
+                <CustomFileUpload
+                  onFileSelect={(file) => handleFileUpload(order.id, file)}
+                  disabled={uploadingFile === order.id}
+                  placeholder="시안 파일을 선택해주세요"
+                  className="w-[13rem]"
+                />
+
+                {uploadingFile === order.id && (
+                  <div className="text-center py-2">
+                    <span className="text-sm text-gray-500">업로드 중...</span>
+                  </div>
+                )}
+              </div>
             </div>
           ))}
+        </div>
+      )}
+      {/* 시안 이미지 미리보기 모달 */}
+      {previewImageUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60"
+          onClick={() => {
+            setPreviewImageUrl(null);
+            setPreviewImageName(null);
+          }}
+        >
+          <div
+            className="bg-white rounded-lg max-w-[90vw] max-h-[90vh] p-4 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm sm:text-base font-semibold text-gray-800">
+                {previewImageName || '시안 미리보기'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setPreviewImageUrl(null);
+                  setPreviewImageName(null);
+                }}
+                className="text-gray-500 hover:text-gray-700 text-xl leading-none px-2"
+              >
+                ×
+              </button>
+            </div>
+            <div className="overflow-auto max-h-[80vh]">
+              <img
+                src={previewImageUrl}
+                alt={previewImageName || '시안 미리보기'}
+                className="max-w-full h-auto mx-auto rounded"
+              />
+            </div>
+          </div>
         </div>
       )}
     </MypageContainer>

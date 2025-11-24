@@ -217,7 +217,7 @@ export async function GET(
       );
     }
 
-    // 가격 정보 계산
+    // 가격 정보 계산 (각 주문에서 "대표 아이템" 1개의 정책만 사용)
     const calculateOrderPrice = () => {
       // 1) order_details가 없고, 결제 정보만 있는 경우 (상담신청 기반 주문 등)
       if (!orderDetails || orderDetails.length === 0) {
@@ -229,7 +229,7 @@ export async function GET(
           return {
             totalPrice: amount,
             totalTaxPrice: 0,
-            totalAdvertisingFee: 0,
+            totalAdvertisingFee: amount,
             totalRoadUsageFee: 0,
             totalAdministrativeFee: 0,
             finalPrice: amount,
@@ -239,24 +239,9 @@ export async function GET(
         return null;
       }
 
-      // 2) panel_slot_snapshot에서 가격 정보 가져오기 (우선순위 1)
-      const snapshot = order.panel_slot_snapshot;
-      if (snapshot && snapshot.policy_total_price) {
-        return {
-          totalPrice: Number(snapshot.policy_total_price || 0),
-          totalTaxPrice: Number(snapshot.policy_tax_price || 0),
-          totalAdvertisingFee: Number(snapshot.policy_advertising_fee || 0),
-          totalRoadUsageFee: Number(snapshot.policy_road_usage_fee || 0),
-          totalAdministrativeFee: 0,
-          finalPrice: Number(snapshot.policy_total_price || 0),
-        };
-      }
-
-      // 3) fallback: orderDetails에서 banner_slot_price_policy로 계산
-      let totalPrice = 0;
-      let totalTaxPrice = 0;
-      let totalAdvertisingFee = 0;
-      let totalRoadUsageFee = 0;
+      // 2) 첫 번째 order_detail 기준으로 banner_slot_price_policy 한 줄만 사용
+      const detail = orderDetails[0];
+      const quantity = detail.slot_order_quantity || 1;
 
       // 사용자 타입 확인 (공공기관 여부)
       const isPublicInstitution =
@@ -265,57 +250,88 @@ export async function GET(
         ? 'public_institution'
         : 'default';
 
-      orderDetails.forEach((detail) => {
-        const quantity = detail.slot_order_quantity || 1;
+      // banner_slot_price_policy에서 가격 정보 가져오기
+      if (
+        detail.panel_slot_usage?.banner_slots?.banner_slot_price_policy &&
+        detail.panel_slot_usage.banner_slots.banner_slot_price_policy.length > 0
+      ) {
+        const policies =
+          detail.panel_slot_usage.banner_slots.banner_slot_price_policy;
 
-        // banner_slot_price_policy에서 가격 정보 가져오기
-        if (
-          detail.panel_slot_usage?.banner_slots?.banner_slot_price_policy &&
-          detail.panel_slot_usage.banner_slots.banner_slot_price_policy.length >
-            0
-        ) {
-          // 사용자 타입에 따라 적절한 정책 선택
-          const policies =
-            detail.panel_slot_usage.banner_slots.banner_slot_price_policy;
+        // 우선순위: 사용자 타입에 맞는 정책 > default > 첫 번째 정책
+        let selectedPolicy = policies.find(
+          (p: { price_usage_type: string }) =>
+            p.price_usage_type === preferredPriceUsageType
+        );
 
-          // 우선순위: 사용자 타입에 맞는 정책 > default > 첫 번째 정책
-          let selectedPolicy = policies.find(
+        if (!selectedPolicy) {
+          selectedPolicy = policies.find(
             (p: { price_usage_type: string }) =>
-              p.price_usage_type === preferredPriceUsageType
+              p.price_usage_type === 'default'
           );
-
-          if (!selectedPolicy) {
-            selectedPolicy = policies.find(
-              (p: { price_usage_type: string }) =>
-                p.price_usage_type === 'default'
-            );
-          }
-
-          if (!selectedPolicy) {
-            selectedPolicy = policies[0];
-          }
-
-          if (selectedPolicy) {
-            totalPrice += Number(selectedPolicy.total_price || 0) * quantity;
-            totalTaxPrice += Number(selectedPolicy.tax_price || 0) * quantity;
-            totalAdvertisingFee +=
-              Number(selectedPolicy.advertising_fee || 0) * quantity;
-            totalRoadUsageFee +=
-              Number(selectedPolicy.road_usage_fee || 0) * quantity;
-          }
-        } else if (detail.panel_slot_usage?.unit_price) {
-          // banner_slot_price_policy가 없으면 unit_price 사용 (하위 호환성)
-          totalPrice += Number(detail.panel_slot_usage.unit_price) * quantity;
         }
-      });
 
+        if (!selectedPolicy) {
+          selectedPolicy = policies[0];
+        }
+
+        if (selectedPolicy) {
+          const totalPrice = Number(selectedPolicy.total_price || 0) * quantity;
+          const totalTaxPrice =
+            Number(selectedPolicy.tax_price || 0) * quantity;
+          const totalAdvertisingFee =
+            Number(selectedPolicy.advertising_fee || 0) * quantity;
+          const totalRoadUsageFee =
+            Number(selectedPolicy.road_usage_fee || 0) * quantity;
+
+          return {
+            totalPrice,
+            totalTaxPrice,
+            totalAdvertisingFee,
+            totalRoadUsageFee,
+            totalAdministrativeFee: 0,
+            finalPrice: totalPrice,
+          };
+        }
+      }
+
+      // 3) 정책/슬롯 정보가 없고 unit_price만 있는 경우 (하위 호환)
+      if (detail.panel_slot_usage?.unit_price) {
+        const unit = Number(detail.panel_slot_usage.unit_price) * quantity;
+        return {
+          totalPrice: unit,
+          totalTaxPrice: 0,
+          totalAdvertisingFee: unit,
+          totalRoadUsageFee: 0,
+          totalAdministrativeFee: 0,
+          finalPrice: unit,
+        };
+      }
+
+      // 4) 그래도 정책을 찾지 못하면 결제 금액 기준으로 표시
+      const latestPayment =
+        payments && payments.length > 0 ? payments[0] : null;
+
+      if (latestPayment) {
+        const amount = Number(latestPayment.amount || 0);
+        return {
+          totalPrice: amount,
+          totalTaxPrice: 0,
+          totalAdvertisingFee: amount,
+          totalRoadUsageFee: 0,
+          totalAdministrativeFee: 0,
+          finalPrice: amount,
+        };
+      }
+
+      // 완전한 fallback
       return {
-        totalPrice,
-        totalTaxPrice,
-        totalAdvertisingFee,
-        totalRoadUsageFee,
+        totalPrice: 0,
+        totalTaxPrice: 0,
+        totalAdvertisingFee: 0,
+        totalRoadUsageFee: 0,
         totalAdministrativeFee: 0,
-        finalPrice: totalPrice,
+        finalPrice: 0,
       };
     };
 
