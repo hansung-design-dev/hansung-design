@@ -32,23 +32,37 @@ export default function MobileMyPage({
           <div className="text-1.5 font-500">{userName}님</div>
           <div className="grid grid-cols-2 gap-4">
             {/* 주문내역 카드 */}
-            {[
-              { label: '주문내역', count: '3건' },
-              { label: '송출중 광고', count: '2건' },
-            ].map((item, index) => (
-              <div
-                key={index}
-                className="flex items-center rounded-lg p-4 md:p-6"
-              >
-                <div className="w-12 h-12 md:w-16 md:h-16 bg-gray-200 rounded-full" />
-                <div className="flex flex-col pl-4 md:pl-6  ">
-                  <div className="text-0.875 font-300 mb-2 text-gray-2">
-                    {item.label}
-                  </div>
-                  <div className="text-1.25 font-900">{item.count}</div>
-                </div>
+            <div className="flex items-center rounded-lg p-4 md:p-6 hover:bg-transparent">
+              <div className="w-12 h-12 md:w-16 md:h-16 bg-gray-200 rounded-full flex items-center justify-center">
+                <img
+                  src="/svg/document.svg"
+                  alt="주문내역"
+                  className="w-6 h-6 object-contain"
+                />
               </div>
-            ))}
+              <div className="flex flex-col pl-4 md:pl-6  ">
+                <div className="text-0.875 font-300 mb-2 text-gray-2">
+                  주문내역
+                </div>
+                <div className="text-1.25 font-900">3건</div>
+              </div>
+            </div>
+            {/* 상담내역 카드 */}
+            <div className="flex items-center rounded-lg p-4 md:p-6 hover:bg-transparent">
+              <div className="w-12 h-12 md:w-16 md:h-16 bg-gray-200 rounded-full flex items-center justify-center">
+                <img
+                  src="/svg/headphones.svg"
+                  alt="상담내역"
+                  className="w-6 h-6 object-contain"
+                />
+              </div>
+              <div className="flex flex-col pl-4 md:pl-6  ">
+                <div className="text-0.875 font-300 mb-2 text-gray-2">
+                  상담내역
+                </div>
+                <div className="text-1.25 font-900">1건</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
