@@ -1480,6 +1480,91 @@ function PaymentPageContent() {
               const draftDeliveryMethod = groupState?.sendByEmail
                 ? 'email'
                 : 'upload';
+
+              // 결제 전에 시안 파일을 Storage + design_drafts에 업로드 (upload 방식인 경우)
+              let draftId: string | undefined;
+
+              if (draftDeliveryMethod === 'upload') {
+                if (!groupState?.selectedFile) {
+                  alert('시안 파일을 선택해주세요.');
+                  paymentButton.disabled = false;
+                  paymentButton.textContent = '결제하기';
+                  return;
+                }
+
+                if (!currentTossWidgetData.user_profile_id) {
+                  alert(
+                    '주문에 사용할 프로필을 찾을 수 없습니다. 마이페이지에서 프로필을 확인해주세요.'
+                  );
+                  paymentButton.disabled = false;
+                  paymentButton.textContent = '결제하기';
+                  return;
+                }
+
+                try {
+                  const uploadFormData = new FormData();
+                  uploadFormData.append('file', groupState.selectedFile);
+                  uploadFormData.append(
+                    'userProfileId',
+                    currentTossWidgetData.user_profile_id
+                  );
+                  uploadFormData.append('projectName', projectName);
+                  uploadFormData.append(
+                    'draftDeliveryMethod',
+                    draftDeliveryMethod
+                  );
+
+                  console.log('🔍 [결제 페이지] 시안 direct-upload API 호출:', {
+                    hasFile: !!groupState.selectedFile,
+                    userProfileId: currentTossWidgetData.user_profile_id,
+                    projectName,
+                    draftDeliveryMethod,
+                  });
+
+                  const uploadResponse = await fetch(
+                    '/api/design-drafts/direct-upload',
+                    {
+                      method: 'POST',
+                      body: uploadFormData,
+                    }
+                  );
+
+                  const uploadResult = await uploadResponse.json();
+
+                  if (!uploadResponse.ok || !uploadResult.success) {
+                    console.error(
+                      '🔍 [결제 페이지] ❌ 시안 direct-upload 실패:',
+                      uploadResult
+                    );
+                    alert(
+                      uploadResult.error ||
+                        '시안 파일 업로드 중 오류가 발생했습니다.'
+                    );
+                    paymentButton.disabled = false;
+                    paymentButton.textContent = '결제하기';
+                    return;
+                  }
+
+                  draftId =
+                    uploadResult.data?.draftId || uploadResult.draftId || null;
+
+                  console.log('🔍 [결제 페이지] ✅ 시안 direct-upload 성공:', {
+                    draftId,
+                    fileName: uploadResult.data?.fileName,
+                  });
+                } catch (uploadError) {
+                  console.error(
+                    '🔍 [결제 페이지] ❌ 시안 direct-upload 예외:',
+                    uploadError
+                  );
+                  alert(
+                    '시안 파일 업로드 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+                  );
+                  paymentButton.disabled = false;
+                  paymentButton.textContent = '결제하기';
+                  return;
+                }
+              }
               // user_auth_id: localStorage에서 가져오기 (로그인 시 저장됨)
               const userAuthId = (() => {
                 if (typeof window !== 'undefined') {
@@ -1795,6 +1880,7 @@ function PaymentPageContent() {
                 userProfileId: finalUserProfileId,
                 draftDeliveryMethod,
                 projectName,
+                draftId,
                 district: currentTossWidgetData.district,
                 email: currentTossWidgetData.email,
                 contact_person_name: currentTossWidgetData.contact_person_name,

@@ -15,6 +15,7 @@ async function createOrderAfterPayment(
     userProfileId?: string;
     draftDeliveryMethod: string;
     projectName: string;
+    draftId?: string;
   },
   paymentMethodId: string,
   paymentInfo?: {
@@ -279,27 +280,58 @@ async function createOrderAfterPayment(
     orderDetailsResult?.length
   );
 
-  // 4. design_drafts 생성
+  // 4. design_drafts 생성 또는 기존 시안과 연결
   if (userProfile?.id) {
-    const { data: draft, error: draftError } = await supabase
-      .from('design_drafts')
-      .insert({
-        user_profile_id: userProfile.id,
-        draft_category: 'initial',
-        project_name: projectName,
-        notes: `주문 생성 시 자동 생성 (전송방식: ${
-          draftDeliveryMethod || 'upload'
-        })`,
-      })
-      .select('id, project_name')
-      .single();
+    let designDraftId = orderData.draftId || null;
 
-    if (!draftError && draft) {
-      // orders 테이블의 design_drafts_id 업데이트
+    // 이미 결제 페이지에서 direct-upload로 생성된 시안이 있는 경우 우선 사용
+    if (designDraftId) {
+      const { data: existingDraft, error: existingDraftError } = await supabase
+        .from('design_drafts')
+        .select('id')
+        .eq('id', designDraftId)
+        .single();
+
+      if (existingDraftError || !existingDraft) {
+        console.warn(
+          '🔍 [주문 생성] 지정된 draftId를 찾을 수 없어 새 시안을 생성합니다:',
+          {
+            draftId: designDraftId,
+            error: existingDraftError,
+          }
+        );
+        designDraftId = null;
+      }
+    }
+
+    // draftId가 없으면 기존 방식대로 새 design_drafts 생성
+    if (!designDraftId) {
+      const { data: draft, error: draftError } = await supabase
+        .from('design_drafts')
+        .insert({
+          user_profile_id: userProfile.id,
+          draft_category: 'initial',
+          project_name: projectName,
+          notes: `주문 생성 시 자동 생성 (전송방식: ${
+            draftDeliveryMethod || 'upload'
+          })`,
+        })
+        .select('id, project_name')
+        .single();
+
+      if (draftError || !draft) {
+        console.error('🔍 [주문 생성] ❌ design_drafts 생성 실패:', draftError);
+      } else {
+        designDraftId = draft.id as string;
+      }
+    }
+
+    // design_drafts가 존재하면 orders와 연결
+    if (designDraftId) {
       await supabase
         .from('orders')
         .update({
-          design_drafts_id: draft.id,
+          design_drafts_id: designDraftId,
           draft_delivery_method: draftDeliveryMethod || 'upload',
         })
         .eq('id', order.id);
@@ -959,7 +991,8 @@ export async function POST(request: NextRequest) {
         } else if (existingOrder) {
           const userProfileId =
             existingOrder.user_profile_id || orderData.userProfileId || null;
-          let designDraftId = existingOrder.design_drafts_id || null;
+          let designDraftId =
+            existingOrder.design_drafts_id || orderData.draftId || null;
 
           // 2) design_drafts가 없으면 새로 생성, 있으면 project_name 업데이트
           if (userProfileId) {
