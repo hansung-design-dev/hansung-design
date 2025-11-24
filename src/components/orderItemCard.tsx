@@ -25,6 +25,9 @@ interface OrderDetail {
   projectName?: string; // 파일이름 (design_draft.project_name)
   displayStartDate?: string; // 송출 시작일
   displayEndDate?: string; // 송출 종료일
+  // 주문 프로필 정보
+  profileTitle?: string; // 주문 프로필명
+  profileCompany?: string; // 주문 프로필 회사명
 }
 
 interface OrderItemCardProps {
@@ -81,6 +84,13 @@ export default function OrderItemCard({
                 <div className="text-gray-600 mb-2">연락처</div>
                 <div className="font-700 text-1.25 sm:text-1">
                   {orderDetail.phone}
+                </div>
+
+                <div className="text-gray-600 mb-2">주문 프로필</div>
+                <div className="font-700 text-1.25 sm:text-1">
+                  {(orderDetail.profileTitle || '-') +
+                    ' / ' +
+                    (orderDetail.profileCompany || '-')}
                 </div>
 
                 <div className="col-span-2 border-t border-gray-3 my-2 sm:col-span-2">

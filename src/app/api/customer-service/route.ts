@@ -146,14 +146,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const {
-      title,
-      content,
-      product_name,
-      product_id,
-      product_type,
-      consultationKey,
-    } = await request.json();
+    const { title, content, product_name, product_id, consultationKey } =
+      await request.json();
 
     if (!title || !content) {
       return NextResponse.json(

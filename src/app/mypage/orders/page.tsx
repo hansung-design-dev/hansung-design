@@ -213,6 +213,9 @@ interface OrderCardData {
   projectName?: string; // 파일이름 (design_draft.project_name)
   displayStartDate?: string; // 송출 시작일
   displayEndDate?: string; // 송출 종료일
+  // 주문 프로필 정보
+  profileTitle?: string; // 주문 프로필명
+  profileCompany?: string; // 주문 프로필 회사명
 }
 
 // 상담문의 데이터 (주문내역 페이지에서 사용)
@@ -671,6 +674,7 @@ export default function OrdersPage() {
     const orderDetails = detail.orderDetails || [];
     const orderDetail = orderDetails[0] || ({} as OrderDetail);
     const panelInfo = orderDetail.panels || ({} as PanelInfo);
+    const userProfile = order.user_profiles || ({} as UserProfile);
     const customerInfo = detail.customerInfo || {};
     const priceInfo = detail.priceInfo || {};
     const payments = detail.payments || [];
@@ -745,7 +749,7 @@ export default function OrdersPage() {
       finalCategory = '전자게시대';
     }
 
-    const result = {
+    const result: OrderCardData = {
       id: order.id ?? '-',
       order_number: order.order_number ?? '-',
       title: defaultProjectName,
@@ -771,6 +775,9 @@ export default function OrdersPage() {
       projectName: defaultProjectName,
       displayStartDate: formatDisplayPeriod(displayStartDate, displayEndDate),
       displayEndDate: displayEndDate,
+      // 주문 프로필 정보 (없으면 '-'로 표시)
+      profileTitle: userProfile.profile_title || '-',
+      profileCompany: userProfile.company_name || '-',
     };
 
     console.log('🔍 [mapOrderDetailToCard] 결과:', result);
