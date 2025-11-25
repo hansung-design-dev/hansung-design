@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
 import MypageContainer from '@/src/components/mypageContainer';
 import { useAuth } from '@/src/contexts/authContext';
 import CustomFileUpload from '@/src/components/ui/CustomFileUpload';
 import DesignSkeleton from '@/src/components/skeleton/DesignSkeleton';
+import Image from 'next/image';
 
 interface DesignDraft {
   id: string;
@@ -31,7 +31,6 @@ interface Order {
 
 export default function DesignPage() {
   const { user } = useAuth();
-  const searchParams = useSearchParams();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadingFile, setUploadingFile] = useState<string | null>(null);
@@ -104,27 +103,6 @@ export default function DesignPage() {
     } finally {
       setUploadingFile(null);
     }
-  };
-
-  const getDraftStatus = (draft: DesignDraft) => {
-    switch (draft.draft_category) {
-      case 'initial':
-        return '초기 시안';
-      case 'feedback':
-        return '피드백';
-      case 'revision':
-        return '수정 시안';
-      case 'final':
-        return '최종 시안';
-      default:
-        return '시안';
-    }
-  };
-
-  const getStatusColor = (draft: DesignDraft) => {
-    if (draft.is_approved) return 'text-green-600';
-    if (draft.draft_category === 'final') return 'text-blue-600';
-    return 'text-gray-600';
   };
 
   if (loading) {
@@ -215,11 +193,14 @@ export default function DesignPage() {
                             }}
                             className="cursor-pointer"
                           >
-                            <img
-                              src={order.design_drafts[0].file_url!}
-                              alt={order.design_drafts[0].file_name || '시안'}
-                              className="h-16 w-auto rounded border border-green-300 object-contain bg-white"
-                            />
+                            <div className="relative h-16 w-16">
+                              <Image
+                                src={order.design_drafts[0].file_url!}
+                                alt={order.design_drafts[0].file_name || '시안'}
+                                fill
+                                className="rounded border border-green-300 object-contain bg-white"
+                              />
+                            </div>
                           </button>
                         ) : (
                           <span className="text-sm text-green-600">
@@ -277,11 +258,15 @@ export default function DesignPage() {
               </button>
             </div>
             <div className="overflow-auto max-h-[80vh]">
-              <img
-                src={previewImageUrl}
-                alt={previewImageName || '시안 미리보기'}
-                className="max-w-full h-auto mx-auto rounded"
-              />
+              <div className="relative max-w-full max-h-[80vh] mx-auto">
+                <Image
+                  src={previewImageUrl}
+                  alt={previewImageName || '시안 미리보기'}
+                  width={800}
+                  height={600}
+                  className="w-full h-auto rounded object-contain"
+                />
+              </div>
             </div>
           </div>
         </div>

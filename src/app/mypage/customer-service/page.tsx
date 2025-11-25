@@ -45,12 +45,6 @@ export default function CustomerServicePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [statusSummary, setStatusSummary] = useState({
-    total: 0,
-    pending: 0,
-    answered: 0,
-    closed: 0,
-  });
 
   // 상담취소 관련 상태
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
@@ -131,7 +125,6 @@ export default function CustomerServicePage() {
 
       if (data.success) {
         setInquiries(data.inquiries);
-        setStatusSummary(data.statusSummary);
       } else {
         setError(data.error || '상담 내역을 불러오는데 실패했습니다.');
       }
