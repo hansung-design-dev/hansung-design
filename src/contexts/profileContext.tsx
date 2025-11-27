@@ -22,6 +22,7 @@ interface UserProfile {
   is_default: boolean;
   is_public_institution?: boolean;
   is_company?: boolean;
+  is_approved?: boolean;
   created_at: string;
 }
 
@@ -125,6 +126,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
           ...profile,
           is_public_institution: profile.is_public_institution ?? false,
           is_company: profile.is_company ?? false,
+          is_approved: profile.is_approved ?? false,
         }));
         console.log('🔍 [ProfileContext] 프로필 API 응답:', {
           count: profilesWithDefaults.length,

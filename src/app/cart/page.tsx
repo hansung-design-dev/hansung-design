@@ -1156,6 +1156,69 @@ function CartContent() {
   // 어드민 승인 요청 함수
   const handleAdminApprovalRequest = async (selectedCartItems: CartItem[]) => {
     try {
+      // 1) user_auth_id 가져오기 (localStorage 우선, 없으면 user.id 사용)
+      let userAuthId: string | null = null;
+      if (typeof window !== 'undefined') {
+        const storedAuthId = localStorage.getItem('hansung_user_auth_id');
+        if (storedAuthId) {
+          userAuthId = storedAuthId;
+        }
+      }
+
+      if (!userAuthId && user?.id) {
+        userAuthId = user.id;
+      }
+
+      if (!userAuthId) {
+        console.error(
+          '🔍 [장바구니] 어드민 승인 요청 실패: user_auth_id를 찾을 수 없습니다.'
+        );
+        setErrorMessage('로그인 정보가 올바르지 않습니다. 다시 로그인해주세요.');
+        setIsPaymentErrorModalOpen(true);
+        return;
+      }
+
+      // 2) 사용할 프로필 ID 결정 (선택된 아이템의 user_profile_id 또는 기본 프로필)
+      let userProfileId: string | null =
+        selectedCartItems.find((item) => item.user_profile_id)?.user_profile_id ||
+        null;
+
+      if (!userProfileId && defaultProfile?.id) {
+        userProfileId = defaultProfile.id;
+      }
+
+      if (!userProfileId) {
+        console.error(
+          '🔍 [장바구니] 어드민 승인 요청 실패: user_profile_id를 찾을 수 없습니다.',
+          {
+            selectedCartItems: selectedCartItems.map((item) => ({
+              id: item.id,
+              name: item.name,
+              user_profile_id: item.user_profile_id,
+            })),
+          }
+        );
+        setErrorMessage(
+          '주문에 사용할 프로필을 찾을 수 없습니다. 마이페이지에서 프로필을 확인해주세요.'
+        );
+        setIsPaymentErrorModalOpen(true);
+        return;
+      }
+
+      // 3) 작업이름(projectName) 기본값 생성
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}-${String(
+        today.getMonth() + 1
+      ).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+      const firstItem = selectedCartItems[0];
+      const baseName =
+        firstItem.company_name ||
+        defaultProfile?.company_name ||
+        user?.username ||
+        '고객';
+      const projectName = `[행정/기업용 결제대기] ${baseName} ${dateStr}`;
+
       // 주문 생성
       const orderResponse = await fetch('/api/orders', {
         method: 'POST',
@@ -1179,7 +1242,12 @@ function CartContent() {
               .toISOString()
               .split('T')[0],
           })),
+          userAuthId,
+          userProfileId,
+          isPaid: false,
+          draftDeliveryMethod: 'upload',
           paymentMethod: 'admin_approval',
+          projectName,
         }),
       });
 

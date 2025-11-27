@@ -645,6 +645,7 @@ CREATE TABLE public.user_profiles (
   updated_at timestamp without time zone DEFAULT now(),
   is_public_institution boolean DEFAULT false,
   is_company boolean DEFAULT false,
+  is_approved boolean DEFAULT false,
   CONSTRAINT user_profiles_pkey PRIMARY KEY (id),
   CONSTRAINT user_profiles_user_auth_id_fkey FOREIGN KEY (user_auth_id) REFERENCES public.user_auth(id)
 );

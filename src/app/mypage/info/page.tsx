@@ -24,6 +24,7 @@ interface UserProfile {
   is_default: boolean;
   is_public_institution?: boolean;
   is_company?: boolean;
+  is_approved?: boolean;
   created_at: string;
 }
 
@@ -154,7 +155,14 @@ export default function UserInfoPage() {
 
   // 프로필 데이터 가져오기
   const fetchProfiles = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      // 로그인 정보가 없으면 더 이상 로딩 상태로 두지 않고 종료
+      console.warn(
+        '[UserInfoPage] 사용자 정보가 없어 프로필을 불러오지 않습니다.'
+      );
+      setLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch(`/api/user-profiles?userId=${user.id}`);
@@ -167,6 +175,7 @@ export default function UserInfoPage() {
             ...profile,
             is_public_institution: profile.is_public_institution ?? false,
             is_company: profile.is_company ?? false,
+            is_approved: profile.is_approved ?? false,
           })
         );
 
@@ -375,6 +384,27 @@ export default function UserInfoPage() {
                           {profile.is_company && (
                             <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded">
                               기업용
+                            </span>
+                          )}
+                          {(profile.is_public_institution ||
+                            profile.is_company) && (
+                            <span
+                              className={`flex items-center gap-1 text-xs ${
+                                profile.is_approved ? 'text-green' : 'text-red'
+                              }`}
+                            >
+                              <span
+                                className={`w-4 h-4 flex items-center justify-center rounded-full border text-[10px] leading-none ${
+                                  profile.is_approved
+                                    ? 'border-green-500 bg-green-50'
+                                    : 'border-red-500 bg-red-50'
+                                }`}
+                              >
+                                ✓
+                              </span>
+                              <span>
+                                {profile.is_approved ? '승인됨' : '승인대기'}
+                              </span>
                             </span>
                           )}
                         </div>

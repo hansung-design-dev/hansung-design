@@ -286,11 +286,12 @@ export async function POST(request: NextRequest) {
           .delete()
           .eq('id', order.design_drafts_id);
 
+        // ✅ 디자인 드래프트 삭제 실패는 치명적인 오류가 아니므로
+        // 주문 취소 자체는 성공으로 처리하고 경고만 남깁니다.
         if (draftsError) {
-          console.error('Design drafts deletion error:', draftsError);
-          return NextResponse.json(
-            { success: false, error: '디자인 드래프트 삭제에 실패했습니다.' },
-            { status: 500 }
+          console.warn(
+            '🔍 [주문 취소] ⚠️ design_drafts 삭제 실패 (주문 취소는 성공 처리):',
+            draftsError
           );
         }
       }

@@ -15,6 +15,7 @@ import CustomFileUpload from '@/src/components/ui/CustomFileUpload';
 // UserProfile 타입 정의
 interface UserProfile {
   id: string;
+  user_auth_id: string;
   profile_title: string;
   company_name?: string;
   business_registration_file?: string;
@@ -25,6 +26,7 @@ interface UserProfile {
   is_default: boolean;
   is_public_institution?: boolean;
   is_company?: boolean;
+  is_approved?: boolean;
   created_at: string;
 }
 
@@ -240,17 +242,26 @@ function PaymentPageContent() {
 
         if (data.success) {
           console.log('🔍 가져온 프로필 데이터:', data.data);
-          // user_auth_id가 없는 경우 추가
-          const profilesWithAuthId = data.data.map(
-            (profile: Record<string, unknown>) => ({
+          // user_auth_id 및 프로필 플래그 기본값 보완
+          const profilesWithAuthId: UserProfile[] = data.data.map(
+            (profile: any) => ({
               ...profile,
-              user_auth_id: (profile.user_auth_id as string) || user.id,
+              user_auth_id: profile.user_auth_id || user.id,
+              is_public_institution: profile.is_public_institution ?? false,
+              is_company: profile.is_company ?? false,
+              is_approved: profile.is_approved ?? false,
             })
           );
-          console.log(
-            '🔍 user_auth_id 추가된 프로필 데이터:',
-            profilesWithAuthId
-          );
+          console.log('🔍 user_auth_id 추가 및 플래그 보완된 프로필 데이터:', {
+            profiles: profilesWithAuthId.map((p) => ({
+              id: p.id,
+              title: p.profile_title,
+              is_default: p.is_default,
+              is_public_institution: p.is_public_institution,
+              is_company: p.is_company,
+              is_approved: p.is_approved,
+            })),
+          });
           setUserProfiles(profilesWithAuthId);
 
           // 만약 profiles가 비어있고 localStorage에 기본 프로필 ID가 있으면
@@ -1457,6 +1468,30 @@ function PaymentPageContent() {
 
           paymentButton.addEventListener('click', async () => {
             try {
+              // 현재 그룹에서 사용할 프로필 정보 확인
+              const selectedProfile =
+                currentProfiles.find(
+                  (p: UserProfile) =>
+                    p.id === currentTossWidgetData.user_profile_id
+                ) || null;
+
+              if (selectedProfile) {
+                const isDiscountProfile =
+                  !!selectedProfile.is_public_institution ||
+                  !!selectedProfile.is_company;
+                const isApprovedProfile = !!selectedProfile.is_approved;
+
+                // 행정용/기업용인데 승인되지 않은 프로필은 결제 불가
+                if (isDiscountProfile && !isApprovedProfile) {
+                  alert(
+                    '행정용/기업용 프로필은 관리자 승인 후에만 할인된 가격으로 결제할 수 있습니다.\n프로필 승인 상태를 확인하시거나 기본 프로필로 다시 주문해주세요.'
+                  );
+                  paymentButton.disabled = false;
+                  paymentButton.textContent = '결제하기';
+                  return;
+                }
+              }
+
               console.log('🔍 [통합결제창] 결제 버튼 클릭됨:', {
                 timestamp: new Date().toISOString(),
                 storedOrderId:
