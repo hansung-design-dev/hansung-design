@@ -58,7 +58,9 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
   const mapInstanceRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const markersRef = useRef<Map<string, any>>(new Map());
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const overlaysRef = useRef<Map<string, any>>(new Map());
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const polygonsRef = useRef<Map<string, any>>(new Map());
   const mapCenterRef = useRef<{ lat: number; lng: number } | null>(null);
   const loadingStateRef = useRef(false); // 로딩 상태 추적용 ref

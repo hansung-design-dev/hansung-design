@@ -1,0 +1,9 @@
+{
+  "crons": [
+    {
+      "path": "/api/schedule-period-generation",
+      "schedule": "5 15 * * *"
+    }
+  ]
+}
+

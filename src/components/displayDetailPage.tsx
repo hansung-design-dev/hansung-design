@@ -1307,7 +1307,7 @@ export default function DisplayDetailPage({
     }, {});
 
     const mapPolygons: MapPolygon[] = Object.entries(groupedByDistrict)
-      .map(([districtName, markers], index) => {
+      .map(([districtName, markers], index): MapPolygon | null => {
         if (markers.length === 0) {
           return null;
         }
@@ -1339,7 +1339,7 @@ export default function DisplayDetailPage({
           fillOpacity: showAllPins ? 0.05 : 0.08,
         };
       })
-      .filter((polygon): polygon is MapPolygon => Boolean(polygon));
+      .filter((polygon): polygon is MapPolygon => polygon !== null);
 
     const selectedMarker =
       !showAllPins &&

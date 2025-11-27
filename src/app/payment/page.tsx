@@ -244,12 +244,12 @@ function PaymentPageContent() {
           console.log('🔍 가져온 프로필 데이터:', data.data);
           // user_auth_id 및 프로필 플래그 기본값 보완
           const profilesWithAuthId: UserProfile[] = data.data.map(
-            (profile: any) => ({
+            (profile: Record<string, unknown>) => ({
               ...profile,
-              user_auth_id: profile.user_auth_id || user.id,
-              is_public_institution: profile.is_public_institution ?? false,
-              is_company: profile.is_company ?? false,
-              is_approved: profile.is_approved ?? false,
+              user_auth_id: (profile.user_auth_id as string) || user.id,
+              is_public_institution: (profile.is_public_institution as boolean) ?? false,
+              is_company: (profile.is_company as boolean) ?? false,
+              is_approved: (profile.is_approved as boolean) ?? false,
             })
           );
           console.log('🔍 user_auth_id 추가 및 플래그 보완된 프로필 데이터:', {

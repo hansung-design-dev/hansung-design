@@ -586,6 +586,12 @@ CREATE TABLE public.region_gu_display_periods (
   year_month character varying NOT NULL,
   period USER-DEFINED,
   CONSTRAINT region_gu_display_periods_pkey PRIMARY KEY (id),
+  CONSTRAINT region_gu_display_periods_unique_period UNIQUE (
+    display_type_id,
+    region_gu_id,
+    year_month,
+    period
+  ),
   CONSTRAINT region_gu_display_periods_display_type_id_fkey FOREIGN KEY (display_type_id) REFERENCES public.display_types(id),
   CONSTRAINT region_gu_display_periods_region_gu_id_fkey FOREIGN KEY (region_gu_id) REFERENCES public.region_gu(id)
 );
