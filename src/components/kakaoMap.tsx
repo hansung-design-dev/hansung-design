@@ -23,12 +23,24 @@ export interface MarkerType {
   subtitle?: string;
 }
 
+export interface MapPolygon {
+  id: string;
+  path: { lat: number; lng: number }[];
+  strokeColor?: string;
+  strokeOpacity?: number;
+  strokeWeight?: number;
+  strokeStyle?: 'solid' | 'shortdash' | 'shortdot' | 'dash' | 'dot' | 'longdash';
+  fillColor?: string;
+  fillOpacity?: number;
+}
+
 interface KakaoMapProps {
   markers: MarkerType[];
   selectedIds: string[];
   center?: { lat: number; lng: number };
   onMarkerClick?: (markerId: string) => void;
   displayMode?: 'default' | 'allMinimal';
+  polygons?: MapPolygon[];
 }
 
 const KakaoMap: React.FC<KakaoMapProps> = ({
@@ -37,6 +49,7 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
   center,
   onMarkerClick,
   displayMode = 'default',
+  polygons = [],
 }) => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,18 +59,18 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const markersRef = useRef<Map<string, any>>(new Map());
   const overlaysRef = useRef<Map<string, any>>(new Map());
+  const polygonsRef = useRef<Map<string, any>>(new Map());
   const mapCenterRef = useRef<{ lat: number; lng: number } | null>(null);
   const loadingStateRef = useRef(false); // 로딩 상태 추적용 ref
 
   // 로드뷰 오버레이 상태
+  const { isLoaded: kakaoLoaded } = useKakaoLoader();
   const [roadviewVisible, setRoadviewVisible] = useState(false);
   const [roadviewPosition, setRoadviewPosition] = useState<{
     lat: number;
     lng: number;
   } | null>(null);
   const [roadviewError, setRoadviewError] = useState<string | null>(null);
-
-  const { isLoaded: kakaoLoaded } = useKakaoLoader();
 
   // 카카오맵 SDK가 완전히 준비되었는지 확인하는 함수
   const isKakaoSDKReady = useCallback(() => {
@@ -263,16 +276,28 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
     });
     overlaysRef.current.clear();
 
-    // 새 마커 생성
+    // 기존 폴리곤 제거
+    polygonsRef.current.forEach((polygon) => {
+      polygon.setMap(null);
+    });
+    polygonsRef.current.clear();
+
+    // 새 마커 및 폴리곤 생성
     if (!window.kakao?.maps) {
       console.error('❌ 카카오맵 SDK가 없습니다.');
       return;
     }
 
-    const { LatLng, Marker, CustomOverlay, event } = window.kakao.maps;
+    const {
+      LatLng,
+      Marker,
+      CustomOverlay,
+      event,
+      Polygon: KakaoPolygon,
+    } = window.kakao.maps;
 
     // 타입 가드: 필수 속성 확인
-    if (!LatLng || !Marker || !CustomOverlay || !event) {
+    if (!LatLng || !Marker || !CustomOverlay || !event || !KakaoPolygon) {
       console.error('❌ 카카오맵 SDK의 필수 생성자가 없습니다.');
       return;
     }
@@ -293,19 +318,19 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
       const shouldShowOverlay =
         overlayVariant === 'minimal' ? true : isSelected;
 
-      const markerContent = shouldShowOverlay
-        ? createMarkerContent(
-            marker,
-            overlayVariant,
-            () => {
-              if (onMarkerClick) {
-                onMarkerClick(marker.id);
-              }
-            },
-            () => {
-              openRoadview(marker.lat, marker.lng);
+    const markerContent = shouldShowOverlay
+      ? createMarkerContent(
+          marker,
+          overlayVariant,
+          () => {
+            if (onMarkerClick) {
+              onMarkerClick(marker.id);
             }
-          )
+          },
+          overlayVariant === 'default'
+            ? () => openRoadview(marker.lat, marker.lng)
+            : undefined
+        )
         : null;
 
       // 마커 클릭 이벤트
@@ -345,6 +370,27 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
       }
     }
 
+    // 폴리곤 추가
+    polygons.forEach((polygonConfig) => {
+      if (!polygonConfig.path || polygonConfig.path.length < 3) {
+        return;
+      }
+      const path = polygonConfig.path.map(
+        (point) => new LatLng(point.lat, point.lng)
+      );
+      const polygon = new KakaoPolygon({
+        path,
+        strokeWeight: polygonConfig.strokeWeight ?? 2,
+        strokeColor: polygonConfig.strokeColor ?? '#1F2933',
+        strokeOpacity: polygonConfig.strokeOpacity ?? 0.6,
+        strokeStyle: polygonConfig.strokeStyle ?? 'solid',
+        fillColor: polygonConfig.fillColor ?? '#238CFA',
+        fillOpacity: polygonConfig.fillOpacity ?? 0.12,
+      });
+      polygon.setMap(map);
+      polygonsRef.current.set(polygonConfig.id, polygon);
+    });
+
     // 마커 업데이트 후 로딩 상태 확실히 해제
     if (mapInstanceRef.current) {
       setIsLoading(false);
@@ -354,8 +400,9 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
     selectedIds,
     onMarkerClick,
     isKakaoSDKReady,
-    openRoadview,
     displayMode,
+    openRoadview,
+    polygons,
   ]);
 
   // 마커 컨텐츠 생성 함수
@@ -363,56 +410,15 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
     marker: MarkerType,
     variant: 'default' | 'minimal',
     onMarkerClick: () => void,
-    onRoadviewClick: () => void
+    onRoadviewClick?: () => void
   ) => {
     const displayTitle =
       marker.number !== undefined
         ? `${marker.number}. ${marker.title}`
         : marker.title;
 
-    if (variant === 'minimal') {
-      const wrapper = document.createElement('div');
-      wrapper.style.cssText = `
-        padding: 6px 10px;
-        background-color: rgba(0, 0, 0, 0.75);
-        color: #ffffff;
-        border-radius: 4px;
-        font-size: 11px;
-        font-weight: 600;
-        white-space: nowrap;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.25);
-        cursor: pointer;
-        text-align: left;
-      `;
-
-      const titleSpan = document.createElement('div');
-      titleSpan.textContent = `${
-        marker.district ? `[${marker.district}] ` : ''
-      }${displayTitle}`;
-      wrapper.appendChild(titleSpan);
-
-      if (marker.subtitle) {
-        const subtitleSpan = document.createElement('div');
-        subtitleSpan.textContent = marker.subtitle;
-        subtitleSpan.style.cssText = `
-          font-weight: 400;
-          font-size: 10px;
-          color: rgba(255,255,255,0.85);
-          margin-top: 2px;
-        `;
-        wrapper.appendChild(subtitleSpan);
-      }
-
-      wrapper.addEventListener('click', (e) => {
-        e.stopPropagation();
-        onMarkerClick();
-      });
-
-      return wrapper;
-    }
-
-    const div = document.createElement('div');
-    div.style.cssText = `
+    const baseWrapper = document.createElement('div');
+    baseWrapper.style.cssText = `
       padding: 8px 12px;
       background-color: #238CFA;
       color: white;
@@ -426,15 +432,42 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
       cursor: pointer;
     `;
 
-    div.textContent =
-      displayTitle.length > 10
-        ? displayTitle.substring(0, 10) + '...'
+    const titleLine = document.createElement('div');
+    titleLine.style.cssText = `
+      font-weight: 700;
+      font-size: 12px;
+      white-space: nowrap;
+    `;
+    titleLine.textContent =
+      displayTitle.length > 18
+        ? displayTitle.substring(0, 18) + '...'
         : displayTitle;
+    baseWrapper.appendChild(titleLine);
 
-    div.addEventListener('click', (e) => {
+    if (marker.subtitle) {
+      const subtitleLine = document.createElement('div');
+      subtitleLine.style.cssText = `
+        margin-top: 4px;
+        font-size: 11px;
+        font-weight: 500;
+        white-space: nowrap;
+        color: rgba(255,255,255,0.9);
+      `;
+      subtitleLine.textContent =
+        marker.subtitle.length > 18
+          ? marker.subtitle.substring(0, 18) + '...'
+          : marker.subtitle;
+      baseWrapper.appendChild(subtitleLine);
+    }
+
+    baseWrapper.addEventListener('click', (e) => {
       e.stopPropagation();
       onMarkerClick();
     });
+
+    if (variant === 'minimal' || !onRoadviewClick) {
+      return baseWrapper;
+    }
 
     const button = document.createElement('button');
     button.style.cssText = `
@@ -467,16 +500,9 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
       button.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
       button.style.transform = 'scale(1)';
     });
-    div.appendChild(button);
+    baseWrapper.appendChild(button);
 
-    return div;
-  };
-
-  // 로드뷰 오버레이 닫기
-  const closeRoadview = () => {
-    setRoadviewVisible(false);
-    setRoadviewPosition(null);
-    setRoadviewError(null);
+    return baseWrapper;
   };
 
   if (error) {
@@ -518,7 +544,7 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
       {roadviewVisible && roadviewPosition && (
         <RoadviewOverlay
           position={roadviewPosition}
-          onClose={closeRoadview}
+          onClose={() => setRoadviewVisible(false)}
           onError={setRoadviewError}
         />
       )}
@@ -541,7 +567,6 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
   );
 };
 
-// 로드뷰 오버레이 컴포넌트
 interface RoadviewOverlayProps {
   position: { lat: number; lng: number };
   onClose: () => void;
@@ -573,7 +598,6 @@ const RoadviewOverlay: React.FC<RoadviewOverlayProps> = ({
           roadviewRef.current.innerHTML = '';
         }
 
-        // 타입 가드: 필수 속성 확인
         const Roadview = window.kakao.maps.Roadview;
         const RoadviewClient = window.kakao.maps.RoadviewClient;
         const LatLng = window.kakao.maps.LatLng;
@@ -586,15 +610,12 @@ const RoadviewOverlay: React.FC<RoadviewOverlayProps> = ({
           return;
         }
 
-        // 공식 가이드 방식으로 로드뷰 생성
-        // 참고: https://apis.map.kakao.com/web/sample/basicRoadview/
         const roadview = new Roadview(roadviewRef.current);
         const roadviewClient = new RoadviewClient();
         const roadviewPosition = new LatLng(position.lat, position.lng);
 
         roadviewInstanceRef.current = roadview;
 
-        // 특정 위치의 좌표와 가까운 로드뷰의 panoId를 추출하여 로드뷰를 띄운다.
         roadviewClient.getNearestPanoId(
           roadviewPosition,
           50,
@@ -605,7 +626,6 @@ const RoadviewOverlay: React.FC<RoadviewOverlayProps> = ({
               );
               return;
             }
-            // panoId와 중심좌표를 통해 로드뷰 실행
             roadview.setPanoId(panoId, roadviewPosition);
             onError(null);
           }

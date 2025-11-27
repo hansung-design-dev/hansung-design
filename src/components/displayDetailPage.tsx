@@ -2,7 +2,7 @@ import ItemList from '@/src/components/ui/itemlist';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import KakaoMap from '@/src/components/kakaoMap';
+import KakaoMap, { MapPolygon } from '@/src/components/kakaoMap';
 import DropdownMenu from '@/src/components/dropdown';
 import ViewTypeButton from '@/src/components/viewTypeButton';
 import GuidelineButton from '@/src/components/GuidelineButton';
@@ -10,6 +10,10 @@ import MapPinIcon from '@/src/icons/map-pin.svg';
 import GalleryIcon from '@/src/icons/gallery.svg';
 import ListIcon from '@/src/icons/list.svg';
 import DocumentIcon from '@/public/svg/document.svg';
+import {
+  getPolygonColor,
+  DEFAULT_POLYGON_PADDING,
+} from '@/src/utils/polygonColors';
 
 import { useState, useEffect } from 'react';
 import { useCart } from '../contexts/cartContext';
@@ -1259,6 +1263,17 @@ export default function DisplayDetailPage({
       (item) => item.lat != null && item.lng != null
     );
 
+    const isBillboardClosed = (item: DisplayBillboard) => {
+      const extendedItem = item as DisplayBillboard & {
+        panel_slot_status?: string | null;
+      };
+      return Boolean(
+        extendedItem.is_closed ||
+          extendedItem.panel_slot_status === 'closed' ||
+          extendedItem.panel_slot_status === '마감'
+      );
+    };
+
     const baseMarkers = billboardsWithCoords.map((item) => ({
       id: item.id,
       title:
@@ -1275,6 +1290,56 @@ export default function DisplayDetailPage({
       district: item.district,
       subtitle: item.address || item.neighborhood || undefined,
     }));
+
+    const groupedByDistrict = baseMarkers.reduce<
+      Record<string, typeof baseMarkers>
+    >((acc, marker) => {
+      const groupKey =
+        marker.district ||
+        districtObj?.name ||
+        selectedOption?.option ||
+        'district';
+      if (!acc[groupKey]) {
+        acc[groupKey] = [];
+      }
+      acc[groupKey].push(marker);
+      return acc;
+    }, {});
+
+    const mapPolygons: MapPolygon[] = Object.entries(groupedByDistrict)
+      .map(([districtName, markers], index) => {
+        if (markers.length === 0) {
+          return null;
+        }
+        const latValues = markers.map((marker) => marker.lat);
+        const lngValues = markers.map((marker) => marker.lng);
+        const minLat = Math.min(...latValues);
+        const maxLat = Math.max(...latValues);
+        const minLng = Math.min(...lngValues);
+        const maxLng = Math.max(...lngValues);
+        const latSpread = maxLat - minLat;
+        const lngSpread = maxLng - minLng;
+        const latPadding = Math.max(latSpread * 0.15, DEFAULT_POLYGON_PADDING);
+        const lngPadding = Math.max(lngSpread * 0.15, DEFAULT_POLYGON_PADDING);
+        const path = [
+          { lat: minLat - latPadding, lng: minLng - lngPadding },
+          { lat: minLat - latPadding, lng: maxLng + lngPadding },
+          { lat: maxLat + latPadding, lng: maxLng + lngPadding },
+          { lat: maxLat + latPadding, lng: minLng - lngPadding },
+        ];
+        const colorKey = districtName || `district-${index}`;
+        const color = getPolygonColor(colorKey);
+        return {
+          id: `polygon-${colorKey.replace(/\s+/g, '-')}-${index}`,
+          path,
+          strokeColor: color,
+          strokeOpacity: 0.65,
+          strokeWeight: 2,
+          fillColor: color,
+          fillOpacity: showAllPins ? 0.05 : 0.08,
+        };
+      })
+      .filter((polygon): polygon is MapPolygon => Boolean(polygon));
 
     const selectedMarker =
       !showAllPins &&
@@ -1359,7 +1424,7 @@ export default function DisplayDetailPage({
             className={`px-4 py-2 rounded-lg text-0.875 font-medium border ${
               showAllPins
                 ? 'bg-black text-white border-black'
-                : 'bg-white text-gray-700 border-gray-300'
+                : 'bg-gray-100 text-gray-700 border-gray-300'
             }`}
             onClick={handleToggleAllPins}
           >
@@ -1375,14 +1440,22 @@ export default function DisplayDetailPage({
               {filteredBillboards.map((item, index) => {
                 const isSelected = selectedIds.includes(item.id);
                 const uniqueKey = item.id || `banner-location-${index}`; // fallback key
+                const isClosed = isBillboardClosed(item);
 
                 return (
                   <div
                     key={uniqueKey}
-                    className={`flex flex-col rounded-lg transition-colors p-2 cursor-pointer ${
-                      isSelected ? 'bg-blue-50' : ''
+                    className={`flex flex-col rounded-lg transition-colors p-2 ${
+                      isClosed
+                        ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed opacity-70'
+                        : `cursor-pointer ${isSelected ? 'bg-blue-50' : ''}`
                     }`}
-                    onClick={() => handleListItemClick(item.id, isSelected)}
+                    onClick={() => {
+                      if (isClosed) {
+                        return;
+                      }
+                      handleListItemClick(item.id, isSelected);
+                    }}
                   >
                     <div className="relative aspect-[1/1] w-full overflow-hidden rounded-lg">
                       <Image
@@ -1418,13 +1491,21 @@ export default function DisplayDetailPage({
                       </p>
                       {/* 지도 뷰에서만 장바구니 담기 버튼 표시 */}
                       <button
+                        disabled={isClosed}
                         onClick={(e) => {
                           e.stopPropagation();
+                          if (isClosed) {
+                            return;
+                          }
                           handleItemSelect(item.id, true);
                         }}
-                        className="mt-3 w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors"
+                        className={`mt-3 w-full py-2 px-4 rounded-lg transition-colors ${
+                          isClosed
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'bg-blue-500 text-white hover:bg-blue-600'
+                        }`}
                       >
-                        장바구니 담기
+                        {isClosed ? '마감' : '장바구니 담기'}
                       </button>
                     </div>
                   </div>
@@ -1441,6 +1522,7 @@ export default function DisplayDetailPage({
                   center={mapCenter}
                   onMarkerClick={handleMarkerClick}
                   displayMode={showAllPins ? 'allMinimal' : 'default'}
+                  polygons={mapPolygons}
                 />
               </div>
             </div>

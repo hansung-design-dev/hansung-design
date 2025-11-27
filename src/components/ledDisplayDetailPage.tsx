@@ -3,7 +3,7 @@ import LEDItemList from '@/src/components/ui/ledItemList';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import KakaoMap from '@/src/components/kakaoMap';
+import KakaoMap, { MapPolygon } from '@/src/components/kakaoMap';
 import DropdownMenu from '@/src/components/dropdown';
 import ViewTypeButton from '@/src/components/viewTypeButton';
 import MapPinIcon from '@/src/icons/map-pin.svg';
@@ -16,6 +16,10 @@ import { useAuth } from '../contexts/authContext';
 import { District, DropdownOption } from '@/src/types/displaydetail';
 import { LEDBillboard } from '@/src/types/leddetail';
 import DistrictInfo from './districtInfo';
+import {
+  getPolygonColor,
+  DEFAULT_POLYGON_PADDING,
+} from '@/src/utils/polygonColors';
 //import HalfPeriodTabs from './ui/HalfPeriodTabs';
 
 const fadeInUp = {
@@ -575,6 +579,16 @@ export default function LEDDisplayDetailPage({
     [filteredBillboards]
   );
 
+  const isLedClosed = (
+    item: LEDBillboard & { panel_slot_status?: string; is_closed?: boolean }
+  ) => {
+    return (
+      item.panel_slot_status === 'closed' ||
+      item.panel_slot_status === '마감' ||
+      item.is_closed === true
+    );
+  };
+
   const mapMarkers = useMemo(() => {
     const baseMarkers = billboardsWithCoords.map((item) => ({
       id: item.id,
@@ -607,6 +621,65 @@ export default function LEDDisplayDetailPage({
 
     return baseMarkers;
   }, [billboardsWithCoords, selectedItem, showAllPins, selectedIds]);
+
+  const mapPolygons = useMemo(() => {
+    const grouped = billboardsWithCoords.reduce<
+      Record<string, { lat: number; lng: number }[]>
+    >((acc, item) => {
+      const groupKey =
+        item.district ||
+        districtObj?.name ||
+        selectedOption?.option ||
+        'district';
+      if (!acc[groupKey]) {
+        acc[groupKey] = [];
+      }
+      if (item.latitude != null && item.longitude != null) {
+        acc[groupKey].push({ lat: item.latitude, lng: item.longitude });
+      }
+      return acc;
+    }, {});
+
+    return Object.entries(grouped)
+      .map(([districtName, coords], index) => {
+        if (coords.length === 0) {
+          return null;
+        }
+        const latValues = coords.map((coord) => coord.lat);
+        const lngValues = coords.map((coord) => coord.lng);
+        const minLat = Math.min(...latValues);
+        const maxLat = Math.max(...latValues);
+        const minLng = Math.min(...lngValues);
+        const maxLng = Math.max(...lngValues);
+        const latSpread = maxLat - minLat;
+        const lngSpread = maxLng - minLng;
+        const latPadding = Math.max(latSpread * 0.15, DEFAULT_POLYGON_PADDING);
+        const lngPadding = Math.max(lngSpread * 0.15, DEFAULT_POLYGON_PADDING);
+        const path = [
+          { lat: minLat - latPadding, lng: minLng - lngPadding },
+          { lat: minLat - latPadding, lng: maxLng + lngPadding },
+          { lat: maxLat + latPadding, lng: maxLng + lngPadding },
+          { lat: maxLat + latPadding, lng: minLng - lngPadding },
+        ];
+        const colorKey = districtName || `district-${index}`;
+        const color = getPolygonColor(colorKey);
+        return {
+          id: `led-polygon-${colorKey.replace(/\s+/g, '-')}-${index}`,
+          path,
+          strokeColor: color,
+          strokeOpacity: 0.65,
+          strokeWeight: 2,
+          fillColor: color,
+          fillOpacity: showAllPins ? 0.05 : 0.08,
+        } as MapPolygon;
+      })
+      .filter((polygon): polygon is MapPolygon => Boolean(polygon));
+  }, [
+    billboardsWithCoords,
+    districtObj?.name,
+    selectedOption?.option,
+    showAllPins,
+  ]);
 
   const mapCenter = useMemo(() => {
     const fallbackCenter =
@@ -673,14 +746,24 @@ export default function LEDDisplayDetailPage({
               {filteredBillboards.map((item, index) => {
                 const isSelected = selectedIds.includes(item.id);
                 const uniqueKey = item.id || `led-location-${index}`; // fallback key
+                const isClosed = isLedClosed(item);
 
                 return (
                   <div
                     key={uniqueKey}
-                    className={`flex flex-col rounded-lg transition-colors p-2 cursor-pointer ${
-                      isSelected ? 'bg-blue-50 border-2 border-blue-300' : ''
+                    className={`flex flex-col rounded-lg transition-colors p-2 ${
+                      isClosed
+                        ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed opacity-70'
+                        : `cursor-pointer ${
+                            isSelected
+                              ? 'bg-blue-50 border-2 border-blue-300'
+                              : ''
+                          }`
                     }`}
                     onClick={() => {
+                      if (isClosed) {
+                        return;
+                      }
                       if (isSelected) {
                         setSelectedIds([]);
                       } else {
@@ -715,13 +798,21 @@ export default function LEDDisplayDetailPage({
                       </p>
                       {/* 지도 뷰에서만 장바구니 담기 버튼 표시 */}
                       <button
+                        disabled={isClosed}
                         onClick={(e) => {
                           e.stopPropagation();
+                          if (isClosed) {
+                            return;
+                          }
                           handleAddToCart(item.id);
                         }}
-                        className="mt-3 w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors"
+                        className={`mt-3 w-full py-2 px-4 rounded-lg transition-colors ${
+                          isClosed
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'bg-blue-500 text-white hover:bg-blue-600'
+                        }`}
                       >
-                        장바구니 담기
+                        {isClosed ? '마감' : '장바구니 담기'}
                       </button>
                     </div>
                   </div>
@@ -750,6 +841,7 @@ export default function LEDDisplayDetailPage({
                     }
                   }}
                   displayMode={showAllPins ? 'allMinimal' : 'default'}
+                  polygons={mapPolygons}
                 />
               </div>
             </div>
