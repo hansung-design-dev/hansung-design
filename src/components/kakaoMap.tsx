@@ -19,6 +19,8 @@ export interface MarkerType {
   type: string;
   isSelected?: boolean;
   number?: number; // 게시대 번호 (선택적)
+  district?: string;
+  subtitle?: string;
 }
 
 interface KakaoMapProps {
@@ -26,6 +28,7 @@ interface KakaoMapProps {
   selectedIds: string[];
   center?: { lat: number; lng: number };
   onMarkerClick?: (markerId: string) => void;
+  displayMode?: 'default' | 'allMinimal';
 }
 
 const KakaoMap: React.FC<KakaoMapProps> = ({
@@ -33,6 +36,7 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
   selectedIds,
   center,
   onMarkerClick,
+  displayMode = 'default',
 }) => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -41,6 +45,7 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
   const mapInstanceRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const markersRef = useRef<Map<string, any>>(new Map());
+  const overlaysRef = useRef<Map<string, any>>(new Map());
   const mapCenterRef = useRef<{ lat: number; lng: number } | null>(null);
   const loadingStateRef = useRef(false); // 로딩 상태 추적용 ref
 
@@ -253,6 +258,10 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
       marker.setMap(null);
     });
     markersRef.current.clear();
+    overlaysRef.current.forEach((overlay) => {
+      overlay.setMap(null);
+    });
+    overlaysRef.current.clear();
 
     // 새 마커 생성
     if (!window.kakao?.maps) {
@@ -268,6 +277,9 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
       return;
     }
 
+    const overlayVariant: 'minimal' | 'default' =
+      displayMode === 'allMinimal' ? 'minimal' : 'default';
+
     markers.forEach((marker) => {
       const isSelected = selectedIds.includes(marker.id);
       const position = new LatLng(marker.lat, marker.lng);
@@ -278,18 +290,23 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
       });
 
       // 커스텀 오버레이 생성 (선택된 마커만 텍스트 표시)
-      const markerContent = createMarkerContent(
-        marker,
-        isSelected,
-        () => {
-          if (onMarkerClick) {
-            onMarkerClick(marker.id);
-          }
-        },
-        () => {
-          openRoadview(marker.lat, marker.lng);
-        }
-      );
+      const shouldShowOverlay =
+        overlayVariant === 'minimal' ? true : isSelected;
+
+      const markerContent = shouldShowOverlay
+        ? createMarkerContent(
+            marker,
+            overlayVariant,
+            () => {
+              if (onMarkerClick) {
+                onMarkerClick(marker.id);
+              }
+            },
+            () => {
+              openRoadview(marker.lat, marker.lng);
+            }
+          )
+        : null;
 
       // 마커 클릭 이벤트
       event.addListener(kakaoMarker, 'click', () => {
@@ -309,6 +326,7 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
           yAnchor: 1.7, // 핀과 박스 사이 거리 조정 (값이 작을수록 가까움)
         });
         overlay.setMap(map);
+        overlaysRef.current.set(marker.id, overlay);
       }
 
       markersRef.current.set(marker.id, kakaoMarker);
@@ -331,18 +349,66 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
     if (mapInstanceRef.current) {
       setIsLoading(false);
     }
-  }, [markers, selectedIds, onMarkerClick, isKakaoSDKReady, openRoadview]);
+  }, [
+    markers,
+    selectedIds,
+    onMarkerClick,
+    isKakaoSDKReady,
+    openRoadview,
+    displayMode,
+  ]);
 
   // 마커 컨텐츠 생성 함수
   const createMarkerContent = (
     marker: MarkerType,
-    isSelected: boolean,
+    variant: 'default' | 'minimal',
     onMarkerClick: () => void,
     onRoadviewClick: () => void
   ) => {
-    // 선택되지 않은 마커는 오버레이 표시하지 않음
-    if (!isSelected) {
-      return null;
+    const displayTitle =
+      marker.number !== undefined
+        ? `${marker.number}. ${marker.title}`
+        : marker.title;
+
+    if (variant === 'minimal') {
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = `
+        padding: 6px 10px;
+        background-color: rgba(0, 0, 0, 0.75);
+        color: #ffffff;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        white-space: nowrap;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.25);
+        cursor: pointer;
+        text-align: left;
+      `;
+
+      const titleSpan = document.createElement('div');
+      titleSpan.textContent = `${
+        marker.district ? `[${marker.district}] ` : ''
+      }${displayTitle}`;
+      wrapper.appendChild(titleSpan);
+
+      if (marker.subtitle) {
+        const subtitleSpan = document.createElement('div');
+        subtitleSpan.textContent = marker.subtitle;
+        subtitleSpan.style.cssText = `
+          font-weight: 400;
+          font-size: 10px;
+          color: rgba(255,255,255,0.85);
+          margin-top: 2px;
+        `;
+        wrapper.appendChild(subtitleSpan);
+      }
+
+      wrapper.addEventListener('click', (e) => {
+        e.stopPropagation();
+        onMarkerClick();
+      });
+
+      return wrapper;
     }
 
     const div = document.createElement('div');
@@ -359,11 +425,7 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
       text-align: center;
       cursor: pointer;
     `;
-    // 번호가 있으면 "1. 제목" 형식으로 표시
-    const displayTitle =
-      marker.number !== undefined
-        ? `${marker.number}. ${marker.title}`
-        : marker.title;
+
     div.textContent =
       displayTitle.length > 10
         ? displayTitle.substring(0, 10) + '...'

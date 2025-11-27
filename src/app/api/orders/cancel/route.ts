@@ -227,10 +227,9 @@ export async function POST(request: NextRequest) {
               filePath = segments.slice(bucketIndex + 1).join('/');
             } else {
               // 방법 2: 정규식으로 추출 시도
-              const pathMatch =
-                url.pathname.match(
-                  /\/storage\/v1\/object\/public\/[^/]+\/(.+)$/
-                );
+              const pathMatch = url.pathname.match(
+                /\/storage\/v1\/object\/public\/[^/]+\/(.+)$/
+              );
               if (pathMatch && pathMatch[1]) {
                 filePath = pathMatch[1];
               }
@@ -270,13 +269,10 @@ export async function POST(request: NextRequest) {
               );
             }
           } catch (urlError) {
-            console.warn(
-              '🔍 [주문 취소] ⚠️ URL 파싱 실패 (레코드는 삭제):',
-              {
-                error: urlError,
-                fileUrl: draft.file_url,
-              }
-            );
+            console.warn('🔍 [주문 취소] ⚠️ URL 파싱 실패 (레코드는 삭제):', {
+              error: urlError,
+              fileUrl: draft.file_url,
+            });
           }
         }
 

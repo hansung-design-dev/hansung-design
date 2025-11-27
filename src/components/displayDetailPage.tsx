@@ -155,6 +155,7 @@ export default function DisplayDetailPage({
     second_half_from: string;
     second_half_to: string;
   } | null>(null);
+  const [showAllPins, setShowAllPins] = useState(false);
 
   // period prop이 변경될 때 selectedDistrictPeriod 업데이트
   useEffect(() => {
@@ -1249,188 +1250,199 @@ export default function DisplayDetailPage({
   );
 
   const renderLocationView = () => {
-    // 지도 뷰에서는 단일 선택만 가능하므로 첫 번째 선택된 아이템만 사용
     const selectedItem =
       selectedIds.length > 0
         ? filteredBillboards.find((b) => b.id === selectedIds[0])
         : null;
 
-    // 선택된 아이템이 있으면 그것만 표시, 없으면 모든 아이템 표시
-    const mapMarkers =
-      selectedItem && selectedItem.lat != null && selectedItem.lng != null
-        ? [
-            {
-              id: selectedItem.id,
-              title: selectedItem.name,
-              lat: selectedItem.lat!,
-              lng: selectedItem.lng!,
-              type: selectedItem.type,
-              isSelected: true,
-              number: selectedItem.panel_code
-                ? Number(selectedItem.panel_code)
-                : undefined, // 실제 게시대 번호 사용
-            },
-          ]
-        : filteredBillboards
-            .filter((item) => item.lat != null && item.lng != null)
-            .map((item) => ({
-              id: item.id,
-              title: item.name,
-              lat: item.lat!,
-              lng: item.lng!,
-              type: item.type,
-              number: item.panel_code ? Number(item.panel_code) : undefined, // 실제 게시대 번호 사용
-              isSelected: selectedIds.includes(item.id),
-            }));
+    const billboardsWithCoords = filteredBillboards.filter(
+      (item) => item.lat != null && item.lng != null
+    );
 
-    // 지도 중심점: 선택된 아이템이 있으면 해당 위치, 없으면 모든 아이템의 중심
-    const mapCenter =
-      selectedItem && selectedItem.lat != null && selectedItem.lng != null
-        ? { lat: selectedItem.lat, lng: selectedItem.lng }
-        : filteredBillboards.length > 0
+    const baseMarkers = billboardsWithCoords.map((item) => ({
+      id: item.id,
+      title:
+        item.nickname ||
+        item.name ||
+        item.address ||
+        item.neighborhood ||
+        '게시대',
+      lat: item.lat!,
+      lng: item.lng!,
+      type: item.type,
+      number: item.panel_code ? Number(item.panel_code) : undefined,
+      isSelected: !showAllPins && selectedIds.includes(item.id),
+      district: item.district,
+      subtitle: item.address || item.neighborhood || undefined,
+    }));
+
+    const selectedMarker =
+      !showAllPins &&
+      selectedItem &&
+      selectedItem.lat != null &&
+      selectedItem.lng != null
+        ? baseMarkers.find((marker) => marker.id === selectedItem.id)
+        : null;
+
+    const mapMarkers = showAllPins
+      ? baseMarkers.map((marker) => ({ ...marker, isSelected: false }))
+      : selectedMarker
+      ? [{ ...selectedMarker, isSelected: true }]
+      : baseMarkers;
+
+    const defaultCenter =
+      baseMarkers.length > 0
         ? {
             lat:
-              filteredBillboards.reduce((sum, b) => sum + (b.lat || 0), 0) /
-              filteredBillboards.length,
+              baseMarkers.reduce((sum, marker) => sum + marker.lat, 0) /
+              baseMarkers.length,
             lng:
-              filteredBillboards.reduce((sum, b) => sum + (b.lng || 0), 0) /
-              filteredBillboards.length,
+              baseMarkers.reduce((sum, marker) => sum + marker.lng, 0) /
+              baseMarkers.length,
           }
         : { lat: 37.5665, lng: 126.978 };
 
-    // 디버깅 로그
+    const mapCenter =
+      !showAllPins &&
+      selectedItem &&
+      selectedItem.lat != null &&
+      selectedItem.lng != null
+        ? { lat: selectedItem.lat, lng: selectedItem.lng }
+        : defaultCenter;
+
+    const handleToggleAllPins = () => {
+      setShowAllPins((prev) => {
+        const next = !prev;
+        if (next) {
+          setSelectedIds([]);
+        }
+        return next;
+      });
+    };
+
+    const handleListItemClick = (itemId: string, isSelected: boolean) => {
+      if (isSelected) {
+        setSelectedIds([]);
+        return;
+      }
+      if (showAllPins) {
+        setShowAllPins(false);
+      }
+      setSelectedIds([itemId]);
+    };
+
+    const handleMarkerClick = (markerId: string) => {
+      if (showAllPins) {
+        setShowAllPins(false);
+        setSelectedIds([markerId]);
+        return;
+      }
+      const alreadySelected = selectedIds.includes(markerId);
+      if (alreadySelected) {
+        setSelectedIds([]);
+      } else {
+        setSelectedIds([markerId]);
+      }
+    };
+
     console.log('🔍 renderLocationView:', {
       selectedItem,
+      showAllPins,
       mapMarkersCount: mapMarkers.length,
       mapCenter,
-      filteredBillboardsCount: filteredBillboards.length,
-      selectedIdsCount: selectedIds.length,
-      mapMarkers: mapMarkers.slice(0, 3), // 처음 3개만 로그
-      filteredBillboardsWithCoords: filteredBillboards
-        .filter((item) => item.lat != null && item.lng != null)
-        .slice(0, 3)
-        .map((item) => ({
-          id: item.id,
-          name: item.name,
-          lat: item.lat,
-          lng: item.lng,
-        })),
     });
 
     return (
-      <div className="flex gap-8" style={{ height: '700px' }}>
-        <div
-          className="flex-1 overflow-y-auto pr-2"
-          style={{ maxWidth: '40%', maxHeight: '700px' }}
-        >
-          <div className="flex flex-col gap-6">
-            {filteredBillboards.map((item, index) => {
-              const isSelected = selectedIds.includes(item.id);
-              const uniqueKey = item.id || `banner-location-${index}`; // fallback key
-
-              // 디버깅 로그 주석 처리
-              // console.log('🔍 렌더링 아이템:', {
-              //   id: item.id,
-              //   isSelected,
-              //   selectedIds,
-              // });
-
-              return (
-                <div
-                  key={uniqueKey}
-                  className={`flex flex-col rounded-lg transition-colors p-2 cursor-pointer ${
-                    isSelected ? 'bg-blue-50' : ''
-                  }`}
-                  onClick={() => {
-                    // 디버깅 로그 주석 처리
-                    // console.log('🔍 아이템 클릭:', item.id);
-                    // console.log('🔍 전체 아이템 데이터:', item);
-                    // console.log('🔍 선택한 아이템 정보:', {
-                    //   id: item.id,
-                    //   name: item.name,
-                    //   latitude: item.lat,
-                    //   longitude: item.lng,
-                    //   district: item.district,
-                    //   address: item.address,
-                    // });
-                    // 지도 뷰에서는 단일 선택만 가능
-                    if (isSelected) {
-                      // 이미 선택된 아이템을 클릭하면 선택 해제
-                      setSelectedIds([]);
-                    } else {
-                      // 새로운 아이템을 선택하면 이전 선택을 모두 해제하고 새 아이템만 선택
-                      setSelectedIds([item.id]);
-                    }
-                  }}
-                >
-                  <div className="relative aspect-[1/1] w-full overflow-hidden rounded-lg">
-                    <Image
-                      src={
-                        item.photo_url || '/images/banner-display/landing.png'
-                      }
-                      alt={item.name}
-                      fill
-                      sizes="(max-width: 768px) 50vw, 33vw"
-                      className="object-cover"
-                    />
-                  </div>
-                  <div className="p-4">
-                    <div className="text-sm text-gray-500 mb-1">
-                      No. {item.panel_code || item.id}
-                    </div>
-                    <h3 className="text-1 font-medium">
-                      {item.nickname && <span>{item.nickname} - </span>}
-                      {item.address ? <span>{item.address}</span> : <></>}
-                      {item.neighborhood && (
-                        <span className="ml-1 text-gray-500">
-                          {item.neighborhood}
-                        </span>
-                      )}
-                      {item.maintenance_notes && (
-                        <span className="text-pink-500 text-sm ml-2">
-                          ({item.maintenance_notes})
-                        </span>
-                      )}
-                    </h3>
-                    <p className="text-0.875 text-gray-600">
-                      {item.neighborhood}
-                    </p>
-                    {/* 지도 뷰에서만 장바구니 담기 버튼 표시 */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleItemSelect(item.id, true);
-                      }}
-                      className="mt-3 w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors"
-                    >
-                      장바구니 담기
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+      <div className="flex flex-col" style={{ height: '700px' }}>
+        <div className="flex justify-end mb-4">
+          <button
+            className={`px-4 py-2 rounded-lg text-0.875 font-medium border ${
+              showAllPins
+                ? 'bg-black text-white border-black'
+                : 'bg-white text-gray-700 border-gray-300'
+            }`}
+            onClick={handleToggleAllPins}
+          >
+            {showAllPins ? '상세 핀 보기' : '전체 핀 보기'}
+          </button>
         </div>
-        <div className="min-w-0" style={{ width: '60%', minWidth: '500px' }}>
-          <div className="sticky top-0">
-            <div className="w-full h-[700px]">
-              <KakaoMap
-                markers={mapMarkers}
-                selectedIds={selectedIds}
-                center={mapCenter}
-                onMarkerClick={(markerId) => {
-                  console.log('🔍 지도 마커 클릭:', markerId);
-                  // 지도 뷰에서는 단일 선택만 가능
-                  const alreadySelected = selectedIds.includes(markerId);
-                  if (alreadySelected) {
-                    // 이미 선택된 아이템을 클릭하면 선택 해제
-                    setSelectedIds([]);
-                  } else {
-                    // 새로운 아이템을 선택하면 이전 선택을 모두 해제하고 새 아이템만 선택
-                    setSelectedIds([markerId]);
-                  }
-                }}
-              />
+        <div className="flex gap-8 flex-1 min-h-0">
+          <div
+            className="flex-1 overflow-y-auto pr-2"
+            style={{ maxWidth: '40%', maxHeight: '700px' }}
+          >
+            <div className="flex flex-col gap-6">
+              {filteredBillboards.map((item, index) => {
+                const isSelected = selectedIds.includes(item.id);
+                const uniqueKey = item.id || `banner-location-${index}`; // fallback key
+
+                return (
+                  <div
+                    key={uniqueKey}
+                    className={`flex flex-col rounded-lg transition-colors p-2 cursor-pointer ${
+                      isSelected ? 'bg-blue-50' : ''
+                    }`}
+                    onClick={() => handleListItemClick(item.id, isSelected)}
+                  >
+                    <div className="relative aspect-[1/1] w-full overflow-hidden rounded-lg">
+                      <Image
+                        src={
+                          item.photo_url || '/images/banner-display/landing.png'
+                        }
+                        alt={item.name}
+                        fill
+                        sizes="(max-width: 768px) 50vw, 33vw"
+                        className="object-cover"
+                      />
+                    </div>
+                    <div className="p-4">
+                      <div className="text-sm text-gray-500 mb-1">
+                        No. {item.panel_code || item.id}
+                      </div>
+                      <h3 className="text-1 font-medium">
+                        {item.nickname && <span>{item.nickname} - </span>}
+                        {item.address ? <span>{item.address}</span> : <></>}
+                        {item.neighborhood && (
+                          <span className="ml-1 text-gray-500">
+                            {item.neighborhood}
+                          </span>
+                        )}
+                        {item.maintenance_notes && (
+                          <span className="text-pink-500 text-sm ml-2">
+                            ({item.maintenance_notes})
+                          </span>
+                        )}
+                      </h3>
+                      <p className="text-0.875 text-gray-600">
+                        {item.neighborhood}
+                      </p>
+                      {/* 지도 뷰에서만 장바구니 담기 버튼 표시 */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleItemSelect(item.id, true);
+                        }}
+                        className="mt-3 w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors"
+                      >
+                        장바구니 담기
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <div className="min-w-0" style={{ width: '60%', minWidth: '500px' }}>
+            <div className="sticky top-0">
+              <div className="w-full h-[700px]">
+                <KakaoMap
+                  markers={mapMarkers}
+                  selectedIds={selectedIds}
+                  center={mapCenter}
+                  onMarkerClick={handleMarkerClick}
+                  displayMode={showAllPins ? 'allMinimal' : 'default'}
+                />
+              </div>
             </div>
           </div>
         </div>

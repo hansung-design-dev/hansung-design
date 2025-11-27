@@ -106,6 +106,7 @@ export default function LEDDisplayDetailPage({
     defaultView
   );
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [showAllPins, setShowAllPins] = useState(false);
 
   // const [selectedHalfPeriod, setSelectedHalfPeriod] = useState<
   //   'first_half' | 'second_half'
@@ -558,7 +559,6 @@ export default function LEDDisplayDetailPage({
     </div>
   );
 
-  // 지도 뷰에서는 단일 선택만 가능하므로 첫 번째 선택된 아이템만 사용
   const selectedItem = useMemo(
     () =>
       selectedIds.length > 0
@@ -567,52 +567,75 @@ export default function LEDDisplayDetailPage({
     [selectedIds, filteredBillboards]
   );
 
-  // 선택된 아이템만 지도에 표시 (단일 선택) - 메모이제이션
-  const mapMarkers = useMemo(
+  const billboardsWithCoords = useMemo(
     () =>
-      selectedItem &&
-      selectedItem.latitude != null &&
-      selectedItem.longitude != null
-        ? [
-            {
-              id: selectedItem.id,
-              title: selectedItem.name,
-              lat: selectedItem.latitude!,
-              lng: selectedItem.longitude!,
-              type: selectedItem.type,
-              isSelected: true,
-              number: selectedItem.panel_code
-                ? Number(selectedItem.panel_code)
-                : undefined, // 실제 게시대 번호 사용
-            },
-          ]
-        : [],
-    [selectedItem]
+      filteredBillboards.filter(
+        (item) => item.latitude != null && item.longitude != null
+      ),
+    [filteredBillboards]
   );
 
-  // 지도 중심점: 선택된 아이템이 있으면 해당 위치, 없으면 모든 아이템의 중심 - 메모이제이션
-  const mapCenter = useMemo(
-    () =>
+  const mapMarkers = useMemo(() => {
+    const baseMarkers = billboardsWithCoords.map((item) => ({
+      id: item.id,
+      title: item.name || item.address || item.neighborhood || '전자게시대',
+      lat: item.latitude!,
+      lng: item.longitude!,
+      type: item.type,
+      number: item.panel_code ? Number(item.panel_code) : undefined,
+      isSelected: !showAllPins && selectedIds.includes(item.id),
+      district: item.district,
+      subtitle: item.address || item.neighborhood || undefined,
+    }));
+
+    if (showAllPins) {
+      return baseMarkers.map((marker) => ({ ...marker, isSelected: false }));
+    }
+
+    if (
       selectedItem &&
       selectedItem.latitude != null &&
       selectedItem.longitude != null
-        ? { lat: selectedItem.latitude, lng: selectedItem.longitude }
-        : filteredBillboards.length > 0
+    ) {
+      const selectedMarker = baseMarkers.find(
+        (marker) => marker.id === selectedItem.id
+      );
+      if (selectedMarker) {
+        return [{ ...selectedMarker, isSelected: true }];
+      }
+    }
+
+    return baseMarkers;
+  }, [billboardsWithCoords, selectedItem, showAllPins, selectedIds]);
+
+  const mapCenter = useMemo(() => {
+    const fallbackCenter =
+      billboardsWithCoords.length > 0
         ? {
             lat:
-              filteredBillboards.reduce(
+              billboardsWithCoords.reduce(
                 (sum, b) => sum + (b.latitude || 0),
                 0
-              ) / filteredBillboards.length,
+              ) / billboardsWithCoords.length,
             lng:
-              filteredBillboards.reduce(
+              billboardsWithCoords.reduce(
                 (sum, b) => sum + (b.longitude || 0),
                 0
-              ) / filteredBillboards.length,
+              ) / billboardsWithCoords.length,
           }
-        : { lat: 37.5665, lng: 126.978 },
-    [selectedItem, filteredBillboards]
-  );
+        : { lat: 37.5665, lng: 126.978 };
+
+    if (
+      !showAllPins &&
+      selectedItem &&
+      selectedItem.latitude != null &&
+      selectedItem.longitude != null
+    ) {
+      return { lat: selectedItem.latitude, lng: selectedItem.longitude };
+    }
+
+    return fallbackCenter;
+  }, [billboardsWithCoords, selectedItem, showAllPins]);
 
   const renderLocationView = () => {
     console.log('🔍 선택된 아이템:', selectedItem);
@@ -620,107 +643,115 @@ export default function LEDDisplayDetailPage({
     console.log('🔍 지도 중심점:', mapCenter);
 
     return (
-      <div className="flex gap-8" style={{ height: '700px' }}>
-        <div
-          className="flex-1 overflow-y-auto pr-2"
-          style={{ maxWidth: '40%', maxHeight: '700px' }}
-        >
-          <div className="flex flex-col gap-6">
-            {filteredBillboards.map((item, index) => {
-              const isSelected = selectedIds.includes(item.id);
-              const uniqueKey = item.id || `led-location-${index}`; // fallback key
+      <div className="flex flex-col" style={{ height: '700px' }}>
+        <div className="flex justify-end mb-4">
+          <button
+            className={`px-4 py-2 rounded-lg text-0.875 font-medium border ${
+              showAllPins
+                ? 'bg-black text-white border-black'
+                : 'bg-white text-gray-700 border-gray-300'
+            }`}
+            onClick={() =>
+              setShowAllPins((prev) => {
+                const next = !prev;
+                if (next) {
+                  setSelectedIds([]);
+                }
+                return next;
+              })
+            }
+          >
+            {showAllPins ? '상세 핀 보기' : '전체 핀 보기'}
+          </button>
+        </div>
+        <div className="flex gap-8 flex-1 min-h-0">
+          <div
+            className="flex-1 overflow-y-auto pr-2"
+            style={{ maxWidth: '40%', maxHeight: '700px' }}
+          >
+            <div className="flex flex-col gap-6">
+              {filteredBillboards.map((item, index) => {
+                const isSelected = selectedIds.includes(item.id);
+                const uniqueKey = item.id || `led-location-${index}`; // fallback key
 
-              console.log('🔍 렌더링 아이템:', {
-                id: item.id,
-                isSelected,
-                selectedIds,
-              });
-
-              return (
-                <div
-                  key={uniqueKey}
-                  className={`flex flex-col rounded-lg transition-colors p-2 cursor-pointer ${
-                    isSelected ? 'bg-blue-50 border-2 border-blue-300' : ''
-                  }`}
-                  onClick={() => {
-                    console.log('🔍 아이템 클릭:', item.id);
-                    console.log('🔍 전체 아이템 데이터:', item);
-                    console.log('🔍 선택한 아이템 정보:', {
-                      id: item.id,
-                      name: item.name,
-                      latitude: item.latitude,
-                      longitude: item.longitude,
-                      district: item.district,
-                      address: item.address,
-                    });
-                    // 지도 뷰에서는 단일 선택만 가능
-                    if (isSelected) {
-                      // 이미 선택된 아이템을 클릭하면 선택 해제
+                return (
+                  <div
+                    key={uniqueKey}
+                    className={`flex flex-col rounded-lg transition-colors p-2 cursor-pointer ${
+                      isSelected ? 'bg-blue-50 border-2 border-blue-300' : ''
+                    }`}
+                    onClick={() => {
+                      if (isSelected) {
+                        setSelectedIds([]);
+                      } else {
+                        if (showAllPins) {
+                          setShowAllPins(false);
+                        }
+                        setSelectedIds([item.id]);
+                      }
+                    }}
+                  >
+                    <div className="relative aspect-[1/1] w-full overflow-hidden rounded-lg">
+                      <Image
+                        src={item.photo_url || '/images/led-display.jpeg'}
+                        alt={item.name}
+                        fill
+                        sizes="(max-width: 768px) 50vw, 33vw"
+                        className="object-cover"
+                      />
+                    </div>
+                    <div className="p-4">
+                      <div className="flex gap-2 mb-2"></div>
+                      <h3 className="text-1 font-medium">
+                        {item.name}
+                        {item.maintenance_notes && (
+                          <span className="text-pink-500 text-sm ml-2">
+                            ({item.maintenance_notes})
+                          </span>
+                        )}
+                      </h3>
+                      <p className="text-0.875 text-gray-600">
+                        {item.neighborhood}
+                      </p>
+                      {/* 지도 뷰에서만 장바구니 담기 버튼 표시 */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAddToCart(item.id);
+                        }}
+                        className="mt-3 w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors"
+                      >
+                        장바구니 담기
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <div className="min-w-0" style={{ width: '60%', minWidth: '500px' }}>
+            <div className="sticky top-0">
+              <div className="w-full h-[700px]">
+                <KakaoMap
+                  markers={mapMarkers}
+                  selectedIds={selectedIds}
+                  center={mapCenter}
+                  onMarkerClick={(markerId) => {
+                    if (showAllPins) {
+                      setShowAllPins(false);
+                      setSelectedIds([markerId]);
+                      return;
+                    }
+                    const alreadySelected = selectedIds.includes(markerId);
+                    if (alreadySelected) {
                       setSelectedIds([]);
                     } else {
-                      // 새로운 아이템을 선택하면 이전 선택을 모두 해제하고 새 아이템만 선택
-                      setSelectedIds([item.id]);
+                      setSelectedIds([markerId]);
                     }
                   }}
-                >
-                  <div className="relative aspect-[1/1] w-full overflow-hidden rounded-lg">
-                    <Image
-                      src={item.photo_url || '/images/led-display.jpeg'}
-                      alt={item.name}
-                      fill
-                      sizes="(max-width: 768px) 50vw, 33vw"
-                      className="object-cover"
-                    />
-                  </div>
-                  <div className="p-4">
-                    <div className="flex gap-2 mb-2"></div>
-                    <h3 className="text-1 font-medium">
-                      {item.name}
-                      {item.maintenance_notes && (
-                        <span className="text-pink-500 text-sm ml-2">
-                          ({item.maintenance_notes})
-                        </span>
-                      )}
-                    </h3>
-                    <p className="text-0.875 text-gray-600">
-                      {item.neighborhood}
-                    </p>
-                    {/* 지도 뷰에서만 장바구니 담기 버튼 표시 */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAddToCart(item.id);
-                      }}
-                      className="mt-3 w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors"
-                    >
-                      장바구니 담기
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-        <div className="min-w-0" style={{ width: '60%', minWidth: '500px' }}>
-          <div className="sticky top-0">
-            <div className="w-full h-[700px]">
-              <KakaoMap
-                markers={mapMarkers}
-                selectedIds={selectedIds}
-                center={mapCenter}
-                onMarkerClick={(markerId) => {
-                  console.log('🔍 지도 마커 클릭:', markerId);
-                  // 지도 뷰에서는 단일 선택만 가능
-                  const alreadySelected = selectedIds.includes(markerId);
-                  if (alreadySelected) {
-                    // 이미 선택된 아이템을 클릭하면 선택 해제
-                    setSelectedIds([]);
-                  } else {
-                    // 새로운 아이템을 선택하면 이전 선택을 모두 해제하고 새 아이템만 선택
-                    setSelectedIds([markerId]);
-                  }
-                }}
-              />
+                  displayMode={showAllPins ? 'allMinimal' : 'default'}
+                />
+              </div>
             </div>
           </div>
         </div>
