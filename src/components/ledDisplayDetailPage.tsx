@@ -20,6 +20,7 @@ import {
   getPolygonColor,
   DEFAULT_POLYGON_PADDING,
 } from '@/src/utils/polygonColors';
+import { calculateConvexHull } from '@/src/utils/convexHull';
 //import HalfPeriodTabs from './ui/HalfPeriodTabs';
 
 const fadeInUp = {
@@ -648,27 +649,14 @@ export default function LEDDisplayDetailPage({
         if (coords.length === 0) {
           return null;
         }
-        const latValues = coords.map((coord) => coord.lat);
-        const lngValues = coords.map((coord) => coord.lng);
-        const minLat = Math.min(...latValues);
-        const maxLat = Math.max(...latValues);
-        const minLng = Math.min(...lngValues);
-        const maxLng = Math.max(...lngValues);
-        const latSpread = maxLat - minLat;
-        const lngSpread = maxLng - minLng;
-        const latPadding = Math.max(latSpread * 0.15, DEFAULT_POLYGON_PADDING);
-        const lngPadding = Math.max(lngSpread * 0.15, DEFAULT_POLYGON_PADDING);
-        const path = [
-          { lat: minLat - latPadding, lng: minLng - lngPadding },
-          { lat: minLat - latPadding, lng: maxLng + lngPadding },
-          { lat: maxLat + latPadding, lng: maxLng + lngPadding },
-          { lat: maxLat + latPadding, lng: minLng - lngPadding },
-        ];
+        // Convex Hull 계산 (실제 영역 경계선)
+        const hullPath = calculateConvexHull(coords, DEFAULT_POLYGON_PADDING);
+
         const colorKey = districtName || `district-${index}`;
         const color = getPolygonColor(colorKey);
         return {
           id: `led-polygon-${colorKey.replace(/\s+/g, '-')}-${index}`,
-          path,
+          path: hullPath,
           strokeColor: color,
           strokeOpacity: 0.65,
           strokeWeight: 2,

@@ -75,17 +75,19 @@ export async function POST(req: NextRequest) {
     const targetMonth = targetDate.getMonth() + 1;
     const yearMonth = `${targetYear}-${targetMonth.toString().padStart(2, '0')}`;
 
-    console.log(`🔧 Generating banner periods for ${yearMonth} (force: ${force})`);
+    console.log(`🔧 Generating periods for ${yearMonth} (force: ${force})`);
 
-    const { data: displayType, error: displayTypeError } = await supabaseAdmin
+    // banner_display와 led_display 모두 가져오기
+    const { data: displayTypes, error: displayTypeError } = await supabaseAdmin
       .from('display_types')
-      .select('id')
-      .eq('name', 'banner_display')
-      .single();
+      .select('id, name')
+      .in('name', ['banner_display', 'led_display']);
 
-    if (displayTypeError || !displayType) {
-      throw new Error('Banner display type not found');
+    if (displayTypeError || !displayTypes || displayTypes.length === 0) {
+      throw new Error('Display types not found');
     }
+
+    console.log(`🔧 Found ${displayTypes.length} display types:`, displayTypes.map(dt => dt.name));
 
     const { data: regions, error: regionsError } = await supabaseAdmin
       .from('region_gu')
@@ -113,58 +115,61 @@ export async function POST(req: NextRequest) {
       nextYear: targetMonth === 12 ? targetYear + 1 : targetYear,
     };
 
-    const periodsToInsert = regions.flatMap((region) => {
-      const monthStr = months.currentMonth.toString().padStart(2, '0');
-      const nextMonthStr = months.nextMonth.toString().padStart(2, '0');
+    // 각 display_type과 region 조합으로 기간 생성
+    const periodsToInsert = displayTypes.flatMap((displayType) =>
+      regions.flatMap((region) => {
+        const monthStr = months.currentMonth.toString().padStart(2, '0');
+        const nextMonthStr = months.nextMonth.toString().padStart(2, '0');
 
-      if (SPECIAL_PERIOD_GUS.has(region.name)) {
+        if (SPECIAL_PERIOD_GUS.has(region.name)) {
+          return [
+            {
+              region_gu_id: region.id,
+              display_type_id: displayType.id,
+              year_month: yearMonth,
+              period: 'first_half',
+              period_from: `${months.currentYear}-${monthStr}-05`,
+              period_to: `${months.currentYear}-${monthStr}-19`,
+            },
+            {
+              region_gu_id: region.id,
+              display_type_id: displayType.id,
+              year_month: yearMonth,
+              period: 'second_half',
+              period_from: `${months.currentYear}-${monthStr}-20`,
+              period_to: `${months.nextYear}-${nextMonthStr}-04`,
+            },
+          ];
+        }
+
+        const lastDay = new Date(
+          months.currentYear,
+          months.currentMonth,
+          0
+        ).getDate();
+
         return [
           {
             region_gu_id: region.id,
             display_type_id: displayType.id,
             year_month: yearMonth,
             period: 'first_half',
-            period_from: `${months.currentYear}-${monthStr}-05`,
-            period_to: `${months.currentYear}-${monthStr}-19`,
+            period_from: `${months.currentYear}-${monthStr}-01`,
+            period_to: `${months.currentYear}-${monthStr}-15`,
           },
           {
             region_gu_id: region.id,
             display_type_id: displayType.id,
             year_month: yearMonth,
             period: 'second_half',
-            period_from: `${months.currentYear}-${monthStr}-20`,
-            period_to: `${months.nextYear}-${nextMonthStr}-04`,
+            period_from: `${months.currentYear}-${monthStr}-16`,
+            period_to: `${months.currentYear}-${monthStr}-${lastDay
+              .toString()
+              .padStart(2, '0')}`,
           },
         ];
-      }
-
-      const lastDay = new Date(
-        months.currentYear,
-        months.currentMonth,
-        0
-      ).getDate();
-
-      return [
-        {
-          region_gu_id: region.id,
-          display_type_id: displayType.id,
-          year_month: yearMonth,
-          period: 'first_half',
-          period_from: `${months.currentYear}-${monthStr}-01`,
-          period_to: `${months.currentYear}-${monthStr}-15`,
-        },
-        {
-          region_gu_id: region.id,
-          display_type_id: displayType.id,
-          year_month: yearMonth,
-          period: 'second_half',
-          period_from: `${months.currentYear}-${monthStr}-16`,
-          period_to: `${months.currentYear}-${monthStr}-${lastDay
-            .toString()
-            .padStart(2, '0')}`,
-        },
-      ];
-    });
+      })
+    );
 
     if (payload.dryRun) {
       return NextResponse.json({
@@ -189,16 +194,24 @@ export async function POST(req: NextRequest) {
     }
 
     console.log(
-      `✅ Upserted ${upserted?.length ?? 0} banner periods for ${yearMonth}`
+      `✅ Upserted ${upserted?.length ?? 0} periods for ${yearMonth}`
     );
+
+    // display_type별로 카운트
+    const countByDisplayType = displayTypes.reduce((acc, dt) => {
+      acc[dt.name] = upserted?.filter(p => p.display_type_id === dt.id).length ?? 0;
+      return acc;
+    }, {} as Record<string, number>);
 
     return NextResponse.json({
       success: true,
-      message: `Generated banner periods for ${yearMonth}`,
+      message: `Generated periods for ${yearMonth}`,
       data: {
         yearMonth,
         insertedCount: upserted?.length ?? 0,
         regionsProcessed: regions.length,
+        displayTypesProcessed: displayTypes.length,
+        countByDisplayType,
       },
     });
   } catch (error) {

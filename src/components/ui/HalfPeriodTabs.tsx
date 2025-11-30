@@ -40,7 +40,9 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
   districtName,
   periodData,
 }) => {
-  // 항상 현재 날짜 기준으로 계산 (API 데이터는 참고용으로만 사용)
+  // 현재 날짜에 따라 표시할 기간 결정
+  // 1일~15일: 현재 달 하반기 + 다음 달 상반기
+  // 16일~31일: 다음 달 상하반기
   const getCurrentPeriods = () => {
     let firstPeriod: PeriodInfo | null = null;
     let secondPeriod: PeriodInfo | null = null;
@@ -54,257 +56,121 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
     const currentMonth = koreaTime.getMonth() + 1;
     const currentDay = koreaTime.getDate();
 
-    // 15일 기준으로 상하반기 밀림 로직
-    // 로직:
-    // 1일-15일: 현재 달의 하반기 + 다음 달의 상반기
-    // 16일-31일: 다음 달의 상반기 + 다음 달의 하반기
-    // 예: 11월 2일(1일-15일) → 11월 하반기(16-31) + 12월 상반기(1-15) 표시
-    // 예: 11월 16일(16일-31일) → 12월 상반기(1-15) + 12월 하반기(16-31) 표시
+    // 다음 달 계산
+    const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+    const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
 
     console.log('🔍 Current date calculation:', {
       currentYear,
       currentMonth,
       currentDay,
+      nextYear,
+      nextMonth,
       koreaTime: koreaTime.toISOString(),
     });
 
     // 마포구, 강북구: 특별한 기간 (5일-19일 상반기, 20일-다음달 4일 하반기)
     if (districtName === '마포구' || districtName === '강북구') {
-      // 마포구/강북구는 5일과 20일이 기준일
-      if (currentDay <= 19) {
-        // 1일-19일: 현재 달의 하반기 시작일 오전 9시 이후인지 확인
-        const currentMonthSecondHalfStart = new Date(`${currentYear}-${String(currentMonth).padStart(2, '0')}-20T09:00:00+09:00`);
-        const isCurrentMonthSecondHalfAvailable = now >= currentMonthSecondHalfStart;
-        
-        if (isCurrentMonthSecondHalfAvailable) {
-          // 현재 달 하반기 시작일 오전 9시 이후: 현재 달 하반기 + 다음 달 상반기
-          const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
-          const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+      if (currentDay >= 1 && currentDay <= 4) {
+        // 1일~4일: 현재 달 하반기 + 다음 달 상반기
+        // 현재 달 하반기 (20일-다음달 4일)
+        firstPeriod = {
+          year: currentYear,
+          month: currentMonth,
+          startDay: 20,
+          endDay: 30,
+          from: `${currentYear}-${String(currentMonth).padStart(2, '0')}-20`,
+          to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-04`,
+          label: `${currentYear}년 ${currentMonth}월 하반기`,
+        };
 
-          firstPeriod = {
-            year: currentYear,
-            month: currentMonth,
-            startDay: 20,
-            endDay: 30,
-            from: `${currentYear}-${String(currentMonth).padStart(2, '0')}-20`,
-            to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-04`,
-            label: `${currentYear}년 ${currentMonth}월 하반기`,
-          };
-
-          secondPeriod = {
-            year: nextYear,
-            month: nextMonth,
-            startDay: 5,
-            endDay: 19,
-            from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-05`,
-            to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-19`,
-            label: `${nextYear}년 ${nextMonth}월 상반기`,
-          };
-        } else {
-          // 현재 달 하반기 시작일 오전 9시 이전: 다음 달 상반기 + 다음 달 하반기
-          const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
-          const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
-
-          firstPeriod = {
-            year: nextYear,
-            month: nextMonth,
-            startDay: 5,
-            endDay: 19,
-            from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-05`,
-            to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-19`,
-            label: `${nextYear}년 ${nextMonth}월 상반기`,
-          };
-
-          const nextNextMonth = nextMonth === 12 ? 1 : nextMonth + 1;
-          const nextNextYear = nextMonth === 12 ? nextYear + 1 : nextYear;
-
-          secondPeriod = {
-            year: nextYear,
-            month: nextMonth,
-            startDay: 20,
-            endDay: 30,
-            from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-20`,
-            to: `${nextNextYear}-${String(nextNextMonth).padStart(2, '0')}-04`,
-            label: `${nextYear}년 ${nextMonth}월 하반기`,
-          };
-        }
+        // 다음 달 상반기 (5일-19일)
+        secondPeriod = {
+          year: nextYear,
+          month: nextMonth,
+          startDay: 5,
+          endDay: 19,
+          from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-05`,
+          to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-19`,
+          label: `${nextYear}년 ${nextMonth}월 상반기`,
+        };
       } else {
-        // 20일-31일(또는 다음달 4일까지): 다음 달의 상반기 시작일 오전 9시 이후인지 확인
-        const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
-        const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+        // 5일~31일: 다음 달 상하반기
+        // 다음 달 상반기 (5일-19일)
+        firstPeriod = {
+          year: nextYear,
+          month: nextMonth,
+          startDay: 5,
+          endDay: 19,
+          from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-05`,
+          to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-19`,
+          label: `${nextYear}년 ${nextMonth}월 상반기`,
+        };
 
-        // 다음 달 상반기 시작일 오전 9시(한국시간) - 마포구/강북구는 5일부터
-        const nextMonthFirstHalfStart = new Date(`${nextYear}-${String(nextMonth).padStart(2, '0')}-05T09:00:00+09:00`);
-        
-        // 현재 시간이 다음 달 상반기 시작일 오전 9시 이후인지 확인
-        const isNextMonthFirstHalfAvailable = now >= nextMonthFirstHalfStart;
-        
-        if (isNextMonthFirstHalfAvailable) {
-          // 다음 달 상반기 시작일 오전 9시 이후: 다음 달 상반기 + 다음 달 하반기
-          firstPeriod = {
-            year: nextYear,
-            month: nextMonth,
-            startDay: 5,
-            endDay: 19,
-            from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-05`,
-            to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-19`,
-            label: `${nextYear}년 ${nextMonth}월 상반기`,
-          };
+        // 다음 달 하반기 (20일-다다음달 4일)
+        const nextNextMonth = nextMonth === 12 ? 1 : nextMonth + 1;
+        const nextNextYear = nextMonth === 12 ? nextYear + 1 : nextYear;
 
-          const nextNextMonth = nextMonth === 12 ? 1 : nextMonth + 1;
-          const nextNextYear = nextMonth === 12 ? nextYear + 1 : nextYear;
-
-          secondPeriod = {
-            year: nextYear,
-            month: nextMonth,
-            startDay: 20,
-            endDay: 30,
-            from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-20`,
-            to: `${nextNextYear}-${String(nextNextMonth).padStart(2, '0')}-04`,
-            label: `${nextYear}년 ${nextMonth}월 하반기`,
-          };
-        } else {
-          // 다음 달 상반기 시작일 오전 9시 이전: 다음 달 하반기 + 다다음 달 상반기
-          const nextNextMonth = nextMonth === 12 ? 1 : nextMonth + 1;
-          const nextNextYear = nextMonth === 12 ? nextYear + 1 : nextYear;
-
-          firstPeriod = {
-            year: nextYear,
-            month: nextMonth,
-            startDay: 20,
-            endDay: 30,
-            from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-20`,
-            to: `${nextNextYear}-${String(nextNextMonth).padStart(2, '0')}-04`,
-            label: `${nextYear}년 ${nextMonth}월 하반기`,
-          };
-
-          const nextNextNextMonth = nextNextMonth === 12 ? 1 : nextNextMonth + 1;
-          const nextNextNextYear = nextNextMonth === 12 ? nextNextYear + 1 : nextNextYear;
-
-          secondPeriod = {
-            year: nextNextYear,
-            month: nextNextMonth,
-            startDay: 5,
-            endDay: 19,
-            from: `${nextNextYear}-${String(nextNextMonth).padStart(2, '0')}-05`,
-            to: `${nextNextYear}-${String(nextNextMonth).padStart(2, '0')}-19`,
-            label: `${nextNextYear}년 ${nextNextMonth}월 상반기`,
-          };
-        }
+        secondPeriod = {
+          year: nextYear,
+          month: nextMonth,
+          startDay: 20,
+          endDay: 30,
+          from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-20`,
+          to: `${nextNextYear}-${String(nextNextMonth).padStart(2, '0')}-04`,
+          label: `${nextYear}년 ${nextMonth}월 하반기`,
+        };
       }
     } else {
-      // 송파, 관악, 용산, 서대문: 일반적인 1일-15일 상반기, 16일-31일 하반기
-      if (currentDay <= 15) {
-        // 1일-15일: 현재 달의 하반기 시작일 오전 9시 이후인지 확인
-        const currentMonthSecondHalfStart = new Date(`${currentYear}-${String(currentMonth).padStart(2, '0')}-16T09:00:00+09:00`);
-        const isCurrentMonthSecondHalfAvailable = now >= currentMonthSecondHalfStart;
-        
-        if (isCurrentMonthSecondHalfAvailable) {
-          // 현재 달 하반기 시작일 오전 9시 이후: 현재 달 하반기 + 다음 달 상반기
-          firstPeriod = {
-            year: currentYear,
-            month: currentMonth,
-            startDay: 16,
-            endDay: 31,
-            from: `${currentYear}-${String(currentMonth).padStart(2, '0')}-16`,
-            to: `${currentYear}-${String(currentMonth).padStart(2, '0')}-31`,
-            label: `${currentYear}년 ${currentMonth}월 하반기`,
-          };
+      // 일반 구: 1일-15일 상반기, 16일-31일 하반기
+      if (currentDay >= 1 && currentDay <= 15) {
+        // 1일~15일: 현재 달 하반기 + 다음 달 상반기
+        // 현재 달 하반기 (16일-31일)
+        const lastDay = new Date(currentYear, currentMonth, 0).getDate();
+        firstPeriod = {
+          year: currentYear,
+          month: currentMonth,
+          startDay: 16,
+          endDay: lastDay,
+          from: `${currentYear}-${String(currentMonth).padStart(2, '0')}-16`,
+          to: `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`,
+          label: `${currentYear}년 ${currentMonth}월 하반기`,
+        };
 
-          const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
-          const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
-
-          secondPeriod = {
-            year: nextYear,
-            month: nextMonth,
-            startDay: 1,
-            endDay: 15,
-            from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`,
-            to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-15`,
-            label: `${nextYear}년 ${nextMonth}월 상반기`,
-          };
-        } else {
-          // 현재 달 하반기 시작일 오전 9시 이전: 다음 달 상반기 + 다음 달 하반기
-          const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
-          const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
-
-          firstPeriod = {
-            year: nextYear,
-            month: nextMonth,
-            startDay: 1,
-            endDay: 15,
-            from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`,
-            to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-15`,
-            label: `${nextYear}년 ${nextMonth}월 상반기`,
-          };
-
-          secondPeriod = {
-            year: nextYear,
-            month: nextMonth,
-            startDay: 16,
-            endDay: 31,
-            from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-16`,
-            to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-31`,
-            label: `${nextYear}년 ${nextMonth}월 하반기`,
-          };
-        }
+        // 다음 달 상반기 (1일-15일)
+        secondPeriod = {
+          year: nextYear,
+          month: nextMonth,
+          startDay: 1,
+          endDay: 15,
+          from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`,
+          to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-15`,
+          label: `${nextYear}년 ${nextMonth}월 상반기`,
+        };
       } else {
-        // 16일-31일: 다음 달의 상반기 시작일 오전 9시 이후인지 확인
-        const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
-        const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
-        
-        // 다음 달 상반기 시작일 오전 9시(한국시간)
-        const nextMonthFirstHalfStart = new Date(`${nextYear}-${String(nextMonth).padStart(2, '0')}-01T09:00:00+09:00`);
-        
-        // 현재 시간이 다음 달 상반기 시작일 오전 9시 이후인지 확인
-        const isNextMonthFirstHalfAvailable = now >= nextMonthFirstHalfStart;
-        
-        if (isNextMonthFirstHalfAvailable) {
-          // 다음 달 상반기 시작일 오전 9시 이후: 다음 달 상반기 + 다음 달 하반기
-          firstPeriod = {
-            year: nextYear,
-            month: nextMonth,
-            startDay: 1,
-            endDay: 15,
-            from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`,
-            to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-15`,
-            label: `${nextYear}년 ${nextMonth}월 상반기`,
-          };
+        // 16일~31일: 다음 달 상하반기
+        // 다음 달 상반기 (1일-15일)
+        firstPeriod = {
+          year: nextYear,
+          month: nextMonth,
+          startDay: 1,
+          endDay: 15,
+          from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`,
+          to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-15`,
+          label: `${nextYear}년 ${nextMonth}월 상반기`,
+        };
 
-          secondPeriod = {
-            year: nextYear,
-            month: nextMonth,
-            startDay: 16,
-            endDay: 31,
-            from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-16`,
-            to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-31`,
-            label: `${nextYear}년 ${nextMonth}월 하반기`,
-          };
-        } else {
-          // 다음 달 상반기 시작일 오전 9시 이전: 다음 달 하반기 + 다다음 달 상반기
-          firstPeriod = {
-            year: nextYear,
-            month: nextMonth,
-            startDay: 16,
-            endDay: 31,
-            from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-16`,
-            to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-31`,
-            label: `${nextYear}년 ${nextMonth}월 하반기`,
-          };
-
-          const nextNextMonth = nextMonth === 12 ? 1 : nextMonth + 1;
-          const nextNextYear = nextMonth === 12 ? nextYear + 1 : nextYear;
-
-          secondPeriod = {
-            year: nextNextYear,
-            month: nextNextMonth,
-            startDay: 1,
-            endDay: 15,
-            from: `${nextNextYear}-${String(nextNextMonth).padStart(2, '0')}-01`,
-            to: `${nextNextYear}-${String(nextNextMonth).padStart(2, '0')}-15`,
-            label: `${nextNextYear}년 ${nextNextMonth}월 상반기`,
-          };
-        }
+        // 다음 달 하반기 (16일-31일)
+        const lastDay = new Date(nextYear, nextMonth, 0).getDate();
+        secondPeriod = {
+          year: nextYear,
+          month: nextMonth,
+          startDay: 16,
+          endDay: lastDay,
+          from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-16`,
+          to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`,
+          label: `${nextYear}년 ${nextMonth}월 하반기`,
+        };
       }
     }
 
@@ -313,23 +179,34 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
 
   const { firstPeriod, secondPeriod } = getCurrentPeriods();
 
-  // 기간 시작일 오전 9시(한국시간)부터 신청 가능 여부 확인
+  // 기간 시작일 2일 전까지 신청 가능 여부 확인
   const isPeriodAvailable = (periodStartDate: string) => {
     const now = new Date();
     
-    // 기간 시작일의 오전 9시(한국시간) 설정
+    // 기간 시작일 설정
     // periodStartDate는 "YYYY-MM-DD" 형식
-    // ISO 8601 형식으로 한국시간 오전 9시 생성
-    const periodStartKst = new Date(`${periodStartDate}T09:00:00+09:00`);
+    const periodStart = new Date(`${periodStartDate}T00:00:00+09:00`);
+    
+    // 현재 시간을 한국시간으로 변환
+    const koreaTime = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+    const koreaDate = new Date(koreaTime.getFullYear(), koreaTime.getMonth(), koreaTime.getDate());
+    const periodStartDateOnly = new Date(periodStart.getFullYear(), periodStart.getMonth(), periodStart.getDate());
+    
+    // 날짜 차이 계산 (일 단위)
+    const daysUntilPeriod = Math.ceil(
+      (periodStartDateOnly.getTime() - koreaDate.getTime()) / (1000 * 60 * 60 * 24)
+    );
 
-    // 현재 시간이 기간 시작일 오전 9시(한국시간) 이후인지 확인
-    const isAvailable = now >= periodStartKst;
+    // 기간 시작일 2일 전까지 신청 가능 (daysUntilPeriod > 2)
+    // 기간 시작일 2일 전부터는 신청 불가 (daysUntilPeriod <= 2)
+    const isAvailable = daysUntilPeriod > 2;
 
     // 디버그 로그 추가
     console.log('🔍 isPeriodAvailable Debug:', {
       periodStartDate,
-      currentTime: now.toISOString(),
-      periodStartKst: periodStartKst.toISOString(),
+      currentKoreaDate: koreaDate.toISOString(),
+      periodStartDateOnly: periodStartDateOnly.toISOString(),
+      daysUntilPeriod,
       isAvailable,
     });
 
@@ -344,13 +221,21 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
     ? isPeriodAvailable(secondPeriod.from)
     : false;
 
-  // 신청 가능한 기간만 필터링
-  const availablePeriods = [];
-  if (isFirstPeriodAvailable && firstPeriod) {
-    availablePeriods.push({ period: 'first_half', data: firstPeriod });
+  // 모든 기간 표시 (신청 가능 여부와 관계없이)
+  const allPeriods = [];
+  if (firstPeriod) {
+    allPeriods.push({ 
+      period: 'first_half' as const, 
+      data: firstPeriod, 
+      isAvailable: isFirstPeriodAvailable 
+    });
   }
-  if (isSecondPeriodAvailable && secondPeriod) {
-    availablePeriods.push({ period: 'second_half', data: secondPeriod });
+  if (secondPeriod) {
+    allPeriods.push({ 
+      period: 'second_half' as const, 
+      data: secondPeriod, 
+      isAvailable: isSecondPeriodAvailable 
+    });
   }
 
   // 디버그 로그 추가
@@ -359,19 +244,15 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
     periodData,
     firstPeriod,
     secondPeriod,
-    availablePeriods: availablePeriods.length,
+    allPeriods: allPeriods.length,
     isFirstPeriodAvailable,
     isSecondPeriodAvailable,
   });
 
   const handlePeriodChange = (period: 'first_half' | 'second_half') => {
-    if (period === 'first_half' && isFirstPeriodAvailable && firstPeriod) {
+    if (period === 'first_half' && firstPeriod) {
       onPeriodChange('first_half', firstPeriod.year, firstPeriod.month);
-    } else if (
-      period === 'second_half' &&
-      isSecondPeriodAvailable &&
-      secondPeriod
-    ) {
+    } else if (period === 'second_half' && secondPeriod) {
       onPeriodChange('second_half', secondPeriod.year, secondPeriod.month);
     }
   };
@@ -383,27 +264,27 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
           신청 기간을 선택해주세요 :
         </div>
 
-        {/* 신청 가능한 기간만 표시 */}
-        {availablePeriods.map((periodInfo) => (
+        {/* 모든 기간 표시 (신청 가능 여부와 관계없이) */}
+        {allPeriods.map((periodInfo) => (
           <button
             key={periodInfo.period}
-            onClick={() =>
-              handlePeriodChange(
-                periodInfo.period as 'first_half' | 'second_half'
-              )
-            }
+            onClick={() => handlePeriodChange(periodInfo.period)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               selectedPeriod === periodInfo.period
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer'
+                ? periodInfo.isAvailable
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-400 text-white cursor-pointer'
+                : periodInfo.isAvailable
+                ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer'
+                : 'bg-gray-50 text-gray-400 hover:bg-gray-100 cursor-pointer'
             }`}
           >
             {periodInfo.data.label}
           </button>
         ))}
 
-        {/* 신청 가능한 기간이 없을 때 */}
-        {availablePeriods.length === 0 && (
+        {/* 기간이 없을 때 */}
+        {allPeriods.length === 0 && (
           <div className="text-sm text-gray-500">
             현재 신청 가능한 기간이 없습니다.
           </div>

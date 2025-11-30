@@ -14,6 +14,7 @@ import {
   getPolygonColor,
   DEFAULT_POLYGON_PADDING,
 } from '@/src/utils/polygonColors';
+import { calculateConvexHull } from '@/src/utils/convexHull';
 
 import { useState, useEffect } from 'react';
 import { useCart } from '../contexts/cartContext';
@@ -100,22 +101,15 @@ export default function DisplayDetailPage({
     'first_half' | 'second_half'
   >('first_half');
 
-  // 선택된 기간의 년월 정보 추가 - HalfPeriodTabs와 동일한 로직으로 초기값 설정
+  // 선택된 기간의 년월 정보 - 항상 다음 달로 설정
   const [selectedPeriodYear, setSelectedPeriodYear] = useState<number>(() => {
     const now = new Date();
     const koreaTime = new Date(now.getTime() + 9 * 60 * 60 * 1000); // UTC+9 (한국시간)
     const currentYear = koreaTime.getFullYear();
     const currentMonth = koreaTime.getMonth() + 1;
-    const currentDay = koreaTime.getDate();
 
-    // 현재 날짜에 따라 올바른 년도 설정
-    if (currentDay <= 12) {
-      // 12일까지는 이번달 상반기 신청 가능
-      return currentYear;
-    } else {
-      // 13일 이후면 다음달로 설정
-      return currentMonth === 12 ? currentYear + 1 : currentYear;
-    }
+    // 다음 달의 년도
+    return currentMonth === 12 ? currentYear + 1 : currentYear;
   });
   const [aiDownloadLoading, setAiDownloadLoading] = useState(false);
 
@@ -123,17 +117,9 @@ export default function DisplayDetailPage({
     const now = new Date();
     const koreaTime = new Date(now.getTime() + 9 * 60 * 60 * 1000); // UTC+9 (한국시간)
     const currentMonth = koreaTime.getMonth() + 1;
-    const currentDay = koreaTime.getDate();
 
-    // 현재 날짜에 따라 올바른 월 설정
-    // 7월 13일이면 7월 상반기는 이미 신청 불가능하므로 8월로 설정
-    if (currentDay <= 12) {
-      // 12일까지는 이번달 상반기 신청 가능
-      return currentMonth;
-    } else {
-      // 13일 이후면 다음달로 설정
-      return currentMonth === 12 ? 1 : currentMonth + 1;
-    }
+    // 다음 달
+    return currentMonth === 12 ? 1 : currentMonth + 1;
   });
 
   // 상반기/하반기 탭별로 선택 상태 분리
@@ -291,24 +277,43 @@ export default function DisplayDetailPage({
     }
   }, [district, currentSetPanelTypeFilter, districtObj?.code]);
 
-  // 기간 시작일 오전 9시(한국시간)부터 신청 가능 여부 확인
+  // 기간 시작일 2일 전까지 신청 가능 여부 확인
   const isPeriodAvailable = (periodStartDate: string) => {
-    // 현재 시간
     const now = new Date();
 
-    // 기간 시작일의 오전 9시(한국시간) 설정
+    // 기간 시작일 설정
     // periodStartDate는 "YYYY-MM-DD" 형식
-    // ISO 8601 형식으로 한국시간 오전 9시 생성
-    const periodStartKst = new Date(`${periodStartDate}T09:00:00+09:00`);
+    const periodStart = new Date(`${periodStartDate}T00:00:00+09:00`);
 
-    // 현재 시간이 기간 시작일 오전 9시(한국시간) 이후인지 확인
-    const isAvailable = now >= periodStartKst;
+    // 현재 시간을 한국시간으로 변환
+    const koreaTime = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+    const koreaDate = new Date(
+      koreaTime.getFullYear(),
+      koreaTime.getMonth(),
+      koreaTime.getDate()
+    );
+    const periodStartDateOnly = new Date(
+      periodStart.getFullYear(),
+      periodStart.getMonth(),
+      periodStart.getDate()
+    );
+
+    // 날짜 차이 계산 (일 단위)
+    const daysUntilPeriod = Math.ceil(
+      (periodStartDateOnly.getTime() - koreaDate.getTime()) /
+        (1000 * 60 * 60 * 24)
+    );
+
+    // 기간 시작일 2일 전까지 신청 가능 (daysUntilPeriod > 2)
+    // 기간 시작일 2일 전부터는 신청 불가 (daysUntilPeriod <= 2)
+    const isAvailable = daysUntilPeriod > 2;
 
     // 디버그 로그 추가
     console.log('🔍 displayDetailPage isPeriodAvailable Debug:', {
       periodStartDate,
-      currentTime: now.toISOString(),
-      periodStartKst: periodStartKst.toISOString(),
+      currentKoreaDate: koreaDate.toISOString(),
+      periodStartDateOnly: periodStartDateOnly.toISOString(),
+      daysUntilPeriod,
       isAvailable,
     });
 
@@ -322,17 +327,11 @@ export default function DisplayDetailPage({
       return false;
     }
 
-    // 1. 기한 확인: 현재 선택된 기간이 신청 가능한지 확인
-    let isPeriodValid = true;
-    if (period) {
-      if (selectedHalfPeriod === 'first_half') {
-        isPeriodValid = isPeriodAvailable(period.first_half_from);
-      } else if (selectedHalfPeriod === 'second_half') {
-        isPeriodValid = isPeriodAvailable(period.second_half_from);
-      }
-    }
-
-    // 기간 검증 활성화 (기간 시작일 오전 9시부터 신청 가능)
+    // 1. 기한 확인: 현재 선택된 기간이 신청 가능한지 확인 (프론트에서 계산한 날짜 사용)
+    const currentPeriodStartDate = getSelectedPeriodStartDate();
+    const isPeriodValid = currentPeriodStartDate
+      ? isPeriodAvailable(currentPeriodStartDate)
+      : true;
 
     // 2. 재고 확인: 선택된 기간의 재고가 0인지 확인
     let hasStock = true;
@@ -432,6 +431,34 @@ export default function DisplayDetailPage({
         )
       : filteredByPanelType;
 
+  // 선택된 기간이 마감인지 확인 (프론트에서 계산한 날짜 사용)
+  const getSelectedPeriodStartDate = () => {
+    if (!selectedPeriodYear || !selectedPeriodMonth) return null;
+
+    const monthStr = String(selectedPeriodMonth).padStart(2, '0');
+
+    if (selectedHalfPeriod === 'first_half') {
+      // 마포구/강북구는 5일부터, 일반 구는 1일부터
+      const startDay =
+        districtObj?.name === '마포구' || districtObj?.name === '강북구'
+          ? '05'
+          : '01';
+      return `${selectedPeriodYear}-${monthStr}-${startDay}`;
+    } else {
+      // 마포구/강북구는 20일부터, 일반 구는 16일부터
+      const startDay =
+        districtObj?.name === '마포구' || districtObj?.name === '강북구'
+          ? '20'
+          : '16';
+      return `${selectedPeriodYear}-${monthStr}-${startDay}`;
+    }
+  };
+
+  const selectedPeriodStartDate = getSelectedPeriodStartDate();
+  const isSelectedPeriodClosed = selectedPeriodStartDate
+    ? !isPeriodAvailable(selectedPeriodStartDate)
+    : false;
+
   // 상하반기에 따른 필터링
   const filteredByHalfPeriod =
     isMapoDistrict && mapoFilter === 'simin'
@@ -468,11 +495,17 @@ export default function DisplayDetailPage({
           };
         });
 
-  const filteredBillboards = isAllDistrictsView
-    ? [...filteredByHalfPeriod].sort((a, b) =>
-        a.district.localeCompare(b.district)
-      )
-    : filteredByHalfPeriod;
+  // 선택된 기간이 마감이면 빈 배열로 설정 (시민게시대, 상단광고 제외)
+  const filteredBillboards =
+    isSelectedPeriodClosed &&
+    !(isMapoDistrict && mapoFilter === 'simin') &&
+    !(isSongpaOrYongsan && currentPanelTypeFilter === 'top_fixed')
+      ? []
+      : isAllDistrictsView
+      ? [...filteredByHalfPeriod].sort((a, b) =>
+          a.district.localeCompare(b.district)
+        )
+      : filteredByHalfPeriod;
 
   if (currentPanelTypeFilter === 'top_fixed') {
     console.log(`🔍 ${district} 최종 렌더링 데이터:`, {
@@ -1316,27 +1349,20 @@ export default function DisplayDetailPage({
         if (markers.length === 0) {
           return null;
         }
-        const latValues = markers.map((marker) => marker.lat);
-        const lngValues = markers.map((marker) => marker.lng);
-        const minLat = Math.min(...latValues);
-        const maxLat = Math.max(...latValues);
-        const minLng = Math.min(...lngValues);
-        const maxLng = Math.max(...lngValues);
-        const latSpread = maxLat - minLat;
-        const lngSpread = maxLng - minLng;
-        const latPadding = Math.max(latSpread * 0.15, DEFAULT_POLYGON_PADDING);
-        const lngPadding = Math.max(lngSpread * 0.15, DEFAULT_POLYGON_PADDING);
-        const path = [
-          { lat: minLat - latPadding, lng: minLng - lngPadding },
-          { lat: minLat - latPadding, lng: maxLng + lngPadding },
-          { lat: maxLat + latPadding, lng: maxLng + lngPadding },
-          { lat: maxLat + latPadding, lng: minLng - lngPadding },
-        ];
+        // 게시대 좌표들을 Point 배열로 변환
+        const points = markers.map((marker) => ({
+          lat: marker.lat,
+          lng: marker.lng,
+        }));
+
+        // Convex Hull 계산 (실제 영역 경계선)
+        const hullPath = calculateConvexHull(points, DEFAULT_POLYGON_PADDING);
+
         const colorKey = districtName || `district-${index}`;
         const color = getPolygonColor(colorKey);
         return {
           id: `polygon-${colorKey.replace(/\s+/g, '-')}-${index}`,
-          path,
+          path: hullPath,
           strokeColor: color,
           strokeOpacity: 0.65,
           strokeWeight: 2,
@@ -1830,6 +1856,19 @@ export default function DisplayDetailPage({
                     조금만 기다려 주세요.
                   </>
                 )}
+              </div>
+            </div>
+          ) : isSelectedPeriodClosed &&
+            !(isMapoDistrict && mapoFilter === 'simin') &&
+            !(isSongpaOrYongsan && currentPanelTypeFilter === 'top_fixed') ? (
+            // 선택된 기간이 마감된 경우 메시지 표시
+            <div className="flex flex-col items-center justify-center py-20">
+              <div className="text-2xl font-bold text-gray-600 mb-4">
+                해당 분기는 신청마감되었습니다
+              </div>
+              <div className="text-gray-500 text-center">
+                선택하신 기간은 신청 마감되었습니다. <br />
+                다른 기간을 선택해주세요.
               </div>
             </div>
           ) : filteredBillboards.length === 0 ? (
