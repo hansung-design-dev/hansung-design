@@ -123,8 +123,35 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
       }
     } else {
       // 일반 구: 1일-15일 상반기, 16일-31일 하반기
-      if (currentDay >= 1 && currentDay <= 15) {
-        // 1일~15일: 현재 달 하반기 + 다음 달 상반기
+      const currentHour = koreaTime.getHours();
+      const isBefore9AM = currentDay === 1 && currentHour < 9;
+      
+      if (currentDay === 1 && isBefore9AM) {
+        // 1일 9시 이전: 현재 달 상반기 + 현재 달 하반기
+        // 현재 달 상반기 (1일-15일)
+        firstPeriod = {
+          year: currentYear,
+          month: currentMonth,
+          startDay: 1,
+          endDay: 15,
+          from: `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`,
+          to: `${currentYear}-${String(currentMonth).padStart(2, '0')}-15`,
+          label: `${currentYear}년 ${currentMonth}월 상반기`,
+        };
+
+        // 현재 달 하반기 (16일-31일)
+        const lastDay = new Date(currentYear, currentMonth, 0).getDate();
+        secondPeriod = {
+          year: currentYear,
+          month: currentMonth,
+          startDay: 16,
+          endDay: lastDay,
+          from: `${currentYear}-${String(currentMonth).padStart(2, '0')}-16`,
+          to: `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`,
+          label: `${currentYear}년 ${currentMonth}월 하반기`,
+        };
+      } else if (currentDay >= 1 && currentDay <= 15) {
+        // 1일 9시 이후 ~ 15일: 현재 달 하반기 + 다음 달 상반기
         // 현재 달 하반기 (16일-31일)
         const lastDay = new Date(currentYear, currentMonth, 0).getDate();
         firstPeriod = {

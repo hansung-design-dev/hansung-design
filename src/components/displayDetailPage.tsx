@@ -97,30 +97,87 @@ export default function DisplayDetailPage({
   const [mapoFilter, setMapoFilter] = useState<'yeollip' | 'jeodan' | 'simin'>(
     'yeollip'
   );
-  const [selectedHalfPeriod, setSelectedHalfPeriod] = useState<
-    'first_half' | 'second_half'
-  >('first_half');
-
-  // 선택된 기간의 년월 정보 - 항상 다음 달로 설정
-  const [selectedPeriodYear, setSelectedPeriodYear] = useState<number>(() => {
+  // 초기 기간 계산 함수 (HalfPeriodTabs와 동일한 로직)
+  const getInitialPeriod = (districtName?: string) => {
     const now = new Date();
     const koreaTime = new Date(now.getTime() + 9 * 60 * 60 * 1000); // UTC+9 (한국시간)
     const currentYear = koreaTime.getFullYear();
     const currentMonth = koreaTime.getMonth() + 1;
+    const currentDay = koreaTime.getDate();
+    const currentHour = koreaTime.getHours();
 
-    // 다음 달의 년도
-    return currentMonth === 12 ? currentYear + 1 : currentYear;
-  });
+    const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+    const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+
+    // 마포구, 강북구: 특별한 기간
+    if (districtName === '마포구' || districtName === '강북구') {
+      if (currentDay >= 1 && currentDay <= 4) {
+        // 1일~4일: 현재 달 하반기 + 다음 달 상반기
+        return {
+          period: 'second_half' as const,
+          year: currentYear,
+          month: currentMonth,
+        };
+      } else {
+        // 5일~31일: 다음 달 상하반기
+        return {
+          period: 'first_half' as const,
+          year: nextYear,
+          month: nextMonth,
+        };
+      }
+    } else {
+      // 일반 구: 1일-15일 상반기, 16일-31일 하반기
+      const isBefore9AM = currentDay === 1 && currentHour < 9;
+
+      if (currentDay === 1 && isBefore9AM) {
+        // 1일 9시 이전: 현재 달 상반기 + 현재 달 하반기
+        return {
+          period: 'first_half' as const,
+          year: currentYear,
+          month: currentMonth,
+        };
+      } else if (currentDay >= 1 && currentDay <= 15) {
+        // 1일 9시 이후 ~ 15일: 현재 달 하반기 + 다음 달 상반기
+        return {
+          period: 'second_half' as const,
+          year: currentYear,
+          month: currentMonth,
+        };
+      } else {
+        // 16일~31일: 다음 달 상하반기
+        return {
+          period: 'first_half' as const,
+          year: nextYear,
+          month: nextMonth,
+        };
+      }
+    }
+  };
+
+  const initialPeriod = getInitialPeriod(districtObj?.name);
+  const [selectedHalfPeriod, setSelectedHalfPeriod] = useState<
+    'first_half' | 'second_half'
+  >(initialPeriod.period);
   const [aiDownloadLoading, setAiDownloadLoading] = useState(false);
 
-  const [selectedPeriodMonth, setSelectedPeriodMonth] = useState<number>(() => {
-    const now = new Date();
-    const koreaTime = new Date(now.getTime() + 9 * 60 * 60 * 1000); // UTC+9 (한국시간)
-    const currentMonth = koreaTime.getMonth() + 1;
+  // 선택된 기간의 년월 정보 - 초기 기간 계산 결과 사용
+  const [selectedPeriodYear, setSelectedPeriodYear] = useState<number>(
+    initialPeriod.year
+  );
+  const [selectedPeriodMonth, setSelectedPeriodMonth] = useState<number>(
+    initialPeriod.month
+  );
 
-    // 다음 달
-    return currentMonth === 12 ? 1 : currentMonth + 1;
-  });
+  // districtObj가 변경될 때 초기 기간 재계산
+  useEffect(() => {
+    if (districtObj?.name) {
+      const newInitialPeriod = getInitialPeriod(districtObj.name);
+      setSelectedHalfPeriod(newInitialPeriod.period);
+      setSelectedPeriodYear(newInitialPeriod.year);
+      setSelectedPeriodMonth(newInitialPeriod.month);
+    }
+  }, [districtObj?.name]);
 
   // 상반기/하반기 탭별로 선택 상태 분리
   const [selectedIdsFirstHalf, setSelectedIdsFirstHalf] = useState<string[]>(
