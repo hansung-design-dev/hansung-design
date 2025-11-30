@@ -9,15 +9,6 @@ interface Point {
 }
 
 /**
- * 두 점 사이의 각도를 계산합니다 (기준점 기준)
- */
-function getAngle(p0: Point, p1: Point, p2: Point): number {
-  const angle1 = Math.atan2(p1.lat - p0.lat, p1.lng - p0.lng);
-  const angle2 = Math.atan2(p2.lat - p0.lat, p2.lng - p0.lng);
-  return angle2 - angle1;
-}
-
-/**
  * 두 점 사이의 거리 제곱을 계산합니다
  */
 function getDistanceSquared(p1: Point, p2: Point): number {

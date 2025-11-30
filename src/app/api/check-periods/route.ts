@@ -41,7 +41,24 @@ export async function GET() {
     }
 
     // 3. 구별로 그룹화
-    const groupedByYearMonth: Record<string, any[]> = {};
+    type PeriodWithRegion = {
+      id: string;
+      display_type_id: string;
+      region_gu_id: string;
+      year_month: string;
+      period: string;
+      period_from: string;
+      period_to: string;
+      created_at: string;
+      updated_at: string;
+      region_gu: {
+        id: string;
+        name: string;
+        code: string;
+      } | null;
+    };
+    
+    const groupedByYearMonth: Record<string, PeriodWithRegion[]> = {};
     periods?.forEach((period) => {
       const key = period.year_month;
       if (!groupedByYearMonth[key]) {
