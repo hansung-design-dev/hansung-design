@@ -291,25 +291,28 @@ export default function DisplayDetailPage({
     }
   }, [district, currentSetPanelTypeFilter, districtObj?.code]);
 
-  // 게시일 7일 전까지 신청 가능 여부 확인 (한국시간 기준)
+  // 기간 시작일 오전 9시(한국시간)부터 신청 가능 여부 확인
   const isPeriodAvailable = (periodStartDate: string) => {
+    // 현재 시간
     const now = new Date();
-    const koreaTime = new Date(now.getTime() + 9 * 60 * 60 * 1000); // UTC+9 (한국시간)
 
-    const periodStart = new Date(periodStartDate);
-    const daysUntilPeriod = Math.ceil(
-      (periodStart.getTime() - koreaTime.getTime()) / (1000 * 60 * 60 * 24)
-    );
+    // 기간 시작일의 오전 9시(한국시간) 설정
+    // periodStartDate는 "YYYY-MM-DD" 형식
+    // ISO 8601 형식으로 한국시간 오전 9시 생성
+    const periodStartKst = new Date(`${periodStartDate}T09:00:00+09:00`);
+
+    // 현재 시간이 기간 시작일 오전 9시(한국시간) 이후인지 확인
+    const isAvailable = now >= periodStartKst;
 
     // 디버그 로그 추가
     console.log('🔍 displayDetailPage isPeriodAvailable Debug:', {
       periodStartDate,
-      daysUntilPeriod,
-      isAvailable: daysUntilPeriod >= 7,
+      currentTime: now.toISOString(),
+      periodStartKst: periodStartKst.toISOString(),
+      isAvailable,
     });
 
-    // 임시로 모든 기간을 신청 가능하도록 설정 (테스트용)
-    return true; // daysUntilPeriod >= 7; // 7일 이상 남았으면 신청 가능
+    return isAvailable;
   };
 
   // 아이템이 선택 가능한지 확인하는 함수
@@ -329,8 +332,7 @@ export default function DisplayDetailPage({
       }
     }
 
-    // 임시로 기간 검증을 비활성화 (테스트용)
-    isPeriodValid = true;
+    // 기간 검증 활성화 (기간 시작일 오전 9시부터 신청 가능)
 
     // 2. 재고 확인: 선택된 기간의 재고가 0인지 확인
     let hasStock = true;
@@ -1288,7 +1290,10 @@ export default function DisplayDetailPage({
       number: item.panel_code ? Number(item.panel_code) : undefined,
       isSelected: !showAllPins && selectedIds.includes(item.id),
       district: item.district,
-      subtitle: item.address || item.neighborhood || undefined,
+      // 전체보기 모드에서는 위치 정보(subtitle)를 표시하지 않음
+      subtitle: showAllPins
+        ? undefined
+        : item.address || item.neighborhood || undefined,
     }));
 
     const groupedByDistrict = baseMarkers.reduce<
@@ -1335,8 +1340,9 @@ export default function DisplayDetailPage({
           strokeColor: color,
           strokeOpacity: 0.65,
           strokeWeight: 2,
+          // 채우기 색상 제거 - 보더만 표시
           fillColor: color,
-          fillOpacity: showAllPins ? 0.05 : 0.08,
+          fillOpacity: 0,
         };
       })
       .filter((polygon): polygon is MapPolygon => polygon !== null);

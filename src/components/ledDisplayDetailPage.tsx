@@ -599,7 +599,10 @@ export default function LEDDisplayDetailPage({
       number: item.panel_code ? Number(item.panel_code) : undefined,
       isSelected: !showAllPins && selectedIds.includes(item.id),
       district: item.district,
-      subtitle: item.address || item.neighborhood || undefined,
+      // 전체보기 모드에서는 위치 정보(subtitle)를 표시하지 않음
+      subtitle: showAllPins
+        ? undefined
+        : item.address || item.neighborhood || undefined,
     }));
 
     if (showAllPins) {
@@ -669,17 +672,13 @@ export default function LEDDisplayDetailPage({
           strokeColor: color,
           strokeOpacity: 0.65,
           strokeWeight: 2,
+          // 채우기 색상 제거 - 보더만 표시
           fillColor: color,
-          fillOpacity: showAllPins ? 0.05 : 0.08,
+          fillOpacity: 0,
         } as MapPolygon;
       })
       .filter((polygon): polygon is MapPolygon => Boolean(polygon));
-  }, [
-    billboardsWithCoords,
-    districtObj?.name,
-    selectedOption?.option,
-    showAllPins,
-  ]);
+  }, [billboardsWithCoords, districtObj?.name, selectedOption?.option]);
 
   const mapCenter = useMemo(() => {
     const fallbackCenter =

@@ -29,7 +29,13 @@ export interface MapPolygon {
   strokeColor?: string;
   strokeOpacity?: number;
   strokeWeight?: number;
-  strokeStyle?: 'solid' | 'shortdash' | 'shortdot' | 'dash' | 'dot' | 'longdash';
+  strokeStyle?:
+    | 'solid'
+    | 'shortdash'
+    | 'shortdot'
+    | 'dash'
+    | 'dot'
+    | 'longdash';
   fillColor?: string;
   fillOpacity?: number;
 }
@@ -320,19 +326,19 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
       const shouldShowOverlay =
         overlayVariant === 'minimal' ? true : isSelected;
 
-    const markerContent = shouldShowOverlay
-      ? createMarkerContent(
-          marker,
-          overlayVariant,
-          () => {
-            if (onMarkerClick) {
-              onMarkerClick(marker.id);
-            }
-          },
-          overlayVariant === 'default'
-            ? () => openRoadview(marker.lat, marker.lng)
-            : undefined
-        )
+      const markerContent = shouldShowOverlay
+        ? createMarkerContent(
+            marker,
+            overlayVariant,
+            () => {
+              if (onMarkerClick) {
+                onMarkerClick(marker.id);
+              }
+            },
+            overlayVariant === 'default'
+              ? () => openRoadview(marker.lat, marker.lng)
+              : undefined
+          )
         : null;
 
       // 마커 클릭 이벤트
@@ -386,8 +392,9 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
         strokeColor: polygonConfig.strokeColor ?? '#1F2933',
         strokeOpacity: polygonConfig.strokeOpacity ?? 0.6,
         strokeStyle: polygonConfig.strokeStyle ?? 'solid',
+        // 채우기 색상 제거 - 보더만 표시
         fillColor: polygonConfig.fillColor ?? '#238CFA',
-        fillOpacity: polygonConfig.fillOpacity ?? 0.12,
+        fillOpacity: polygonConfig.fillOpacity ?? 0,
       });
       polygon.setMap(map);
       polygonsRef.current.set(polygonConfig.id, polygon);
@@ -414,8 +421,13 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
     onMarkerClick: () => void,
     onRoadviewClick?: () => void
   ) => {
+    // 전체보기 모드(minimal)에서는 게시대번호만 표시
     const displayTitle =
-      marker.number !== undefined
+      variant === 'minimal'
+        ? marker.number !== undefined
+          ? `${marker.number}`
+          : marker.title
+        : marker.number !== undefined
         ? `${marker.number}. ${marker.title}`
         : marker.title;
 
@@ -446,7 +458,8 @@ const KakaoMap: React.FC<KakaoMapProps> = ({
         : displayTitle;
     baseWrapper.appendChild(titleLine);
 
-    if (marker.subtitle) {
+    // minimal 모드(전체보기)에서는 위치 정보(subtitle)를 표시하지 않음
+    if (marker.subtitle && variant !== 'minimal') {
       const subtitleLine = document.createElement('div');
       subtitleLine.style.cssText = `
         margin-top: 4px;
