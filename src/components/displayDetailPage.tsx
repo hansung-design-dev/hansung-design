@@ -99,12 +99,35 @@ export default function DisplayDetailPage({
   );
   // 초기 기간 계산 함수 (HalfPeriodTabs와 동일한 로직)
   const getInitialPeriod = (districtName?: string) => {
+    // 한국 시간대(KST, UTC+9) 기준으로 현재 시간 가져오기
     const now = new Date();
-    const koreaTime = new Date(now.getTime() + 9 * 60 * 60 * 1000); // UTC+9 (한국시간)
-    const currentYear = koreaTime.getFullYear();
-    const currentMonth = koreaTime.getMonth() + 1;
-    const currentDay = koreaTime.getDate();
-    const currentHour = koreaTime.getHours();
+    // Intl API를 사용하여 한국 시간대의 시간 정보 가져오기
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Seoul',
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      second: 'numeric',
+      hour12: false,
+    });
+    const parts = formatter.formatToParts(now);
+    const currentYear = parseInt(
+      parts.find((p) => p.type === 'year')?.value || '0'
+    );
+    const currentMonth = parseInt(
+      parts.find((p) => p.type === 'month')?.value || '0'
+    );
+    const currentDay = parseInt(
+      parts.find((p) => p.type === 'day')?.value || '0'
+    );
+    const currentHour = parseInt(
+      parts.find((p) => p.type === 'hour')?.value || '0'
+    );
+    const currentMinute = parseInt(
+      parts.find((p) => p.type === 'minute')?.value || '0'
+    );
 
     const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
     const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
@@ -128,7 +151,10 @@ export default function DisplayDetailPage({
       }
     } else {
       // 일반 구: 1일-15일 상반기, 16일-31일 하반기
-      const isBefore9AM = currentDay === 1 && currentHour < 9;
+      // 9시 0분 이전인지 확인 (9시 0분 0초까지는 9시 이전으로 간주)
+      const isBefore9AM =
+        currentDay === 1 &&
+        (currentHour < 9 || (currentHour === 9 && currentMinute === 0));
 
       if (currentDay === 1 && isBefore9AM) {
         // 1일 9시 이전: 현재 달 상반기 + 현재 달 하반기
@@ -336,24 +362,36 @@ export default function DisplayDetailPage({
 
   // 기간 시작일 2일 전까지 신청 가능 여부 확인
   const isPeriodAvailable = (periodStartDate: string) => {
-    const now = new Date();
-
-    // 기간 시작일 설정
+    // 기간 시작일 설정 (한국 시간대 기준)
     // periodStartDate는 "YYYY-MM-DD" 형식
-    const periodStart = new Date(`${periodStartDate}T00:00:00+09:00`);
+    const [startYear, startMonth, startDay] = periodStartDate
+      .split('-')
+      .map(Number);
+    const periodStartDateOnly = new Date(
+      Date.UTC(startYear, startMonth - 1, startDay)
+    );
 
     // 현재 시간을 한국시간으로 변환
-    const koreaTime = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-    const koreaDate = new Date(
-      koreaTime.getFullYear(),
-      koreaTime.getMonth(),
-      koreaTime.getDate()
+    const now = new Date();
+    // Intl API를 사용하여 한국 시간대의 날짜 정보 가져오기
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Seoul',
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+    });
+    const parts = formatter.formatToParts(now);
+    const koreaYear = parseInt(
+      parts.find((p) => p.type === 'year')?.value || '0'
     );
-    const periodStartDateOnly = new Date(
-      periodStart.getFullYear(),
-      periodStart.getMonth(),
-      periodStart.getDate()
+    const koreaMonth = parseInt(
+      parts.find((p) => p.type === 'month')?.value || '0'
     );
+    const koreaDay = parseInt(
+      parts.find((p) => p.type === 'day')?.value || '0'
+    );
+    // UTC 기준으로 한국 날짜 생성 (시간대 차이 무시하고 날짜만 비교)
+    const koreaDate = new Date(Date.UTC(koreaYear, koreaMonth - 1, koreaDay));
 
     // 날짜 차이 계산 (일 단위)
     const daysUntilPeriod = Math.ceil(
@@ -368,10 +406,14 @@ export default function DisplayDetailPage({
     // 디버그 로그 추가
     console.log('🔍 displayDetailPage isPeriodAvailable Debug:', {
       periodStartDate,
+      koreaYear,
+      koreaMonth,
+      koreaDay,
       currentKoreaDate: koreaDate.toISOString(),
       periodStartDateOnly: periodStartDateOnly.toISOString(),
       daysUntilPeriod,
       isAvailable,
+      parts: parts.map((p) => `${p.type}:${p.value}`),
     });
 
     return isAvailable;
@@ -515,6 +557,16 @@ export default function DisplayDetailPage({
   const isSelectedPeriodClosed = selectedPeriodStartDate
     ? !isPeriodAvailable(selectedPeriodStartDate)
     : false;
+
+  // 디버그 로그 추가
+  console.log('🔍 Period availability check:', {
+    selectedPeriodYear,
+    selectedPeriodMonth,
+    selectedHalfPeriod,
+    selectedPeriodStartDate,
+    isSelectedPeriodClosed,
+    districtName: districtObj?.name,
+  });
 
   // 상하반기에 따른 필터링
   const filteredByHalfPeriod =

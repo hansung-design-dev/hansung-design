@@ -32,6 +32,7 @@ interface PeriodInfo {
   from: string;
   to: string;
   label: string;
+  period: 'first_half' | 'second_half'; // 실제 기간 타입 추가
 }
 
 const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
@@ -49,12 +50,35 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
 
     console.log('🔍 Calculating periods based on current date');
 
+    // 한국 시간대(KST, UTC+9) 기준으로 현재 시간 가져오기
     const now = new Date();
-    const koreaTime = new Date(now.getTime() + 9 * 60 * 60 * 1000); // UTC+9 (한국시간)
-
-    const currentYear = koreaTime.getFullYear();
-    const currentMonth = koreaTime.getMonth() + 1;
-    const currentDay = koreaTime.getDate();
+    // Intl API를 사용하여 한국 시간대의 시간 정보 가져오기
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Seoul',
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      second: 'numeric',
+      hour12: false,
+    });
+    const parts = formatter.formatToParts(now);
+    const currentYear = parseInt(
+      parts.find((p) => p.type === 'year')?.value || '0'
+    );
+    const currentMonth = parseInt(
+      parts.find((p) => p.type === 'month')?.value || '0'
+    );
+    const currentDay = parseInt(
+      parts.find((p) => p.type === 'day')?.value || '0'
+    );
+    const currentHour = parseInt(
+      parts.find((p) => p.type === 'hour')?.value || '0'
+    );
+    const currentMinute = parseInt(
+      parts.find((p) => p.type === 'minute')?.value || '0'
+    );
 
     // 다음 달 계산
     const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
@@ -64,9 +88,10 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
       currentYear,
       currentMonth,
       currentDay,
+      currentHour,
       nextYear,
       nextMonth,
-      koreaTime: koreaTime.toISOString(),
+      parts: parts.map((p) => `${p.type}:${p.value}`),
     });
 
     // 마포구, 강북구: 특별한 기간 (5일-19일 상반기, 20일-다음달 4일 하반기)
@@ -82,6 +107,7 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
           from: `${currentYear}-${String(currentMonth).padStart(2, '0')}-20`,
           to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-04`,
           label: `${currentYear}년 ${currentMonth}월 하반기`,
+          period: 'second_half',
         };
 
         // 다음 달 상반기 (5일-19일)
@@ -93,6 +119,7 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
           from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-05`,
           to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-19`,
           label: `${nextYear}년 ${nextMonth}월 상반기`,
+          period: 'first_half',
         };
       } else {
         // 5일~31일: 다음 달 상하반기
@@ -105,6 +132,7 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
           from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-05`,
           to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-19`,
           label: `${nextYear}년 ${nextMonth}월 상반기`,
+          period: 'first_half',
         };
 
         // 다음 달 하반기 (20일-다다음달 4일)
@@ -119,13 +147,24 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
           from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-20`,
           to: `${nextNextYear}-${String(nextNextMonth).padStart(2, '0')}-04`,
           label: `${nextYear}년 ${nextMonth}월 하반기`,
+          period: 'second_half',
         };
       }
     } else {
       // 일반 구: 1일-15일 상반기, 16일-31일 하반기
-      const currentHour = koreaTime.getHours();
-      const isBefore9AM = currentDay === 1 && currentHour < 9;
-      
+      // 9시 0분 이전인지 확인 (9시 0분 0초까지는 9시 이전으로 간주)
+      const isBefore9AM =
+        currentDay === 1 &&
+        (currentHour < 9 || (currentHour === 9 && currentMinute === 0));
+
+      console.log('🔍 Period selection logic:', {
+        currentDay,
+        currentHour,
+        currentMinute,
+        isBefore9AM,
+        condition: currentDay === 1 && isBefore9AM,
+      });
+
       if (currentDay === 1 && isBefore9AM) {
         // 1일 9시 이전: 현재 달 상반기 + 현재 달 하반기
         // 현재 달 상반기 (1일-15일)
@@ -137,6 +176,7 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
           from: `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`,
           to: `${currentYear}-${String(currentMonth).padStart(2, '0')}-15`,
           label: `${currentYear}년 ${currentMonth}월 상반기`,
+          period: 'first_half',
         };
 
         // 현재 달 하반기 (16일-31일)
@@ -147,8 +187,11 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
           startDay: 16,
           endDay: lastDay,
           from: `${currentYear}-${String(currentMonth).padStart(2, '0')}-16`,
-          to: `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`,
+          to: `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(
+            lastDay
+          ).padStart(2, '0')}`,
           label: `${currentYear}년 ${currentMonth}월 하반기`,
+          period: 'second_half',
         };
       } else if (currentDay >= 1 && currentDay <= 15) {
         // 1일 9시 이후 ~ 15일: 현재 달 하반기 + 다음 달 상반기
@@ -160,8 +203,11 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
           startDay: 16,
           endDay: lastDay,
           from: `${currentYear}-${String(currentMonth).padStart(2, '0')}-16`,
-          to: `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`,
+          to: `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(
+            lastDay
+          ).padStart(2, '0')}`,
           label: `${currentYear}년 ${currentMonth}월 하반기`,
+          period: 'second_half', // 실제로는 하반기
         };
 
         // 다음 달 상반기 (1일-15일)
@@ -173,6 +219,7 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
           from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`,
           to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-15`,
           label: `${nextYear}년 ${nextMonth}월 상반기`,
+          period: 'first_half', // 실제로는 상반기
         };
       } else {
         // 16일~31일: 다음 달 상하반기
@@ -185,6 +232,7 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
           from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`,
           to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-15`,
           label: `${nextYear}년 ${nextMonth}월 상반기`,
+          period: 'first_half',
         };
 
         // 다음 달 하반기 (16일-31일)
@@ -195,8 +243,11 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
           startDay: 16,
           endDay: lastDay,
           from: `${nextYear}-${String(nextMonth).padStart(2, '0')}-16`,
-          to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`,
+          to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-${String(
+            lastDay
+          ).padStart(2, '0')}`,
           label: `${nextYear}년 ${nextMonth}월 하반기`,
+          period: 'second_half',
         };
       }
     }
@@ -208,20 +259,41 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
 
   // 기간 시작일 2일 전까지 신청 가능 여부 확인
   const isPeriodAvailable = (periodStartDate: string) => {
-    const now = new Date();
-    
-    // 기간 시작일 설정
+    // 기간 시작일 설정 (한국 시간대 기준)
     // periodStartDate는 "YYYY-MM-DD" 형식
-    const periodStart = new Date(`${periodStartDate}T00:00:00+09:00`);
-    
+    const [startYear, startMonth, startDay] = periodStartDate
+      .split('-')
+      .map(Number);
+    const periodStartDateOnly = new Date(
+      Date.UTC(startYear, startMonth - 1, startDay)
+    );
+
     // 현재 시간을 한국시간으로 변환
-    const koreaTime = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-    const koreaDate = new Date(koreaTime.getFullYear(), koreaTime.getMonth(), koreaTime.getDate());
-    const periodStartDateOnly = new Date(periodStart.getFullYear(), periodStart.getMonth(), periodStart.getDate());
-    
+    const now = new Date();
+    // Intl API를 사용하여 한국 시간대의 날짜 정보 가져오기
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Seoul',
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+    });
+    const parts = formatter.formatToParts(now);
+    const koreaYear = parseInt(
+      parts.find((p) => p.type === 'year')?.value || '0'
+    );
+    const koreaMonth = parseInt(
+      parts.find((p) => p.type === 'month')?.value || '0'
+    );
+    const koreaDay = parseInt(
+      parts.find((p) => p.type === 'day')?.value || '0'
+    );
+    // UTC 기준으로 한국 날짜 생성 (시간대 차이 무시하고 날짜만 비교)
+    const koreaDate = new Date(Date.UTC(koreaYear, koreaMonth - 1, koreaDay));
+
     // 날짜 차이 계산 (일 단위)
     const daysUntilPeriod = Math.ceil(
-      (periodStartDateOnly.getTime() - koreaDate.getTime()) / (1000 * 60 * 60 * 24)
+      (periodStartDateOnly.getTime() - koreaDate.getTime()) /
+        (1000 * 60 * 60 * 24)
     );
 
     // 기간 시작일 2일 전까지 신청 가능 (daysUntilPeriod > 2)
@@ -249,19 +321,24 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
     : false;
 
   // 모든 기간 표시 (신청 가능 여부와 관계없이)
-  const allPeriods = [];
+  type PeriodTabInfo = {
+    period: 'first_half' | 'second_half';
+    data: PeriodInfo;
+    isAvailable: boolean;
+  };
+  const allPeriods: PeriodTabInfo[] = [];
   if (firstPeriod) {
-    allPeriods.push({ 
-      period: 'first_half' as const, 
-      data: firstPeriod, 
-      isAvailable: isFirstPeriodAvailable 
+    allPeriods.push({
+      period: firstPeriod.period, // 실제 기간 타입 사용
+      data: firstPeriod,
+      isAvailable: isFirstPeriodAvailable,
     });
   }
   if (secondPeriod) {
-    allPeriods.push({ 
-      period: 'second_half' as const, 
-      data: secondPeriod, 
-      isAvailable: isSecondPeriodAvailable 
+    allPeriods.push({
+      period: secondPeriod.period, // 실제 기간 타입 사용
+      data: secondPeriod,
+      isAvailable: isSecondPeriodAvailable,
     });
   }
 
@@ -277,10 +354,25 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
   });
 
   const handlePeriodChange = (period: 'first_half' | 'second_half') => {
-    if (period === 'first_half' && firstPeriod) {
-      onPeriodChange('first_half', firstPeriod.year, firstPeriod.month);
-    } else if (period === 'second_half' && secondPeriod) {
-      onPeriodChange('second_half', secondPeriod.year, secondPeriod.month);
+    // allPeriods에서 해당 period를 찾아서 실제 기간 정보 사용
+    const periodInfo = allPeriods.find((p) => p.period === period);
+    if (periodInfo) {
+      onPeriodChange(
+        periodInfo.period,
+        periodInfo.data.year,
+        periodInfo.data.month
+      );
+    } else {
+      // fallback: 기존 로직 사용
+      if (period === 'first_half' && firstPeriod) {
+        onPeriodChange(firstPeriod.period, firstPeriod.year, firstPeriod.month);
+      } else if (period === 'second_half' && secondPeriod) {
+        onPeriodChange(
+          secondPeriod.period,
+          secondPeriod.year,
+          secondPeriod.month
+        );
+      }
     }
   };
 
