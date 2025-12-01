@@ -83,8 +83,8 @@ export default function Signin() {
               className="h-[1.25rem] w-[1.25rem] pl-2"
             />
             <input
-              type="email"
-              placeholder="  이메일을 입력해주세요."
+              type="text"
+              placeholder="  아이디를 입력해주세요."
               className="flex-1 outline-none border-none font-200"
               value={formData.username}
               onChange={(e) => handleInputChange('username', e.target.value)}

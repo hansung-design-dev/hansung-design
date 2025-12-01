@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     const { username, password } = body;
 
     console.log('=== 로그인 시도 ===');
-    console.log('입력된 아이디(이메일):', username);
+    console.log('입력된 아이디:', username);
     console.log('입력된 비밀번호:', password);
 
     // 필수 필드 검증
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
 
     // 사용자 조회 (Service Role Key 사용)
     console.log('DB에서 사용자 조회 중...');
-    console.log('조회할 이메일:', username);
+    console.log('조회할 아이디(username):', username);
 
     try {
       const { data: user, error: fetchError } = await supabaseAdmin
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
         .select(
           'id, username, email, name, phone, password, is_active, is_verified'
         )
-        .eq('email', username) // username 대신 email로 조회
+        .eq('username', username) // 아이디(username) 기준으로 조회
         .single();
 
       console.log('쿼리 결과 - 데이터:', user ? '존재' : '없음');
