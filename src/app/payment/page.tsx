@@ -72,7 +72,7 @@ function PaymentPageContent() {
   const [cartUpdated, setCartUpdated] = useState(false); // cart 업데이트 플래그
   const [isAgreedCaution, setIsAgreedCaution] = useState(false);
   const [projectName, setProjectName] = useState('');
-  const [tempProjectName, setTempProjectName] = useState('');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [validationErrors, setValidationErrors] = useState<{
     projectName: string;
@@ -95,6 +95,19 @@ function PaymentPageContent() {
   // 구별 + 상하반기별 개별 상태 관리
   const [groupStates, setGroupStates] = useState<{
     [groupKey: string]: {
+      projectName: string;
+      selectedFile: File | null;
+      sendByEmail: boolean;
+      fileName: string | null;
+      fileSize: number | null;
+      fileType: string | null;
+      emailAddress: string | null;
+    };
+  }>({});
+
+  // 아이템별 시안 업로드 상태 관리
+  const [itemStates, setItemStates] = useState<{
+    [itemId: string]: {
       projectName: string;
       selectedFile: File | null;
       sendByEmail: boolean;
@@ -136,18 +149,6 @@ function PaymentPageContent() {
     });
   };
 
-  const handleBulkEmailMethodToggle = () => {
-    setBulkApply((prev) => {
-      const newEmailMethod = !prev.emailMethod;
-      return {
-        ...prev,
-        emailMethod: newEmailMethod,
-        // 이메일 일괄적용을 켤 때 파일 일괄적용은 끄기
-        fileUpload: newEmailMethod ? false : prev.fileUpload,
-      };
-    });
-  };
-
   // 구별 + 상하반기별 상태 업데이트 핸들러들
   const handleGroupProjectNameChange = (groupKey: string, value: string) => {
     setGroupStates((prev) => ({
@@ -184,6 +185,56 @@ function PaymentPageContent() {
         fileName: null,
         fileSize: null,
         fileType: null,
+      },
+    }));
+  };
+
+  // 아이템별 시안 업로드 핸들러들
+  const handleItemFileSelect = (itemId: string, file: File) => {
+    setItemStates((prev) => ({
+      ...prev,
+      [itemId]: {
+        ...prev[itemId],
+        projectName: prev[itemId]?.projectName || '',
+        selectedFile: file,
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        sendByEmail: false,
+        emailAddress: null,
+      },
+    }));
+  };
+
+  const handleItemEmailSelect = (itemId: string, isEmail: boolean) => {
+    setItemStates((prev) => ({
+      ...prev,
+      [itemId]: {
+        ...prev[itemId],
+        projectName: prev[itemId]?.projectName || '',
+        sendByEmail: isEmail,
+        emailAddress: isEmail ? 'banner114@hanmail.net' : null,
+        selectedFile: null,
+        fileName: null,
+        fileSize: null,
+        fileType: null,
+      },
+    }));
+  };
+
+  // 아이템별 작업이름 변경 핸들러
+  const handleItemProjectNameChange = (itemId: string, value: string) => {
+    setItemStates((prev) => ({
+      ...prev,
+      [itemId]: {
+        ...prev[itemId],
+        projectName: value,
+        selectedFile: prev[itemId]?.selectedFile || null,
+        sendByEmail: prev[itemId]?.sendByEmail || false,
+        fileName: prev[itemId]?.fileName || null,
+        fileSize: prev[itemId]?.fileSize || null,
+        fileType: prev[itemId]?.fileType || null,
+        emailAddress: prev[itemId]?.emailAddress || null,
       },
     }));
   };
@@ -247,7 +298,8 @@ function PaymentPageContent() {
             (profile: Record<string, unknown>) => ({
               ...profile,
               user_auth_id: (profile.user_auth_id as string) || user.id,
-              is_public_institution: (profile.is_public_institution as boolean) ?? false,
+              is_public_institution:
+                (profile.is_public_institution as boolean) ?? false,
               is_company: (profile.is_company as boolean) ?? false,
               is_approved: (profile.is_approved as boolean) ?? false,
             })
@@ -458,7 +510,6 @@ function PaymentPageContent() {
       console.log('🔍 Direct mode - defaultProjectName:', defaultProjectName);
 
       setProjectName(defaultProjectName);
-      setTempProjectName(defaultProjectName);
 
       // 일괄적용 활성화
       setBulkApply((prev) => ({
@@ -483,17 +534,12 @@ function PaymentPageContent() {
         storedDefaultProfileId
       );
 
-      // 구별 + 상하반기별로 그룹화
+      // 구별로 그룹화 (상하반기 구분 없이 같은 구는 하나의 그룹으로)
       const grouped: { [key: string]: CartItem[] } = {};
 
       items.forEach((item) => {
-        // 상하반기 정보 생성
-        const halfPeriod = item.halfPeriod || 'first_half';
-        const year = item.selectedYear || new Date().getFullYear();
-        const month = item.selectedMonth || new Date().getMonth() + 1;
-
-        // 그룹 키: 구_상하반기_년월
-        const groupKey = `${item.district}_${halfPeriod}_${year}_${month}`;
+        // 그룹 키: 구만 사용 (같은 구의 상반기/하반기 아이템을 하나의 그룹으로)
+        const groupKey = item.district;
 
         if (!grouped[groupKey]) grouped[groupKey] = [];
         grouped[groupKey].push(item);
@@ -1246,6 +1292,15 @@ function PaymentPageContent() {
 
   console.log('🔍 defaultProfile:', defaultProfile);
 
+  // 테스트용 0원 결제 확인
+  const isTestFreePaymentEnabled =
+    process.env.NEXT_PUBLIC_ENABLE_TEST_FREE_PAYMENT === 'true';
+  const testFreePaymentUserId =
+    process.env.NEXT_PUBLIC_TEST_FREE_PAYMENT_USER_ID || 'testsung';
+  const isTestUser =
+    user?.username === testFreePaymentUserId ||
+    user?.id === testFreePaymentUserId;
+
   // 가격 계산
   const priceSummary = selectedItems.reduce(
     (summary, item) => {
@@ -1268,6 +1323,17 @@ function PaymentPageContent() {
       totalPrice: 0,
     }
   );
+
+  // 테스트 유저인 경우 모든 가격을 0원으로 설정
+  const finalPriceSummary =
+    isTestFreePaymentEnabled && isTestUser
+      ? {
+          roadUsageFee: 0,
+          advertisingFee: 0,
+          taxPrice: 0,
+          totalPrice: 0,
+        }
+      : priceSummary;
 
   // 구별 계좌번호 정보 가져오기
   useEffect(() => {
@@ -1297,26 +1363,6 @@ function PaymentPageContent() {
 
     fetchBankInfo();
   }, [selectedItems]);
-
-  // 파일 선택 핸들러 (묶음 결제용)
-  const handleFileSelect = (file: File) => {
-    console.log('🔍 결제 페이지에서 파일 선택됨:', file.name);
-    console.log('🔍 파일 선택 전 groupedItems:', groupedItems.length);
-
-    setSelectedFile(file);
-
-    // groupedItems에 파일 정보 추가
-    setGroupedItems((prevGroups) => {
-      return prevGroups.map((group) => ({
-        ...group,
-        selectedFile: file,
-        fileUploadMethod: 'upload' as const,
-        fileName: file.name,
-        fileSize: file.size,
-        fileType: file.type,
-      }));
-    });
-  };
 
   // 에러가 있는 경우 에러 화면 표시 (현재는 사용하지 않음)
   // if (/* error && */ !isProcessing) {
@@ -1386,6 +1432,8 @@ function PaymentPageContent() {
           // 클로저 문제 방지를 위해 현재 상태 값 저장
           const currentUser = user;
           const currentGroupStates = groupStates;
+          const currentItemStates = itemStates;
+          const currentBulkApply = bulkApply;
           const currentTossWidgetData = tossWidgetData;
           // profiles (context)와 userProfiles (state) 둘 다 확인
           const currentProfilesFromContext = profiles;
@@ -1512,15 +1560,81 @@ function PaymentPageContent() {
               // 주문 생성에 필요한 정보 가져오기 (클로저에서 저장한 값 사용)
               const groupState = currentGroupStates[currentTossWidgetData.id];
               const projectName = groupState?.projectName || '';
-              const draftDeliveryMethod = groupState?.sendByEmail
-                ? 'email'
-                : 'upload';
+
+              // 아이템 개수 확인
+              const itemCount = currentTossWidgetData.items.length;
+
+              // 일괄적용 여부 확인
+              const isBulkFileUpload =
+                currentBulkApply.fileUpload || currentBulkApply.emailMethod;
+
+              // 아이템이 1개이거나 일괄적용이 체크된 경우: 그룹 단위로 확인
+              // 아이템이 2개 이상이고 일괄적용이 체크되지 않은 경우: 각 아이템별로 확인
+              if (itemCount === 1 || isBulkFileUpload) {
+                // 그룹 단위 검증
+                const isEmailSelected = groupState?.sendByEmail === true;
+                const hasFileUploaded = !!groupState?.selectedFile;
+
+                // 둘 중 하나는 반드시 선택되어야 함
+                if (!isEmailSelected && !hasFileUploaded) {
+                  alert(
+                    '시안 파일을 업로드하거나 "이메일로 파일 보낼게요"를 선택해주세요.'
+                  );
+                  paymentButton.disabled = false;
+                  paymentButton.textContent = '결제하기';
+                  return;
+                }
+              } else {
+                // 아이템별 검증 (아이템이 2개 이상이고 일괄적용이 체크되지 않은 경우)
+                for (const item of currentTossWidgetData.items) {
+                  const itemState = currentItemStates[item.id];
+                  const isEmailSelected = itemState?.sendByEmail === true;
+                  const hasFileUploaded = !!itemState?.selectedFile;
+
+                  // 각 아이템마다 둘 중 하나는 반드시 선택되어야 함
+                  if (!isEmailSelected && !hasFileUploaded) {
+                    alert(
+                      `"${
+                        item.name || item.panel_code || '아이템'
+                      }"의 시안 파일을 업로드하거나 "이메일로 파일 보낼게요"를 선택해주세요.`
+                    );
+                    paymentButton.disabled = false;
+                    paymentButton.textContent = '결제하기';
+                    return;
+                  }
+                }
+              }
+
+              // 이메일 체크박스가 선택되었으면 'email', 파일이 업로드되었으면 'upload'
+              // (그룹 단위 또는 아이템별로 이미 검증 완료)
+              const draftDeliveryMethod: 'email' | 'upload' =
+                itemCount === 1 || isBulkFileUpload
+                  ? groupState?.sendByEmail === true
+                    ? 'email'
+                    : 'upload'
+                  : 'upload'; // 아이템별인 경우는 나중에 각 아이템별로 처리
 
               // 결제 전에 시안 파일을 Storage + design_drafts에 업로드 (upload 방식인 경우)
               let draftId: string | undefined;
+              // 아이템별 draftId 저장 (아이템별인 경우)
+              const itemDraftIds: { [itemId: string]: string } = {};
 
-              if (draftDeliveryMethod === 'upload') {
+              // 그룹 단위로 파일 업로드가 필요한 경우 처리
+              if (
+                draftDeliveryMethod === 'upload' &&
+                (itemCount === 1 || isBulkFileUpload)
+              ) {
+                // upload 방식이고 그룹 단위인 경우 파일이 반드시 있어야 함
                 if (!groupState?.selectedFile) {
+                  console.error(
+                    '🔍 [결제 페이지] ❌ upload 방식인데 파일이 없음',
+                    {
+                      itemCount,
+                      isBulkFileUpload,
+                      hasGroupState: !!groupState,
+                      hasSelectedFile: !!groupState?.selectedFile,
+                    }
+                  );
                   alert('시안 파일을 선택해주세요.');
                   paymentButton.disabled = false;
                   paymentButton.textContent = '결제하기';
@@ -1598,6 +1712,116 @@ function PaymentPageContent() {
                   paymentButton.disabled = false;
                   paymentButton.textContent = '결제하기';
                   return;
+                }
+              }
+
+              // 아이템별 파일 업로드 처리 (아이템이 2개 이상이고 일괄적용이 체크되지 않은 경우)
+              if (itemCount >= 2 && !isBulkFileUpload) {
+                if (!currentTossWidgetData.user_profile_id) {
+                  alert(
+                    '주문에 사용할 프로필을 찾을 수 없습니다. 마이페이지에서 프로필을 확인해주세요.'
+                  );
+                  paymentButton.disabled = false;
+                  paymentButton.textContent = '결제하기';
+                  return;
+                }
+
+                // 각 아이템별로 파일이 업로드된 경우 DB에 업로드
+                for (const item of currentTossWidgetData.items) {
+                  const itemState = currentItemStates[item.id];
+                  // 정확한 값만 사용 (기본값 사용 안 함)
+                  const itemProjectName = itemState?.projectName || '';
+
+                  // 파일이 업로드된 아이템만 처리 (이메일 체크박스가 선택된 아이템은 건너뜀)
+                  if (itemState?.selectedFile && !itemState?.sendByEmail) {
+                    // projectName이 없으면 에러
+                    if (!itemProjectName || itemProjectName.trim() === '') {
+                      alert(
+                        `"${
+                          item.name || item.panel_code || '아이템'
+                        }"의 작업이름을 입력해주세요.`
+                      );
+                      paymentButton.disabled = false;
+                      paymentButton.textContent = '결제하기';
+                      return;
+                    }
+                    try {
+                      const uploadFormData = new FormData();
+                      uploadFormData.append('file', itemState.selectedFile);
+                      uploadFormData.append(
+                        'userProfileId',
+                        currentTossWidgetData.user_profile_id
+                      );
+                      uploadFormData.append('projectName', itemProjectName);
+                      uploadFormData.append('draftDeliveryMethod', 'upload');
+
+                      console.log(
+                        `🔍 [결제 페이지] 아이템별 시안 direct-upload API 호출:`,
+                        {
+                          itemId: item.id,
+                          itemName: item.name,
+                          hasFile: !!itemState.selectedFile,
+                          userProfileId: currentTossWidgetData.user_profile_id,
+                          projectName: itemProjectName,
+                        }
+                      );
+
+                      const uploadResponse = await fetch(
+                        '/api/design-drafts/direct-upload',
+                        {
+                          method: 'POST',
+                          body: uploadFormData,
+                        }
+                      );
+
+                      const uploadResult = await uploadResponse.json();
+
+                      if (!uploadResponse.ok || !uploadResult.success) {
+                        console.error(
+                          `🔍 [결제 페이지] ❌ 아이템 ${item.id} 시안 direct-upload 실패:`,
+                          uploadResult
+                        );
+                        alert(
+                          `"${
+                            item.name || item.panel_code || '아이템'
+                          }"의 시안 파일 업로드 중 오류가 발생했습니다.`
+                        );
+                        paymentButton.disabled = false;
+                        paymentButton.textContent = '결제하기';
+                        return;
+                      }
+
+                      const itemDraftId =
+                        uploadResult.data?.draftId ||
+                        uploadResult.draftId ||
+                        null;
+
+                      if (itemDraftId) {
+                        itemDraftIds[item.id] = itemDraftId;
+                        console.log(
+                          `🔍 [결제 페이지] ✅ 아이템 ${item.id} 시안 direct-upload 성공:`,
+                          {
+                            itemId: item.id,
+                            draftId: itemDraftId,
+                            fileName: uploadResult.data?.fileName,
+                          }
+                        );
+                      }
+                    } catch (uploadError) {
+                      console.error(
+                        `🔍 [결제 페이지] ❌ 아이템 ${item.id} 시안 direct-upload 예외:`,
+                        uploadError
+                      );
+                      alert(
+                        `"${
+                          item.name || item.panel_code || '아이템'
+                        }"의 시안 파일 업로드 중 오류가 발생했습니다.`
+                      );
+                      paymentButton.disabled = false;
+                      paymentButton.textContent = '결제하기';
+                      return;
+                    }
+                  }
                 }
               }
               // user_auth_id: localStorage에서 가져오기 (로그인 시 저장됨)
@@ -1817,11 +2041,33 @@ function PaymentPageContent() {
                 );
               }
 
-              if (!projectName || projectName.trim() === '') {
-                alert('작업이름을 입력해주세요.');
-                paymentButton.disabled = false;
-                paymentButton.textContent = '결제하기';
-                return;
+              // 작업이름 검증
+              // 그룹 단위인 경우: 그룹 projectName 확인
+              // 아이템별인 경우: 각 아이템의 projectName 확인 (각각 필수 입력)
+              if (itemCount === 1 || isBulkFileUpload) {
+                // 그룹 단위 검증
+                if (!projectName || projectName.trim() === '') {
+                  alert('작업이름을 입력해주세요.');
+                  paymentButton.disabled = false;
+                  paymentButton.textContent = '결제하기';
+                  return;
+                }
+              } else {
+                // 아이템별 검증: 각 아이템의 projectName이 반드시 입력되어야 함
+                for (const item of currentTossWidgetData.items) {
+                  const itemState = currentItemStates[item.id];
+                  const itemProjectName = itemState?.projectName || '';
+                  if (!itemProjectName || itemProjectName.trim() === '') {
+                    alert(
+                      `"${
+                        item.name || item.panel_code || '아이템'
+                      }"의 작업이름을 입력해주세요.`
+                    );
+                    paymentButton.disabled = false;
+                    paymentButton.textContent = '결제하기';
+                    return;
+                  }
+                }
               }
 
               console.log('🔍 [결제 페이지] 결제 정보 준비...', {
@@ -1897,6 +2143,18 @@ function PaymentPageContent() {
                 source: '위젯 초기화 시 생성',
               });
 
+              // 아이템별 draftDeliveryMethod 생성 (아이템별인 경우)
+              const itemDraftDeliveryMethods: {
+                [itemId: string]: 'email' | 'upload';
+              } = {};
+              if (itemCount >= 2 && !isBulkFileUpload) {
+                for (const item of currentTossWidgetData.items) {
+                  const itemState = currentItemStates[item.id];
+                  itemDraftDeliveryMethods[item.id] =
+                    itemState?.sendByEmail === true ? 'email' : 'upload';
+                }
+              }
+
               // 결제 정보를 localStorage에 저장 (결제 성공 시 실제 주문 생성에 사용)
               const paymentData = {
                 tempOrderId: finalOrderId,
@@ -1910,12 +2168,29 @@ function PaymentPageContent() {
                   selectedMonth: item.selectedMonth,
                   panel_slot_usage_id: item.panel_slot_usage_id,
                   panel_slot_snapshot: item.panel_slot_snapshot,
+                  // 아이템별 정보 추가
+                  draftId: itemDraftIds[item.id] || undefined,
+                  draftDeliveryMethod:
+                    itemDraftDeliveryMethods[item.id] || draftDeliveryMethod,
+                  projectName:
+                    itemCount >= 2 && !isBulkFileUpload
+                      ? currentItemStates[item.id]?.projectName || ''
+                      : projectName,
                 })),
                 userAuthId,
                 userProfileId: finalUserProfileId,
                 draftDeliveryMethod,
                 projectName,
                 draftId,
+                // 아이템별 정보 추가
+                itemDraftIds:
+                  Object.keys(itemDraftIds).length > 0
+                    ? itemDraftIds
+                    : undefined,
+                itemDraftDeliveryMethods:
+                  Object.keys(itemDraftDeliveryMethods).length > 0
+                    ? itemDraftDeliveryMethods
+                    : undefined,
                 district: currentTossWidgetData.district,
                 email: currentTossWidgetData.email,
                 contact_person_name: currentTossWidgetData.contact_person_name,
@@ -2017,10 +2292,28 @@ function PaymentPageContent() {
                 return;
               }
 
+              // 테스트용 0원 결제 확인
+              const isTestFreePaymentEnabled =
+                process.env.NEXT_PUBLIC_ENABLE_TEST_FREE_PAYMENT === 'true';
+              const testFreePaymentUserId =
+                process.env.NEXT_PUBLIC_TEST_FREE_PAYMENT_USER_ID || 'testsung';
+              const isTestUser =
+                currentUser?.username === testFreePaymentUserId ||
+                currentUser?.id === testFreePaymentUserId;
+
+              // 테스트 유저인 경우 가격을 0원으로 설정
+              const finalAmount =
+                isTestFreePaymentEnabled && isTestUser
+                  ? 0
+                  : currentTossWidgetData.totalPrice;
+
               console.log('🔍 [통합결제창] 결제 요청 시작:', {
                 orderId: paymentParams.orderId,
                 orderName: paymentParams.orderName,
-                amount: tossWidgetData.totalPrice,
+                originalAmount: currentTossWidgetData.totalPrice,
+                finalAmount,
+                isTestUser,
+                isTestFreePaymentEnabled,
                 hasTossPayments: !!tossPayments,
                 paymentMethod: 'CARD',
               });
@@ -2028,7 +2321,7 @@ function PaymentPageContent() {
               // 통합결제창 방식: tossPayments.requestPayment() 직접 호출
               // 문서: https://docs.tosspayments.com/guides/v2/payment-window/integration
               await tossPayments.requestPayment('CARD', {
-                amount: tossWidgetData.totalPrice,
+                amount: finalAmount,
                 orderId: paymentParams.orderId,
                 orderName: paymentParams.orderName,
                 customerName: paymentParams.customerName,
@@ -2146,138 +2439,6 @@ function PaymentPageContent() {
 
         {/* 좌측 - 작업이름, 시안 업로드 및 구별 카드 */}
         <div className="space-y-8 border border-solid border-gray-3 rounded-[0.375rem] p-[2.5rem] sm:p-[1.5rem]">
-          {/* 작업이름 입력 */}
-          <section className="p-6 border rounded-lg shadow-sm flex flex-col gap-4 sm:p-2">
-            <div className="flex items-center justify-between mb-4 border-b-solid border-black border-b-[0.1rem] pb-4">
-              <h2 className="text-1.25 text-gray-2 font-bold">작업이름</h2>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="bulkProjectName"
-                  checked={bulkApply.projectName}
-                  onChange={handleBulkProjectNameToggle}
-                  className="w-4 h-4"
-                />
-                <label
-                  htmlFor="bulkProjectName"
-                  className="text-sm text-gray-600"
-                >
-                  일괄적용
-                </label>
-              </div>
-            </div>
-            {/* 시안업로드 섹셕 */}
-            {bulkApply.projectName && (
-              <div className="flex flex-col sm:flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4 sm:gap-2">
-                <label className="w-full md:w-[9rem] text-gray-600 font-medium">
-                  <span className="text-red">*</span> 작업이름
-                </label>
-                <div className="flex flex-col gap-1">
-                  <input
-                    type="text"
-                    value={tempProjectName}
-                    onChange={(e) => {
-                      setTempProjectName(e.target.value);
-                      if (validationErrors.projectName) {
-                        setValidationErrors((prev) => ({
-                          ...prev,
-                          projectName: '',
-                        }));
-                      }
-                    }}
-                    onBlur={() => {
-                      setProjectName(tempProjectName);
-                      if (bulkApply.projectName) {
-                        applyBulkSettings();
-                      }
-                    }}
-                    className={`w-full md:w-[21.25rem] sm:w-[13rem] border border-solid shadow-none rounded px-4 h-[3rem] ${
-                      validationErrors.projectName
-                        ? 'border-red-500'
-                        : 'border-gray-300'
-                    }`}
-                    placeholder="작업 이름을 입력하세요"
-                  />
-                  {validationErrors.projectName && (
-                    <span className="text-red-500 text-sm">
-                      {validationErrors.projectName}
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
-          </section>
-
-          {/* 시안 업로드 UI */}
-          {bulkApply.projectName && (
-            <section className="p-6 border rounded-lg shadow-sm flex flex-col gap-4 sm:p-2">
-              <div className="flex items-center justify-between mb-4 border-b-solid border-black border-b-[0.1rem] pb-4">
-                <h2 className="text-1.25 text-gray-2 font-bold">
-                  <span className="text-red">*</span> 시안 업로드
-                </h2>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="bulkFileUpload"
-                      checked={bulkApply.fileUpload}
-                      onChange={handleBulkFileUploadToggle}
-                      className="w-4 h-4"
-                    />
-                    <label
-                      htmlFor="bulkFileUpload"
-                      className="text-sm text-gray-600"
-                    >
-                      파일 일괄적용
-                    </label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="bulkEmailMethod"
-                      checked={bulkApply.emailMethod}
-                      onChange={handleBulkEmailMethodToggle}
-                      className="w-4 h-4"
-                    />
-                    <label
-                      htmlFor="bulkEmailMethod"
-                      className="text-sm text-gray-600"
-                    >
-                      이메일 일괄적용
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-4">
-                <div className="flex flex-col sm:flex-col md:flex-row items-start justify-between gap-2 md:gap-4 sm:gap-2">
-                  <label className="w-full md:w-[9rem] text-gray-600 font-medium pt-2">
-                    파일업로드
-                  </label>
-                  <div className="flex-1 space-y-2">
-                    <CustomFileUpload
-                      onFileSelect={handleFileSelect}
-                      disabled={bulkApply.emailMethod}
-                      placeholder="시안 파일을 선택해주세요"
-                      className="w-full md:w-[21.25rem] sm:w-[13rem]"
-                    />
-                    <div className="flex flex-col gap-2 items-start">
-                      {bulkApply.emailMethod && (
-                        <p className="text-xs text-gray-500 ml-6">
-                          banner114@hanmail.net로 시안을 보내주세요.
-                        </p>
-                      )}
-                    </div>
-                    {validationErrors.fileUpload && (
-                      <span className="text-red-500 text-sm">
-                        {validationErrors.fileUpload}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </section>
-          )}
           {/* 구별 카드 */}
           {visibleGroups.map((group) => {
             // 디스플레이 타입 라벨
@@ -2314,10 +2475,60 @@ function PaymentPageContent() {
                     ({itemCount}개 {unitLabel})
                   </span>
                 </div>
-                {/* 구별 개별 입력 필드들 */}
-                <div className="space-y-4 mb-4">
-                  {/* 구별 작업이름 - 일괄적용이 꺼져있을 때만 표시 */}
-                  {!bulkApply.projectName && (
+
+                {/* 아이템이 2개 이상일 때 일괄적용 체크박스 - 항상 표시 */}
+                {itemCount >= 2 && (
+                  <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id={`bulk-project-${group.id}`}
+                          checked={bulkApply.projectName}
+                          onChange={handleBulkProjectNameToggle}
+                          className="w-4 h-4"
+                        />
+                        <label
+                          htmlFor={`bulk-project-${group.id}`}
+                          className="text-sm text-gray-700 font-medium"
+                        >
+                          작업이름 일괄적용
+                        </label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id={`bulk-file-${group.id}`}
+                          checked={
+                            bulkApply.fileUpload || bulkApply.emailMethod
+                          }
+                          onChange={() => {
+                            if (bulkApply.fileUpload || bulkApply.emailMethod) {
+                              setBulkApply((prev) => ({
+                                ...prev,
+                                fileUpload: false,
+                                emailMethod: false,
+                              }));
+                            } else {
+                              handleBulkFileUploadToggle();
+                            }
+                          }}
+                          className="w-4 h-4"
+                        />
+                        <label
+                          htmlFor={`bulk-file-${group.id}`}
+                          className="text-sm text-gray-700 font-medium"
+                        >
+                          시안 일괄적용
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 그룹 단위 작업이름 - 아이템 1개이거나 작업이름 일괄적용이 체크되었을 때 */}
+                {(itemCount === 1 || bulkApply.projectName) && (
+                  <div className="mb-4">
                     <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
                       <label className="w-full sm:w-[8rem] text-gray-600 font-medium text-sm">
                         작업이름
@@ -2337,10 +2548,14 @@ function PaymentPageContent() {
                         />
                       </div>
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {/* 구별 시안 업로드 - 일괄적용이 꺼져있을 때만 표시 */}
-                  {!bulkApply.projectName && (
+                {/* 그룹 단위 시안 업로드 - 아이템 1개이거나 시안 일괄적용이 체크되었을 때 */}
+                {(itemCount === 1 ||
+                  bulkApply.fileUpload ||
+                  bulkApply.emailMethod) && (
+                  <div className="mb-4">
                     <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
                       <label className="w-full sm:w-[8rem] text-gray-600 font-medium text-sm">
                         시안 업로드
@@ -2380,15 +2595,15 @@ function PaymentPageContent() {
                         )}
                       </div>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
 
                 {/* 구별 아이템 목록 */}
                 <div className="mb-4 p-4 bg-gray-50 rounded-lg">
                   <h3 className="text-sm font-semibold mb-2 text-gray-700">
                     결제할 게시대 목록:
                   </h3>
-                  <div className="space-y-1">
+                  <div className="space-y-4">
                     {group.items.map((item, index) => {
                       // 상하반기 정보 표시
                       const itemHalfPeriod = item.halfPeriod || 'first_half';
@@ -2400,17 +2615,95 @@ function PaymentPageContent() {
                         itemHalfPeriod === 'first_half' ? '상반기' : '하반기'
                       }`;
 
+                      const itemState = itemStates[item.id];
+
                       return (
                         <div
                           key={item.id}
-                          className="text-sm text-gray-600 flex flex-col sm:flex-row sm:justify-between items-center"
+                          className="border border-gray-200 rounded-lg p-3 bg-white"
                         >
-                          <span>
-                            {index + 1}. 패널번호:{' '}
-                            {item.panel_code || item.panel_id || '-'} / 이름:{' '}
-                            {item.name || '-'} / 구: {item.district} / 기간:{' '}
-                            {itemPeriodText}
-                          </span>
+                          <div className="text-sm text-gray-600 mb-3">
+                            <span className="font-medium">
+                              {index + 1}. 패널번호:{' '}
+                              {item.panel_code || item.panel_id || '-'} / 이름:{' '}
+                              {item.name || '-'} / 구: {item.district} / 기간:{' '}
+                              {itemPeriodText}
+                            </span>
+                          </div>
+
+                          {/* 아이템별 입력란 - 아이템 2개 이상이고 해당 항목의 일괄적용이 체크되지 않았을 때만 표시 */}
+                          {itemCount >= 2 && (
+                            <div className="space-y-3 mt-3">
+                              {/* 아이템별 작업이름 - 작업이름 일괄적용이 체크되지 않았을 때만 표시 */}
+                              {!bulkApply.projectName && (
+                                <div className="flex flex-col gap-2">
+                                  <label className="text-xs text-gray-600 font-medium">
+                                    작업이름
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={itemState?.projectName || ''}
+                                    onChange={(e) =>
+                                      handleItemProjectNameChange(
+                                        item.id,
+                                        e.target.value
+                                      )
+                                    }
+                                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                                    placeholder="작업 이름을 입력하세요"
+                                  />
+                                </div>
+                              )}
+
+                              {/* 아이템별 시안 업로드 - 시안 일괄적용이 체크되지 않았을 때만 표시 */}
+                              {!bulkApply.fileUpload &&
+                                !bulkApply.emailMethod && (
+                                  <div className="flex flex-col gap-2">
+                                    <label className="text-xs text-gray-600 font-medium">
+                                      시안 업로드
+                                    </label>
+                                    <div className="space-y-2">
+                                      <CustomFileUpload
+                                        onFileSelect={(file) =>
+                                          handleItemFileSelect(item.id, file)
+                                        }
+                                        disabled={itemState?.sendByEmail}
+                                        placeholder="시안 파일을 선택해주세요"
+                                        className="w-full"
+                                      />
+                                      <div className="flex items-center gap-2">
+                                        <input
+                                          type="checkbox"
+                                          id={`email-item-${item.id}`}
+                                          checked={
+                                            itemState?.sendByEmail || false
+                                          }
+                                          onChange={(e) =>
+                                            handleItemEmailSelect(
+                                              item.id,
+                                              e.target.checked
+                                            )
+                                          }
+                                          className="w-4 h-4"
+                                        />
+                                        <label
+                                          htmlFor={`email-item-${item.id}`}
+                                          className="text-xs text-gray-500"
+                                        >
+                                          이메일로 파일 보낼게요
+                                        </label>
+                                      </div>
+                                      {itemState?.sendByEmail && (
+                                        <p className="text-xs text-gray-500 ml-6">
+                                          banner114@hanmail.net로 시안을
+                                          보내주세요.
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -2425,41 +2718,83 @@ function PaymentPageContent() {
                     <div className="flex justify-between">
                       <span className="text-gray-600">도로점용료:</span>
                       <span className="font-medium">
-                        {group.items
-                          .reduce(
-                            (sum, item) =>
-                              sum +
-                              (item.panel_slot_snapshot?.road_usage_fee || 0),
-                            0
-                          )
-                          .toLocaleString()}
+                        {(() => {
+                          const isTestFreePaymentEnabled =
+                            process.env.NEXT_PUBLIC_ENABLE_TEST_FREE_PAYMENT ===
+                            'true';
+                          const testFreePaymentUserId =
+                            process.env.NEXT_PUBLIC_TEST_FREE_PAYMENT_USER_ID ||
+                            'testsung';
+                          const isTestUser =
+                            user?.username === testFreePaymentUserId ||
+                            user?.id === testFreePaymentUserId;
+                          const displayPrice =
+                            isTestFreePaymentEnabled && isTestUser
+                              ? 0
+                              : group.items.reduce(
+                                  (sum, item) =>
+                                    sum +
+                                    (item.panel_slot_snapshot?.road_usage_fee ||
+                                      0),
+                                  0
+                                );
+                          return displayPrice.toLocaleString();
+                        })()}
                         원
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">광고료:</span>
                       <span className="font-medium">
-                        {group.items
-                          .reduce(
-                            (sum, item) =>
-                              sum +
-                              (item.panel_slot_snapshot?.advertising_fee || 0),
-                            0
-                          )
-                          .toLocaleString()}
+                        {(() => {
+                          const isTestFreePaymentEnabled =
+                            process.env.NEXT_PUBLIC_ENABLE_TEST_FREE_PAYMENT ===
+                            'true';
+                          const testFreePaymentUserId =
+                            process.env.NEXT_PUBLIC_TEST_FREE_PAYMENT_USER_ID ||
+                            'testsung';
+                          const isTestUser =
+                            user?.username === testFreePaymentUserId ||
+                            user?.id === testFreePaymentUserId;
+                          const displayPrice =
+                            isTestFreePaymentEnabled && isTestUser
+                              ? 0
+                              : group.items.reduce(
+                                  (sum, item) =>
+                                    sum +
+                                    (item.panel_slot_snapshot
+                                      ?.advertising_fee || 0),
+                                  0
+                                );
+                          return displayPrice.toLocaleString();
+                        })()}
                         원
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">부가세:</span>
                       <span className="font-medium">
-                        {group.items
-                          .reduce(
-                            (sum, item) =>
-                              sum + (item.panel_slot_snapshot?.tax_price || 0),
-                            0
-                          )
-                          .toLocaleString()}
+                        {(() => {
+                          const isTestFreePaymentEnabled =
+                            process.env.NEXT_PUBLIC_ENABLE_TEST_FREE_PAYMENT ===
+                            'true';
+                          const testFreePaymentUserId =
+                            process.env.NEXT_PUBLIC_TEST_FREE_PAYMENT_USER_ID ||
+                            'testsung';
+                          const isTestUser =
+                            user?.username === testFreePaymentUserId ||
+                            user?.id === testFreePaymentUserId;
+                          const displayPrice =
+                            isTestFreePaymentEnabled && isTestUser
+                              ? 0
+                              : group.items.reduce(
+                                  (sum, item) =>
+                                    sum +
+                                    (item.panel_slot_snapshot?.tax_price || 0),
+                                  0
+                                );
+                          return displayPrice.toLocaleString();
+                        })()}
                         원
                       </span>
                     </div>
@@ -2467,7 +2802,26 @@ function PaymentPageContent() {
                       <div className="flex justify-between font-semibold">
                         <span>총 결제 금액:</span>
                         <span className="text-blue-700">
-                          {group.totalPrice.toLocaleString()}원
+                          {(() => {
+                            // 테스트용 0원 결제 확인
+                            const isTestFreePaymentEnabled =
+                              process.env
+                                .NEXT_PUBLIC_ENABLE_TEST_FREE_PAYMENT ===
+                              'true';
+                            const testFreePaymentUserId =
+                              process.env
+                                .NEXT_PUBLIC_TEST_FREE_PAYMENT_USER_ID ||
+                              'testsung';
+                            const isTestUser =
+                              user?.username === testFreePaymentUserId ||
+                              user?.id === testFreePaymentUserId;
+                            const displayPrice =
+                              isTestFreePaymentEnabled && isTestUser
+                                ? 0
+                                : group.totalPrice;
+                            return displayPrice.toLocaleString();
+                          })()}
+                          원
                         </span>
                       </div>
                     </div>
@@ -2493,11 +2847,48 @@ function PaymentPageContent() {
                   {/* 결제 조건 확인 */}
                   {(() => {
                     const groupState = groupStates[group.id];
-                    const hasProjectName =
-                      groupState?.projectName &&
-                      groupState.projectName.trim() !== '';
-                    const hasFileUploadMethod =
-                      groupState?.selectedFile || groupState?.sendByEmail;
+                    const itemCount =
+                      group.items.length > 0 ? group.items.length : 1;
+
+                    // 작업이름 확인
+                    let hasProjectName = false;
+                    if (itemCount === 1 || bulkApply.projectName) {
+                      // 아이템 1개이거나 작업이름 일괄적용이 체크되었을 때
+                      hasProjectName = !!(
+                        groupState?.projectName &&
+                        groupState.projectName.trim() !== ''
+                      );
+                    } else {
+                      // 아이템 2개 이상이고 작업이름 일괄적용이 꺼져있을 때
+                      hasProjectName = group.items.every((item) => {
+                        const itemState = itemStates[item.id];
+                        return !!(
+                          itemState?.projectName &&
+                          itemState.projectName.trim() !== ''
+                        );
+                      });
+                    }
+
+                    // 시안 업로드 확인
+                    let hasFileUploadMethod = false;
+                    if (
+                      itemCount === 1 ||
+                      bulkApply.fileUpload ||
+                      bulkApply.emailMethod
+                    ) {
+                      // 아이템 1개이거나 시안 일괄적용이 체크되었을 때
+                      hasFileUploadMethod =
+                        !!groupState?.selectedFile || !!groupState?.sendByEmail;
+                    } else {
+                      // 아이템 2개 이상이고 시안 일괄적용이 꺼져있을 때
+                      hasFileUploadMethod = group.items.every((item) => {
+                        const itemState = itemStates[item.id];
+                        return (
+                          !!itemState?.selectedFile || !!itemState?.sendByEmail
+                        );
+                      });
+                    }
+
                     const hasAgreedToTerms = isAgreedCaution;
 
                     const isButtonEnabled =
@@ -2524,7 +2915,12 @@ function PaymentPageContent() {
                               <div>• 작업이름을 입력해주세요</div>
                             )}
                             {!hasFileUploadMethod && (
-                              <div>• 파일 업로드 방법을 선택해주세요</div>
+                              <div>
+                                •{' '}
+                                {bulkApply.fileUpload || bulkApply.emailMethod
+                                  ? '파일 업로드 방법을 선택해주세요'
+                                  : '모든 아이템의 시안 업로드 방법을 선택해주세요'}
+                              </div>
                             )}
                             {!hasAgreedToTerms && (
                               <div>• 유의사항에 동의해주세요</div>
@@ -2650,9 +3046,11 @@ function PaymentPageContent() {
                   htmlFor="agreement"
                   className="text-sm text-gray-700 leading-relaxed"
                 >
+                  <span className="text-red-500">*</span> 유의사항을 확인하고
+                  동의합니다.
                   {validationErrors.agreement && (
-                    <span className="text-red text-sm">
-                      * {validationErrors.agreement}
+                    <span className="text-red text-sm block mt-1">
+                      {validationErrors.agreement}
                     </span>
                   )}
                 </label>
@@ -2669,25 +3067,25 @@ function PaymentPageContent() {
               <div className="flex justify-between">
                 <span className="text-gray-600">도로점용료:</span>
                 <span className="font-medium">
-                  {priceSummary.roadUsageFee.toLocaleString()}원
+                  {finalPriceSummary.roadUsageFee.toLocaleString()}원
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">광고료:</span>
                 <span className="font-medium">
-                  {priceSummary.advertisingFee.toLocaleString()}원
+                  {finalPriceSummary.advertisingFee.toLocaleString()}원
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">부가세:</span>
                 <span className="font-medium">
-                  {priceSummary.taxPrice.toLocaleString()}원
+                  {finalPriceSummary.taxPrice.toLocaleString()}원
                 </span>
               </div>
               <div className="border-t pt-3">
                 <div className="flex justify-between text-lg font-bold">
                   <span>총 결제 금액:</span>
-                  <span>{priceSummary.totalPrice.toLocaleString()}원</span>
+                  <span>{finalPriceSummary.totalPrice.toLocaleString()}원</span>
                 </div>
               </div>
             </div>
@@ -2715,7 +3113,26 @@ function PaymentPageContent() {
             <div className="mb-4 p-3 bg-gray-50 rounded">
               <div className="flex justify-between font-semibold">
                 <span>결제 금액:</span>
-                <span>{tossWidgetData.totalPrice.toLocaleString()}원</span>
+                <span>
+                  {(() => {
+                    // 테스트용 0원 결제 확인
+                    const isTestFreePaymentEnabled =
+                      process.env.NEXT_PUBLIC_ENABLE_TEST_FREE_PAYMENT ===
+                      'true';
+                    const testFreePaymentUserId =
+                      process.env.NEXT_PUBLIC_TEST_FREE_PAYMENT_USER_ID ||
+                      'testsung';
+                    const isTestUser =
+                      user?.username === testFreePaymentUserId ||
+                      user?.id === testFreePaymentUserId;
+                    const displayPrice =
+                      isTestFreePaymentEnabled && isTestUser
+                        ? 0
+                        : tossWidgetData.totalPrice;
+                    return displayPrice.toLocaleString();
+                  })()}
+                  원
+                </span>
               </div>
               <div className="text-sm text-gray-600 mt-1">
                 {tossWidgetData.district === '상담신청'

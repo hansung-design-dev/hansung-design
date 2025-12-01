@@ -400,39 +400,64 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ⚠️ 중요: 토스페이먼츠 결제 승인 API 호출 (이 호출이 실제로 카드에서 돈을 빠져나가게 함)
-    console.log('🔍 [결제 확인 API] 토스페이먼츠 결제 승인 API 호출 시작...', {
-      paymentKey: paymentKey ? `${paymentKey.substring(0, 30)}...` : '(없음)',
-      orderId,
-      amount: finalAmount,
-      originalAmount: amount !== finalAmount ? amount : undefined,
-      timestamp: new Date().toISOString(),
-    });
+    // 0원 결제인 경우 토스페이먼츠 API 호출 스킵
+    let confirmData: any = null;
+    let confirmResponse: Response | null = null;
 
-    const basicToken = Buffer.from(`${secretKey}:`).toString('base64');
-    const confirmResponse = await fetch(
-      'https://api.tosspayments.com/v1/payments/confirm',
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Basic ${basicToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          paymentKey,
+    if (finalAmount === 0) {
+      console.log(
+        '🔍 [결제 확인 API] ⚠️ 0원 결제 - 토스페이먼츠 API 호출 스킵, 바로 주문 생성으로 진행'
+      );
+      // 0원 결제는 토스페이먼츠 API를 호출하지 않고 가짜 응답 생성
+      confirmData = {
+        code: 'SUCCESS',
+        status: 'DONE',
+        totalAmount: 0,
+        method: 'FREE',
+        approvedAt: new Date().toISOString(),
+        requestedAt: new Date().toISOString(),
+        orderId: orderId,
+        paymentKey: paymentKey,
+      };
+    } else {
+      // ⚠️ 중요: 토스페이먼츠 결제 승인 API 호출 (이 호출이 실제로 카드에서 돈을 빠져나가게 함)
+      console.log(
+        '🔍 [결제 확인 API] 토스페이먼츠 결제 승인 API 호출 시작...',
+        {
+          paymentKey: paymentKey ? `${paymentKey.substring(0, 30)}...` : '(없음)',
           orderId,
           amount: finalAmount,
-        }),
-      }
-    );
+          originalAmount: amount !== finalAmount ? amount : undefined,
+          timestamp: new Date().toISOString(),
+        }
+      );
 
-    const confirmData = await confirmResponse.json();
+      const basicToken = Buffer.from(`${secretKey}:`).toString('base64');
+      confirmResponse = await fetch(
+        'https://api.tosspayments.com/v1/payments/confirm',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Basic ${basicToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            paymentKey,
+            orderId,
+            amount: finalAmount,
+          }),
+        }
+      );
+
+      confirmData = await confirmResponse.json();
+    }
 
     // 🔍 디버깅: 토스페이먼츠 응답 상세 로깅
     console.log('🔍 [결제 확인 API] 토스페이먼츠 결제 승인 API 응답:', {
-      ok: confirmResponse.ok,
-      status: confirmResponse.status,
-      statusText: confirmResponse.statusText,
+      isFreePayment: finalAmount === 0,
+      ok: confirmResponse?.ok ?? true,
+      status: confirmResponse?.status ?? 200,
+      statusText: confirmResponse?.statusText ?? 'OK',
       confirmData: confirmData
         ? {
             code: confirmData.code || '(없음)',
@@ -452,8 +477,8 @@ export async function POST(request: NextRequest) {
       fullResponse: confirmData,
     });
 
-    // HTTP 응답 상태 확인
-    if (!confirmResponse.ok) {
+    // HTTP 응답 상태 확인 (0원 결제가 아닌 경우만)
+    if (finalAmount !== 0 && confirmResponse && !confirmResponse.ok) {
       const errorCode = confirmData?.code;
       const errorMessage = confirmData?.message || '결제 승인 실패';
 
@@ -492,7 +517,11 @@ export async function POST(request: NextRequest) {
 
     // 결제 승인 API가 성공적으로 호출되었는지 확인
     // HTTP 200 응답이면 결제 승인이 완료된 것이지만, 에러 메시지가 있으면 확인 필요
-    if (hasError || (responseCode && !responseCode.includes('SUCCESS'))) {
+    // 0원 결제는 항상 성공으로 처리
+    if (
+      finalAmount !== 0 &&
+      (hasError || (responseCode && !responseCode.includes('SUCCESS')))
+    ) {
       console.error('🔍 [결제 확인 API] ❌ 토스페이먼츠 응답에 에러:', {
         code: responseCode,
         message: confirmData?.message,
@@ -747,6 +776,11 @@ export async function POST(request: NextRequest) {
       note: '토스페이먼츠 응답에서 결제 수단을 확인하여 DB method_code로 변환했습니다.',
     });
 
+    // 0원 결제인 경우 결제 수단을 'FREE'로 설정
+    if (finalAmount === 0) {
+      methodCode = 'free';
+    }
+
     // payment_methods 테이블에서 결제 수단 조회 (없으면 자동 생성)
     let paymentMethodData;
     const { error: paymentMethodError, data: foundPaymentMethod } =
@@ -777,6 +811,7 @@ export async function POST(request: NextRequest) {
         kakao: { name: '카카오페이', method_type: 'online' },
         naver: { name: '네이버페이', method_type: 'online' },
         bank_transfer: { name: '계좌이체', method_type: 'offline' },
+        free: { name: '무료결제', method_type: 'online' },
       };
 
       const methodInfo = methodMapping[methodCode] || {
