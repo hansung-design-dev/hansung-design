@@ -134,15 +134,34 @@ export default function DisplayDetailPage({
 
     // 마포구, 강북구: 특별한 기간
     if (districtName === '마포구' || districtName === '강북구') {
+      // 5일 9시 이전인지 확인 (5일 9시 0분 0초까지는 9시 이전으로 간주)
+      const isBefore9AMOn5th =
+        currentDay === 5 &&
+        (currentHour < 9 || (currentHour === 9 && currentMinute === 0));
+
       if (currentDay >= 1 && currentDay <= 4) {
-        // 1일~4일: 현재 달 하반기 + 다음 달 상반기
+        // 1일~4일: 현재 달 상반기 + 현재 달 하반기
+        return {
+          period: 'first_half' as const,
+          year: currentYear,
+          month: currentMonth,
+        };
+      } else if (currentDay === 5 && isBefore9AMOn5th) {
+        // 5일 9시 이전: 현재 달 상반기(비활성화) + 현재 달 하반기(활성화)
+        return {
+          period: 'first_half' as const,
+          year: currentYear,
+          month: currentMonth,
+        };
+      } else if (currentDay >= 5 && currentDay <= 19) {
+        // 5일 9시 이후 ~ 19일: 현재 달 하반기 + 다음 달 상반기
         return {
           period: 'second_half' as const,
           year: currentYear,
           month: currentMonth,
         };
       } else {
-        // 5일~31일: 다음 달 상하반기
+        // 20일~31일: 다음 달 상하반기
         return {
           period: 'first_half' as const,
           year: nextYear,

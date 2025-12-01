@@ -96,8 +96,63 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
 
     // 마포구, 강북구: 특별한 기간 (5일-19일 상반기, 20일-다음달 4일 하반기)
     if (districtName === '마포구' || districtName === '강북구') {
+      // 5일 9시 이전인지 확인 (5일 9시 0분 0초까지는 9시 이전으로 간주)
+      const isBefore9AMOn5th =
+        currentDay === 5 &&
+        (currentHour < 9 || (currentHour === 9 && currentMinute === 0));
+
       if (currentDay >= 1 && currentDay <= 4) {
-        // 1일~4일: 현재 달 하반기 + 다음 달 상반기
+        // 1일~4일: 현재 달 상반기 + 현재 달 하반기
+        // 현재 달 상반기 (5일-19일)
+        firstPeriod = {
+          year: currentYear,
+          month: currentMonth,
+          startDay: 5,
+          endDay: 19,
+          from: `${currentYear}-${String(currentMonth).padStart(2, '0')}-05`,
+          to: `${currentYear}-${String(currentMonth).padStart(2, '0')}-19`,
+          label: `${currentYear}년 ${currentMonth}월 상반기`,
+          period: 'first_half',
+        };
+
+        // 현재 달 하반기 (20일-다음달 4일)
+        secondPeriod = {
+          year: currentYear,
+          month: currentMonth,
+          startDay: 20,
+          endDay: 30,
+          from: `${currentYear}-${String(currentMonth).padStart(2, '0')}-20`,
+          to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-04`,
+          label: `${currentYear}년 ${currentMonth}월 하반기`,
+          period: 'second_half',
+        };
+      } else if (currentDay === 5 && isBefore9AMOn5th) {
+        // 5일 9시 이전: 현재 달 상반기(비활성화) + 현재 달 하반기(활성화)
+        // 현재 달 상반기 (5일-19일)
+        firstPeriod = {
+          year: currentYear,
+          month: currentMonth,
+          startDay: 5,
+          endDay: 19,
+          from: `${currentYear}-${String(currentMonth).padStart(2, '0')}-05`,
+          to: `${currentYear}-${String(currentMonth).padStart(2, '0')}-19`,
+          label: `${currentYear}년 ${currentMonth}월 상반기`,
+          period: 'first_half',
+        };
+
+        // 현재 달 하반기 (20일-다음달 4일)
+        secondPeriod = {
+          year: currentYear,
+          month: currentMonth,
+          startDay: 20,
+          endDay: 30,
+          from: `${currentYear}-${String(currentMonth).padStart(2, '0')}-20`,
+          to: `${nextYear}-${String(nextMonth).padStart(2, '0')}-04`,
+          label: `${currentYear}년 ${currentMonth}월 하반기`,
+          period: 'second_half',
+        };
+      } else if (currentDay >= 5 && currentDay <= 19) {
+        // 5일 9시 이후 ~ 19일: 현재 달 하반기 + 다음 달 상반기
         // 현재 달 하반기 (20일-다음달 4일)
         firstPeriod = {
           year: currentYear,
