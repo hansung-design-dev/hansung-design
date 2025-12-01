@@ -374,11 +374,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // TODO: 테스트 완료 후 0원 결제 로직 제거
+    // [임시] 테스트용 0원 결제 로직 (dev/stage 전용)
+    const isTestFreePaymentEnabled =
+      process.env.ENABLE_TEST_FREE_PAYMENT === 'true';
+    const testFreePaymentUserId =
+      process.env.TEST_FREE_PAYMENT_USER_ID || 'testsung';
+    const isProd = process.env.NODE_ENV === 'production';
+    const userId = orderData?.userAuthId;
+
+    let finalAmount = amount;
+    if (
+      !isProd &&
+      isTestFreePaymentEnabled &&
+      userId === testFreePaymentUserId
+    ) {
+      finalAmount = 0;
+      console.log(
+        '🔍 [결제 확인 API] ⚠️ 테스트용 0원 결제 적용:',
+        {
+          userId,
+          originalAmount: amount,
+          finalAmount: 0,
+        }
+      );
+    }
+
     // ⚠️ 중요: 토스페이먼츠 결제 승인 API 호출 (이 호출이 실제로 카드에서 돈을 빠져나가게 함)
     console.log('🔍 [결제 확인 API] 토스페이먼츠 결제 승인 API 호출 시작...', {
       paymentKey: paymentKey ? `${paymentKey.substring(0, 30)}...` : '(없음)',
       orderId,
-      amount,
+      amount: finalAmount,
+      originalAmount: amount !== finalAmount ? amount : undefined,
       timestamp: new Date().toISOString(),
     });
 
@@ -394,7 +421,7 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({
           paymentKey,
           orderId,
-          amount,
+          amount: finalAmount,
         }),
       }
     );
@@ -839,7 +866,7 @@ export async function POST(request: NextRequest) {
           {
             transactionId: paymentKey,
             paymentProviderMethod: paymentProviderForDb,
-            amount: amount,
+            amount: finalAmount,
             paymentType: paymentTypeForDb,
             approveNo: approveNoForDb,
             installmentMonths: installmentMonthsForDb,
@@ -909,7 +936,7 @@ export async function POST(request: NextRequest) {
     console.log('🔍 [결제 확인 API] 기존 주문에 대한 payments 저장 시작:', {
       orderId: actualOrderId,
       paymentKey: paymentKey.substring(0, 20) + '...',
-      amount,
+      amount: finalAmount,
     });
 
     const { data: upsertedPayment, error: paymentUpsertError } = await supabase
@@ -918,7 +945,7 @@ export async function POST(request: NextRequest) {
         {
           order_id: actualOrderId,
           payment_method_id: paymentMethodData.id,
-          amount: amount,
+          amount: finalAmount,
           payment_status: 'completed',
           transaction_id: paymentKey,
           payment_provider: paymentProviderForDb,

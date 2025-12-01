@@ -82,12 +82,43 @@ export async function POST(request: NextRequest) {
         payMethod,
       } = approveData.body;
 
+      // TODO: 테스트 완료 후 0원 결제 로직 제거
+      // [임시] 테스트용 0원 결제 로직 (dev/stage 전용)
+      const isTestFreePaymentEnabled =
+        process.env.ENABLE_TEST_FREE_PAYMENT === 'true';
+      const testFreePaymentUserId =
+        process.env.TEST_FREE_PAYMENT_USER_ID || 'testsung';
+      const isProd = process.env.NODE_ENV === 'production';
+
+      // 주문 정보 조회하여 userAuthId 확인
+      let finalAmount = totalPayAmount;
+      if (!isProd && isTestFreePaymentEnabled) {
+        const { data: orderData } = await supabase
+          .from('orders')
+          .select('user_auth_id')
+          .eq('id', orderId)
+          .single();
+
+        if (orderData?.user_auth_id === testFreePaymentUserId) {
+          finalAmount = 0;
+          console.log(
+            '🔍 [네이버페이 결제 승인 API] ⚠️ 테스트용 0원 결제 적용:',
+            {
+              userId: orderData.user_auth_id,
+              originalAmount: totalPayAmount,
+              finalAmount: 0,
+            }
+          );
+        }
+      }
+
       // 결제 정보 업데이트 (completed 상태)
       const { error: updateError } = await supabase
         .from('payments')
         .update({
           status: 'completed',
           payment_provider_id: approvedPaymentId,
+          amount: finalAmount,
           updated_at: new Date().toISOString(),
         })
         .eq('order_id', orderId)
@@ -121,7 +152,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         paymentId: approvedPaymentId,
-        amount: totalPayAmount,
+        amount: finalAmount,
         payMethod: payMethod,
         status: 'completed',
       });
