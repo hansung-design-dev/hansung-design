@@ -49,7 +49,9 @@ export async function POST(request: NextRequest) {
     // ✅ 결제 정보 조회 (토스 결제 취소용)
     const { data: paymentRecords, error: paymentFetchError } = await supabase
       .from('payments')
-      .select('id, order_id, amount, payment_status, transaction_id')
+      .select(
+        'id, order_id, amount, payment_status, transaction_id, payment_provider'
+      )
       .eq('order_id', order.id);
 
     if (paymentFetchError) {
@@ -66,11 +68,25 @@ export async function POST(request: NextRequest) {
     const payment =
       paymentRecords && paymentRecords.length > 0 ? paymentRecords[0] : null;
 
+    // ✅ 테스트/0원 결제 여부 판별 (ENABLE_TEST_FREE_PAYMENT === 'true' 일 때만 동작)
+    const isTestFreePaymentEnabled =
+      process.env.ENABLE_TEST_FREE_PAYMENT === 'true';
+
+    const isTestFreePayment =
+      isTestFreePaymentEnabled &&
+      payment &&
+      (payment.amount === 0 ||
+        (typeof payment.transaction_id === 'string' &&
+          payment.transaction_id.startsWith('test_free_')) ||
+        payment.payment_provider === 'FREE');
+
     // ✅ 토스 결제 취소 처리 (결제가 완료된 카드/간편결제 건으로 가정)
+    // - 테스트/0원 결제(isTestFreePayment)는 토스 API를 호출하지 않고 내부 데이터만 취소
     if (
       payment &&
       payment.transaction_id &&
-      payment.payment_status === 'completed'
+      payment.payment_status === 'completed' &&
+      !isTestFreePayment
     ) {
       const secretKey = process.env.TOSS_PAYMENTS_SECRET_KEY;
 
@@ -128,20 +144,40 @@ export async function POST(request: NextRequest) {
       });
 
       if (!tossCancelResponse.ok) {
-        console.error(
-          '🔍 [주문 취소] ❌ 토스 결제 취소 실패:',
-          tossCancelData || tossCancelResponse.statusText
-        );
-        return NextResponse.json(
-          {
-            success: false,
-            error:
-              '결제 취소에 실패했습니다. 잠시 후 다시 시도하거나 고객센터로 문의해주세요.',
-            code: tossCancelData?.code,
-            toss: tossCancelData,
-          },
-          { status: 400 }
-        );
+        // ✅ 보완용: 토스에서 결제 정보를 찾을 수 없고(NOT_FOUND_PAYMENT),
+        //    로컬 payment.amount가 0인 경우에는 내부 데이터만 취소하고 계속 진행
+        if (
+          isTestFreePaymentEnabled &&
+          payment.amount === 0 &&
+          tossCancelData?.code === 'NOT_FOUND_PAYMENT'
+        ) {
+          console.warn(
+            '🔍 [주문 취소] ⚠️ 토스 결제 정보 없음(NOT_FOUND_PAYMENT) + 0원 결제 - 토스 취소는 건너뛰고 내부 주문만 취소 처리:',
+            {
+              orderNumber: order.order_number,
+              transactionId: payment.transaction_id,
+              amount: payment.amount,
+              tossCode: tossCancelData?.code,
+              tossMessage: tossCancelData?.message,
+            }
+          );
+          // 토스 취소 실패지만 내부 취소는 계속 진행
+        } else {
+          console.error(
+            '🔍 [주문 취소] ❌ 토스 결제 취소 실패:',
+            tossCancelData || tossCancelResponse.statusText
+          );
+          return NextResponse.json(
+            {
+              success: false,
+              error:
+                '결제 취소에 실패했습니다. 잠시 후 다시 시도하거나 고객센터로 문의해주세요.',
+              code: tossCancelData?.code,
+              toss: tossCancelData,
+            },
+            { status: 400 }
+          );
+        }
       }
     }
 
