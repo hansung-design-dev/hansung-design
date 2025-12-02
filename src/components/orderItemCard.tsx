@@ -24,6 +24,7 @@ interface OrderDetail {
   daysSinceOrder: number;
   // 추가 필드들
   projectName?: string; // 파일이름 (design_draft.project_name)
+  panelDisplayName?: string; // 게시대 명 (주소 + 별칭)
   displayStartDate?: string; // 송출 시작일
   displayEndDate?: string; // 송출 종료일
   // 주문 프로필 정보
@@ -65,7 +66,7 @@ export default function OrderItemCard({
               <div className="flex flex-col text-start gap-2 pt-4 sm:pt-2 pl-6">
                 <div className="text-1.25 font-500 sm:text-1">파일이름</div>
                 <div className="text-1.75 font-700 mb-4 sm:text-1.5">
-                  {orderDetail.projectName || ''}
+                  {orderDetail.projectName || '-'}
                 </div>
               </div>
 
@@ -114,6 +115,11 @@ export default function OrderItemCard({
                 <div className="text-gray-600 mb-2">품명</div>
                 <div className="font-700 text-1.25 sm:text-1">
                   {orderDetail.category}
+                </div>
+
+                <div className="text-gray-600 mb-2">게시대 명</div>
+                <div className="font-700 text-1.25 sm:text-1">
+                  {orderDetail.panelDisplayName || '-'}
                 </div>
 
                 <div className="text-gray-600 mb-2">위치</div>

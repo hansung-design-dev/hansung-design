@@ -398,18 +398,37 @@ export async function POST(request: NextRequest) {
     }
 
     // 테스트 결제가 아니면 시크릿 키 필요
-    if (!isTestPayment) {
-      const secretKey = process.env.TOSS_PAYMENTS_SECRET_KEY;
-      if (!secretKey) {
-        return NextResponse.json(
-          { error: '서버 시크릿 키가 설정되지 않았습니다.' },
-          { status: 500 }
-        );
-      }
+    const secretKey = process.env.TOSS_PAYMENTS_SECRET_KEY;
+    if (!isTestPayment && !secretKey) {
+      return NextResponse.json(
+        { error: '서버 시크릿 키가 설정되지 않았습니다.' },
+        { status: 500 }
+      );
     }
 
     // 0원 결제인 경우 토스페이먼츠 API 호출 스킵
-    let confirmData: any = null;
+    let confirmData: {
+      code?: string;
+      status?: string;
+      totalAmount?: number;
+      method?: string;
+      approvedAt?: string;
+      requestedAt?: string;
+      orderId?: string;
+      paymentKey?: string;
+      message?: string;
+      cancels?: Array<{
+        cancelAmount?: number;
+        canceledAt?: string;
+        cancelStatus?: string;
+      }>;
+      card?: {
+        approveNo?: string;
+        installmentPlanMonths?: number;
+        [key: string]: unknown;
+      };
+      [key: string]: unknown;
+    } | null = null;
     let confirmResponse: Response | null = null;
 
     if (finalAmount === 0) {
@@ -429,6 +448,13 @@ export async function POST(request: NextRequest) {
       };
     } else {
       // ⚠️ 중요: 토스페이먼츠 결제 승인 API 호출 (이 호출이 실제로 카드에서 돈을 빠져나가게 함)
+      if (!secretKey) {
+        return NextResponse.json(
+          { error: '서버 시크릿 키가 설정되지 않았습니다.' },
+          { status: 500 }
+        );
+      }
+
       console.log(
         '🔍 [결제 확인 API] 토스페이먼츠 결제 승인 API 호출 시작...',
         {

@@ -27,11 +27,25 @@ interface Order {
   updated_at: string;
   draft_delivery_method?: 'email' | 'upload';
   design_drafts?: DesignDraft[];
+  projectName?: string;
+  user_profile_id?: string;
+}
+
+// 시안 카드용 인터페이스
+interface DraftCard {
+  id: string; // draft.id 또는 order.id (시안이 없을 경우)
+  orderId: string;
+  orderNumber: string;
+  orderCreatedAt: string;
+  draft?: DesignDraft;
+  draftDeliveryMethod?: 'email' | 'upload';
+  projectName?: string;
+  isEmailOnly: boolean; // 이메일로만 보낸 경우 (시안이 없음)
 }
 
 export default function DesignPage() {
   const { user } = useAuth();
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [draftCards, setDraftCards] = useState<DraftCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadingFile, setUploadingFile] = useState<string | null>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
@@ -55,14 +69,83 @@ export default function DesignPage() {
             order.payment_status === 'waiting_admin_approval'
         );
         console.log(
-          '🔍 필터링된 주문:',
-          completedOrders.length,
-          completedOrders.map((o: Order) => ({
-            id: o.id,
-            payment_status: o.payment_status,
-          }))
+          '🔍 [시안보기] 필터링된 주문:',
+          {
+            totalOrders: data.orders.length,
+            filteredOrders: completedOrders.length,
+            orders: completedOrders.map((o: Order) => ({
+              id: o.id,
+              order_number: o.order_number,
+              payment_status: o.payment_status,
+              hasDesignDraftsId: !!(o as Order & { design_drafts_id?: string }).design_drafts_id,
+              hasDesignDrafts: !!(o.design_drafts && o.design_drafts.length > 0),
+              designDraftsCount: o.design_drafts?.length || 0,
+              projectName: (o as Order & { projectName?: string }).projectName || o.design_drafts?.[0]?.project_name || '없음',
+            }))
+          }
         );
-        setOrders(completedOrders);
+        // setOrders는 더 이상 사용하지 않음 (draftCards만 사용)
+
+        // 주문 배열을 시안 배열로 변환
+        const cards: DraftCard[] = [];
+        completedOrders.forEach((order: Order) => {
+          const hasDrafts = order.design_drafts && order.design_drafts.length > 0;
+          const isEmailOnly = order.draft_delivery_method === 'email' && !hasDrafts;
+
+          if (hasDrafts) {
+            // 시안이 있는 경우: 각 시안마다 카드 생성
+            order.design_drafts!.forEach((draft) => {
+              cards.push({
+                id: draft.id,
+                orderId: order.id,
+                orderNumber: order.order_number,
+                orderCreatedAt: order.created_at,
+                draft: draft,
+                draftDeliveryMethod: order.draft_delivery_method,
+                projectName: draft.project_name || order.projectName,
+                isEmailOnly: false,
+              });
+            });
+          } else if (isEmailOnly) {
+            // 이메일로만 보낸 경우: 시안이 없어도 카드 1개 생성
+            cards.push({
+              id: `email-only-${order.id}`,
+              orderId: order.id,
+              orderNumber: order.order_number,
+              orderCreatedAt: order.created_at,
+              draft: undefined,
+              draftDeliveryMethod: 'email',
+              projectName: order.projectName,
+              isEmailOnly: true,
+            });
+          } else {
+            // 시안도 없고 이메일도 아닌 경우: 카드 1개 생성 (업로드 가능)
+            cards.push({
+              id: `no-draft-${order.id}`,
+              orderId: order.id,
+              orderNumber: order.order_number,
+              orderCreatedAt: order.created_at,
+              draft: undefined,
+              draftDeliveryMethod: order.draft_delivery_method,
+              projectName: order.projectName,
+              isEmailOnly: false,
+            });
+          }
+        });
+
+        console.log('🔍 [시안보기] 시안 카드 변환 결과:', {
+          totalOrders: completedOrders.length,
+          totalCards: cards.length,
+          cards: cards.map((c) => ({
+            id: c.id,
+            orderNumber: c.orderNumber,
+            hasDraft: !!c.draft,
+            isEmailOnly: c.isEmailOnly,
+            projectName: c.projectName,
+          })),
+        });
+
+        setDraftCards(cards);
       }
     } catch (error) {
       console.error('Failed to fetch orders:', error);
@@ -77,9 +160,10 @@ export default function DesignPage() {
     }
   }, [user, fetchOrders]);
 
-  const handleFileUpload = async (orderId: string, file: File) => {
+  const handleFileUpload = async (orderId: string, file: File, draftId?: string) => {
     try {
-      setUploadingFile(orderId);
+      const uploadKey = draftId || orderId;
+      setUploadingFile(uploadKey);
       const formData = new FormData();
       formData.append('file', file);
       formData.append('orderId', orderId);
@@ -118,40 +202,41 @@ export default function DesignPage() {
     <MypageContainer activeTab="시안관리">
       <h1 className="text-2xl font-bold mb-8">시안 관리</h1>
 
-      {orders.length === 0 ? (
+      {draftCards.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-gray-500 mb-4">시안 업로드할 주문이 없습니다.</p>
         </div>
       ) : (
         <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {orders.map((order) => (
+          {draftCards.map((card) => (
             <div
-              key={order.id}
+              key={card.id}
               className="border-solid border-1 border-gray-200 rounded-lg p-6 bg-white shadow-sm"
             >
               <div className="">
                 <div>
                   <h3 className="text-1 font-semibold">
-                    주문번호: {order.order_number}
+                    주문번호: {card.orderNumber}
                   </h3>
                   <p className="text-gray-600">
-                    주문일: {new Date(order.created_at).toLocaleDateString()}
+                    주문일: {new Date(card.orderCreatedAt).toLocaleDateString()}
                   </p>
-                  {order.design_drafts?.[0]?.project_name && (
+                  {card.projectName && card.projectName !== '프로젝트명 없음' && (
                     <p className="text-blue-600 font-medium">
-                      작업명: {order.design_drafts[0].project_name}
+                      작업명: {card.projectName}
                     </p>
                   )}
                   <div className="items-end justify-end flex flex-col gap-2"></div>
                 </div>
               </div>
 
-              {order.draft_delivery_method === 'email' && (
+              {/* 이메일로 보내기 신청한 경우 표기 */}
+              {card.isEmailOnly && (
                 <div className="flex items-center gap-2 mt-2 mb-4">
                   <span className="text-sm text-blue-600 font-medium">
-                    이메일로 보내기:
+                    이메일로 보내기 신청:
                   </span>
-                  <span className="text-xs text-blue-800 px-2 py-1 rounded">
+                  <span className="text-xs text-blue-800 px-2 py-1 rounded bg-blue-50">
                     banner114@hanmail.net
                   </span>
                 </div>
@@ -159,7 +244,7 @@ export default function DesignPage() {
 
               <div className="space-y-4">
                 {/* 이메일로 보내기 신청한 경우 안내 메시지 */}
-                {order.draft_delivery_method === 'email' && (
+                {card.isEmailOnly && (
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-sm text-blue-700">
@@ -170,56 +255,51 @@ export default function DesignPage() {
                   </div>
                 )}
 
-                {/* 홈페이지 업로드한 경우 이미 업로드된 시안 미리보기 표시 */}
-                {order.draft_delivery_method === 'upload' &&
-                  order.design_drafts &&
-                  order.design_drafts.length > 0 &&
-                  order.design_drafts[0].file_name && (
-                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <div className="flex items-center gap-3 flex-wrap">
-                        {order.design_drafts[0].file_url &&
-                        order.design_drafts[0].file_name
-                          ?.toLowerCase()
-                          .match(/\.(jpg|jpeg|png)$/) ? (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setPreviewImageUrl(
-                                order.design_drafts![0].file_url!
-                              );
-                              setPreviewImageName(
-                                order.design_drafts![0].file_name || null
-                              );
-                            }}
-                            className="cursor-pointer"
-                          >
-                            <div className="relative h-16 w-16">
-                              <Image
-                                src={order.design_drafts[0].file_url!}
-                                alt={order.design_drafts[0].file_name || '시안'}
-                                fill
-                                className="rounded border border-green-300 object-contain bg-white"
-                              />
-                            </div>
-                          </button>
-                        ) : (
-                          <span className="text-sm text-green-600">
-                            {order.design_drafts[0].file_name}
-                          </span>
-                        )}
-                      </div>
+                {/* 이미 업로드된 시안 미리보기 표시 */}
+                {card.draft && card.draft.file_name && (
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      {card.draft.file_url &&
+                      card.draft.file_name
+                        ?.toLowerCase()
+                        .match(/\.(jpg|jpeg|png)$/) ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPreviewImageUrl(card.draft!.file_url!);
+                            setPreviewImageName(card.draft!.file_name || null);
+                          }}
+                          className="cursor-pointer"
+                        >
+                          <div className="relative h-16 w-16">
+                            <Image
+                              src={card.draft.file_url!}
+                              alt={card.draft.file_name || '시안'}
+                              fill
+                              className="rounded border border-green-300 object-contain bg-white"
+                            />
+                          </div>
+                        </button>
+                      ) : (
+                        <span className="text-sm text-green-600">
+                          {card.draft.file_name}
+                        </span>
+                      )}
                     </div>
-                  )}
+                  </div>
+                )}
 
-                {/* 커스텀 파일 업로드 - 이메일 선택 시에도 업로드 가능 */}
+                {/* 커스텀 파일 업로드 */}
                 <CustomFileUpload
-                  onFileSelect={(file) => handleFileUpload(order.id, file)}
-                  disabled={uploadingFile === order.id}
+                  onFileSelect={(file) =>
+                    handleFileUpload(card.orderId, file, card.draft?.id)
+                  }
+                  disabled={uploadingFile === (card.draft?.id || card.orderId)}
                   placeholder="시안 파일을 선택해주세요"
                   className="w-[13rem]"
                 />
 
-                {uploadingFile === order.id && (
+                {uploadingFile === (card.draft?.id || card.orderId) && (
                   <div className="text-center py-2">
                     <span className="text-sm text-gray-500">업로드 중...</span>
                   </div>

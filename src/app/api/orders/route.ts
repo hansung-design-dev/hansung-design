@@ -133,6 +133,11 @@ export async function GET(request: NextRequest) {
             *,
             region_gu (
               name
+            ),
+            display_types (
+              id,
+              name,
+              description
             )
           )
         ),
@@ -158,42 +163,105 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 2. 각 주문에 대한 design_drafts 조회 (orders.design_drafts_id를 통해 연결)
+    // 2. 각 주문에 대한 design_drafts 조회
+    // - orders.design_drafts_id로 조회
+    // - 같은 user_profile_id와 주문 생성 시간 기준(±5분)으로 관련된 모든 design_drafts 조회
     const ordersWithDraftsAndProjectName = await Promise.all(
       (orders || []).map(async (order: Order) => {
-        let designDrafts: DesignDraft[] = [];
+        const designDrafts: DesignDraft[] = [];
+        const draftIds = new Set<string>();
 
+        // 1) orders.design_drafts_id로 조회
         if (order.design_drafts_id) {
           const { data: draft, error: draftError } = await supabase
             .from('design_drafts')
-            .select('*')
+            .select('id, project_name, file_name, file_url, file_extension, file_size, draft_category, notes, is_approved, created_at, updated_at, user_profile_id')
             .eq('id', order.design_drafts_id)
-            .order('created_at', { ascending: true });
+            .single();
 
           if (draftError) {
             console.error(
               `🔍 주문 ${order.id}의 design_drafts 조회 오류:`,
               draftError
             );
-          } else if (draft && Array.isArray(draft) && draft.length > 0) {
-            designDrafts = draft as DesignDraft[];
-          } else if (draft && !Array.isArray(draft)) {
-            designDrafts = [draft as DesignDraft];
+          } else if (draft) {
+            designDrafts.push(draft as DesignDraft);
+            draftIds.add(draft.id);
+          }
+        }
+
+        // 2) 같은 user_profile_id와 주문 생성 시간 기준(±5분)으로 관련된 모든 design_drafts 조회
+        if (order.user_profile_id) {
+          const orderCreatedAt = new Date(order.created_at);
+          const timeWindowStart = new Date(orderCreatedAt.getTime() - 5 * 60 * 1000); // 5분 전
+          const timeWindowEnd = new Date(orderCreatedAt.getTime() + 5 * 60 * 1000); // 5분 후
+
+          const { data: relatedDrafts, error: relatedDraftsError } = await supabase
+            .from('design_drafts')
+            .select('id, project_name, file_name, file_url, file_extension, file_size, draft_category, notes, is_approved, created_at, updated_at, user_profile_id')
+            .eq('user_profile_id', order.user_profile_id)
+            .gte('created_at', timeWindowStart.toISOString())
+            .lte('created_at', timeWindowEnd.toISOString())
+            .order('created_at', { ascending: true });
+
+          if (relatedDraftsError) {
+            console.error(
+              `🔍 주문 ${order.id}의 관련 design_drafts 조회 오류:`,
+              relatedDraftsError
+            );
+          } else if (relatedDrafts && relatedDrafts.length > 0) {
+            // 중복 제거하여 추가
+            relatedDrafts.forEach((draft) => {
+              if (!draftIds.has(draft.id)) {
+                designDrafts.push(draft as DesignDraft);
+                draftIds.add(draft.id);
+              }
+            });
           }
 
           console.log(
-            `🔍 주문 ${order.id}의 design_drafts:`,
-            designDrafts.length
+            `🔍 주문 ${order.id}의 관련 design_drafts 조회 결과:`,
+            {
+              user_profile_id: order.user_profile_id,
+              timeWindow: {
+                start: timeWindowStart.toISOString(),
+                end: timeWindowEnd.toISOString(),
+              },
+              relatedDraftsCount: relatedDrafts?.length || 0,
+              totalDraftsCount: designDrafts.length,
+            }
           );
-        } else {
-          console.log(`🔍 주문 ${order.id}의 design_drafts_id가 없음`);
         }
+
+        console.log(
+          `🔍 주문 ${order.id}의 design_drafts 조회 결과:`,
+          {
+            design_drafts_id: order.design_drafts_id,
+            designDraftsLength: designDrafts.length,
+            drafts: designDrafts.map((d) => ({
+              id: d.id,
+              project_name: d.project_name,
+              file_name: d.file_name,
+            })),
+          }
+        );
 
         // design_drafts에서 프로젝트명 추출 (주문 상세 API와 동일한 로직)
         const projectName =
           designDrafts && designDrafts.length > 0
             ? designDrafts[0]?.project_name || '프로젝트명 없음'
             : '프로젝트명 없음';
+
+        console.log(
+          `🔍 주문 ${order.id}의 최종 projectName:`,
+          {
+            orderId: order.id,
+            orderNumber: order.order_number,
+            designDraftsLength: designDrafts.length,
+            projectName,
+            firstDraftProjectName: designDrafts[0]?.project_name,
+          }
+        );
 
         return {
           ...order,

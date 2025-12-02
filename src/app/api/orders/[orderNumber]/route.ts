@@ -157,11 +157,24 @@ export async function GET(
     let designDraftsError = null;
 
     if (order.design_drafts_id) {
-      const { data: drafts, error: draftsError } = await supabase
+      // design_drafts_id는 단일 ID이므로 single() 사용
+      const { data: draft, error: draftsError } = await supabase
         .from('design_drafts')
         .select(
           `
-          *,
+          id,
+          project_name,
+          file_name,
+          file_url,
+          file_extension,
+          file_size,
+          draft_category,
+          notes,
+          is_approved,
+          created_at,
+          updated_at,
+          user_profile_id,
+          admin_profile_id,
           user_profiles!design_drafts_user_profile_id_fkey (
             id,
             profile_title,
@@ -177,10 +190,34 @@ export async function GET(
         `
         )
         .eq('id', order.design_drafts_id)
-        .order('created_at', { ascending: true });
+        .single();
 
-      designDrafts = drafts || [];
+      if (draft) {
+        // 필요한 필드만 추출하여 DesignDraft 타입으로 변환
+        const draftData: DesignDraft = {
+          id: draft.id,
+          user_profile_id: draft.user_profile_id,
+          admin_profile_id: draft.admin_profile_id,
+          draft_category: draft.draft_category,
+          project_name: draft.project_name,
+          notes: draft.notes,
+          file_url: draft.file_url,
+          file_name: draft.file_name,
+          file_size: draft.file_size,
+          file_type: draft.file_extension,
+          created_at: draft.created_at,
+          updated_at: draft.updated_at,
+        };
+        designDrafts = [draftData];
+      }
       designDraftsError = draftsError;
+
+      console.log('🔍 [주문 상세 API] design_drafts 조회 결과:', {
+        design_drafts_id: order.design_drafts_id,
+        draft: draft,
+        draftProjectName: draft?.project_name,
+        designDraftsLength: designDrafts.length,
+      });
     }
 
     if (designDraftsError) {
@@ -337,12 +374,18 @@ export async function GET(
 
     // 프로젝트 이름 추출 (디자인 드래프트에서)
     const getProjectName = () => {
+      console.log('🔍 [getProjectName] designDrafts:', designDrafts);
       if (designDrafts && designDrafts.length > 0) {
         // design_drafts_id는 단일 ID이므로 첫 번째 항목 사용
         const draft = designDrafts[0];
-        console.log('🔍 draft:', draft);
-        return draft?.project_name || '프로젝트명 없음';
+        console.log('🔍 [getProjectName] draft:', draft);
+        console.log('🔍 [getProjectName] draft.project_name:', draft?.project_name);
+        const projectName = draft?.project_name;
+        if (projectName && projectName.trim() !== '') {
+          return projectName;
+        }
       }
+      console.log('🔍 [getProjectName] 프로젝트명 없음 반환');
       return '프로젝트명 없음';
     };
 
@@ -389,6 +432,7 @@ export async function GET(
       order: {
         ...order,
         projectName: getProjectName(),
+        design_drafts: designDrafts, // design_drafts를 응답에 포함
       },
       orderDetails: orderDetails || [],
       payments: payments || [],

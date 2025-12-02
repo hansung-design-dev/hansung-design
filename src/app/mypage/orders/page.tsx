@@ -177,6 +177,7 @@ interface OrderDetailResponse {
 interface DisplayItem {
   id: number;
   title: string;
+  subtitle?: string; // 작업명
   location: string;
   status: string; // 마감여부
   paymentStatus: string; // 결제여부
@@ -212,6 +213,7 @@ interface OrderCardData {
   daysSinceOrder: number;
   // 추가 필드들
   projectName?: string; // 파일이름 (design_draft.project_name)
+  panelDisplayName?: string; // 게시대 명 (주소 + 별칭)
   displayStartDate?: string; // 송출 시작일
   displayEndDate?: string; // 송출 종료일
   // 주문 프로필 정보
@@ -452,12 +454,26 @@ export default function OrdersPage() {
       if (orderDetails.length > 0) {
         // 일반 주문: order_details 기준으로 행 생성
         orderDetails.forEach((item: OrderDetail) => {
+          // 작업명 추출 (order.projectName 또는 design_drafts에서)
+          const projectName =
+            order.projectName && order.projectName !== '프로젝트명 없음'
+              ? order.projectName
+              : (() => {
+                  const orderWithDrafts = order as Order & { design_drafts?: Array<{ project_name?: string }> };
+                  const draftProjectName = orderWithDrafts.design_drafts?.[0]?.project_name;
+                  return draftProjectName && draftProjectName !== '프로젝트명 없음'
+                    ? draftProjectName
+                    : null;
+                })();
+
           displayItems.push({
             id: globalIndex++,
             // 게시대명: address (nickname)
             title:
               (item.panels?.address || '') +
               (item.panels?.nickname ? ` (${item.panels.nickname})` : ''),
+            // 작업명을 subtitle로 추가
+            subtitle: projectName || undefined,
             // 행정동
             location: item.panels?.region_gu?.name || '',
             // 마감여부
@@ -718,21 +734,61 @@ export default function OrdersPage() {
       inquiryAddress = address;
     }
 
-    // 파일이름(프로젝트명) 기본값:
-    // - 실제 프로젝트명이 있으면 그대로 사용
-    // - 없거나 '프로젝트명 없음'인 경우 게시대 주소/별칭을 사용
+    // 파일이름(프로젝트명): 실제 프로젝트 이름만 사용 (게시대 주소/별칭은 사용하지 않음)
+    // - design_drafts[0].project_name 우선 사용 (원본 데이터)
+    // - 없으면 order.projectName 사용 (API에서 이미 처리된 값)
+    // - 둘 다 없으면 '프로젝트명 없음' 또는 '미정'
+    const orderWithDrafts = order as Order & { design_drafts?: Array<{ project_name?: string }> };
+    const projectNameFromDraft = orderWithDrafts.design_drafts?.[0]?.project_name;
+    const projectNameFromOrder = order.projectName;
+    
+    console.log('🔍 [mapOrderDetailToCard] 프로젝트명 확인 (상세):', {
+      orderNumber: order.order_number,
+      design_drafts: orderWithDrafts.design_drafts,
+      projectNameFromDraft,
+      projectNameFromOrder,
+      design_drafts_id: order.design_drafts_id,
+    });
+    
     const hasRealProjectName =
-      order.projectName &&
-      order.projectName !== '프로젝트명 없음' &&
-      order.projectName !== '미정';
-    let defaultProjectName =
-      hasRealProjectName && order.projectName
-        ? order.projectName
-        : panelInfo.address
-        ? `${panelInfo.address}${
-            panelInfo.nickname ? ` (${panelInfo.nickname})` : ''
-          }`
+      (projectNameFromDraft && 
+       projectNameFromDraft.trim() !== '' &&
+       projectNameFromDraft !== '프로젝트명 없음' && 
+       projectNameFromDraft !== '미정') ||
+      (projectNameFromOrder && 
+       projectNameFromOrder !== '프로젝트명 없음' && 
+       projectNameFromOrder !== '미정');
+    
+    // design_drafts의 project_name을 우선 사용 (원본 데이터)
+    let finalProjectName =
+      (projectNameFromDraft && 
+       projectNameFromDraft.trim() !== '' &&
+       projectNameFromDraft !== '프로젝트명 없음' && 
+       projectNameFromDraft !== '미정')
+        ? projectNameFromDraft
+        : (projectNameFromOrder && 
+           projectNameFromOrder !== '프로젝트명 없음' && 
+           projectNameFromOrder !== '미정')
+        ? projectNameFromOrder
         : '프로젝트명 없음';
+    
+    // 게시대 명: 주소 + 별칭 조합
+    let panelDisplayName = '-';
+    if (panelInfo.address) {
+      panelDisplayName = panelInfo.address;
+      if (panelInfo.nickname) {
+        panelDisplayName += ` (${panelInfo.nickname})`;
+      }
+    }
+    
+    console.log('🔍 [mapOrderDetailToCard] 프로젝트명 확인:', {
+      orderNumber: order.order_number,
+      projectNameFromOrder,
+      projectNameFromDraft,
+      finalProjectName,
+      hasRealProjectName,
+      panelDisplayName,
+    });
 
     // 상담신청(INQ-*) 주문이고 패널 정보가 없으면
     // - 결제 전: 파일이름은 '미정'
@@ -746,16 +802,20 @@ export default function OrdersPage() {
 
     if (isInquiryOrder && !panelInfo.address && inquiryAddress) {
       if (!hasRealProjectName) {
-        defaultProjectName = '미정';
+        finalProjectName = '미정';
       }
       finalLocation = inquiryAddress;
       finalCategory = '전자게시대';
+      // 상담신청 주문의 경우 게시대 명도 상담 주소 사용
+      if (inquiryAddress) {
+        panelDisplayName = inquiryAddress;
+      }
     }
 
     const result: OrderCardData = {
       id: order.id ?? '-',
       order_number: order.order_number ?? '-',
-      title: defaultProjectName,
+      title: finalProjectName,
       // 위치는 순수 주소만 표시 (상담신청 주문이면 상담 주소)
       location: finalLocation,
       status: getStatusDisplay(order.payment_status || ''),
@@ -776,7 +836,8 @@ export default function OrdersPage() {
       canCancel,
       daysSinceOrder,
       // 추가 필드들
-      projectName: defaultProjectName,
+      projectName: finalProjectName,
+      panelDisplayName: panelDisplayName,
       displayStartDate: formatDisplayPeriod(displayStartDate, displayEndDate),
       displayEndDate: displayEndDate,
       // 주문 프로필 정보 (없으면 '-'로 표시)
