@@ -366,14 +366,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const secretKey = process.env.TOSS_PAYMENTS_SECRET_KEY;
-    if (!secretKey) {
-      return NextResponse.json(
-        { error: '서버 시크릿 키가 설정되지 않았습니다.' },
-        { status: 500 }
-      );
-    }
-
+    // 테스트 결제 확인 (paymentKey가 test_free_로 시작하면 테스트 결제)
+    const isTestPayment = paymentKey.startsWith('test_free_');
+    
     // TODO: 테스트 완료 후 0원 결제 로직 제거
     // [임시] 테스트용 0원 결제 로직 (dev/stage 전용)
     const isTestFreePaymentEnabled =
@@ -383,12 +378,12 @@ export async function POST(request: NextRequest) {
     const isProd = process.env.NODE_ENV === 'production';
     const userId = orderData?.userAuthId;
 
+    // 테스트 유저인지 확인
+    const isTestUser = !isProd && isTestFreePaymentEnabled && userId === testFreePaymentUserId;
+
+    // 테스트 결제인 경우 0원 처리
     let finalAmount = amount;
-    if (
-      !isProd &&
-      isTestFreePaymentEnabled &&
-      userId === testFreePaymentUserId
-    ) {
+    if (isTestPayment || isTestUser) {
       finalAmount = 0;
       console.log(
         '🔍 [결제 확인 API] ⚠️ 테스트용 0원 결제 적용:',
@@ -396,8 +391,21 @@ export async function POST(request: NextRequest) {
           userId,
           originalAmount: amount,
           finalAmount: 0,
+          isTestPayment,
+          isTestUser,
         }
       );
+    }
+
+    // 테스트 결제가 아니면 시크릿 키 필요
+    if (!isTestPayment) {
+      const secretKey = process.env.TOSS_PAYMENTS_SECRET_KEY;
+      if (!secretKey) {
+        return NextResponse.json(
+          { error: '서버 시크릿 키가 설정되지 않았습니다.' },
+          { status: 500 }
+        );
+      }
     }
 
     // 0원 결제인 경우 토스페이먼츠 API 호출 스킵

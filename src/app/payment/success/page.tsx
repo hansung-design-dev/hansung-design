@@ -3,10 +3,12 @@
 import { useEffect, useState, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Nav from '@/src/components/layouts/nav';
+import { useCart } from '@/src/contexts/cartContext';
 
 function PaymentSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { dispatch: cartDispatch } = useCart();
   const [paymentInfo, setPaymentInfo] = useState<{
     paymentId: string;
     orderId: string;
@@ -249,6 +251,10 @@ function PaymentSuccessContent() {
             amount: parseInt(amount),
             status: 'completed',
           });
+
+          // 주문 완료 후 장바구니 초기화
+          console.log('🔍 [결제 성공 페이지] 장바구니 초기화');
+          cartDispatch({ type: 'CLEAR_CART' });
         } catch (error) {
           console.error('🔍 [결제 성공 페이지] ❌ 결제 확인 중 예외 발생:', {
             error,

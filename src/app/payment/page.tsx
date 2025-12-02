@@ -1292,16 +1292,7 @@ function PaymentPageContent() {
 
   console.log('🔍 defaultProfile:', defaultProfile);
 
-  // 테스트용 0원 결제 확인
-  const isTestFreePaymentEnabled =
-    process.env.NEXT_PUBLIC_ENABLE_TEST_FREE_PAYMENT === 'true';
-  const testFreePaymentUserId =
-    process.env.NEXT_PUBLIC_TEST_FREE_PAYMENT_USER_ID || 'testsung';
-  const isTestUser =
-    user?.username === testFreePaymentUserId ||
-    user?.id === testFreePaymentUserId;
-
-  // 가격 계산
+  // 가격 계산 (결제 페이지에서는 원래 금액 표시, 토스 위젯에서만 0원 표시)
   const priceSummary = selectedItems.reduce(
     (summary, item) => {
       const roadUsageFee = item.panel_slot_snapshot?.road_usage_fee || 0;
@@ -1324,16 +1315,8 @@ function PaymentPageContent() {
     }
   );
 
-  // 테스트 유저인 경우 모든 가격을 0원으로 설정
-  const finalPriceSummary =
-    isTestFreePaymentEnabled && isTestUser
-      ? {
-          roadUsageFee: 0,
-          advertisingFee: 0,
-          taxPrice: 0,
-          totalPrice: 0,
-        }
-      : priceSummary;
+  // 결제 페이지에서는 원래 금액 표시 (토스 위젯에서만 0원 표시)
+  const finalPriceSummary = priceSummary;
 
   // 구별 계좌번호 정보 가져오기
   useEffect(() => {
@@ -2301,17 +2284,100 @@ function PaymentPageContent() {
                 currentUser?.username === testFreePaymentUserId ||
                 currentUser?.id === testFreePaymentUserId;
 
-              // 테스트 유저인 경우 가격을 0원으로 설정
-              const finalAmount =
-                isTestFreePaymentEnabled && isTestUser
-                  ? 0
-                  : currentTossWidgetData.totalPrice;
+              // 디버깅 로그
+              console.log('🔍 [통합결제창] 테스트 결제 디버깅:', {
+                isTestFreePaymentEnabled,
+                envValue: process.env.NEXT_PUBLIC_ENABLE_TEST_FREE_PAYMENT,
+                testFreePaymentUserId,
+                currentUserUsername: currentUser?.username,
+                currentUserId: currentUser?.id,
+                isTestUser,
+                originalAmount: currentTossWidgetData.totalPrice,
+              });
 
+              // 테스트 유저인 경우 위젯 스킵하고 바로 서버로 요청
+              if (isTestFreePaymentEnabled && isTestUser) {
+                console.log(
+                  '🔍 [통합결제창] ⚠️ 테스트 유저 감지 - 위젯 스킵하고 바로 주문 생성'
+                );
+
+                try {
+                  // localStorage에서 주문 정보 가져오기
+                  const pendingOrderData =
+                    localStorage.getItem('pending_order_data');
+                  if (!pendingOrderData) {
+                    alert('주문 정보를 찾을 수 없습니다.');
+                    paymentButton.disabled = false;
+                    paymentButton.textContent = '결제하기';
+                    return;
+                  }
+
+                  const orderData = JSON.parse(pendingOrderData);
+
+                  // 테스트 결제용 임시 paymentKey 생성
+                  const testPaymentKey = `test_free_${finalOrderId}`;
+
+                  // 서버에 직접 주문 생성 요청 (임시 paymentKey 사용)
+                  const confirmResponse = await fetch(
+                    '/api/payment/toss/confirm',
+                    {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({
+                        paymentKey: testPaymentKey, // 테스트 결제용 임시 paymentKey
+                        orderId: finalOrderId,
+                        amount: currentTossWidgetData.totalPrice,
+                        orderData: orderData,
+                      }),
+                    }
+                  );
+
+                  const confirmResult = await confirmResponse.json();
+
+                  if (!confirmResponse.ok || !confirmResult.success) {
+                    console.error(
+                      '🔍 [결제 페이지] ❌ 테스트 결제 주문 생성 실패:',
+                      confirmResult
+                    );
+                    alert(
+                      confirmResult.error || '주문 생성 중 오류가 발생했습니다.'
+                    );
+                    paymentButton.disabled = false;
+                    paymentButton.textContent = '결제하기';
+                    return;
+                  }
+
+                  console.log(
+                    '🔍 [결제 페이지] ✅ 테스트 결제 주문 생성 성공:',
+                    confirmResult
+                  );
+
+                  // 주문 완료 후 장바구니 초기화
+                  console.log('🔍 [결제 페이지] 장바구니 초기화');
+                  cartDispatch({ type: 'CLEAR_CART' });
+
+                  // 성공 페이지로 리다이렉트
+                  window.location.href = `/payment/success?orderId=${
+                    confirmResult.data?.orderId || finalOrderId
+                  }&amount=0&status=SUCCESS`;
+                  return;
+                } catch (error) {
+                  console.error('🔍 [결제 페이지] ❌ 테스트 결제 예외:', error);
+                  alert('주문 생성 중 오류가 발생했습니다.');
+                  paymentButton.disabled = false;
+                  paymentButton.textContent = '결제하기';
+                  return;
+                }
+              }
+
+              // 일반 유저는 기존대로 토스 위젯 열기
               console.log('🔍 [통합결제창] 결제 요청 시작:', {
                 orderId: paymentParams.orderId,
                 orderName: paymentParams.orderName,
                 originalAmount: currentTossWidgetData.totalPrice,
-                finalAmount,
+                finalAmount: currentTossWidgetData.totalPrice,
                 isTestUser,
                 isTestFreePaymentEnabled,
                 hasTossPayments: !!tossPayments,
@@ -2321,7 +2387,7 @@ function PaymentPageContent() {
               // 통합결제창 방식: tossPayments.requestPayment() 직접 호출
               // 문서: https://docs.tosspayments.com/guides/v2/payment-window/integration
               await tossPayments.requestPayment('CARD', {
-                amount: finalAmount,
+                amount: currentTossWidgetData.totalPrice,
                 orderId: paymentParams.orderId,
                 orderName: paymentParams.orderName,
                 customerName: paymentParams.customerName,
@@ -2718,83 +2784,41 @@ function PaymentPageContent() {
                     <div className="flex justify-between">
                       <span className="text-gray-600">도로점용료:</span>
                       <span className="font-medium">
-                        {(() => {
-                          const isTestFreePaymentEnabled =
-                            process.env.NEXT_PUBLIC_ENABLE_TEST_FREE_PAYMENT ===
-                            'true';
-                          const testFreePaymentUserId =
-                            process.env.NEXT_PUBLIC_TEST_FREE_PAYMENT_USER_ID ||
-                            'testsung';
-                          const isTestUser =
-                            user?.username === testFreePaymentUserId ||
-                            user?.id === testFreePaymentUserId;
-                          const displayPrice =
-                            isTestFreePaymentEnabled && isTestUser
-                              ? 0
-                              : group.items.reduce(
-                                  (sum, item) =>
-                                    sum +
-                                    (item.panel_slot_snapshot?.road_usage_fee ||
-                                      0),
-                                  0
-                                );
-                          return displayPrice.toLocaleString();
-                        })()}
+                        {group.items
+                          .reduce(
+                            (sum, item) =>
+                              sum +
+                              (item.panel_slot_snapshot?.road_usage_fee || 0),
+                            0
+                          )
+                          .toLocaleString()}
                         원
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">광고료:</span>
                       <span className="font-medium">
-                        {(() => {
-                          const isTestFreePaymentEnabled =
-                            process.env.NEXT_PUBLIC_ENABLE_TEST_FREE_PAYMENT ===
-                            'true';
-                          const testFreePaymentUserId =
-                            process.env.NEXT_PUBLIC_TEST_FREE_PAYMENT_USER_ID ||
-                            'testsung';
-                          const isTestUser =
-                            user?.username === testFreePaymentUserId ||
-                            user?.id === testFreePaymentUserId;
-                          const displayPrice =
-                            isTestFreePaymentEnabled && isTestUser
-                              ? 0
-                              : group.items.reduce(
-                                  (sum, item) =>
-                                    sum +
-                                    (item.panel_slot_snapshot
-                                      ?.advertising_fee || 0),
-                                  0
-                                );
-                          return displayPrice.toLocaleString();
-                        })()}
+                        {group.items
+                          .reduce(
+                            (sum, item) =>
+                              sum +
+                              (item.panel_slot_snapshot?.advertising_fee || 0),
+                            0
+                          )
+                          .toLocaleString()}
                         원
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">부가세:</span>
                       <span className="font-medium">
-                        {(() => {
-                          const isTestFreePaymentEnabled =
-                            process.env.NEXT_PUBLIC_ENABLE_TEST_FREE_PAYMENT ===
-                            'true';
-                          const testFreePaymentUserId =
-                            process.env.NEXT_PUBLIC_TEST_FREE_PAYMENT_USER_ID ||
-                            'testsung';
-                          const isTestUser =
-                            user?.username === testFreePaymentUserId ||
-                            user?.id === testFreePaymentUserId;
-                          const displayPrice =
-                            isTestFreePaymentEnabled && isTestUser
-                              ? 0
-                              : group.items.reduce(
-                                  (sum, item) =>
-                                    sum +
-                                    (item.panel_slot_snapshot?.tax_price || 0),
-                                  0
-                                );
-                          return displayPrice.toLocaleString();
-                        })()}
+                        {group.items
+                          .reduce(
+                            (sum, item) =>
+                              sum + (item.panel_slot_snapshot?.tax_price || 0),
+                            0
+                          )
+                          .toLocaleString()}
                         원
                       </span>
                     </div>
@@ -2802,26 +2826,7 @@ function PaymentPageContent() {
                       <div className="flex justify-between font-semibold">
                         <span>총 결제 금액:</span>
                         <span className="text-blue-700">
-                          {(() => {
-                            // 테스트용 0원 결제 확인
-                            const isTestFreePaymentEnabled =
-                              process.env
-                                .NEXT_PUBLIC_ENABLE_TEST_FREE_PAYMENT ===
-                              'true';
-                            const testFreePaymentUserId =
-                              process.env
-                                .NEXT_PUBLIC_TEST_FREE_PAYMENT_USER_ID ||
-                              'testsung';
-                            const isTestUser =
-                              user?.username === testFreePaymentUserId ||
-                              user?.id === testFreePaymentUserId;
-                            const displayPrice =
-                              isTestFreePaymentEnabled && isTestUser
-                                ? 0
-                                : group.totalPrice;
-                            return displayPrice.toLocaleString();
-                          })()}
-                          원
+                          {group.totalPrice.toLocaleString()} 원
                         </span>
                       </div>
                     </div>
@@ -3125,6 +3130,20 @@ function PaymentPageContent() {
                     const isTestUser =
                       user?.username === testFreePaymentUserId ||
                       user?.id === testFreePaymentUserId;
+
+                    // 디버깅 로그
+                    console.log('🔍 [토스 위젯] 가격 표시 디버깅:', {
+                      isTestFreePaymentEnabled,
+                      envValue:
+                        process.env.NEXT_PUBLIC_ENABLE_TEST_FREE_PAYMENT,
+                      testFreePaymentUserId,
+                      currentUserUsername: user?.username,
+                      currentUserId: user?.id,
+                      isTestUser,
+                      originalPrice: tossWidgetData.totalPrice,
+                      willDisplayZero: isTestFreePaymentEnabled && isTestUser,
+                    });
+
                     const displayPrice =
                       isTestFreePaymentEnabled && isTestUser
                         ? 0
