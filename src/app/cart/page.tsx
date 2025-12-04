@@ -64,7 +64,6 @@ const dividerVertical = (
 function CartGroupCard({
   title,
   children,
-  phoneList,
   isSelected,
   onSelect,
   onDelete,
@@ -72,7 +71,6 @@ function CartGroupCard({
 }: {
   title: string | React.ReactNode;
   children: React.ReactNode;
-  phoneList?: string[];
   isSelected?: boolean;
   onSelect?: (selected: boolean) => void;
   onDelete?: () => void;
@@ -459,10 +457,12 @@ function CartContent() {
   const [isConsultationModalOpen, setIsConsultationModalOpen] = useState(false);
   const [selectedProductName, setSelectedProductName] = useState('');
   const [selectedProductId, setSelectedProductId] = useState('');
-  const [selectedProductType, setSelectedProductType] =
-    useState<CartItem['type'] | undefined>(undefined);
-  const [selectedConsultationKey, setSelectedConsultationKey] =
-    useState<string | undefined>(undefined);
+  const [selectedProductType, setSelectedProductType] = useState<
+    CartItem['type'] | undefined
+  >(undefined);
+  const [selectedConsultationKey, setSelectedConsultationKey] = useState<
+    string | undefined
+  >(undefined);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<CartItem | null>(null);
   const [isGroupDeleteModalOpen, setIsGroupDeleteModalOpen] = useState(false);
@@ -600,7 +600,8 @@ function CartContent() {
         }, 100);
       }
     }
-  }, []); // activeTab 의존성 제거 - URL 해시만 확인
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // activeTab 의존성 제거 - URL 해시만 확인 (무한루프 방지)
 
   // useEffect에서 cart를 바꾸는 로직 완전히 제거!
   // cart는 오직 아이템 추가/삭제/프로필 변경 등 명확한 액션에서만 dispatch로 바뀜
@@ -1168,15 +1169,17 @@ function CartContent() {
         console.error(
           '🔍 [장바구니] 어드민 승인 요청 실패: user_auth_id를 찾을 수 없습니다.'
         );
-        setErrorMessage('로그인 정보가 올바르지 않습니다. 다시 로그인해주세요.');
+        setErrorMessage(
+          '로그인 정보가 올바르지 않습니다. 다시 로그인해주세요.'
+        );
         setIsPaymentErrorModalOpen(true);
         return;
       }
 
       // 2) 사용할 프로필 ID 결정 (선택된 아이템의 user_profile_id 또는 기본 프로필)
       let userProfileId: string | null =
-        selectedCartItems.find((item) => item.user_profile_id)?.user_profile_id ||
-        null;
+        selectedCartItems.find((item) => item.user_profile_id)
+          ?.user_profile_id || null;
 
       if (!userProfileId && defaultProfile?.id) {
         userProfileId = defaultProfile.id;
@@ -1532,11 +1535,6 @@ function CartContent() {
                                 )}
                               </div>
                             }
-                            phoneList={[
-                              '1533-0570',
-                              '1899-0596',
-                              '02-719-0083',
-                            ]}
                             isSelected={isGroupSelected('general', district)}
                             onSelect={(selected) =>
                               handleGroupSelect('general', district, selected)
@@ -1607,11 +1605,6 @@ function CartContent() {
                         {publicInstitutionItems.length > 0 && (
                           <CartGroupCard
                             title={`현수막게시대 (공공기관용) - ${district}`}
-                            phoneList={[
-                              '1533-0570',
-                              '1899-0596',
-                              '02-719-0083',
-                            ]}
                             isSelected={isGroupSelected(
                               'public_institution',
                               district
@@ -1684,11 +1677,6 @@ function CartContent() {
                         {companyItems.length > 0 && (
                           <CartGroupCard
                             title={`현수막게시대 (기업용) - ${district}`}
-                            phoneList={[
-                              '1533-0570',
-                              '1899-0596',
-                              '02-719-0083',
-                            ]}
                             isSelected={isGroupSelected('company', district)}
                             onSelect={(selected) =>
                               handleGroupSelect('company', district, selected)
@@ -1771,7 +1759,6 @@ function CartContent() {
                 {bannerConsultingItems.length > 0 && (
                   <CartGroupCard
                     title="상단광고"
-                    phoneList={['1533-0570', '1899-0596', '02-719-0083']}
                     isSelected={isGroupSelected('general', '')}
                     onSelect={(selected) =>
                       handleGroupSelect('general', '', selected)
@@ -1810,28 +1797,28 @@ function CartContent() {
                               '-',
                           };
                       return (
-                          <CartItemRow
-                            key={item.id}
-                            item={item}
-                            user={userInfo}
-                            isSelected={selectedItems.has(item.id)}
-                            onSelect={(selected) =>
-                              handleItemSelect(item.id, selected)
-                            }
-                            isConsulting={true}
-                            onOrderModify={() => handleOrderModify(item.id)}
-                            onConsultation={() =>
-                              handleConsultation(
-                                item.name,
-                                item.id,
-                                item.type,
-                                item.consultationKey
-                              )
-                            }
-                            onDelete={() => handleDelete(item)}
-                            inquiryStatus={undefined}
-                            getPanelTypeDisplay={getPanelTypeDisplay}
-                          />
+                        <CartItemRow
+                          key={item.id}
+                          item={item}
+                          user={userInfo}
+                          isSelected={selectedItems.has(item.id)}
+                          onSelect={(selected) =>
+                            handleItemSelect(item.id, selected)
+                          }
+                          isConsulting={true}
+                          onOrderModify={() => handleOrderModify(item.id)}
+                          onConsultation={() =>
+                            handleConsultation(
+                              item.name,
+                              item.id,
+                              item.type,
+                              item.consultationKey
+                            )
+                          }
+                          onDelete={() => handleDelete(item)}
+                          inquiryStatus={undefined}
+                          getPanelTypeDisplay={getPanelTypeDisplay}
+                        />
                       );
                     })}
                   </CartGroupCard>
@@ -1840,7 +1827,6 @@ function CartContent() {
                 {ledConsultingItemsOnly.length > 0 && (
                   <CartGroupCard
                     title="LED전자게시대"
-                    phoneList={['1533-0570', '1899-0596', '02-719-0083']}
                     isSelected={isGroupSelected('general', '')}
                     onSelect={(selected) =>
                       handleGroupSelect('general', '', selected)
@@ -1940,7 +1926,6 @@ function CartContent() {
                         <CartGroupCard
                           key={item.id}
                           title={item.name}
-                          phoneList={['1533-0570', '1899-0596', '02-719-0083']}
                           isSelected={selectedItems.has(item.id)}
                           onSelect={(selected) =>
                             handleItemSelect(item.id, selected)
@@ -1978,7 +1963,6 @@ function CartContent() {
                 {digitalProductConsultingItems.length > 0 && (
                   <CartGroupCard
                     title="디지털미디어 쇼핑몰"
-                    phoneList={['1533-0570', '1899-0596', '02-719-0083']}
                     isSelected={isGroupSelected('general', '')}
                     onSelect={(selected) =>
                       handleGroupSelect('general', '', selected)
@@ -2082,7 +2066,6 @@ function CartContent() {
                         <CartGroupCard
                           key={item.id}
                           title={item.name}
-                          phoneList={['1533-0570', '1899-0596', '02-719-0083']}
                           isSelected={selectedItems.has(item.id)}
                           onSelect={(selected) =>
                             handleItemSelect(item.id, selected)
