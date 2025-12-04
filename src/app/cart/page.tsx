@@ -90,11 +90,6 @@ function CartGroupCard({
           />
         )}
         <span className="text-xl font-semibold">{title}</span>
-        {phoneList && (
-          <span className="ml-4 text-sm text-gray-500">
-            상담전화: {phoneList.join(', ')}
-          </span>
-        )}
         <button
           className="absolute top-4 right-10 text-1.5 font-100 text-gray-2 hover:cursor-pointer"
           onClick={onDelete}
@@ -2199,9 +2194,6 @@ function CartContent() {
           <div className="text-center text-gray-600">
             <div className="text-lg font-semibold mb-2">
               상담문의 버튼을 통해 상담신청해주세요
-            </div>
-            <div className="text-sm">
-              상담전화: 1533-0570, 1899-0596, 02-719-0083
             </div>
           </div>
         </div>

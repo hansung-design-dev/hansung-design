@@ -25,6 +25,7 @@ interface OrderDetail {
   // 추가 필드들
   projectName?: string; // 파일이름 (design_draft.project_name)
   panelDisplayName?: string; // 게시대 명 (주소 + 별칭)
+  panelCode?: string; // 게시대번호 (현수막게시대용)
   displayStartDate?: string; // 송출 시작일
   displayEndDate?: string; // 송출 종료일
   // 주문 프로필 정보
@@ -121,6 +122,16 @@ export default function OrderItemCard({
                 <div className="font-700 text-1.25 sm:text-1">
                   {orderDetail.panelDisplayName || '-'}
                 </div>
+
+                {/* 현수막게시대인 경우 게시대번호 표시 */}
+                {orderDetail.category === '현수막게시대' && orderDetail.panelCode && (
+                  <>
+                    <div className="text-gray-600 mb-2">게시대번호</div>
+                    <div className="font-700 text-1.25 sm:text-1">
+                      {orderDetail.panelCode}
+                    </div>
+                  </>
+                )}
 
                 <div className="text-gray-600 mb-2">위치</div>
                 <div className="font-700 text-1.25 sm:text-1">

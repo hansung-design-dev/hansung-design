@@ -186,6 +186,8 @@ interface DisplayItem {
   startDate?: string;
   endDate?: string;
   isClosed?: boolean; // 마감 여부
+  panelCode?: string; // 게시대번호 (현수막게시대용)
+  category?: string; // 품명 (현수막게시대, 전자게시대 등)
   order?: Order; // 전체 주문 정보
 }
 
@@ -214,6 +216,7 @@ interface OrderCardData {
   // 추가 필드들
   projectName?: string; // 파일이름 (design_draft.project_name)
   panelDisplayName?: string; // 게시대 명 (주소 + 별칭)
+  panelCode?: string; // 게시대번호 (현수막게시대용)
   displayStartDate?: string; // 송출 시작일
   displayEndDate?: string; // 송출 종료일
   // 주문 프로필 정보
@@ -466,12 +469,18 @@ export default function OrdersPage() {
                     : null;
                 })();
 
+          // 품명 확인 (현수막게시대인지 확인)
+          const displayTypeName = item.panels?.display_types?.name || '';
+          const category = formatDisplayType(displayTypeName);
+          const isBannerDisplay = category === '현수막게시대';
+          
           displayItems.push({
             id: globalIndex++,
-            // 게시대명: address (nickname)
+            // 게시대명: address (nickname) [게시대번호]
             title:
               (item.panels?.address || '') +
-              (item.panels?.nickname ? ` (${item.panels.nickname})` : ''),
+              (item.panels?.nickname ? ` (${item.panels.nickname})` : '') +
+              (isBannerDisplay && item.panels?.panel_code ? ` [${item.panels.panel_code}]` : ''),
             // 작업명을 subtitle로 추가
             subtitle: projectName || undefined,
             // 행정동
@@ -486,6 +495,8 @@ export default function OrdersPage() {
             startDate: item.display_start_date,
             endDate: item.display_end_date,
             isClosed: item.panel_slot_usage?.is_closed === true,
+            panelCode: item.panels?.panel_code,
+            category: category,
             order: order,
           });
         });
@@ -781,6 +792,9 @@ export default function OrdersPage() {
       }
     }
     
+    // 게시대번호 추출 (현수막게시대용)
+    const panelCode = panelInfo.panel_code || undefined;
+    
     console.log('🔍 [mapOrderDetailToCard] 프로젝트명 확인:', {
       orderNumber: order.order_number,
       projectNameFromOrder,
@@ -838,6 +852,7 @@ export default function OrdersPage() {
       // 추가 필드들
       projectName: finalProjectName,
       panelDisplayName: panelDisplayName,
+      panelCode: panelCode,
       displayStartDate: formatDisplayPeriod(displayStartDate, displayEndDate),
       displayEndDate: displayEndDate,
       // 주문 프로필 정보 (없으면 '-'로 표시)
