@@ -50,7 +50,13 @@ interface Payment {
   payment_method_id: string;
   payment_provider?: string;
   amount: number;
-  payment_status: 'pending' | 'completed' | 'failed' | 'cancelled' | 'refunded';
+  payment_status:
+    | 'pending'
+    | 'pending_deposit'
+    | 'completed'
+    | 'failed'
+    | 'cancelled'
+    | 'refunded';
   transaction_id?: string;
   payment_date?: string;
   admin_approval_status: 'pending' | 'approved' | 'rejected';
@@ -97,7 +103,13 @@ interface Order {
   user_profile_id: string;
   order_number: string;
   total_price: number;
-  payment_status: 'pending' | 'completed' | 'failed' | 'cancelled' | 'refunded';
+  payment_status:
+    | 'pending'
+    | 'pending_deposit'
+    | 'completed'
+    | 'failed'
+    | 'cancelled'
+    | 'refunded';
   admin_approval_status: 'pending' | 'approved' | 'rejected';
   draft_delivery_method?: 'email' | 'upload';
   design_drafts_id?: string;
@@ -175,7 +187,9 @@ export async function GET(request: NextRequest) {
         if (order.design_drafts_id) {
           const { data: draft, error: draftError } = await supabase
             .from('design_drafts')
-            .select('id, project_name, file_name, file_url, file_extension, file_size, draft_category, notes, is_approved, created_at, updated_at, user_profile_id')
+            .select(
+              'id, project_name, file_name, file_url, file_extension, file_size, draft_category, notes, is_approved, created_at, updated_at, user_profile_id'
+            )
             .eq('id', order.design_drafts_id)
             .single();
 
@@ -193,16 +207,23 @@ export async function GET(request: NextRequest) {
         // 2) 같은 user_profile_id와 주문 생성 시간 기준(±5분)으로 관련된 모든 design_drafts 조회
         if (order.user_profile_id) {
           const orderCreatedAt = new Date(order.created_at);
-          const timeWindowStart = new Date(orderCreatedAt.getTime() - 5 * 60 * 1000); // 5분 전
-          const timeWindowEnd = new Date(orderCreatedAt.getTime() + 5 * 60 * 1000); // 5분 후
+          const timeWindowStart = new Date(
+            orderCreatedAt.getTime() - 5 * 60 * 1000
+          ); // 5분 전
+          const timeWindowEnd = new Date(
+            orderCreatedAt.getTime() + 5 * 60 * 1000
+          ); // 5분 후
 
-          const { data: relatedDrafts, error: relatedDraftsError } = await supabase
-            .from('design_drafts')
-            .select('id, project_name, file_name, file_url, file_extension, file_size, draft_category, notes, is_approved, created_at, updated_at, user_profile_id')
-            .eq('user_profile_id', order.user_profile_id)
-            .gte('created_at', timeWindowStart.toISOString())
-            .lte('created_at', timeWindowEnd.toISOString())
-            .order('created_at', { ascending: true });
+          const { data: relatedDrafts, error: relatedDraftsError } =
+            await supabase
+              .from('design_drafts')
+              .select(
+                'id, project_name, file_name, file_url, file_extension, file_size, draft_category, notes, is_approved, created_at, updated_at, user_profile_id'
+              )
+              .eq('user_profile_id', order.user_profile_id)
+              .gte('created_at', timeWindowStart.toISOString())
+              .lte('created_at', timeWindowEnd.toISOString())
+              .order('created_at', { ascending: true });
 
           if (relatedDraftsError) {
             console.error(
@@ -219,32 +240,26 @@ export async function GET(request: NextRequest) {
             });
           }
 
-          console.log(
-            `🔍 주문 ${order.id}의 관련 design_drafts 조회 결과:`,
-            {
-              user_profile_id: order.user_profile_id,
-              timeWindow: {
-                start: timeWindowStart.toISOString(),
-                end: timeWindowEnd.toISOString(),
-              },
-              relatedDraftsCount: relatedDrafts?.length || 0,
-              totalDraftsCount: designDrafts.length,
-            }
-          );
+          console.log(`🔍 주문 ${order.id}의 관련 design_drafts 조회 결과:`, {
+            user_profile_id: order.user_profile_id,
+            timeWindow: {
+              start: timeWindowStart.toISOString(),
+              end: timeWindowEnd.toISOString(),
+            },
+            relatedDraftsCount: relatedDrafts?.length || 0,
+            totalDraftsCount: designDrafts.length,
+          });
         }
 
-        console.log(
-          `🔍 주문 ${order.id}의 design_drafts 조회 결과:`,
-          {
-            design_drafts_id: order.design_drafts_id,
-            designDraftsLength: designDrafts.length,
-            drafts: designDrafts.map((d) => ({
-              id: d.id,
-              project_name: d.project_name,
-              file_name: d.file_name,
-            })),
-          }
-        );
+        console.log(`🔍 주문 ${order.id}의 design_drafts 조회 결과:`, {
+          design_drafts_id: order.design_drafts_id,
+          designDraftsLength: designDrafts.length,
+          drafts: designDrafts.map((d) => ({
+            id: d.id,
+            project_name: d.project_name,
+            file_name: d.file_name,
+          })),
+        });
 
         // design_drafts에서 프로젝트명 추출 (주문 상세 API와 동일한 로직)
         const projectName =
@@ -252,16 +267,13 @@ export async function GET(request: NextRequest) {
             ? designDrafts[0]?.project_name || '프로젝트명 없음'
             : '프로젝트명 없음';
 
-        console.log(
-          `🔍 주문 ${order.id}의 최종 projectName:`,
-          {
-            orderId: order.id,
-            orderNumber: order.order_number,
-            designDraftsLength: designDrafts.length,
-            projectName,
-            firstDraftProjectName: designDrafts[0]?.project_name,
-          }
-        );
+        console.log(`🔍 주문 ${order.id}의 최종 projectName:`, {
+          orderId: order.id,
+          orderNumber: order.order_number,
+          designDraftsLength: designDrafts.length,
+          projectName,
+          firstDraftProjectName: designDrafts[0]?.project_name,
+        });
 
         return {
           ...order,
@@ -333,7 +345,8 @@ export async function POST(request: NextRequest) {
       isPaid = false,
       draftDeliveryMethod,
       paymentMethodId, // 결제수단 ID 추가
-      projectName, // 작업이름 필수
+      projectName, // 파일제목 필수
+      depositorName, // 계좌이체 시 입금자명 (선택)
     } = body;
 
     console.log(
@@ -370,9 +383,9 @@ export async function POST(request: NextRequest) {
       typeof projectName !== 'string' ||
       !projectName.trim()
     ) {
-      console.error('🔍 [주문 생성 API] ❌ 작업이름 누락');
+      console.error('🔍 [주문 생성 API] ❌ 파일제목 누락');
       return NextResponse.json(
-        { error: '작업이름(projectName)은 필수입니다.' },
+        { error: '파일제목(projectName)은 필수입니다.' },
         { status: 400 }
       );
     }
@@ -437,19 +450,40 @@ export async function POST(request: NextRequest) {
       })),
     });
 
+    // 결제수단이 계좌이체(bank_transfer)인지 확인
+    let isBankTransfer = false;
+    if (paymentMethodId) {
+      const { data: pm, error: pmError } = await supabase
+        .from('payment_methods')
+        .select('id, method_code')
+        .eq('id', paymentMethodId)
+        .single();
+
+      if (pmError) {
+        console.warn('🔍 [주문 생성 API] payment_methods 조회 실패:', pmError);
+      } else if (pm) {
+        isBankTransfer = pm.method_code === 'bank_transfer';
+      }
+    }
+
     // 1. orders 테이블에 주문 생성 (가격 정보 제외)
     console.log('🔍 [주문 생성 API] orders 테이블에 주문 생성 시작...');
     const orderInsertData: {
       order_number: string;
       user_auth_id: string;
       user_profile_id?: string | null;
-      payment_status: 'completed' | 'pending';
+      payment_status: 'completed' | 'pending' | 'pending_deposit';
       order_status: string;
       draft_delivery_method: string;
     } = {
       order_number: orderNumber,
       user_auth_id: userAuthId,
-      payment_status: isPaid ? 'completed' : 'pending',
+      // 계좌이체: pending_deposit, 카드/온라인: pending, 결제완료: completed
+      payment_status: isPaid
+        ? 'completed'
+        : isBankTransfer
+        ? 'pending_deposit'
+        : 'pending',
       order_status: 'pending',
       draft_delivery_method: draftDeliveryMethod || 'upload',
     };
@@ -501,9 +535,17 @@ export async function POST(request: NextRequest) {
           order_id: order.id,
           payment_method_id: paymentMethodId,
           amount: totalPrice,
-          payment_status: isPaid ? 'completed' : 'pending',
+          // 계좌이체: pending_deposit, 카드/온라인: pending, 결제완료: completed
+          payment_status: isPaid
+            ? 'completed'
+            : isBankTransfer
+            ? 'pending_deposit'
+            : 'pending',
           payment_date: isPaid ? new Date().toISOString() : null,
+          // 계좌이체는 관리자 승인 여부와 무관하게 최초에는 pending
           admin_approval_status: isPaid ? 'approved' : 'pending',
+          // 계좌이체인 경우 입금자명 저장 (없으면 null)
+          depositor_name: isBankTransfer ? depositorName || null : null,
         })
         .select('id, payment_status, amount')
         .single();

@@ -90,7 +90,7 @@ export default function CartItemAccordion({ item }: CartItemAccordionProps) {
           <div className="text-1.25 font-600 mb-8">고객 정보</div>
           <div className="mb-3 flex justify-between">
             <label className="block text-gray-400 text-1 font-500 mb-1">
-              작업이름
+              파일제목
             </label>
             <input
               className="w-[21.25rem] h-[3rem] border border-[#AEAEAE] rounded-[0.375rem] px-3"

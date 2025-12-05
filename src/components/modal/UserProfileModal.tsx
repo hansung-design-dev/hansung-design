@@ -6,6 +6,7 @@ import { Button } from '../button/button';
 import { useAuth } from '@/src/contexts/authContext';
 import { useProfile } from '@/src/contexts/profileContext';
 import Image from 'next/image';
+import { formatPhoneInput } from '@/src/lib/utils';
 
 export interface UserProfile {
   id: string;
@@ -286,7 +287,13 @@ export default function UserProfileModal({
   }, [isOpen, user]);
 
   const handleInputChange = (field: string, value: string | boolean) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    // 전화번호는 입력 시 자동 포맷
+    if (field === 'phone' && typeof value === 'string') {
+      const formatted = formatPhoneInput(value);
+      setFormData((prev) => ({ ...prev, phone: formatted }));
+    } else {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+    }
 
     // 공공기관/기업 체크박스 변경 시 ProfileContext 업데이트
     if (
@@ -667,13 +674,16 @@ export default function UserProfileModal({
               전화번호<span className="text-red">*</span>
             </label>
             <input
-              type="text"
+              type="tel"
               value={formData.phone}
               onChange={(e) => handleInputChange('phone', e.target.value)}
               className={`w-[80%] px-3 ${
                 className.includes('compact') ? 'py-2' : 'py-4'
               } border-solid border-1 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-1`}
               placeholder="010-1234-5678"
+              maxLength={13}
+              inputMode="numeric"
+              autoComplete="tel"
             />
           </div>
 

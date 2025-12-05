@@ -414,8 +414,9 @@ export default function OrdersPage() {
       case 'rejected':
         return '거절';
       case 'pending':
-      case 'pending_deposit':
         return '대기';
+      case 'pending_deposit':
+        return '입금대기';
       default:
         return '대기';
     }
@@ -542,12 +543,13 @@ export default function OrdersPage() {
   const getStatusDisplay = (status: string): string => {
     switch (status) {
       case 'pending':
-        // 주문만 생성되어 있고 아직 결제하지 않은 상태
+        // 카드/온라인 결제 대기 (결제하기 버튼 표시)
         return '결제대기 중';
       case 'pending_payment':
         return '결제대기 중';
       case 'pending_deposit':
-        return '입금확인 중';
+        // 계좌이체 입금 대기 (결제하기 버튼 숨김)
+        return '입금대기 중';
       case 'confirmed':
         return '결제완료';
       case 'completed':

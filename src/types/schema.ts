@@ -308,7 +308,7 @@ export interface Payment {
   payment_method_id: string;
   payment_provider?: PaymentProvider;
   amount: number;
-  payment_status: 'pending' | 'completed' | 'failed' | 'cancelled' | 'refunded';
+  payment_status: 'pending' | 'pending_deposit' | 'completed' | 'failed' | 'cancelled' | 'refunded';
   transaction_id?: string;
   payment_date?: string;
   admin_approval_status: 'pending' | 'approved' | 'rejected';

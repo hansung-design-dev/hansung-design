@@ -322,14 +322,27 @@ export async function GET(request: NextRequest) {
 
     if (action === 'getBankData' && districtName && displayType) {
       // 계좌번호 정보만 가져오기 (기존 bank-info API 호환성)
-      const { data: regionData, error: regionError } = await supabase
+      const { data: regions, error: regionError } = await supabase
         .from('region_gu')
         .select('id, name')
         .eq('name', districtName)
-        .single();
+        // 같은 구 이름으로 여러 레코드가 있을 수 있으므로 단일 행 강제(single) 대신 첫 번째 행만 사용
+        ;
 
       if (regionError) {
         console.error('Error fetching region_gu:', regionError);
+        return NextResponse.json(
+          { success: false, error: 'Region not found' },
+          { status: 404 }
+        );
+      }
+
+      const regionData = Array.isArray(regions) && regions.length > 0 ? regions[0] : null;
+
+      if (!regionData) {
+        console.error('Error fetching region_gu: no rows for district', {
+          districtName,
+        });
         return NextResponse.json(
           { success: false, error: 'Region not found' },
           { status: 404 }

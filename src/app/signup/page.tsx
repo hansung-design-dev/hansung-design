@@ -5,6 +5,10 @@ import { useState } from 'react';
 import { getModalContent } from './modalContent';
 import { useAuth } from '@/src/contexts/authContext';
 import { useRouter } from 'next/navigation';
+import {
+  formatPhoneInput,
+  isValidPhoneFormatted,
+} from '@/src/lib/utils';
 
 export default function Signup() {
   const [agreements, setAgreements] = useState({
@@ -179,20 +183,31 @@ export default function Signup() {
     return { isValid: true, message: '' };
   };
 
-  // 휴대폰 번호 유효성 검사
+  // 휴대폰 번호 유효성 검사 (하이픈 포함 형식)
   const validatePhone = (phone: string) => {
-    const phoneRegex = /^[0-9]{10,11}$/;
     if (!phone) {
       return { isValid: false, message: '휴대폰 번호를 입력해주세요.' };
     }
-    if (!phoneRegex.test(phone)) {
-      return { isValid: false, message: '올바른 휴대폰 번호를 입력해주세요.' };
+
+    if (!isValidPhoneFormatted(phone)) {
+      return {
+        isValid: false,
+        message: '휴대폰 번호를 010-1234-5678 형식으로 입력해주세요.',
+      };
     }
+
     return { isValid: true, message: '' };
   };
 
   // 입력 필드 변경 핸들러
   const handleInputChange = (field: keyof typeof formData, value: string) => {
+    // 휴대폰 번호는 입력 시 자동으로 하이픈 포맷 적용
+    if (field === 'phone') {
+      const formatted = formatPhoneInput(value);
+      setFormData((prev) => ({ ...prev, phone: formatted }));
+      return;
+    }
+
     setFormData((prev) => ({ ...prev, [field]: value }));
     // 아이디가 변경되면 중복확인 상태 초기화
     if (field === 'id') {
@@ -504,11 +519,14 @@ export default function Signup() {
               />
               <input
                 type="tel"
-                placeholder="  휴대폰 번호를 입력해주세요."
+                placeholder="  휴대폰 번호를 입력해주세요. (예: 010-1234-5678)"
                 className="flex-1 outline-none border-none font-200"
                 value={formData.phone}
                 onChange={(e) => handleInputChange('phone', e.target.value)}
                 onBlur={(e) => handleInputBlur('phone', e.target.value)}
+                maxLength={13}
+                inputMode="numeric"
+                autoComplete="tel"
               />
             </div>
             <Button

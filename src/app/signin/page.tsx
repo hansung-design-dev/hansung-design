@@ -146,13 +146,23 @@ export default function Signin() {
           카카오로 로그인
         </KakaoLoginButton> */}
 
-        {/* 회원가입 버튼 */}
+          {/* 회원가입 버튼 */}
         <Link
           href="/signup"
           className="w-full flex items-center justify-center h-[4rem] bg-white text-black text-1.25 font-500 rounded border border-gray-200"
         >
           회원가입
         </Link>
+
+          {/* 아이디/비밀번호 찾기 링크 */}
+          <div className="w-full flex justify-between mt-4 text-sm text-gray-600">
+            <Link href="/find-id" className="text-gray-600 no-underline">
+              아이디 찾기
+            </Link>
+            <Link href="/reset-password" className="text-gray-600 no-underline">
+              비밀번호 찾기
+            </Link>
+          </div>
       </div>
     </div>
   );

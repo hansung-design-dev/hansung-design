@@ -1203,7 +1203,7 @@ function CartContent() {
         return;
       }
 
-      // 3) 작업이름(projectName) 기본값 생성
+      // 3) 파일제목(projectName) 기본값 생성
       const today = new Date();
       const dateStr = `${today.getFullYear()}-${String(
         today.getMonth() + 1

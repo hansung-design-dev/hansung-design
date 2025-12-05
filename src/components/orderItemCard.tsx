@@ -52,8 +52,19 @@ export default function OrderItemCard({
   onResendFile,
   onReceiptClick,
 }: OrderItemCardProps) {
+  // 계좌이체 입금대기인지 확인 (결제하기 버튼 숨김)
+  const isBankTransferPending =
+    paymentStatus === '입금대기' ||
+    paymentStatus === '입금대기 중' ||
+    paymentStatus === 'pending_deposit' ||
+    orderDetail.paymentMethodCode === 'bank_transfer' ||
+    (orderDetail.depositorName && orderDetail.depositorName !== '-');
+
+  // 카드/온라인 결제 대기인지 확인 (결제하기 버튼 표시)
   const isPaymentPending =
-    paymentStatus === '대기' || paymentStatus === 'pending_payment';
+    !isBankTransferPending &&
+    (paymentStatus === '대기' || paymentStatus === 'pending_payment' || paymentStatus === 'pending');
+
   return (
     <div className="rounded-lg overflow-hidden py-[2rem] sm:py-4">
       <div className="flex items-center justify-center ">
