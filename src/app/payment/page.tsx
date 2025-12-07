@@ -59,6 +59,12 @@ interface GroupedCartItem {
   periodText?: string;
 }
 
+type BankAccountInfo = {
+  bankName: string;
+  accountNumber: string;
+  owner: string;
+};
+
 function PaymentPageContent() {
   const { user } = useAuth();
   const { cart, dispatch: cartDispatch } = useCart();
@@ -117,6 +123,17 @@ function PaymentPageContent() {
       emailAddress: string | null;
     };
   }>({});
+
+  const [bankModalOpen, setBankModalOpen] = useState(false);
+  const [bankModalGroup, setBankModalGroup] = useState<GroupedCartItem | null>(
+    null
+  );
+  const [bankAccountInfo, setBankAccountInfo] =
+    useState<BankAccountInfo | null>(null);
+  const [bankModalLoading, setBankModalLoading] = useState(false);
+  const [bankModalError, setBankModalError] = useState<string | null>(null);
+  const [isBankTransferProcessing, setIsBankTransferProcessing] =
+    useState(false);
 
   // 토스 위젯 상태
   const [tossWidgetOpen, setTossWidgetOpen] = useState(false);
@@ -1346,6 +1363,198 @@ function PaymentPageContent() {
 
     fetchBankInfo();
   }, [selectedItems]);
+
+  const getDisplayTypeForBankAccount = (
+    group: GroupedCartItem
+  ): 'banner_display' | 'led_display' | null => {
+    if (group.type === 'banner-display') return 'banner_display';
+    if (group.type === 'led-display') return 'led_display';
+    return null;
+  };
+
+  const fetchBankAccountForDistrict = async (
+    district: string,
+    displayType: 'banner_display' | 'led_display'
+  ): Promise<BankAccountInfo | null> => {
+    try {
+      const params = new URLSearchParams({
+        action: 'getBankData',
+        district,
+        displayType,
+      });
+      const res = await fetch(`/api/region-gu?${params.toString()}`);
+      const json = await res.json();
+      if (!res.ok || !json.success || !json.data) {
+        console.warn('🔍 [계좌이체] bank info missing', {
+          district,
+          displayType,
+          json,
+        });
+        return null;
+      }
+      return {
+        bankName: json.data.bank_name as string,
+        accountNumber: json.data.account_number as string,
+        owner: json.data.depositor as string,
+      };
+    } catch (error) {
+      console.error('🔍 [계좌이체] bank info fetch failed', {
+        district,
+        displayType,
+        error,
+      });
+      return null;
+    }
+  };
+
+  const closeBankModal = () => {
+    setBankModalOpen(false);
+    setBankModalGroup(null);
+    setBankAccountInfo(null);
+    setBankModalError(null);
+    setBankModalLoading(false);
+  };
+
+  const openBankTransferModal = async (group: GroupedCartItem) => {
+    setBankModalError(null);
+    setBankModalGroup(group);
+    setBankModalLoading(true);
+    setBankModalOpen(true);
+    const displayType = getDisplayTypeForBankAccount(group);
+    if (!displayType) {
+      setBankModalError('현재 상품은 계좌이체를 지원하지 않습니다.');
+      setBankModalLoading(false);
+      return;
+    }
+    const account = await fetchBankAccountForDistrict(
+      group.district,
+      displayType
+    );
+    if (!account) {
+      setBankModalError(
+        `${group.district}의 계좌정보가 아직 등록되지 않았습니다.`
+      );
+      setBankModalLoading(false);
+      return;
+    }
+    setBankAccountInfo(account);
+    setBankModalLoading(false);
+  };
+
+  const handleBankTransferPayment = async (
+    group: GroupedCartItem,
+    account: BankAccountInfo
+  ) => {
+    if (isBankTransferProcessing) return;
+    setIsBankTransferProcessing(true);
+    try {
+      if (!user?.id) {
+        alert('로그인이 필요합니다.');
+        return;
+      }
+      const groupState = groupStates[group.id];
+      let projectName =
+        groupState?.projectName?.trim() ||
+        group.name ||
+        group.district ||
+        '광고주';
+      if (!projectName) {
+        projectName = '광고주';
+      }
+      const draftDeliveryMethod =
+        groupState?.sendByEmail === true ? 'email' : 'upload';
+
+      const itemsForOrder = group.items.map((item) => {
+        const itemState = itemStates[item.id];
+        const itemProjectName =
+          itemState?.projectName?.trim() || projectName || item.name || '작업';
+        return {
+          id: item.id,
+          panel_id: item.panel_id,
+          price: item.price || 0,
+          quantity: 1,
+          halfPeriod: item.halfPeriod,
+          selectedYear: item.selectedYear,
+          selectedMonth: item.selectedMonth,
+          panel_slot_usage_id: item.panel_slot_usage_id,
+          panel_slot_snapshot: item.panel_slot_snapshot,
+          draftDeliveryMethod:
+            itemState?.sendByEmail === true ? 'email' : 'upload',
+          projectName: itemProjectName,
+        };
+      });
+
+      const paymentMethodRes = await fetch(
+        '/api/payment/methods?code=bank_transfer'
+      );
+      const paymentMethodJson = await paymentMethodRes.json();
+      if (
+        !paymentMethodRes.ok ||
+        !paymentMethodJson.success ||
+        !paymentMethodJson.data?.id
+      ) {
+        console.error(
+          '🔍 [계좌이체] payment method lookup failed',
+          paymentMethodJson
+        );
+        alert('계좌이체 결제수단 정보를 불러올 수 없습니다.');
+        return;
+      }
+      const paymentMethodId: string = paymentMethodJson.data.id;
+
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}${String(
+        today.getMonth() + 1
+      ).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+      const baseName =
+        user?.username || user?.name || group.contact_person_name || '고객';
+      const depositorName = `${baseName}_${dateStr}`;
+
+      const orderRes = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: itemsForOrder,
+          userAuthId: user.id,
+          userProfileId: group.user_profile_id,
+          isPaid: false,
+          draftDeliveryMethod,
+          paymentMethodId,
+          projectName,
+          depositorName,
+          meta: {
+            paymentAccount: account,
+            displayType: getDisplayTypeLabel(group),
+          },
+        }),
+      });
+      const orderJson = await orderRes.json();
+      if (!orderRes.ok || !orderJson.success) {
+        console.error('🔍 [계좌이체] order creation failed', orderJson);
+        alert(orderJson.error || '계좌이체 주문을 생성할 수 없습니다.');
+        return;
+      }
+
+      cartDispatch({ type: 'CLEAR_CART' });
+      const orderNumber =
+        orderJson.order?.orderNumber || orderJson.order?.orderId || '';
+      const paymentId = `bank_${orderNumber || dateStr}`;
+
+      window.location.href = `/payment/success?orderId=${encodeURIComponent(
+        orderNumber
+      )}&paymentId=${encodeURIComponent(paymentId)}&amount=${
+        group.totalPrice
+      }&status=pending_deposit`;
+    } catch (error) {
+      console.error('🔍 [계좌이체] exception', error);
+      alert('계좌이체 주문 처리 중 오류가 발생했습니다.');
+    } finally {
+      setIsBankTransferProcessing(false);
+      closeBankModal();
+    }
+  };
 
   // 에러가 있는 경우 에러 화면 표시 (현재는 사용하지 않음)
   // if (/* error && */ !isProcessing) {
@@ -2890,39 +3099,60 @@ function PaymentPageContent() {
                     const isButtonEnabled =
                       hasProjectName && hasFileUploadMethod && hasAgreedToTerms;
 
+                    const bankDisplayType = getDisplayTypeForBankAccount(group);
+                    const bankButtonDisabled =
+                      !isButtonEnabled ||
+                      !bankDisplayType ||
+                      isBankTransferProcessing;
+
                     return (
                       <>
-                        <Button
-                          onClick={() => openTossWidget(group)}
-                          disabled={!isButtonEnabled}
-                          className={`w-full py-2 rounded-lg ${
-                            isButtonEnabled
-                              ? 'bg-blue-600 text-white hover:bg-blue-700'
-                              : 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                          }`}
-                        >
-                          {group.name} 결제하기
-                        </Button>
-
-                        {/* 조건 미충족 시 안내 메시지 */}
-                        {!isButtonEnabled && (
-                          <div className="mt-2 text-xs text-red">
-                            {!hasProjectName && (
-                              <div>• 작업이름을 입력해주세요</div>
-                            )}
-                            {!hasFileUploadMethod && (
-                              <div>
-                                •{' '}
-                                {bulkApply.fileUpload || bulkApply.emailMethod
-                                  ? '파일 업로드 방법을 선택해주세요'
-                                  : '모든 아이템의 시안 업로드 방법을 선택해주세요'}
-                              </div>
-                            )}
-                            {!hasAgreedToTerms && (
-                              <div>• 유의사항에 동의해주세요</div>
-                            )}
+                        <div className="flex flex-col gap-2">
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={() => openTossWidget(group)}
+                              disabled={!isButtonEnabled}
+                              className={`flex-1 py-2 rounded-lg border border-blue-600 ${
+                                isButtonEnabled
+                                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                  : 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                              }`}
+                            >
+                              {group.name} 결제하기
+                            </Button>
+                            <Button
+                              onClick={() => openBankTransferModal(group)}
+                              disabled={bankButtonDisabled}
+                              className={`flex-1 py-2 rounded-lg border border-blue-600 ${
+                                bankButtonDisabled
+                                  ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                                  : 'bg-gray-900 text-white hover:bg-gray-800'
+                              }`}
+                            >
+                              {isBankTransferProcessing
+                                ? '처리중...'
+                                : '계좌이체하기'}
+                            </Button>
                           </div>
-                        )}
+                          {!isButtonEnabled && (
+                            <div className="text-xs text-red">
+                              {!hasProjectName && (
+                                <div>• 작업이름을 입력해주세요</div>
+                              )}
+                              {!hasFileUploadMethod && (
+                                <div>
+                                  •{' '}
+                                  {bulkApply.fileUpload || bulkApply.emailMethod
+                                    ? '파일 업로드 방법을 선택해주세요'
+                                    : '모든 아이템의 시안 업로드 방법을 선택해주세요'}
+                                </div>
+                              )}
+                              {!hasAgreedToTerms && (
+                                <div>• 유의사항에 동의해주세요</div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </>
                     );
                   })()}
@@ -3089,6 +3319,99 @@ function PaymentPageContent() {
         </div>
       </div>
 
+      {bankModalOpen && bankModalGroup && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full mx-4 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">계좌이체 안내</h2>
+              <button
+                type="button"
+                className="text-gray-400 hover:text-gray-600"
+                onClick={closeBankModal}
+              >
+                ×
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 mb-2">
+              {bankModalGroup.district} ({getDisplayTypeLabel(bankModalGroup)})
+            </p>
+            <p className="text-xs text-gray-500 mb-3">
+              {bankModalGroup.name} · 총 금액{' '}
+              {bankModalGroup.totalPrice.toLocaleString()}원
+            </p>
+            {bankModalLoading ? (
+              <p className="text-sm text-gray-500 mb-4">
+                계좌 정보를 불러오는 중입니다...
+              </p>
+            ) : bankModalError ? (
+              <p className="text-sm text-red-600 mb-4">{bankModalError}</p>
+            ) : bankAccountInfo ? (
+              <div className="space-y-2 mb-4">
+                <div className="text-sm text-gray-600">
+                  프로젝트명:{' '}
+                  <span className="font-medium text-gray-800">
+                    {bankModalGroup.name}
+                  </span>
+                </div>
+                <div className="text-sm text-gray-600">
+                  연락처:{' '}
+                  <span className="font-medium text-gray-800">
+                    {bankModalGroup.contact_person_name || '연락처 없음'}
+                  </span>
+                </div>
+                <div className="text-sm text-gray-600">
+                  은행명:{' '}
+                  <span className="font-medium text-gray-800">
+                    {bankAccountInfo.bankName}
+                  </span>
+                </div>
+                <div className="text-sm text-gray-600">
+                  계좌번호:{' '}
+                  <span className="font-medium text-gray-800">
+                    {bankAccountInfo.accountNumber}
+                  </span>
+                </div>
+                <div className="text-sm text-gray-600">
+                  예금주:{' '}
+                  <span className="font-medium text-gray-800">
+                    {bankAccountInfo.owner}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500">
+                  입금 확인 후 주문이 자동으로 결제완료 처리됩니다.
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500 mb-4">
+                계좌정보를 불러오지 못했습니다.
+              </p>
+            )}
+            <div className="flex items-center justify-end gap-2">
+              <Button
+                className="px-4 py-2 rounded-lg bg-gray-900 text-white hover:bg-gray-800"
+                onClick={closeBankModal}
+              >
+                닫기
+              </Button>
+              <Button
+                className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+                disabled={
+                  !bankAccountInfo ||
+                  bankModalLoading ||
+                  isBankTransferProcessing
+                }
+                onClick={() => {
+                  if (bankAccountInfo && bankModalGroup) {
+                    handleBankTransferPayment(bankModalGroup, bankAccountInfo);
+                  }
+                }}
+              >
+                입금정보 확인 후 주문
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* 토스 위젯 모달 */}
       {tossWidgetOpen && tossWidgetData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
