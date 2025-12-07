@@ -111,9 +111,6 @@ const loadCartFromStorage = (): CartState => {
     const cartState: CartState = JSON.parse(stored);
     const now = Date.now();
 
-    // 상담신청 아이템(price가 0인 아이템)은 항상 유지
-    const consultingItems = cartState.items.filter((item) => item.price === 0);
-
     // 각 아이템별로 20분이 지났는지 확인
     // addedAt이 없으면 lastUpdated를 기준으로 판단 (기존 아이템 호환성)
     const validItems = cartState.items.filter((item) => {
@@ -294,9 +291,6 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     const checkExpiry = () => {
       const now = Date.now();
       console.log('🔄 CartContext: Checking expiry, current state:', state);
-
-      // 상담신청 아이템(price가 0인 아이템)은 항상 유지
-      const consultingItems = state.items.filter((item) => item.price === 0);
 
       // 각 아이템별로 20분이 지났는지 확인
       // addedAt이 없으면 lastUpdated를 기준으로 판단 (기존 아이템 호환성)

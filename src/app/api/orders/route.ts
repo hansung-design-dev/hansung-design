@@ -348,7 +348,6 @@ export async function POST(request: NextRequest) {
       projectName, // 파일제목 필수
       depositorName, // 계좌이체 시 입금자명 (선택)
       draftId,
-      itemDraftIds,
     } = body;
 
     console.log(

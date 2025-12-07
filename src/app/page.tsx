@@ -84,11 +84,11 @@ export default function Home() {
             height={10000}
             className="w-full h-full object-cover  sm:min-h-[48rem] sm:object-left-bottom"
           />
-          <div className="absolute lg:bottom-[6rem]  md:bottom-[2rem] lg:left-[6rem] sm:left-[2rem] text-white sm:bottom-[6rem]">
+          <div className="absolute lg:bottom-[6rem]  md:bottom-[2rem] lg:left-[6rem] sm:left-[2rem] text-white sm:bottom-[6rem] p-8 rounded-[4rem] backdrop-blur-[0.2rem]">
             <h1 className="lg:text-3 sm:text-2 font-weight-700 sm:text-2 font-gmarket">
               {mainSection?.title || 'Moving Smart City'}
             </h1>
-            <h2 className="lg:text-1.5 lg:line-height-8 sm:text-1 md:text-1.125 md:line-height-6 font-weight-500 sm:font-weight-300 sm:line-height-6">
+            <h2 className="lg:text-1.5 lg:line-height-8 sm:text-1 md:text-1.125 md:line-height-6 lg:font-weight-600 md:font-weight-600 sm:font-weight-400 sm:line-height-6">
               {mainSection?.subtitle ? (
                 <span
                   dangerouslySetInnerHTML={{ __html: mainSection.subtitle }}
