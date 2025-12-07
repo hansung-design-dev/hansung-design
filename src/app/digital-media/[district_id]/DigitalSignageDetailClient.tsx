@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import DetailImageSlider from '@/src/components/DetailImageSlider';
+import BackToListButton from '@/src/components/BackToListButton';
 
 interface Model {
   modelName: string;
@@ -115,18 +116,7 @@ export default function DigitalSignageDetailClient({
       <main className="min-h-screen bg-white">
         {/* Header Section */}
         <section className="lg:container lg:mx-auto lg:px-[8rem] sm:px-[1.5rem] pt-[10rem] pb-[6rem]">
-          <button
-            onClick={handleBack}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
-          >
-            <Image
-              src="/svg/arrow-left.svg"
-              alt="뒤로 가기"
-              width={16}
-              height={16}
-            />
-            <span className="text-lg">목록으로 가기</span>
-          </button>
+          <BackToListButton onClick={handleBack} />
           <h1 className="text-3.75 sm:text-2.5 font-[700] mb-4 font-gmarket">
             {productData.title}
           </h1>
@@ -176,18 +166,7 @@ export default function DigitalSignageDetailClient({
       <main className="min-h-screen bg-white">
         {/* Header Section */}
         <section className="lg:container lg:mx-auto lg:px-[8rem] sm:px-[1.5rem] pt-[10rem] pb-[6rem]">
-          <button
-            onClick={handleBack}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
-          >
-            <Image
-              src="/svg/arrow-left.svg"
-              alt="뒤로 가기"
-              width={16}
-              height={16}
-            />
-            <span className="text-lg">목록으로 가기</span>
-          </button>
+          <BackToListButton onClick={handleBack} />
           <h1 className="text-3.75 sm:text-2.5 font-[700] mb-4 font-gmarket">
             {productData.title}
           </h1>
@@ -234,18 +213,7 @@ export default function DigitalSignageDetailClient({
     <main className="min-h-screen bg-white">
       {/* Header Section */}
       <section className="lg:container lg:mx-auto lg:px-[8rem] sm:px-[1.5rem] pt-[10rem] pb-[6rem]">
-        <button
-          onClick={handleBack}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors mb-4"
-        >
-          <Image
-            src="/svg/arrow-left.svg"
-            alt="뒤로 가기"
-            width={16}
-            height={16}
-          />
-          <span className="text-lg">목록으로 가기</span>
-        </button>
+        <BackToListButton onClick={handleBack} className="mb-4" />
         <h1 className="text-3.75 sm:text-2.5 font-[700] mb-4 font-gmarket">
           {productData.title}
         </h1>

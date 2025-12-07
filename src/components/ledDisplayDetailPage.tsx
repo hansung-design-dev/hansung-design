@@ -21,6 +21,7 @@ import {
   DEFAULT_POLYGON_PADDING,
 } from '@/src/utils/polygonColors';
 import { calculateConvexHull } from '@/src/utils/convexHull';
+import BackToListButton from './BackToListButton';
 //import HalfPeriodTabs from './ui/HalfPeriodTabs';
 
 const fadeInUp = {
@@ -841,19 +842,10 @@ export default function LEDDisplayDetailPage({
   return (
     <main className="min-h-screen flex flex-col bg-white pb-10">
       <div className="lg:min-w-[70rem] lg:max-w-[1500px]  mx-auto px-4 pt-[7rem]">
-        <button
-          onClick={() => router.push('/led-display')}
-          className="flex items-center gap-2 lg:text-1.125 md:text-1 font-semibold mb-4 text-gray-600"
-        >
-          <Image
-            src="/svg/arrow-left.svg"
-            alt="arrow-left"
-            width={100}
-            height={100}
-            className="w-10 h-10 "
-          />
-          구 목록으로 돌아가기
-        </button>
+        <BackToListButton
+          label="구 목록으로 돌아가기"
+          onClick={() => router.push('/banner-display')}
+        />
         <div className="mb-8">
           <div className="flex gap-2 items-center">
             {(districtObj || selectedOption || districtData) && (

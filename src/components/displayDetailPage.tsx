@@ -27,6 +27,7 @@ import {
 } from '@/src/types/displaydetail';
 import DistrictInfo from './districtInfo';
 import HalfPeriodTabs from './ui/HalfPeriodTabs';
+import BackToListButton from './BackToListButton';
 
 const fadeInUp = {
   initial: { y: 60, opacity: 0 },
@@ -1723,19 +1724,10 @@ export default function DisplayDetailPage({
   return (
     <main className="min-h-screen flex flex-col bg-white pb-10">
       <div className="lg:min-w-[70rem] lg:max-w-[1500px]  mx-auto px-4 pt-[7rem]">
-        <button
+        <BackToListButton
+          label="구 목록으로 돌아가기"
           onClick={() => router.push('/banner-display')}
-          className="flex items-center gap-2 lg:text-1.125 md:text-1 font-semibold mb-4 text-gray-600"
-        >
-          <Image
-            src="/svg/arrow-left.svg"
-            alt="arrow-left"
-            width={100}
-            height={100}
-            className="w-10 h-10 "
-          />
-          구 목록으로 돌아가기
-        </button>
+        />
         <div className="mb-8">
           <div className="flex gap-2 items-center">
             {(districtObj || districtData) && (
