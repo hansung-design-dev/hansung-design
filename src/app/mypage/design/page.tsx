@@ -61,12 +61,15 @@ export default function DesignPage() {
 
       if (data.orders) {
         // 결제 완료된 주문만 필터링 (completed, approved, pending, waiting_admin_approval 상태 모두 포함)
-        const completedOrders = (data.orders || []).filter(
-          (order: Order) =>
-            order.payment_status === 'completed' ||
-            order.payment_status === 'approved' ||
-            order.payment_status === 'pending' ||
-            order.payment_status === 'waiting_admin_approval'
+        const visibleStatuses = [
+          'completed',
+          'approved',
+          'pending',
+          'waiting_admin_approval',
+          'pending_deposit',
+        ];
+        const completedOrders = (data.orders || []).filter((order: Order) =>
+          visibleStatuses.includes(order.payment_status)
         );
         console.log(
           '🔍 [시안보기] 필터링된 주문:',

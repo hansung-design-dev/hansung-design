@@ -347,6 +347,8 @@ export async function POST(request: NextRequest) {
       paymentMethodId, // 결제수단 ID 추가
       projectName, // 파일제목 필수
       depositorName, // 계좌이체 시 입금자명 (선택)
+      draftId,
+      itemDraftIds,
     } = body;
 
     console.log(
@@ -758,60 +760,76 @@ export async function POST(request: NextRequest) {
 
     // 3. design_drafts row 생성 (항상)
     if (userProfile?.id) {
-      console.log('🔍 [주문 생성 API] design_drafts 생성 시작...');
-      const { data: draft, error: draftError } = await supabase
-        .from('design_drafts')
-        .insert({
-          user_profile_id: userProfile.id,
-          draft_category: 'initial',
-          project_name: projectName,
-          notes: `주문 생성 시 자동 생성 (전송방식: ${
-            draftDeliveryMethod || 'upload'
-          })`,
-        })
-        .select('id, project_name')
-        .single();
+      console.log('🔍 [주문 생성 API] design_drafts 처리 시작...');
+      let designDraftId = draftId || null;
 
-      console.log('🔍 [주문 생성 API] design_drafts 생성 결과:', {
-        success: !draftError,
-        draftId: draft?.id,
-        project_name: draft?.project_name,
-        error: draftError,
-      });
+      if (designDraftId) {
+        const { data: existingDraft, error: existingDraftError } =
+          await supabase
+            .from('design_drafts')
+            .select('id')
+            .eq('id', designDraftId)
+            .single();
+        if (existingDraftError || !existingDraft) {
+          console.warn(
+            '🔍 [주문 생성 API] 전달받은 draftId 유효하지 않음, 새로 생성:',
+            { designDraftId, error: existingDraftError }
+          );
+          designDraftId = null;
+        }
+      }
 
-      if (draftError) {
-        console.error(
-          '🔍 [주문 생성 API] ❌ design_drafts 생성 실패:',
-          draftError
-        );
-      } else {
-        console.log('🔍 [주문 생성 API] ✅ design_drafts 생성 성공:', draft.id);
+      if (!designDraftId) {
+        const { data: draft, error: draftError } = await supabase
+          .from('design_drafts')
+          .insert({
+            user_profile_id: userProfile.id,
+            draft_category: 'initial',
+            project_name: projectName,
+            notes: `주문 생성 시 자동 생성 (전송방식: ${
+              draftDeliveryMethod || 'upload'
+            })`,
+          })
+          .select('id, project_name')
+          .single();
 
-        // orders 테이블의 design_drafts_id와 draft_delivery_method 업데이트
+        console.log('🔍 [주문 생성 API] design_drafts 생성 결과:', {
+          success: !draftError,
+          draftId: draft?.id,
+          project_name: draft?.project_name,
+          error: draftError,
+        });
+
+        if (draftError) {
+          console.error(
+            '🔍 [주문 생성 API] ❌ design_drafts 생성 실패:',
+            draftError
+          );
+        } else {
+          designDraftId = draft?.id || null;
+        }
+      }
+
+      if (designDraftId) {
         const { error: updateError } = await supabase
           .from('orders')
           .update({
-            design_drafts_id: draft.id,
+            design_drafts_id: designDraftId,
             draft_delivery_method: draftDeliveryMethod || 'upload',
           })
           .eq('id', order.id);
-
-        console.log(
-          '🔍 [주문 생성 API] orders.design_drafts_id 업데이트 결과:',
-          {
-            success: !updateError,
-            error: updateError,
-          }
-        );
-
         if (updateError) {
           console.error(
-            '🔍 [주문 생성 API] ⚠️ orders 업데이트 실패 (치명적이지 않음):',
+            '🔍 [주문 생성 API] ⚠️ orders.design_drafts_id 업데이트 실패:',
             updateError
           );
         } else {
-          console.log('🔍 [주문 생성 API] ✅ orders 업데이트 성공');
+          console.log('🔍 [주문 생성 API] ✅ orders.design_drafts_id 업데이트 성공');
         }
+      } else {
+        console.error(
+          '🔍 [주문 생성 API] ❌ design_drafts_id를 확보할 수 없어 연결 실패'
+        );
       }
     } else {
       console.error(

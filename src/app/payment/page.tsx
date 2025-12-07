@@ -1372,6 +1372,32 @@ function PaymentPageContent() {
     return null;
   };
 
+  const uploadDraftToDesigns = async (
+    file: File,
+    projectName: string,
+    userProfileId?: string
+  ): Promise<string> => {
+    if (!userProfileId) {
+      throw new Error('사용자 프로필이 필요합니다.');
+    }
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('userProfileId', userProfileId);
+    formData.append('projectName', projectName);
+    formData.append('draftDeliveryMethod', 'upload');
+
+    const response = await fetch('/api/design-drafts/direct-upload', {
+      method: 'POST',
+      body: formData,
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success) {
+      console.error('🔍 [계좌이체] 시안 direct-upload 실패:', result);
+      throw new Error(result.error || '시안 업로드 실패');
+    }
+    return result.data?.draftId || result.draftId;
+  };
+
   const fetchBankAccountForDistrict = async (
     district: string,
     displayType: 'banner_display' | 'led_display'
@@ -1452,6 +1478,12 @@ function PaymentPageContent() {
         alert('로그인이 필요합니다.');
         return;
       }
+      if (!group.user_profile_id) {
+        alert(
+          '계좌이체 주문에는 프로필이 필요합니다. 마이페이지에서 프로필을 설정해주세요.'
+        );
+        return;
+      }
       const groupState = groupStates[group.id];
       let projectName =
         groupState?.projectName?.trim() ||
@@ -1510,6 +1542,41 @@ function PaymentPageContent() {
         user?.username || user?.name || group.contact_person_name || '고객';
       const depositorName = `${baseName}_${dateStr}`;
 
+      let draftId: string | undefined;
+      const itemDraftIds: Record<string, string> = {};
+
+      if (draftDeliveryMethod === 'upload') {
+        if (!groupState?.selectedFile) {
+          alert('시안 파일을 선택해주세요.');
+          return;
+        }
+        draftId = await uploadDraftToDesigns(
+          groupState.selectedFile,
+          projectName,
+          group.user_profile_id
+        );
+      }
+
+      if (group.items.length >= 2) {
+        for (const item of group.items) {
+          const itemState = itemStates[item.id];
+          if (itemState?.selectedFile && !itemState?.sendByEmail) {
+            const itemProjectName =
+              itemState.projectName?.trim() || item.name || '작업';
+            if (!itemProjectName) {
+              alert(`"${item.name || '아이템'}"의 작업이름을 입력해주세요.`);
+              return;
+            }
+            const itemDraftId = await uploadDraftToDesigns(
+              itemState.selectedFile,
+              itemProjectName,
+              group.user_profile_id
+            );
+            itemDraftIds[item.id] = itemDraftId;
+          }
+        }
+      }
+
       const orderRes = await fetch('/api/orders', {
         method: 'POST',
         headers: {
@@ -1524,6 +1591,9 @@ function PaymentPageContent() {
           paymentMethodId,
           projectName,
           depositorName,
+          draftId,
+          itemDraftIds:
+            Object.keys(itemDraftIds).length > 0 ? itemDraftIds : undefined,
           meta: {
             paymentAccount: account,
             displayType: getDisplayTypeLabel(group),
