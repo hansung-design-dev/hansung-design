@@ -123,6 +123,19 @@ function PaymentPageContent() {
   const [tossWidgetData, setTossWidgetData] = useState<GroupedCartItem | null>(
     null
   );
+  const [bankModalOpen, setBankModalOpen] = useState(false);
+  const [bankModalGroup, setBankModalGroup] = useState<GroupedCartItem | null>(
+    null
+  );
+  const [bankAccountInfo, setBankAccountInfo] = useState<{
+    bankName: string;
+    accountNumber: string;
+    owner: string;
+  } | null>(null);
+  const [bankModalLoading, setBankModalLoading] = useState(false);
+  const [bankModalError, setBankModalError] = useState<string | null>(null);
+  const [isBankTransferProcessing, setIsBankTransferProcessing] =
+    useState(false);
 
   // 세금계산서 상태
   const [modalTaxInvoice, setModalTaxInvoice] = useState(false);
@@ -1384,6 +1397,205 @@ function PaymentPageContent() {
   //   );
   // }
 
+  const getDisplayTypeForBankAccount = (
+    group: GroupedCartItem
+  ): 'banner_display' | 'led_display' | null => {
+    if (group.type === 'banner-display') return 'banner_display';
+    if (group.type === 'led-display') return 'led_display';
+    return null;
+  };
+
+  const fetchBankAccountForDistrict = async (
+    district: string,
+    displayType: 'banner_display' | 'led_display'
+  ) => {
+    try {
+      const params = new URLSearchParams({
+        action: 'getBankData',
+        district,
+        displayType,
+      });
+      const res = await fetch(`/api/region-gu?${params.toString()}`);
+      const json = await res.json();
+      if (!res.ok || !json.success || !json.data?.bank_name) {
+        console.warn('🔍 [계좌이체] bank info missing', {
+          district,
+          displayType,
+          json,
+        });
+        return null;
+      }
+      return {
+        bankName: json.data.bank_name as string,
+        accountNumber: json.data.account_number as string,
+        owner: json.data.depositor as string,
+      };
+    } catch (error) {
+      console.error('🔍 [계좌이체] bank info fetch failed', {
+        district,
+        error,
+      });
+      return null;
+    }
+  };
+
+  const closeBankModal = () => {
+    setBankModalOpen(false);
+    setBankModalGroup(null);
+    setBankAccountInfo(null);
+    setBankModalError(null);
+    setBankModalLoading(false);
+  };
+
+  const openBankTransferModal = async (group: GroupedCartItem) => {
+    setBankModalError(null);
+    setBankModalGroup(group);
+    setBankModalLoading(true);
+    const displayType = getDisplayTypeForBankAccount(group);
+    if (!displayType) {
+      setBankModalError('현재 상품은 계좌이체를 지원하지 않습니다.');
+      setBankModalLoading(false);
+      setBankModalOpen(true);
+      return;
+    }
+    const account = await fetchBankAccountForDistrict(
+      group.district,
+      displayType
+    );
+    if (!account) {
+      setBankModalError(
+        `${group.district}의 계좌정보가 아직 등록되지 않았습니다.`
+      );
+      setBankModalLoading(false);
+      setBankModalOpen(true);
+      return;
+    }
+    setBankAccountInfo(account);
+    setBankModalLoading(false);
+    setBankModalOpen(true);
+  };
+
+  const handleBankTransferPayment = async (
+    group: GroupedCartItem,
+    account: { bankName: string; accountNumber: string; owner: string }
+  ) => {
+    if (isBankTransferProcessing) return;
+    setIsBankTransferProcessing(true);
+    try {
+      if (!group) {
+        alert('결제할 정보를 찾을 수 없습니다.');
+        return;
+      }
+      const pendingData = (() => {
+        if (typeof window === 'undefined') return null;
+        const raw = localStorage.getItem('pending_order_data');
+        if (!raw) return null;
+        try {
+          return JSON.parse(raw);
+        } catch {
+          return null;
+        }
+      })();
+      const userAuthId =
+        (pendingData?.userAuthId as string | undefined) || user?.id;
+      const userProfileId =
+        (pendingData?.userProfileId as string | undefined) ||
+        group.user_profile_id;
+      const draftDeliveryMethod =
+        (pendingData?.draftDeliveryMethod as 'email' | 'upload' | undefined) ||
+        'upload';
+      let projectName =
+        (pendingData?.projectName as string | undefined) ||
+        group.district ||
+        '광고주';
+      if (!projectName.trim()) {
+        projectName = group.contact_person_name || group.name || '광고주';
+      }
+      if (!userAuthId) {
+        alert('로그인이 필요합니다.');
+        return;
+      }
+      const itemsForOrder = group.items.map((item) => ({
+        id: item.id,
+        name: item.name,
+        price: item.price || 0,
+        quantity: 1,
+        panel_id: item.panel_id,
+        panel_slot_snapshot: item.panel_slot_snapshot,
+        panel_slot_usage_id: item.panel_slot_usage_id,
+        halfPeriod: item.halfPeriod,
+        selectedYear: item.selectedYear,
+        selectedMonth: item.selectedMonth,
+      }));
+      const paymentMethodRes = await fetch(
+        '/api/payment/methods?code=bank_transfer'
+      );
+      const paymentMethodJson = await paymentMethodRes.json();
+      if (
+        !paymentMethodRes.ok ||
+        !paymentMethodJson.success ||
+        !paymentMethodJson.data?.id
+      ) {
+        console.error(
+          '🔍 [계좌이체] payment method lookup failed',
+          paymentMethodJson
+        );
+        alert('계좌이체 결제수단 정보를 불러올 수 없습니다.');
+        return;
+      }
+      const bankTransferMethodId: string = paymentMethodJson.data.id;
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}${String(
+        today.getMonth() + 1
+      ).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+      const baseName =
+        user?.username || user?.name || group.contact_person_name || '고객';
+      const depositorName = `${baseName}_${dateStr}`;
+      const orderRes = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: itemsForOrder,
+          userAuthId,
+          userProfileId,
+          isPaid: false,
+          draftDeliveryMethod,
+          paymentMethodId: bankTransferMethodId,
+          projectName,
+          depositorName,
+          meta: {
+            paymentAccount: account,
+          },
+        }),
+      });
+      const orderJson = await orderRes.json();
+      if (!orderRes.ok || !orderJson.success) {
+        console.error('🔍 [계좌이체] order creation failed', orderJson);
+        alert(orderJson.error || '계좌이체 주문을 생성할 수 없습니다.');
+        return;
+      }
+      cartDispatch({ type: 'CLEAR_CART' });
+      const orderNumber =
+        orderJson.order?.orderNumber || orderJson.order?.orderId || '';
+      const paymentId = `bank_${orderNumber || dateStr}`;
+      if (typeof window !== 'undefined') {
+        window.location.href = `/payment/success?orderId=${encodeURIComponent(
+          orderNumber
+        )}&paymentId=${encodeURIComponent(paymentId)}&amount=${
+          group.totalPrice
+        }&status=pending_deposit`;
+      }
+    } catch (error) {
+      console.error('🔍 [계좌이체] exception', error);
+      alert('계좌이체 주문 처리 중 오류가 발생했습니다.');
+    } finally {
+      setIsBankTransferProcessing(false);
+      closeBankModal();
+    }
+  };
+
   // handleSingleGroupPayment 함수 제거 - 바로 토스 위젯 사용
 
   // 토스 위젯 열기 함수
@@ -1481,923 +1693,8 @@ function PaymentPageContent() {
 
           // 통합결제창 방식: 위젯 렌더링 없이 바로 결제 버튼만 표시
           // 버튼 클릭 시 tossPayments.requestPayment()로 결제창 직접 열기
-          const container = document.getElementById('toss-payment-methods');
-          if (container) {
-            container.innerHTML = `
-              <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <div class="text-blue-800 font-medium mb-2">통합결제창 방식</div>
-                <div class="text-blue-600 text-sm">결제하기 버튼을 클릭하면 토스페이먼츠 통합결제창이 열립니다.</div>
-              </div>
-            `;
-          }
 
           // 결제 요청 버튼 이벤트 리스너
-          const paymentButton = document.createElement('button');
-          paymentButton.textContent = '결제하기';
-          paymentButton.className =
-            'w-full py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700';
-
-          paymentButton.addEventListener('click', async () => {
-            try {
-              // 현재 그룹에서 사용할 프로필 정보 확인
-              const selectedProfile =
-                currentProfiles.find(
-                  (p: UserProfile) =>
-                    p.id === currentTossWidgetData.user_profile_id
-                ) || null;
-
-              if (selectedProfile) {
-                const isDiscountProfile =
-                  !!selectedProfile.is_public_institution ||
-                  !!selectedProfile.is_company;
-                const isApprovedProfile = !!selectedProfile.is_approved;
-
-                // 행정용/기업용인데 승인되지 않은 프로필은 결제 불가
-                if (isDiscountProfile && !isApprovedProfile) {
-                  alert(
-                    '행정용/기업용 프로필은 관리자 승인 후에만 할인된 가격으로 결제할 수 있습니다.\n프로필 승인 상태를 확인하시거나 기본 프로필로 다시 주문해주세요.'
-                  );
-                  paymentButton.disabled = false;
-                  paymentButton.textContent = '결제하기';
-                  return;
-                }
-              }
-
-              console.log('🔍 [통합결제창] 결제 버튼 클릭됨:', {
-                timestamp: new Date().toISOString(),
-                storedOrderId:
-                  typeof window !== 'undefined'
-                    ? (window as unknown as { currentTossOrderId?: string })
-                        .currentTossOrderId || '(없음)'
-                    : '(window 없음)',
-                hasStoredOrderId:
-                  typeof window !== 'undefined' &&
-                  !!(window as unknown as { currentTossOrderId?: string })
-                    .currentTossOrderId,
-              });
-
-              // 버튼 비활성화
-              paymentButton.disabled = true;
-              paymentButton.textContent = '주문 생성 중...';
-
-              // 주문 생성에 필요한 정보 가져오기 (클로저에서 저장한 값 사용)
-              const groupState = currentGroupStates[currentTossWidgetData.id];
-              const projectName = groupState?.projectName || '';
-
-              // 아이템 개수 확인
-              const itemCount = currentTossWidgetData.items.length;
-
-              // 일괄적용 여부 확인
-              const isBulkFileUpload =
-                currentBulkApply.fileUpload || currentBulkApply.emailMethod;
-
-              // 아이템이 1개이거나 일괄적용이 체크된 경우: 그룹 단위로 확인
-              // 아이템이 2개 이상이고 일괄적용이 체크되지 않은 경우: 각 아이템별로 확인
-              if (itemCount === 1 || isBulkFileUpload) {
-                // 그룹 단위 검증
-                const isEmailSelected = groupState?.sendByEmail === true;
-                const hasFileUploaded = !!groupState?.selectedFile;
-
-                // 둘 중 하나는 반드시 선택되어야 함
-                if (!isEmailSelected && !hasFileUploaded) {
-                  alert(
-                    '시안 파일을 업로드하거나 "이메일로 파일 보낼게요"를 선택해주세요.'
-                  );
-                  paymentButton.disabled = false;
-                  paymentButton.textContent = '결제하기';
-                  return;
-                }
-              } else {
-                // 아이템별 검증 (아이템이 2개 이상이고 일괄적용이 체크되지 않은 경우)
-                for (const item of currentTossWidgetData.items) {
-                  const itemState = currentItemStates[item.id];
-                  const isEmailSelected = itemState?.sendByEmail === true;
-                  const hasFileUploaded = !!itemState?.selectedFile;
-
-                  // 각 아이템마다 둘 중 하나는 반드시 선택되어야 함
-                  if (!isEmailSelected && !hasFileUploaded) {
-                    alert(
-                      `"${
-                        item.name || item.panel_code || '아이템'
-                      }"의 시안 파일을 업로드하거나 "이메일로 파일 보낼게요"를 선택해주세요.`
-                    );
-                    paymentButton.disabled = false;
-                    paymentButton.textContent = '결제하기';
-                    return;
-                  }
-                }
-              }
-
-              // 이메일 체크박스가 선택되었으면 'email', 파일이 업로드되었으면 'upload'
-              // (그룹 단위 또는 아이템별로 이미 검증 완료)
-              const draftDeliveryMethod: 'email' | 'upload' =
-                itemCount === 1 || isBulkFileUpload
-                  ? groupState?.sendByEmail === true
-                    ? 'email'
-                    : 'upload'
-                  : 'upload'; // 아이템별인 경우는 나중에 각 아이템별로 처리
-
-              // 결제 전에 시안 파일을 Storage + design_drafts에 업로드 (upload 방식인 경우)
-              let draftId: string | undefined;
-              // 아이템별 draftId 저장 (아이템별인 경우)
-              const itemDraftIds: { [itemId: string]: string } = {};
-
-              // 그룹 단위로 파일 업로드가 필요한 경우 처리
-              if (
-                draftDeliveryMethod === 'upload' &&
-                (itemCount === 1 || isBulkFileUpload)
-              ) {
-                // upload 방식이고 그룹 단위인 경우 파일이 반드시 있어야 함
-                if (!groupState?.selectedFile) {
-                  console.error(
-                    '🔍 [결제 페이지] ❌ upload 방식인데 파일이 없음',
-                    {
-                      itemCount,
-                      isBulkFileUpload,
-                      hasGroupState: !!groupState,
-                      hasSelectedFile: !!groupState?.selectedFile,
-                    }
-                  );
-                  alert('시안 파일을 선택해주세요.');
-                  paymentButton.disabled = false;
-                  paymentButton.textContent = '결제하기';
-                  return;
-                }
-
-                if (!currentTossWidgetData.user_profile_id) {
-                  alert(
-                    '주문에 사용할 프로필을 찾을 수 없습니다. 마이페이지에서 프로필을 확인해주세요.'
-                  );
-                  paymentButton.disabled = false;
-                  paymentButton.textContent = '결제하기';
-                  return;
-                }
-
-                try {
-                  const uploadFormData = new FormData();
-                  uploadFormData.append('file', groupState.selectedFile);
-                  uploadFormData.append(
-                    'userProfileId',
-                    currentTossWidgetData.user_profile_id
-                  );
-                  uploadFormData.append('projectName', projectName);
-                  uploadFormData.append(
-                    'draftDeliveryMethod',
-                    draftDeliveryMethod
-                  );
-
-                  console.log('🔍 [결제 페이지] 시안 direct-upload API 호출:', {
-                    hasFile: !!groupState.selectedFile,
-                    userProfileId: currentTossWidgetData.user_profile_id,
-                    projectName,
-                    draftDeliveryMethod,
-                  });
-
-                  const uploadResponse = await fetch(
-                    '/api/design-drafts/direct-upload',
-                    {
-                      method: 'POST',
-                      body: uploadFormData,
-                    }
-                  );
-
-                  const uploadResult = await uploadResponse.json();
-
-                  if (!uploadResponse.ok || !uploadResult.success) {
-                    console.error(
-                      '🔍 [결제 페이지] ❌ 시안 direct-upload 실패:',
-                      uploadResult
-                    );
-                    alert(
-                      uploadResult.error ||
-                        '시안 파일 업로드 중 오류가 발생했습니다.'
-                    );
-                    paymentButton.disabled = false;
-                    paymentButton.textContent = '결제하기';
-                    return;
-                  }
-
-                  draftId =
-                    uploadResult.data?.draftId || uploadResult.draftId || null;
-
-                  console.log('🔍 [결제 페이지] ✅ 시안 direct-upload 성공:', {
-                    draftId,
-                    fileName: uploadResult.data?.fileName,
-                  });
-                } catch (uploadError) {
-                  console.error(
-                    '🔍 [결제 페이지] ❌ 시안 direct-upload 예외:',
-                    uploadError
-                  );
-                  alert(
-                    '시안 파일 업로드 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
-                  );
-                  paymentButton.disabled = false;
-                  paymentButton.textContent = '결제하기';
-                  return;
-                }
-              }
-
-              // 아이템별 파일 업로드 처리 (아이템이 2개 이상이고 일괄적용이 체크되지 않은 경우)
-              if (itemCount >= 2 && !isBulkFileUpload) {
-                if (!currentTossWidgetData.user_profile_id) {
-                  alert(
-                    '주문에 사용할 프로필을 찾을 수 없습니다. 마이페이지에서 프로필을 확인해주세요.'
-                  );
-                  paymentButton.disabled = false;
-                  paymentButton.textContent = '결제하기';
-                  return;
-                }
-
-                // 각 아이템별로 파일이 업로드된 경우 DB에 업로드
-                for (const item of currentTossWidgetData.items) {
-                  const itemState = currentItemStates[item.id];
-                  // 정확한 값만 사용 (기본값 사용 안 함)
-                  const itemProjectName = itemState?.projectName || '';
-
-                  // 파일이 업로드된 아이템만 처리 (이메일 체크박스가 선택된 아이템은 건너뜀)
-                  if (itemState?.selectedFile && !itemState?.sendByEmail) {
-                    // projectName이 없으면 에러
-                    if (!itemProjectName || itemProjectName.trim() === '') {
-                      alert(
-                        `"${
-                          item.name || item.panel_code || '아이템'
-                        }"의 작업이름을 입력해주세요.`
-                      );
-                      paymentButton.disabled = false;
-                      paymentButton.textContent = '결제하기';
-                      return;
-                    }
-                    try {
-                      const uploadFormData = new FormData();
-                      uploadFormData.append('file', itemState.selectedFile);
-                      uploadFormData.append(
-                        'userProfileId',
-                        currentTossWidgetData.user_profile_id
-                      );
-                      uploadFormData.append('projectName', itemProjectName);
-                      uploadFormData.append('draftDeliveryMethod', 'upload');
-
-                      console.log(
-                        `🔍 [결제 페이지] 아이템별 시안 direct-upload API 호출:`,
-                        {
-                          itemId: item.id,
-                          itemName: item.name,
-                          hasFile: !!itemState.selectedFile,
-                          userProfileId: currentTossWidgetData.user_profile_id,
-                          projectName: itemProjectName,
-                        }
-                      );
-
-                      const uploadResponse = await fetch(
-                        '/api/design-drafts/direct-upload',
-                        {
-                          method: 'POST',
-                          body: uploadFormData,
-                        }
-                      );
-
-                      const uploadResult = await uploadResponse.json();
-
-                      if (!uploadResponse.ok || !uploadResult.success) {
-                        console.error(
-                          `🔍 [결제 페이지] ❌ 아이템 ${item.id} 시안 direct-upload 실패:`,
-                          uploadResult
-                        );
-                        alert(
-                          `"${
-                            item.name || item.panel_code || '아이템'
-                          }"의 시안 파일 업로드 중 오류가 발생했습니다.`
-                        );
-                        paymentButton.disabled = false;
-                        paymentButton.textContent = '결제하기';
-                        return;
-                      }
-
-                      const itemDraftId =
-                        uploadResult.data?.draftId ||
-                        uploadResult.draftId ||
-                        null;
-
-                      if (itemDraftId) {
-                        itemDraftIds[item.id] = itemDraftId;
-                        console.log(
-                          `🔍 [결제 페이지] ✅ 아이템 ${item.id} 시안 direct-upload 성공:`,
-                          {
-                            itemId: item.id,
-                            draftId: itemDraftId,
-                            fileName: uploadResult.data?.fileName,
-                          }
-                        );
-                      }
-                    } catch (uploadError) {
-                      console.error(
-                        `🔍 [결제 페이지] ❌ 아이템 ${item.id} 시안 direct-upload 예외:`,
-                        uploadError
-                      );
-                      alert(
-                        `"${
-                          item.name || item.panel_code || '아이템'
-                        }"의 시안 파일 업로드 중 오류가 발생했습니다.`
-                      );
-                      paymentButton.disabled = false;
-                      paymentButton.textContent = '결제하기';
-                      return;
-                    }
-                  }
-                }
-              }
-              // user_auth_id: localStorage에서 가져오기 (로그인 시 저장됨)
-              const userAuthId = (() => {
-                if (typeof window !== 'undefined') {
-                  const storedAuthId = localStorage.getItem(
-                    'hansung_user_auth_id'
-                  );
-                  if (storedAuthId) {
-                    console.log(
-                      '🔍 [결제 페이지] localStorage에서 user_auth_id 가져옴:',
-                      storedAuthId
-                    );
-                    return storedAuthId;
-                  }
-                }
-                // localStorage에 없으면 currentUser.id 사용 (폴백)
-                if (currentUser?.id) {
-                  console.warn(
-                    '🔍 [결제 페이지] ⚠️ localStorage에 없어서 user.id 폴백 사용:',
-                    currentUser.id
-                  );
-                  // 폴백 사용 시 localStorage에 저장
-                  if (typeof window !== 'undefined') {
-                    localStorage.setItem(
-                      'hansung_user_auth_id',
-                      currentUser.id
-                    );
-                  }
-                  return currentUser.id;
-                }
-                console.error(
-                  '🔍 [결제 페이지] ❌ user_auth_id를 찾을 수 없음!',
-                  {
-                    hasLocalStorage: typeof window !== 'undefined',
-                    storedAuthId:
-                      typeof window !== 'undefined'
-                        ? localStorage.getItem('hansung_user_auth_id')
-                        : null,
-                    hasUser: !!currentUser,
-                    userId: currentUser?.id,
-                  }
-                );
-                return undefined;
-              })();
-
-              // user_profile_id: 사용자가 선택한 프로필 우선, 없으면 기본 프로필
-              const userProfileId = currentTossWidgetData.user_profile_id;
-
-              console.log('🔍 [결제 페이지] 사용자 정보 확인:', {
-                userAuthId,
-                userProfileId,
-                hasUser: !!currentUser,
-                hasTossWidgetData: !!currentTossWidgetData,
-                tossWidgetDataKeys: currentTossWidgetData
-                  ? Object.keys(currentTossWidgetData)
-                  : [],
-                profilesCount: currentProfiles?.length || 0,
-                tossWidgetDataItems:
-                  currentTossWidgetData?.items?.map((item) => ({
-                    id: item.id,
-                    name: item.name,
-                    user_profile_id: item.user_profile_id,
-                  })) || [],
-              });
-
-              // user_profile_id는 필수이므로 폴백 제거
-
-              if (!userAuthId) {
-                console.error('🔍 [결제 페이지] ❌ userAuthId가 없음');
-                alert('로그인이 필요합니다.');
-                paymentButton.disabled = false;
-                paymentButton.textContent = '결제하기';
-                return;
-              }
-
-              // user_profile_id가 없으면 기본 프로필 사용 (자동 선택)
-              let finalUserProfileId = userProfileId;
-
-              if (!finalUserProfileId) {
-                console.log(
-                  '🔍 [결제 페이지] 사용자가 프로필을 선택하지 않음, 기본 프로필 자동 선택...',
-                  {
-                    profilesFromContext:
-                      currentProfilesFromContext?.length || 0,
-                    userProfiles: currentUserProfiles?.length || 0,
-                    currentProfiles: currentProfiles?.length || 0,
-                  }
-                );
-
-                // 프로필이 없으면 API를 다시 호출하여 가져오기 시도
-                if (currentProfiles.length === 0 && currentUser?.id) {
-                  console.log(
-                    '🔍 [결제 페이지] 프로필이 없어서 API 재호출 시도...',
-                    {
-                      userId: currentUser.id,
-                    }
-                  );
-                  try {
-                    const profileResponse = await fetch(
-                      `/api/user-profiles?userId=${currentUser.id}`
-                    );
-                    const profileData = await profileResponse.json();
-
-                    console.log('🔍 [결제 페이지] 프로필 API 응답:', {
-                      ok: profileResponse.ok,
-                      status: profileResponse.status,
-                      success: profileData.success,
-                      dataLength: profileData.data?.length || 0,
-                      data: profileData.data,
-                    });
-
-                    if (profileData.success && profileData.data?.length > 0) {
-                      const fetchedProfiles = profileData.data.map(
-                        (profile: Record<string, unknown>) => ({
-                          ...profile,
-                          user_auth_id:
-                            (profile.user_auth_id as string) || currentUser.id,
-                        })
-                      );
-                      console.log(
-                        '🔍 [결제 페이지] 가져온 프로필:',
-                        fetchedProfiles
-                      );
-
-                      const fallbackProfile =
-                        fetchedProfiles.find(
-                          (p: UserProfile) => p.is_default
-                        ) || fetchedProfiles[0];
-
-                      console.log(
-                        '🔍 [결제 페이지] 선택된 폴백 프로필:',
-                        fallbackProfile
-                      );
-
-                      if (fallbackProfile?.id) {
-                        finalUserProfileId = fallbackProfile.id;
-                        console.log(
-                          '🔍 [결제 페이지] ✅ API 재호출로 기본 프로필 자동 선택:',
-                          finalUserProfileId
-                        );
-                      } else {
-                        console.error(
-                          '🔍 [결제 페이지] ❌ 폴백 프로필에도 id가 없음:',
-                          fallbackProfile
-                        );
-                      }
-                    } else {
-                      console.error(
-                        '🔍 [결제 페이지] ❌ 프로필 API 응답이 비어있음:',
-                        {
-                          success: profileData.success,
-                          hasData: !!profileData.data,
-                          dataLength: profileData.data?.length || 0,
-                          error: profileData.error,
-                        }
-                      );
-                    }
-                  } catch (error) {
-                    console.error(
-                      '🔍 [결제 페이지] 프로필 API 재호출 실패:',
-                      error
-                    );
-                  }
-                } else if (currentProfiles.length > 0) {
-                  const fallbackProfile =
-                    currentProfiles.find((p: UserProfile) => p.is_default) ||
-                    currentProfiles[0];
-                  if (fallbackProfile?.id) {
-                    finalUserProfileId = fallbackProfile.id;
-                    console.log(
-                      '🔍 [결제 페이지] ✅ 사용자가 프로필을 선택하지 않아 기본 프로필 자동 선택:',
-                      finalUserProfileId
-                    );
-                  }
-                }
-              }
-
-              // 기본 프로필도 없으면 에러 (프로필 생성 필요) - 이 경우는 프로필이 하나도 없는 경우
-              if (!finalUserProfileId) {
-                console.error(
-                  '🔍 [결제 페이지] ❌ 프로필이 없습니다. 기본 프로필 생성이 필요합니다.',
-                  {
-                    tossWidgetData: currentTossWidgetData,
-                    items: currentTossWidgetData?.items?.map((item) => ({
-                      id: item.id,
-                      name: item.name,
-                      user_profile_id: item.user_profile_id,
-                    })),
-                    profilesCount: currentProfiles?.length || 0,
-                    userId: currentUser?.id,
-                    note: '사용자가 프로필을 선택하지 않았고 기본 프로필도 없는 경우 = 프로필이 하나도 없음',
-                  }
-                );
-
-                alert(
-                  '프로필이 없습니다. 마이페이지에서 프로필을 먼저 생성해주세요.'
-                );
-                paymentButton.disabled = false;
-                paymentButton.textContent = '결제하기';
-
-                // 마이페이지로 리다이렉트 제안
-                if (confirm('프로필 생성 페이지로 이동하시겠습니까?')) {
-                  window.location.href = '/mypage/info';
-                }
-                return;
-              }
-
-              // 사용자가 프로필을 선택하지 않았지만 기본 프로필이 자동 선택된 경우
-              if (!userProfileId && finalUserProfileId) {
-                console.log(
-                  '🔍 [결제 페이지] ✅ 사용자가 프로필을 선택하지 않아 기본 프로필 자동 선택됨:',
-                  {
-                    autoSelectedProfileId: finalUserProfileId,
-                    note: '사용자가 명시적으로 선택하지 않았지만 기본 프로필이 자동으로 사용됨',
-                  }
-                );
-              }
-
-              // 작업이름 검증
-              // 그룹 단위인 경우: 그룹 projectName 확인
-              // 아이템별인 경우: 각 아이템의 projectName 확인 (각각 필수 입력)
-              if (itemCount === 1 || isBulkFileUpload) {
-                // 그룹 단위 검증
-                if (!projectName || projectName.trim() === '') {
-                  alert('작업이름을 입력해주세요.');
-                  paymentButton.disabled = false;
-                  paymentButton.textContent = '결제하기';
-                  return;
-                }
-              } else {
-                // 아이템별 검증: 각 아이템의 projectName이 반드시 입력되어야 함
-                for (const item of currentTossWidgetData.items) {
-                  const itemState = currentItemStates[item.id];
-                  const itemProjectName = itemState?.projectName || '';
-                  if (!itemProjectName || itemProjectName.trim() === '') {
-                    alert(
-                      `"${
-                        item.name || item.panel_code || '아이템'
-                      }"의 작업이름을 입력해주세요.`
-                    );
-                    paymentButton.disabled = false;
-                    paymentButton.textContent = '결제하기';
-                    return;
-                  }
-                }
-              }
-
-              console.log('🔍 [결제 페이지] 결제 정보 준비...', {
-                itemsCount: currentTossWidgetData.items.length,
-                userAuthId,
-                userProfileId: finalUserProfileId,
-                projectName,
-                draftDeliveryMethod,
-              });
-
-              // ⚠️ 중요: 결제 전에 주문을 생성하지 않음!
-              // 결제 성공 후 결제 확인 API에서 실제 주문 생성
-              // orderId는 위젯 초기화 시 이미 생성되었으므로 사용 (또는 새로 생성)
-              let finalOrderId: string;
-
-              // 전역 변수에 저장된 orderId가 있으면 사용
-              if (
-                typeof window !== 'undefined' &&
-                (window as unknown as { currentTossOrderId?: string })
-                  .currentTossOrderId
-              ) {
-                finalOrderId = (
-                  window as unknown as { currentTossOrderId?: string }
-                ).currentTossOrderId!;
-                console.log(
-                  '🔍 [결제 페이지] 전역 변수에서 orderId 가져옴:',
-                  finalOrderId
-                );
-              } else {
-                // 위젯 초기화 시 orderId가 생성되지 않았으면 새로 생성
-                const timestamp = Date.now();
-                const randomStr = Math.random().toString(36).substring(2, 11);
-                finalOrderId = `temp_${timestamp}_${randomStr}`;
-                console.log(
-                  '🔍 [결제 페이지] orderId 새로 생성:',
-                  finalOrderId
-                );
-
-                // 전역 변수에 저장
-                if (typeof window !== 'undefined') {
-                  (
-                    window as unknown as { currentTossOrderId?: string }
-                  ).currentTossOrderId = finalOrderId;
-                }
-              }
-
-              // orderId 검증
-              if (!finalOrderId || finalOrderId.trim() === '') {
-                console.error('🔍 [결제 페이지] ❌ orderId가 없음');
-                alert('주문 ID를 생성할 수 없습니다. 다시 시도해주세요.');
-                paymentButton.disabled = false;
-                paymentButton.textContent = '결제하기';
-                return;
-              }
-
-              // orderId 형식 검증 (영문, 숫자, 언더스코어, 하이픈만 허용)
-              const orderIdPattern = /^[a-zA-Z0-9_-]+$/;
-              if (!orderIdPattern.test(finalOrderId)) {
-                console.error(
-                  '🔍 [결제 페이지] ❌ orderId 형식 오류:',
-                  finalOrderId
-                );
-                alert('주문 ID 형식이 올바르지 않습니다. 다시 시도해주세요.');
-                paymentButton.disabled = false;
-                paymentButton.textContent = '결제하기';
-                return;
-              }
-
-              console.log('🔍 [결제 페이지] 사용할 orderId:', {
-                finalOrderId,
-                length: finalOrderId.length,
-                isValidFormat: orderIdPattern.test(finalOrderId),
-                source: '위젯 초기화 시 생성',
-              });
-
-              // 아이템별 draftDeliveryMethod 생성 (아이템별인 경우)
-              const itemDraftDeliveryMethods: {
-                [itemId: string]: 'email' | 'upload';
-              } = {};
-              if (itemCount >= 2 && !isBulkFileUpload) {
-                for (const item of currentTossWidgetData.items) {
-                  const itemState = currentItemStates[item.id];
-                  itemDraftDeliveryMethods[item.id] =
-                    itemState?.sendByEmail === true ? 'email' : 'upload';
-                }
-              }
-
-              // 결제 정보를 localStorage에 저장 (결제 성공 시 실제 주문 생성에 사용)
-              const paymentData = {
-                tempOrderId: finalOrderId,
-                items: currentTossWidgetData.items.map((item) => ({
-                  id: item.id,
-                  panel_id: item.panel_id,
-                  price: item.price || 0,
-                  quantity: 1,
-                  halfPeriod: item.halfPeriod,
-                  selectedYear: item.selectedYear,
-                  selectedMonth: item.selectedMonth,
-                  panel_slot_usage_id: item.panel_slot_usage_id,
-                  panel_slot_snapshot: item.panel_slot_snapshot,
-                  // 아이템별 정보 추가
-                  draftId: itemDraftIds[item.id] || undefined,
-                  draftDeliveryMethod:
-                    itemDraftDeliveryMethods[item.id] || draftDeliveryMethod,
-                  projectName:
-                    itemCount >= 2 && !isBulkFileUpload
-                      ? currentItemStates[item.id]?.projectName || ''
-                      : projectName,
-                })),
-                userAuthId,
-                userProfileId: finalUserProfileId,
-                draftDeliveryMethod,
-                projectName,
-                draftId,
-                // 아이템별 정보 추가
-                itemDraftIds:
-                  Object.keys(itemDraftIds).length > 0
-                    ? itemDraftIds
-                    : undefined,
-                itemDraftDeliveryMethods:
-                  Object.keys(itemDraftDeliveryMethods).length > 0
-                    ? itemDraftDeliveryMethods
-                    : undefined,
-                district: currentTossWidgetData.district,
-                email: currentTossWidgetData.email,
-                contact_person_name: currentTossWidgetData.contact_person_name,
-                phone: currentTossWidgetData.phone,
-              };
-
-              // localStorage에 결제 정보 저장 (결제 성공 페이지에서 사용)
-              localStorage.setItem(
-                'pending_order_data',
-                JSON.stringify(paymentData)
-              );
-              console.log('🔍 [결제 페이지] 결제 정보 localStorage 저장 완료');
-
-              // 전화번호 정리 (숫자만 남기기)
-              const sanitizedPhone = (
-                currentTossWidgetData.phone || '010-0000-0000'
-              ).replace(/\D/g, '');
-
-              // 전화번호 검증
-              if (!sanitizedPhone || sanitizedPhone.length < 10) {
-                console.error(
-                  '🔍 [결제 페이지] ❌ 전화번호 형식 오류:',
-                  sanitizedPhone
-                );
-                alert('전화번호 형식이 올바르지 않습니다.');
-                paymentButton.disabled = false;
-                paymentButton.textContent = '결제하기';
-                return;
-              }
-
-              // 통합결제창 SDK가 준비되었는지 확인
-              if (!tossPayments) {
-                console.error('🔍 [결제 페이지] ❌ 토스 SDK가 초기화되지 않음');
-                alert(
-                  '결제 SDK가 아직 준비되지 않았습니다. 잠시 후 다시 시도해주세요.'
-                );
-                paymentButton.disabled = false;
-                paymentButton.textContent = '결제하기';
-                return;
-              }
-
-              // 결제 요청 파라미터 검증
-              const successUrl = `${window.location.origin}/payment/success?orderId=${finalOrderId}`;
-              const failUrl = `${window.location.origin}/payment/fail?orderId=${finalOrderId}`;
-
-              console.log('🔍 [로컬 디버깅] 결제 URL 생성:', {
-                windowOrigin: window.location.origin,
-                hostname: window.location.hostname,
-                protocol: window.location.protocol,
-                successUrl,
-                failUrl,
-                orderId: finalOrderId,
-                note: '로컬 환경에서는 localhost를 사용해야 하며, 토스페이먼츠 테스트 키가 필요합니다.',
-              });
-
-              const isConsultingGroup =
-                currentTossWidgetData.district === '상담신청';
-
-              const displayTypeLabel = getDisplayTypeLabel(
-                currentTossWidgetData
-              );
-
-              const paymentParams = {
-                orderId: finalOrderId,
-                orderName: isConsultingGroup
-                  ? '상담신청'
-                  : `${currentTossWidgetData.district} ${displayTypeLabel}`,
-                successUrl,
-                failUrl,
-                customerEmail:
-                  currentTossWidgetData.email || 'customer@example.com',
-                customerName:
-                  currentTossWidgetData.contact_person_name || '고객',
-                customerMobilePhone: sanitizedPhone,
-              };
-
-              // 모든 필수 파라미터 검증
-              if (
-                !paymentParams.orderId ||
-                !paymentParams.orderName ||
-                !paymentParams.successUrl ||
-                !paymentParams.failUrl ||
-                !paymentParams.customerEmail ||
-                !paymentParams.customerName ||
-                !paymentParams.customerMobilePhone
-              ) {
-                console.error('🔍 [결제 페이지] ❌ 결제 파라미터 누락:', {
-                  hasOrderId: !!paymentParams.orderId,
-                  hasOrderName: !!paymentParams.orderName,
-                  hasSuccessUrl: !!paymentParams.successUrl,
-                  hasFailUrl: !!paymentParams.failUrl,
-                  hasCustomerEmail: !!paymentParams.customerEmail,
-                  hasCustomerName: !!paymentParams.customerName,
-                  hasCustomerMobilePhone: !!paymentParams.customerMobilePhone,
-                });
-                alert('결제 정보가 불완전합니다. 다시 시도해주세요.');
-                paymentButton.disabled = false;
-                paymentButton.textContent = '결제하기';
-                return;
-              }
-
-              // 테스트용 0원 결제 확인
-              const isTestFreePaymentEnabled =
-                process.env.NEXT_PUBLIC_ENABLE_TEST_FREE_PAYMENT === 'true';
-              const testFreePaymentUserId =
-                process.env.NEXT_PUBLIC_TEST_FREE_PAYMENT_USER_ID || 'testsung';
-              const isTestUser =
-                currentUser?.username === testFreePaymentUserId ||
-                currentUser?.id === testFreePaymentUserId;
-              const shouldUseTestFlow =
-                isTestFreePaymentEnabled && isTestUser && tossWidgetData;
-
-              // 디버깅 로그
-              console.log('🔍 [통합결제창] 테스트 결제 디버깅:', {
-                isTestFreePaymentEnabled,
-                envValue: process.env.NEXT_PUBLIC_ENABLE_TEST_FREE_PAYMENT,
-                testFreePaymentUserId,
-                currentUserUsername: currentUser?.username,
-                currentUserId: currentUser?.id,
-                isTestUser,
-                originalAmount: currentTossWidgetData.totalPrice,
-              });
-
-              // 테스트 유저인 경우 위젯 스킵하고 바로 서버로 요청
-              if (shouldUseTestFlow) {
-                console.log(
-                  '🔍 [통합결제창] ⚠️ 테스트 유저 감지 - 위젯 스킵하고 바로 주문 생성'
-                );
-
-                try {
-                  const testPaymentKey = `test_free_${finalOrderId}`;
-                  const confirmResponse = await fetch(
-                    '/api/payment/toss/confirm',
-                    {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                      },
-                      body: JSON.stringify({
-                        paymentKey: testPaymentKey,
-                        orderId: finalOrderId,
-                        amount: currentTossWidgetData.totalPrice,
-                        orderData: paymentData,
-                      }),
-                    }
-                  );
-
-                  const confirmResult = await confirmResponse.json();
-
-                  if (!confirmResponse.ok || !confirmResult.success) {
-                    console.error(
-                      '🔍 [결제 페이지] ❌ 테스트 결제 주문 생성 실패:',
-                      {
-                        confirmResult,
-                        confirmResponseStatus: confirmResponse.status,
-                        confirmResponseText: await confirmResponse
-                          .clone()
-                          .text(),
-                      }
-                    );
-                    alert(
-                      confirmResult.error || '주문 생성 중 오류가 발생했습니다.'
-                    );
-                    paymentButton.disabled = false;
-                    paymentButton.textContent = '결제하기';
-                    return;
-                  }
-
-                  console.log(
-                    '🔍 [결제 페이지] ✅ 테스트 결제 주문 생성 성공:',
-                    confirmResult
-                  );
-
-                  console.log('🔍 [결제 페이지] 장바구니 초기화');
-                  cartDispatch({ type: 'CLEAR_CART' });
-
-                  window.location.href = `/payment/success?orderId=${
-                    confirmResult.data?.orderId || finalOrderId
-                  }&amount=0&status=SUCCESS`;
-                  return;
-                } catch (error) {
-                  console.error('🔍 [결제 페이지] ❌ 테스트 결제 예외:', error);
-                  alert('주문 생성 중 오류가 발생했습니다.');
-                  paymentButton.disabled = false;
-                  paymentButton.textContent = '결제하기';
-                  return;
-                }
-              }
-
-              // 일반 유저는 기존대로 토스 위젯 열기
-              console.log('🔍 [통합결제창] 결제 요청 시작:', {
-                orderId: paymentParams.orderId,
-                orderName: paymentParams.orderName,
-                originalAmount: currentTossWidgetData.totalPrice,
-                finalAmount: currentTossWidgetData.totalPrice,
-                isTestUser,
-                isTestFreePaymentEnabled,
-                hasTossPayments: !!tossPayments,
-                paymentMethod: 'CARD',
-              });
-
-              // 통합결제창 방식: tossPayments.requestPayment() 직접 호출
-              // 문서: https://docs.tosspayments.com/guides/v2/payment-window/integration
-              await tossPayments.requestPayment('CARD', {
-                amount: currentTossWidgetData.totalPrice,
-                orderId: paymentParams.orderId,
-                orderName: paymentParams.orderName,
-                customerName: paymentParams.customerName,
-                customerEmail: paymentParams.customerEmail,
-                customerMobilePhone: paymentParams.customerMobilePhone,
-                successUrl: paymentParams.successUrl,
-                failUrl: paymentParams.failUrl,
-              });
-
-              console.log(
-                '🔍 [통합결제창] ✅ 결제창 열기 요청 완료 (리다이렉트 예상)'
-              );
-            } catch (err) {
-              console.error('🔍 [결제 페이지] ❌ 결제 요청 실패:', err);
-              alert('결제 요청 중 오류가 발생했습니다.');
-              paymentButton.disabled = false;
-              paymentButton.textContent = '결제하기';
-            }
-          });
 
           // 결제 버튼을 버튼 컨테이너에 추가
           const buttonContainer = document.getElementById(
@@ -2411,15 +1708,6 @@ function PaymentPageContent() {
           console.error('토스 위젯 초기화 실패:', error);
 
           // 에러 발생 시 사용자에게 알림
-          const container = document.getElementById('toss-payment-methods');
-          if (container) {
-            container.innerHTML = `
-              <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <div class="text-red-800 font-medium">토스 위젯 로딩 실패</div>
-                <div class="text-red-600 text-sm mt-1">결제 위젯을 불러오는데 실패했습니다. 페이지를 새로고침해주세요.</div>
-              </div>
-            `;
-          }
         }
       };
 
@@ -2895,7 +2183,7 @@ function PaymentPageContent() {
                         <Button
                           onClick={() => openTossWidget(group)}
                           disabled={!isButtonEnabled}
-                          className={`w-full py-2 rounded-lg ${
+                          className={`w-full py-2 rounded-lg border border-blue-600 ${
                             isButtonEnabled
                               ? 'bg-blue-600 text-white hover:bg-blue-700'
                               : 'bg-gray-400 text-gray-600 cursor-not-allowed'
@@ -3090,11 +2378,92 @@ function PaymentPageContent() {
       </div>
 
       {/* 토스 위젯 모달 */}
+      {bankModalOpen && bankModalGroup && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full mx-4 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">계좌이체 안내</h2>
+              <button
+                onClick={closeBankModal}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ×
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 mb-2">
+              {bankModalGroup.district}({getDisplayTypeLabel(bankModalGroup)})
+              등록된 계좌정보입니다.
+            </p>
+            {bankModalLoading ? (
+              <p className="text-sm text-gray-500 mb-4">
+                계좌정보를 가져오는 중입니다...
+              </p>
+            ) : bankModalError ? (
+              <p className="text-sm text-red-600 mb-4">{bankModalError}</p>
+            ) : bankAccountInfo ? (
+              <div className="flex flex-col gap-2 mb-4">
+                <div className="text-base font-semibold text-gray-700">
+                  결제금액: {bankModalGroup.totalPrice.toLocaleString()}원
+                </div>
+                <div className="text-sm text-gray-600">
+                  은행명:{' '}
+                  <span className="font-medium text-gray-800">
+                    {bankAccountInfo.bankName}
+                  </span>
+                </div>
+                <div className="text-sm text-gray-600">
+                  계좌번호:{' '}
+                  <span className="font-medium text-gray-800">
+                    {bankAccountInfo.accountNumber}
+                  </span>
+                </div>
+                <div className="text-sm text-gray-600">
+                  예금주:{' '}
+                  <span className="font-medium text-gray-800">
+                    {bankAccountInfo.owner}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500">
+                  입금확인이 되면 주문이 자동으로 ’결제완료’ 상태로 전환됩니다.
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500 mb-4">
+                계좌정보를 불러오지 못했습니다.
+              </p>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button
+                onClick={closeBankModal}
+                className="px-4 py-2 rounded-lg bg-gray-900 text-gray-700 hover:bg-gray-200"
+              >
+                닫기
+              </Button>
+              <Button
+                className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+                disabled={
+                  !bankAccountInfo ||
+                  bankModalLoading ||
+                  isBankTransferProcessing
+                }
+                onClick={() => {
+                  if (!bankAccountInfo || !bankModalGroup) return;
+                  handleBankTransferPayment(bankModalGroup, bankAccountInfo);
+                }}
+              >
+                {isBankTransferProcessing
+                  ? '처리중...'
+                  : '입금정보 확인 후 주문'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
       {tossWidgetOpen && tossWidgetData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">토스페이먼츠 결제</h2>
+              <h2 className="text-xl font-bold">결제하기</h2>
               <button
                 onClick={() => {
                   setTossWidgetOpen(false);
@@ -3155,7 +2524,6 @@ function PaymentPageContent() {
                 <div className="font-medium mb-1">결제할 게시대 목록:</div>
                 <div className="space-y-1">
                   {tossWidgetData.items.map((item, index) => {
-                    // 상하반기 정보 표시
                     const itemHalfPeriod = item.halfPeriod || 'first_half';
                     const itemYear =
                       item.selectedYear || new Date().getFullYear();
@@ -3176,6 +2544,31 @@ function PaymentPageContent() {
                   })}
                 </div>
               </div>
+            </div>
+            <div className="mt-4 flex gap-2">
+              <Button
+                className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 text-sm font-semibold"
+                onClick={() => {
+                  const htmlBtn = document.querySelector<HTMLButtonElement>(
+                    '#toss-payment-button button'
+                  );
+                  if (!htmlBtn) {
+                    alert(
+                      '결제 위젯이 아직 준비되지 않았습니다. 잠시 후 다시 시도해주세요.'
+                    );
+                    return;
+                  }
+                  htmlBtn.click();
+                }}
+              >
+                결제하기
+              </Button>
+              <Button
+                className="flex-1 border border-blue-600 text-blue-700 bg-gray-900 hover:bg-gray-800 py-2 rounded-lg text-sm font-semibold"
+                onClick={() => openBankTransferModal(tossWidgetData)}
+              >
+                계좌이체하기
+              </Button>
             </div>
 
             {/* 토스 위젯이 렌더링될 영역 */}

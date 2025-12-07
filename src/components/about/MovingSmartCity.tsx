@@ -13,26 +13,28 @@ export default function MovingSmartCity() {
             className="w-15 h-15"
           />
         </div>
-        <div className="text-center mb-12">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            Moving Smart City
-          </h2>
-          <p className="text-xl text-gray-600">
-            30년간 도시를 바꾸고, 브랜드를 연결해온 디자인 파트너
-          </p>
-        </div>
-        <div className="max-w-4xl mx-auto">
-          <div className="">
-            <p className="text-lg text-gray-700 leading-relaxed text-center">
-              공간이 메시지가 되는 순간, 그 중심엔 한성이 있습니다.
-              <br />
-              전자게시대부터 공공디자인, AI기반 광고솔루션까지 도시의
-              커뮤니케이션을 디자인합니다.
-              <br />
-              30년간 100개 이상의 공공 프로젝트와 2000여 매체를 운영하며
-              <br />
-              도시의 커뮤니케이션을 디자인해왔습니다.
+        <div className="bg-gray-100 p-10 rounded-lg">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+              Moving Smart City
+            </h2>
+            <p className="text-xl text-gray-600">
+              30년간 도시를 바꾸고, 브랜드를 연결해온 디자인 파트너
             </p>
+          </div>
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-[rgba(255,255,255,0.85)] px-6 py-10 rounded-2xl shadow-lg backdrop-blur-sm">
+              <p className="text-lg text-gray-700 leading-relaxed text-center">
+                공간이 메시지가 되는 순간, 그 중심엔 한성이 있습니다.
+                <br />
+                전자게시대부터 공공디자인, AI기반 광고솔루션까지 도시의
+                커뮤니케이션을 디자인합니다.
+                <br />
+                30년간 100개 이상의 공공 프로젝트와 2000여 매체를 운영하며
+                <br />
+                도시의 커뮤니케이션을 디자인해왔습니다.
+              </p>
+            </div>
           </div>
         </div>
       </div>
