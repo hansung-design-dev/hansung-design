@@ -81,16 +81,22 @@ function PaymentSuccessContent() {
                     orderData?.draftDeliveryMethod || '(없음)',
                   tempOrderId: orderData?.tempOrderId || '(없음)',
                   orderDataKeys: orderData ? Object.keys(orderData) : [],
-                  itemsDetail: orderData?.items?.map((item: unknown) => ({
-                    id: (item as { id?: string })?.id,
-                    panel_id: (item as { panel_id?: string })?.panel_id,
-                    name: (item as { name?: string })?.name || '(없음)',
-                    district: (item as { district?: string })?.district || '(없음)',
-                    price: (item as { price?: number })?.price || 0,
-                    quantity: (item as { quantity?: number })?.quantity || 0,
-                    projectName: (item as { projectName?: string })?.projectName,
-                  })) || [],
-                  fullOrderData: JSON.stringify(orderData, null, 2).substring(0, 2000),
+                  itemsDetail:
+                    orderData?.items?.map((item: unknown) => ({
+                      id: (item as { id?: string })?.id,
+                      panel_id: (item as { panel_id?: string })?.panel_id,
+                      name: (item as { name?: string })?.name || '(없음)',
+                      district:
+                        (item as { district?: string })?.district || '(없음)',
+                      price: (item as { price?: number })?.price || 0,
+                      quantity: (item as { quantity?: number })?.quantity || 0,
+                      projectName: (item as { projectName?: string })
+                        ?.projectName,
+                    })) || [],
+                  fullOrderData: JSON.stringify(orderData, null, 2).substring(
+                    0,
+                    2000
+                  ),
                 }
               );
               // 사용 후 삭제
@@ -114,6 +120,10 @@ function PaymentSuccessContent() {
                   typeof window !== 'undefined'
                     ? Object.keys(localStorage)
                     : [],
+                pendingOrderData:
+                  typeof window !== 'undefined'
+                    ? localStorage.getItem('pending_order_data')
+                    : null,
               }
             );
             setError('주문 정보를 찾을 수 없습니다.');
