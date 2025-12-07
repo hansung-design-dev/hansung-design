@@ -75,7 +75,7 @@ export default function Home() {
   return (
     <main className="w-full ">
       <Nav />
-      <div className="pt-[2rem] sm:pt-[3rem] pb-[4rem]">
+      <div className="pt-[2rem] sm:pt-[3rem] pb-[2rem]">
         <div className="relative pt-[2rem] ">
           <Image
             src={mainSection?.main_image_url || '/images/landing/main-part.png'}
@@ -85,60 +85,58 @@ export default function Home() {
             className="w-full h-full object-cover  sm:min-h-[48rem] sm:object-left-bottom"
           />
           <div className="absolute lg:bottom-[6rem]  md:bottom-[2rem] lg:left-[6rem] sm:left-[2rem] text-white sm:bottom-[6rem]">
-            <div className="max-w-2xl rounded-[36px]  p-10 backdrop-blur-sm  shadow-1xl ">
-              <h1 className="lg:text-3 sm:text-2 font-weight-700 sm:text-2 font-gmarket">
-                {mainSection?.title || 'Moving Smart City'}
-              </h1>
-              <h2 className="lg:text-1.5 lg:line-height-8 sm:text-1 md:text-1.125 md:line-height-6 font-weight-700 sm:font-weight-500 sm:line-height-6 mt-4">
-                {mainSection?.subtitle ? (
-                  <span
-                    dangerouslySetInnerHTML={{ __html: mainSection.subtitle }}
-                  />
-                ) : (
-                  <>
-                    한성디자인은 사람을 위한 편리하고 안전한 공간, <br /> 도시를
-                    혁신하는 기술, 환경을 고려한 지속 가능한
-                    <br className="lg:hidden md:hidden" />
-                    디자인을 제공합니다.
-                  </>
-                )}
-              </h2>
-              <p className="lg:text-1 md:text-0.875 lg:font-weight-500 md:font-weight-300 lg:line-height-6 md:line-height-5 sm:text-0.75 sm:font-weight-300 sm:line-height-5 sm:hidden lg:block md:block mt-6">
-                {mainSection?.description ? (
-                  (() => {
-                    const lines = mainSection.description.split('<br>');
-                    return (
-                      <>
-                        {lines.map((line, idx) => (
-                          <React.Fragment key={idx}>
-                            {line}
-                            {idx !== lines.length - 1 && (
-                              <br className="hidden sm:inline" />
-                            )}
-                          </React.Fragment>
-                        ))}
-                      </>
-                    );
-                  })()
-                ) : (
-                  <>
-                    디지털 광고와 공공디자인이 결합된 혁신적인 솔루션을 통해{' '}
-                    <br className="lg:hidden md:hidden sm:inline" />
-                    공간을 효율적으로 활용하고,
-                    <br className="lg:inline md:inline sm:inline" /> 브랜드
-                    가치를 높이며,{' '}
-                    <br className="lg:hidden md:hidden sm:inline" />
-                    도시를 더욱 스마트하게 변화시킵니다.
-                    <br />
-                    사람과 공간, 도시와 환경이 조화를 이루는 미래형 디자인,{' '}
-                    <br className="lg:hidden md:hidden sm:inline" />
-                    한성디자인이 만들어갑니다.
-                    <br /> 공간을 효율적으로, 도시를 스마트하게, 브랜드의 가치를
-                    높입니다
-                  </>
-                )}
-              </p>
-            </div>
+            <h1 className="lg:text-3 sm:text-2 font-weight-700 sm:text-2 font-gmarket">
+              {mainSection?.title || 'Moving Smart City'}
+            </h1>
+            <h2 className="lg:text-1.5 lg:line-height-8 sm:text-1 md:text-1.125 md:line-height-6 font-weight-500 sm:font-weight-300 sm:line-height-6">
+              {mainSection?.subtitle ? (
+                <span
+                  dangerouslySetInnerHTML={{ __html: mainSection.subtitle }}
+                />
+              ) : (
+                <>
+                  한성디자인은 사람을 위한 편리하고 안전한 공간, <br /> 도시를
+                  혁신하는 기술, 환경을 고려한 지속 가능한
+                  <br className="lg:hidden md:hidden" />
+                  디자인을 제공합니다.
+                </>
+              )}
+            </h2>
+            <p className="lg:text-1 md:text-0.875 lg:font-400 md:font-200 lg:line-height-6 md:line-height-5 sm:text-0.75 sm:font-300 sm:line-height-5 sm:hidden lg:block md:block">
+              {mainSection?.description ? (
+                // DB에서 불러온 description을 <br> 기준으로 split하여 줄바꿈 처리
+                (() => {
+                  const lines = mainSection.description.split('<br>');
+                  return (
+                    <>
+                      {lines.map((line, idx) => (
+                        <React.Fragment key={idx}>
+                          {line}
+                          {idx !== lines.length - 1 && (
+                            <br className="hidden sm:inline" />
+                          )}
+                        </React.Fragment>
+                      ))}
+                    </>
+                  );
+                })()
+              ) : (
+                <>
+                  디지털 광고와 공공디자인이 결합된 혁신적인 솔루션을 통해{' '}
+                  <br className="lg:hidden md:hidden sm:inline" />
+                  공간을 효율적으로 활용하고,
+                  <br className="lg:inline md:inline sm:inline" /> 브랜드 가치를
+                  높이며, <br className="lg:hidden md:hidden sm:inline" />
+                  도시를 더욱 스마트하게 변화시킵니다.
+                  <br />
+                  사람과 공간, 도시와 환경이 조화를 이루는 미래형 디자인,{' '}
+                  <br className="lg:hidden md:hidden sm:inline" />
+                  한성디자인이 만들어갑니다.
+                  <br /> 공간을 효울적으로, 도시를 스마트하게, 브랜드의 가치를
+                  높입니다
+                </>
+              )}
+            </p>
           </div>
         </div>
       </div>

@@ -325,7 +325,9 @@ export async function GET(request: NextRequest) {
       const { data: regions, error: regionError } = await supabase
         .from('region_gu')
         .select('id, name')
-        .eq('name', districtName);
+        .eq('name', districtName)
+        // 같은 구 이름으로 여러 레코드가 있을 수 있으므로 단일 행 강제(single) 대신 첫 번째 행만 사용
+        ;
 
       if (regionError) {
         console.error('Error fetching region_gu:', regionError);
@@ -335,8 +337,7 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      const regionData =
-        Array.isArray(regions) && regions.length > 0 ? regions[0] : null;
+      const regionData = Array.isArray(regions) && regions.length > 0 ? regions[0] : null;
 
       if (!regionData) {
         console.error('Error fetching region_gu: no rows for district', {
@@ -362,115 +363,48 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      let bankData = null;
-
-      if (displayType === 'banner_display') {
-        const { data: bannerCache, error: bannerCacheError } = await supabase
-          .from('banner_display_cache')
-          .select('bank_name, account_number, depositor')
-          .ilike('region_name', districtName)
-          .limit(1)
-          .maybeSingle();
-
-        if (
-          !bannerCacheError &&
-          bannerCache &&
-          bannerCache.bank_name &&
-          bannerCache.account_number
-        ) {
-          bankData = {
-            id: `cache_banner_${regionData.id}`,
-            bank_name: bannerCache.bank_name,
-            account_number: bannerCache.account_number,
-            depositor: bannerCache.depositor,
-            region_gu: {
-              id: regionData.id,
-              name: regionData.name,
-            },
-            display_types: {
-              id: displayTypeData.id,
-              name: displayTypeData.name,
-            },
-          };
-        }
-      } else if (displayType === 'led_display') {
-        const { data: ledCache, error: ledCacheError } = await supabase
-          .from('led_display_cache')
-          .select('bank_name, account_number, depositor')
-          .eq('region_name', regionData.name)
-          .limit(1)
-          .maybeSingle();
-
-        if (
-          !ledCacheError &&
-          ledCache &&
-          ledCache.bank_name &&
-          ledCache.account_number
-        ) {
-          bankData = {
-            id: `cache_led_${regionData.id}`,
-            bank_name: ledCache.bank_name,
-            account_number: ledCache.account_number,
-            depositor: ledCache.depositor,
-            region_gu: {
-              id: regionData.id,
-              name: regionData.name,
-            },
-            display_types: {
-              id: displayTypeData.id,
-              name: displayTypeData.name,
-            },
-          };
-        }
-      }
-
-      if (!bankData) {
-        const { data, error } = await supabase
-          .from('bank_accounts')
-          .select(
-            `
-            id,
-            bank_name,
-            account_number,
-            depositor,
-            region_gu_id,
-            display_type_id
+      const { data, error } = await supabase
+        .from('bank_accounts')
+        .select(
           `
-          )
-          .eq('region_gu_id', regionData.id)
-          .eq('display_type_id', displayTypeData.id)
-          .maybeSingle();
+          id,
+          bank_name,
+          account_number,
+          depositor,
+          region_gu_id,
+          display_type_id
+        `
+        )
+        .eq('region_gu_id', regionData.id)
+        .eq('display_type_id', displayTypeData.id)
+        .single();
 
-        if (!error && data) {
-          bankData = {
-            id: data.id,
-            bank_name: data.bank_name,
-            account_number: data.account_number,
-            depositor: data.depositor,
-            region_gu: {
-              id: regionData.id,
-              name: regionData.name,
-            },
-            display_types: {
-              id: displayTypeData.id,
-              name: displayTypeData.name,
-            },
-          };
-        } else {
-          console.error('Error fetching bank info:', error);
-        }
-      }
-
-      if (!bankData) {
+      if (error) {
+        console.error('Error fetching bank info:', error);
         return NextResponse.json(
           { success: false, error: 'Bank info not found' },
           { status: 404 }
         );
       }
 
+      const responseData = {
+        id: data.id,
+        bank_name: data.bank_name,
+        account_number: data.account_number,
+        depositor: data.depositor,
+        region_gu: {
+          id: regionData.id,
+          name: regionData.name,
+        },
+        display_types: {
+          id: displayTypeData.id,
+          name: displayTypeData.name,
+        },
+      };
+
       return NextResponse.json({
         success: true,
-        data: bankData,
+        data: responseData,
       });
     }
 
