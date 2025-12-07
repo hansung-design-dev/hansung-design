@@ -552,11 +552,11 @@ function PaymentPageContent() {
       // is_default = true인 프로필만 사용
       const defaultProfile = userProfiles.find((profile) => profile.is_default);
 
-      console.log('🔍 Direct mode - defaultProfile:', defaultProfile);
-      console.log(
-        '🔍 Direct mode - company_name:',
-        defaultProfile?.company_name
-      );
+      // console.log('🔍 Direct mode - defaultProfile:', defaultProfile);
+      // console.log(
+      //   '🔍 Direct mode - company_name:',
+      //   defaultProfile?.company_name
+      // );
 
       const today = new Date();
       const dateStr = `${today.getFullYear()}년 ${
@@ -1286,27 +1286,27 @@ function PaymentPageContent() {
     }
   };
 
-  // 장바구니에서 선택된 프로필 정보 가져오기
-  console.log('🔍 profiles 상태:', profiles?.length || 0, profiles);
-  console.log('🔍 userProfiles 상태:', userProfiles?.length || 0, userProfiles);
-  console.log(
-    '🔍 selectedItems:',
-    selectedItems.length,
-    selectedItems.map((item) => ({
-      id: item.id,
-      contact_person_name: item.contact_person_name,
-      phone: item.phone,
-      company_name: item.company_name,
-      email: item.email,
-      user_profile_id: item.user_profile_id,
-    }))
-  );
+  // // 장바구니에서 선택된 프로필 정보 가져오기
+  // console.log('🔍 profiles 상태:', profiles?.length || 0, profiles);
+  // console.log('🔍 userProfiles 상태:', userProfiles?.length || 0, userProfiles);
+  // console.log(
+  //   '🔍 selectedItems:',
+  //   selectedItems.length,
+  //   selectedItems.map((item) => ({
+  //     id: item.id,
+  //     contact_person_name: item.contact_person_name,
+  //     phone: item.phone,
+  //     company_name: item.company_name,
+  //     email: item.email,
+  //     user_profile_id: item.user_profile_id,
+  //   }))
+  // );
 
   // selectedItems에서 실제 프로필 ID 확인 (첫 번째 아이템 기준)
   const selectedProfileId =
     selectedItems.length > 0 ? selectedItems[0].user_profile_id : null;
 
-  console.log('🔍 selectedProfileId:', selectedProfileId);
+  // console.log('🔍 selectedProfileId:', selectedProfileId);
 
   // localStorage에서 기본 프로필 ID 가져오기
   const storedDefaultProfileId =
@@ -1359,7 +1359,7 @@ function PaymentPageContent() {
     return null;
   })();
 
-  console.log('🔍 defaultProfile:', defaultProfile);
+  // console.log('🔍 defaultProfile:', defaultProfile);
 
   // 가격 계산 (결제 페이지에서는 원래 금액 표시, 토스 위젯에서만 0원 표시)
   const priceSummary = selectedItems.reduce(
@@ -1795,6 +1795,37 @@ function PaymentPageContent() {
               // 주문 생성에 필요한 정보 가져오기 (클로저에서 저장한 값 사용)
               const groupState = currentGroupStates[currentTossWidgetData.id];
               const projectName = groupState?.projectName || '';
+
+              // 🔍 디버깅: groupState와 currentTossWidgetData 상세 확인
+              console.log(
+                '🔍 [통합결제 버튼 클릭] groupState 및 items 상세 확인:',
+                {
+                  groupId: currentTossWidgetData.id,
+                  groupState: groupState,
+                  projectName: projectName,
+                  projectNameSource: groupState?.projectName
+                    ? 'groupState'
+                    : 'empty',
+                  itemsCount: currentTossWidgetData.items.length,
+                  items: currentTossWidgetData.items.map((item) => ({
+                    id: item.id,
+                    panel_id: item.panel_id,
+                    name: item.name,
+                    district: item.district,
+                    price: item.price,
+                    halfPeriod: item.halfPeriod,
+                    selectedYear: item.selectedYear,
+                    selectedMonth: item.selectedMonth,
+                  })),
+                  allGroupStates: Object.keys(currentGroupStates).map(
+                    (key) => ({
+                      groupId: key,
+                      projectName: currentGroupStates[key]?.projectName,
+                    })
+                  ),
+                  currentTossWidgetDataKeys: Object.keys(currentTossWidgetData),
+                }
+              );
 
               // 아이템 개수 확인
               const itemCount = currentTossWidgetData.items.length;
@@ -2315,39 +2346,11 @@ function PaymentPageContent() {
 
               // ⚠️ 중요: 결제 전에 주문을 생성하지 않음!
               // 결제 성공 후 결제 확인 API에서 실제 주문 생성
-              // orderId는 위젯 초기화 시 이미 생성되었으므로 사용 (또는 새로 생성)
-              let finalOrderId: string;
-
-              // 전역 변수에 저장된 orderId가 있으면 사용
-              if (
-                typeof window !== 'undefined' &&
-                (window as unknown as { currentTossOrderId?: string })
-                  .currentTossOrderId
-              ) {
-                finalOrderId = (
-                  window as unknown as { currentTossOrderId?: string }
-                ).currentTossOrderId!;
-                console.log(
-                  '🔍 [결제 페이지] 전역 변수에서 orderId 가져옴:',
-                  finalOrderId
-                );
-              } else {
-                // 위젯 초기화 시 orderId가 생성되지 않았으면 새로 생성
-                const timestamp = Date.now();
-                const randomStr = Math.random().toString(36).substring(2, 11);
-                finalOrderId = `temp_${timestamp}_${randomStr}`;
-                console.log(
-                  '🔍 [결제 페이지] orderId 새로 생성:',
-                  finalOrderId
-                );
-
-                // 전역 변수에 저장
-                if (typeof window !== 'undefined') {
-                  (
-                    window as unknown as { currentTossOrderId?: string }
-                  ).currentTossOrderId = finalOrderId;
-                }
-              }
+              // orderId는 매번 새로 생성 (전역변수 재사용 안 함)
+              const timestamp = Date.now();
+              const randomStr = Math.random().toString(36).substring(2, 11);
+              const finalOrderId = `temp_${timestamp}_${randomStr}`;
+              console.log('🔍 [결제 페이지] orderId 새로 생성:', finalOrderId);
 
               // orderId 검증
               if (!finalOrderId || finalOrderId.trim() === '') {
@@ -2390,32 +2393,117 @@ function PaymentPageContent() {
                 }
               }
 
+              // projectName 검증 및 로깅 (사용자가 입력한 값 그대로 사용)
+              let finalProjectName =
+                itemCount >= 2 && !isBulkFileUpload
+                  ? currentItemStates[currentTossWidgetData.items[0]?.id]
+                      ?.projectName || ''
+                  : projectName;
+
+              console.log('🔍 [결제 페이지] projectName 검증 시작:', {
+                itemCount,
+                isBulkFileUpload,
+                projectNameState: projectName,
+                finalProjectName,
+                itemStates: Object.keys(currentItemStates).map((key) => ({
+                  itemId: key,
+                  projectName: currentItemStates[key]?.projectName,
+                })),
+              });
+
+              // 빈 문자열일 때만 기본값으로 대체 (사용자가 입력한 값은 그대로 사용)
+              if (finalProjectName.trim() === '') {
+                const today = new Date();
+                const dateStr = `${today.getFullYear()}년 ${
+                  today.getMonth() + 1
+                }월 ${today.getDate()}일`;
+                const defaultName =
+                  currentTossWidgetData.contact_person_name ||
+                  currentTossWidgetData.company_name ||
+                  currentTossWidgetData.district ||
+                  '주문';
+                finalProjectName = `${defaultName} ${dateStr}`;
+
+                console.warn(
+                  '🔍 [결제 페이지] ⚠️ projectName이 비어있어 기본값으로 대체:',
+                  {
+                    originalProjectName: projectName,
+                    originalFinalProjectName:
+                      itemCount >= 2 && !isBulkFileUpload
+                        ? currentItemStates[currentTossWidgetData.items[0]?.id]
+                            ?.projectName || ''
+                        : projectName,
+                    newFinalProjectName: finalProjectName,
+                    reason: '빈 문자열',
+                  }
+                );
+              }
+
+              console.log('🔍 [결제 페이지] projectName 최종 확인:', {
+                finalProjectName,
+                isValid: finalProjectName.trim() !== '',
+              });
+
+              // 🔍 디버깅: paymentData 생성 전 최종 확인
+              console.log(
+                '🔍 [통합결제 버튼 클릭] paymentData 생성 전 최종 확인:',
+                {
+                  finalOrderId,
+                  finalProjectName,
+                  currentTossWidgetDataItems: currentTossWidgetData.items.map(
+                    (item) => ({
+                      id: item.id,
+                      panel_id: item.panel_id,
+                      name: item.name,
+                      district: item.district,
+                      price: item.price,
+                    })
+                  ),
+                  currentItemStates: Object.keys(currentItemStates).map(
+                    (key) => ({
+                      itemId: key,
+                      projectName: currentItemStates[key]?.projectName,
+                    })
+                  ),
+                }
+              );
+
               // 결제 정보를 localStorage에 저장 (결제 성공 시 실제 주문 생성에 사용)
               const paymentData = {
                 tempOrderId: finalOrderId,
-                items: currentTossWidgetData.items.map((item) => ({
-                  id: item.id,
-                  panel_id: item.panel_id,
-                  price: item.price || 0,
-                  quantity: 1,
-                  halfPeriod: item.halfPeriod,
-                  selectedYear: item.selectedYear,
-                  selectedMonth: item.selectedMonth,
-                  panel_slot_usage_id: item.panel_slot_usage_id,
-                  panel_slot_snapshot: item.panel_slot_snapshot,
-                  // 아이템별 정보 추가
-                  draftId: itemDraftIds[item.id] || undefined,
-                  draftDeliveryMethod:
-                    itemDraftDeliveryMethods[item.id] || draftDeliveryMethod,
-                  projectName:
+                items: currentTossWidgetData.items.map((item) => {
+                  // 각 아이템의 projectName (사용자가 입력한 값 그대로 사용)
+                  let itemProjectName =
                     itemCount >= 2 && !isBulkFileUpload
                       ? currentItemStates[item.id]?.projectName || ''
-                      : projectName,
-                })),
+                      : projectName;
+
+                  // 빈 문자열일 때만 finalProjectName 사용 (사용자가 입력한 값은 그대로 사용)
+                  if (itemProjectName.trim() === '') {
+                    itemProjectName = finalProjectName;
+                  }
+
+                  return {
+                    id: item.id,
+                    panel_id: item.panel_id,
+                    price: item.price || 0,
+                    quantity: 1,
+                    halfPeriod: item.halfPeriod,
+                    selectedYear: item.selectedYear,
+                    selectedMonth: item.selectedMonth,
+                    panel_slot_usage_id: item.panel_slot_usage_id,
+                    panel_slot_snapshot: item.panel_slot_snapshot,
+                    // 아이템별 정보 추가
+                    draftId: itemDraftIds[item.id] || undefined,
+                    draftDeliveryMethod:
+                      itemDraftDeliveryMethods[item.id] || draftDeliveryMethod,
+                    projectName: itemProjectName, // 검증된 projectName 사용
+                  };
+                }),
                 userAuthId,
                 userProfileId: finalUserProfileId,
                 draftDeliveryMethod,
-                projectName,
+                projectName: finalProjectName, // 검증된 projectName 사용
                 draftId,
                 // 아이템별 정보 추가
                 itemDraftIds:
@@ -2432,12 +2520,67 @@ function PaymentPageContent() {
                 phone: currentTossWidgetData.phone,
               };
 
-              // localStorage에 결제 정보 저장 (결제 성공 페이지에서 사용)
-              localStorage.setItem(
-                'pending_order_data',
-                JSON.stringify(paymentData)
+              console.log(
+                '🔍 [결제 페이지] paymentData 최종 확인 (localStorage 저장 전):',
+                {
+                  projectName: paymentData.projectName,
+                  projectNameType: typeof paymentData.projectName,
+                  itemsCount: paymentData.items.length,
+                  itemsProjectNames: paymentData.items.map((item) => ({
+                    itemId: item.id,
+                    panel_id: item.panel_id,
+                    projectName: item.projectName,
+                    projectNameType: typeof item.projectName,
+                    price: item.price,
+                    quantity: item.quantity,
+                  })),
+                  fullPaymentData: JSON.stringify(
+                    paymentData,
+                    null,
+                    2
+                  ).substring(0, 2000),
+                  itemsDetail: paymentData.items.map((item) => ({
+                    id: item.id,
+                    panel_id: item.panel_id,
+                    price: item.price,
+                    quantity: item.quantity,
+                    projectName: item.projectName,
+                  })),
+                }
               );
-              console.log('🔍 [결제 페이지] 결제 정보 localStorage 저장 완료');
+
+              // localStorage에 저장하기 전에 이전 데이터 무조건 삭제 (주문이 매번 달라지므로)
+              const existingPendingData =
+                localStorage.getItem('pending_order_data');
+              if (existingPendingData) {
+                console.warn(
+                  '🔍 [결제 페이지] ⚠️ localStorage에 이전 pending_order_data가 있습니다. 삭제합니다.',
+                  {
+                    willBeDeleted: true,
+                  }
+                );
+                localStorage.removeItem('pending_order_data');
+              }
+
+              // localStorage에 결제 정보 저장 (결제 성공 페이지에서 사용)
+              // ⚠️ 중요: 토스 위젯 리다이렉트 전에 반드시 저장해야 함
+              const paymentDataString = JSON.stringify(paymentData);
+              localStorage.setItem('pending_order_data', paymentDataString);
+
+              // 저장 후 확인
+              const savedData = localStorage.getItem('pending_order_data');
+              const parsedSavedData = savedData ? JSON.parse(savedData) : null;
+              console.log(
+                '🔍 [결제 페이지] 결제 정보 localStorage 저장 완료:',
+                {
+                  projectName: paymentData.projectName,
+                  savedProjectName: parsedSavedData?.projectName,
+                  itemsCount: paymentData.items.length,
+                  savedItemsCount: parsedSavedData?.items?.length || 0,
+                  dataMatches:
+                    paymentData.projectName === parsedSavedData?.projectName,
+                }
+              );
 
               // 전화번호 정리 (숫자만 남기기)
               const sanitizedPhone = (
@@ -2548,26 +2691,124 @@ function PaymentPageContent() {
               });
 
               // 테스트 유저인 경우 위젯 스킵하고 바로 서버로 요청
+              // ⚠️ 중요: paymentData가 localStorage에 저장된 후에 실행되어야 함
               if (isTestFreePaymentEnabled && isTestUser) {
                 console.log(
                   '🔍 [통합결제창] ⚠️ 테스트 유저 감지 - 위젯 스킵하고 바로 주문 생성'
                 );
 
                 try {
-                  // localStorage에서 주문 정보 가져오기
-                  const pendingOrderData =
-                    localStorage.getItem('pending_order_data');
-                  if (!pendingOrderData) {
-                    alert('주문 정보를 찾을 수 없습니다.');
-                    paymentButton.disabled = false;
-                    paymentButton.textContent = '결제하기';
-                    return;
+                  // 이미 생성된 paymentData를 직접 사용 (localStorage에서 가져오지 않음)
+                  const orderData = { ...paymentData };
+
+                  console.log(
+                    '🔍 [테스트 결제] paymentData를 직접 사용 (localStorage에서 가져오지 않음):',
+                    {
+                      projectName: orderData.projectName,
+                      projectNameType: typeof orderData.projectName,
+                      itemsCount: orderData.items?.length || 0,
+                      items:
+                        orderData.items?.map(
+                          (item: unknown, index: number) => ({
+                            index,
+                            id: (item as { id?: string })?.id,
+                            panel_id: (item as { panel_id?: string })?.panel_id,
+                            projectName: (item as { projectName?: string })
+                              ?.projectName,
+                            projectNameType: typeof (
+                              item as { projectName?: string }
+                            )?.projectName,
+                          })
+                        ) || [],
+                      fullOrderData: JSON.stringify(
+                        orderData,
+                        null,
+                        2
+                      ).substring(0, 2000),
+                    }
+                  );
+
+                  // 테스트 결제: projectName이 빈 문자열일 때만 기본값으로 대체 (사용자가 입력한 값은 그대로 사용)
+                  if (
+                    !orderData.projectName ||
+                    orderData.projectName.trim() === ''
+                  ) {
+                    const today = new Date();
+                    const dateStr = `${today.getFullYear()}년 ${
+                      today.getMonth() + 1
+                    }월 ${today.getDate()}일`;
+                    const defaultName =
+                      orderData.contact_person_name ||
+                      (orderData as { company_name?: string }).company_name ||
+                      orderData.district ||
+                      '주문';
+                    const newProjectName = `${defaultName} ${dateStr}`;
+
+                    console.warn(
+                      '🔍 [테스트 결제] ⚠️ projectName이 비어있어 기본값으로 대체:',
+                      {
+                        originalProjectName: orderData.projectName,
+                        newProjectName,
+                        reason: '빈 문자열',
+                      }
+                    );
+
+                    // orderData의 projectName 수정
+                    orderData.projectName = newProjectName;
+
+                    // items 배열의 각 아이템 projectName도 수정 (빈 문자열일 때만)
+                    if (orderData.items && Array.isArray(orderData.items)) {
+                      orderData.items = orderData.items.map((item) => {
+                        if (
+                          !item.projectName ||
+                          item.projectName.trim() === ''
+                        ) {
+                          item.projectName = newProjectName;
+                        }
+                        return item;
+                      });
+                    }
                   }
 
-                  const orderData = JSON.parse(pendingOrderData);
+                  console.log('🔍 [테스트 결제] orderData 최종 확인:', {
+                    projectName: orderData.projectName,
+                    itemsCount: orderData.items?.length || 0,
+                    itemsProjectNames:
+                      orderData.items?.map((item: unknown) => ({
+                        itemId: (item as { id?: string })?.id,
+                        projectName: (item as { projectName?: string })
+                          ?.projectName,
+                      })) || [],
+                    fullOrderData: JSON.stringify(orderData, null, 2).substring(
+                      0,
+                      500
+                    ),
+                  });
 
                   // 테스트 결제용 임시 paymentKey 생성
                   const testPaymentKey = `test_free_${finalOrderId}`;
+
+                  // 서버로 보낼 요청 본문 준비
+                  const requestBody = {
+                    paymentKey: testPaymentKey, // 테스트 결제용 임시 paymentKey
+                    orderId: finalOrderId,
+                    amount: currentTossWidgetData.totalPrice,
+                    orderData: orderData,
+                  };
+
+                  console.log('🔍 [테스트 결제] 서버로 보낼 요청 본문:', {
+                    paymentKey: testPaymentKey,
+                    orderId: finalOrderId,
+                    amount: currentTossWidgetData.totalPrice,
+                    orderDataProjectName: orderData.projectName,
+                    orderDataItemsCount: orderData.items?.length || 0,
+                    orderDataKeys: Object.keys(orderData),
+                    requestBodyPreview: JSON.stringify(
+                      requestBody,
+                      null,
+                      2
+                    ).substring(0, 1000),
+                  });
 
                   // 서버에 직접 주문 생성 요청 (임시 paymentKey 사용)
                   const confirmResponse = await fetch(
@@ -2577,12 +2818,7 @@ function PaymentPageContent() {
                       headers: {
                         'Content-Type': 'application/json',
                       },
-                      body: JSON.stringify({
-                        paymentKey: testPaymentKey, // 테스트 결제용 임시 paymentKey
-                        orderId: finalOrderId,
-                        amount: currentTossWidgetData.totalPrice,
-                        orderData: orderData,
-                      }),
+                      body: JSON.stringify(requestBody),
                     }
                   );
 
@@ -3831,7 +4067,106 @@ function PaymentPageContent() {
                 {/* 통합결제(카드/간편결제) */}
                 <Button
                   className="flex-1 bg-blue-600 text-white hover:bg-blue-700 py-2 rounded-lg text-sm font-semibold"
-                  onClick={() => {
+                  onClick={async () => {
+                    // 테스트 유저인 경우 토스 위젯 없이 바로 처리
+                    const isTestFreePaymentEnabled =
+                      process.env.NEXT_PUBLIC_ENABLE_TEST_FREE_PAYMENT ===
+                      'true';
+                    const testFreePaymentUserId =
+                      process.env.NEXT_PUBLIC_TEST_FREE_PAYMENT_USER_ID ||
+                      'testsung';
+                    const isTestUser =
+                      user?.username === testFreePaymentUserId ||
+                      user?.id === testFreePaymentUserId;
+
+                    if (
+                      isTestFreePaymentEnabled &&
+                      isTestUser &&
+                      tossWidgetData
+                    ) {
+                      console.log(
+                        '🔍 [통합결제 버튼] ⚠️ 테스트 유저 감지 - 위젯 스킵하고 바로 주문 생성'
+                      );
+
+                      try {
+                        // localStorage에서 주문 정보 가져오기
+                        const pendingOrderData =
+                          typeof window !== 'undefined'
+                            ? localStorage.getItem('pending_order_data')
+                            : null;
+                        if (!pendingOrderData) {
+                          alert('주문 정보를 찾을 수 없습니다.');
+                          return;
+                        }
+
+                        const orderData = JSON.parse(pendingOrderData);
+
+                        // orderId 생성 (temp_로 시작하여 새 주문 생성 로직으로 처리)
+                        const timestamp = Date.now();
+                        const randomStr = Math.random()
+                          .toString(36)
+                          .substring(2, 8);
+                        const finalOrderId = `temp_${timestamp}_${randomStr}`;
+
+                        // 테스트 결제용 임시 paymentKey 생성
+                        const testPaymentKey = `test_free_${finalOrderId}`;
+
+                        // 서버에 직접 주문 생성 요청 (임시 paymentKey 사용)
+                        const confirmResponse = await fetch(
+                          '/api/payment/toss/confirm',
+                          {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                              paymentKey: testPaymentKey,
+                              orderId: finalOrderId,
+                              amount: tossWidgetData.totalPrice,
+                              orderData: orderData,
+                            }),
+                          }
+                        );
+
+                        const confirmResult = await confirmResponse.json();
+
+                        if (!confirmResponse.ok || !confirmResult.success) {
+                          console.error(
+                            '🔍 [통합결제 버튼] ❌ 테스트 결제 주문 생성 실패:',
+                            confirmResult
+                          );
+                          alert(
+                            confirmResult.error ||
+                              '주문 생성 중 오류가 발생했습니다.'
+                          );
+                          return;
+                        }
+
+                        console.log(
+                          '🔍 [통합결제 버튼] ✅ 테스트 결제 주문 생성 성공:',
+                          confirmResult
+                        );
+
+                        // 주문 완료 후 장바구니 초기화
+                        console.log('🔍 [통합결제 버튼] 장바구니 초기화');
+                        cartDispatch({ type: 'CLEAR_CART' });
+
+                        // 성공 페이지로 리다이렉트
+                        window.location.href = `/payment/success?orderId=${
+                          confirmResult.data?.orderId || finalOrderId
+                        }&amount=0&status=SUCCESS`;
+                        return;
+                      } catch (error) {
+                        console.error(
+                          '🔍 [통합결제 버튼] ❌ 테스트 결제 예외:',
+                          error
+                        );
+                        alert('주문 생성 중 오류가 발생했습니다.');
+                        return;
+                      }
+                    }
+
+                    // 일반 유저는 토스 위젯 버튼 클릭
                     const htmlBtn = document.querySelector<HTMLButtonElement>(
                       '#toss-payment-button button'
                     );

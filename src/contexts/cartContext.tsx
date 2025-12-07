@@ -69,6 +69,8 @@ export interface CartItem {
   fileSize?: number | null;
   fileType?: string | null;
   emailAddress?: string | null;
+  // 아이템이 장바구니에 추가된 시간 (밀리초)
+  addedAt?: number;
 }
 
 interface CartState {
@@ -91,8 +93,8 @@ const CartContext = createContext<{
 // localStorage 키
 const CART_STORAGE_KEY = 'hansung_cart';
 
-// 15분을 밀리초로 변환
-const CART_EXPIRY_TIME = 15 * 60 * 1000;
+// 20분을 밀리초로 변환
+const CART_EXPIRY_TIME = 20 * 60 * 1000;
 
 // localStorage에서 장바구니 로드 (무한루프 방지)
 const loadCartFromStorage = (): CartState => {
@@ -109,15 +111,32 @@ const loadCartFromStorage = (): CartState => {
     const cartState: CartState = JSON.parse(stored);
     const now = Date.now();
 
-    // 상담신청 아이템(price가 0인 아이템)과 일반 아이템 분리
+    // 상담신청 아이템(price가 0인 아이템)은 항상 유지
     const consultingItems = cartState.items.filter((item) => item.price === 0);
 
-    // 15분이 지났으면 일반 아이템만 리셋, 상담신청 아이템은 유지
-    if (now - cartState.lastUpdated > CART_EXPIRY_TIME) {
-      console.log('🔍 Regular cart items expired, clearing...');
-      // localStorage.setItem 제거 - 무한루프 방지
+    // 각 아이템별로 20분이 지났는지 확인
+    // addedAt이 없으면 lastUpdated를 기준으로 판단 (기존 아이템 호환성)
+    const validItems = cartState.items.filter((item) => {
+      // 상담신청 아이템은 항상 유지
+      if (item.price === 0) return true;
+
+      // 아이템 추가 시간 확인 (addedAt이 없으면 lastUpdated 사용)
+      const itemAddedAt = item.addedAt || cartState.lastUpdated;
+      const timeSinceAdded = now - itemAddedAt;
+
+      // 20분이 지나지 않은 아이템만 유지
+      return timeSinceAdded <= CART_EXPIRY_TIME;
+    });
+
+    // 만료된 아이템이 있으면 필터링된 아이템으로 업데이트
+    if (validItems.length !== cartState.items.length) {
+      console.log('🔍 Some cart items expired, filtering...', {
+        originalCount: cartState.items.length,
+        validCount: validItems.length,
+        expiredCount: cartState.items.length - validItems.length,
+      });
       return {
-        items: consultingItems, // 상담신청 아이템만 유지
+        items: validItems,
         lastUpdated: now,
       };
     }
@@ -199,8 +218,13 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         user_auth_id: action.item.user_auth_id,
         hasUserProfileId: !!action.item.user_profile_id,
       });
+      // 아이템 추가 시 현재 시간을 addedAt으로 설정
+      const itemWithTimestamp = {
+        ...action.item,
+        addedAt: Date.now(),
+      };
       newState = {
-        items: [...state.items, action.item],
+        items: [...state.items, itemWithTimestamp],
         lastUpdated: Date.now(),
       };
       console.log('🔍 New cart state after ADD_ITEM:', newState);
@@ -217,8 +241,18 @@ function cartReducer(state: CartState, action: CartAction): CartState {
       return newState;
 
     case 'UPDATE_CART':
+      // 기존 아이템의 addedAt을 유지하고, 새로 추가된 아이템에는 현재 시간 설정
+      const updatedItems = action.items.map((newItem) => {
+        const existingItem = state.items.find((item) => item.id === newItem.id);
+        if (existingItem && existingItem.addedAt) {
+          // 기존 아이템이면 addedAt 유지
+          return { ...newItem, addedAt: existingItem.addedAt };
+        }
+        // 새로 추가된 아이템이면 현재 시간 설정
+        return { ...newItem, addedAt: newItem.addedAt || Date.now() };
+      });
       newState = {
-        items: action.items,
+        items: updatedItems,
         lastUpdated: Date.now(),
       };
       console.log('🔍 New cart state after UPDATE_CART:', newState);
@@ -254,31 +288,49 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     dispatch({ type: 'LOAD_CART', state: savedCart });
   }, []);
 
-  // 15분마다 장바구니 만료 체크 (무한루프 방지)
+  // 1분마다 장바구니 만료 체크 (각 아이템별로 20분이 지났는지 확인)
   useEffect(() => {
     console.log('🔄 CartContext: Setting up expiry check interval...');
     const checkExpiry = () => {
       const now = Date.now();
       console.log('🔄 CartContext: Checking expiry, current state:', state);
-      if (now - state.lastUpdated > CART_EXPIRY_TIME) {
+
+      // 상담신청 아이템(price가 0인 아이템)은 항상 유지
+      const consultingItems = state.items.filter((item) => item.price === 0);
+
+      // 각 아이템별로 20분이 지났는지 확인
+      // addedAt이 없으면 lastUpdated를 기준으로 판단 (기존 아이템 호환성)
+      const validItems = state.items.filter((item) => {
+        // 상담신청 아이템은 항상 유지
+        if (item.price === 0) return true;
+
+        // 아이템 추가 시간 확인 (addedAt이 없으면 lastUpdated 사용)
+        const itemAddedAt = item.addedAt || state.lastUpdated;
+        const timeSinceAdded = now - itemAddedAt;
+
+        // 20분이 지나지 않은 아이템만 유지
+        return timeSinceAdded <= CART_EXPIRY_TIME;
+      });
+
+      // 만료된 아이템이 있으면 필터링된 아이템으로 업데이트
+      if (validItems.length !== state.items.length) {
         console.log(
-          '🔍 Regular cart items expired during session, clearing...'
-        );
-        // 상담신청 아이템만 유지하고 일반 아이템 제거
-        const consultingItems = state.items.filter((item) => item.price === 0);
-        console.log(
-          '🔄 CartContext: Dispatching LOAD_CART with consulting items:',
-          consultingItems
+          '🔍 Regular cart items expired during session, filtering...',
+          {
+            originalCount: state.items.length,
+            validCount: validItems.length,
+            expiredCount: state.items.length - validItems.length,
+          }
         );
         dispatch({
           type: 'LOAD_CART',
-          state: { items: consultingItems, lastUpdated: now },
+          state: { items: validItems, lastUpdated: now },
         });
       }
     };
     const interval = setInterval(checkExpiry, 60000); // 1분마다 체크
     return () => clearInterval(interval);
-  }, []); // 빈 의존성 배열로 변경 - 무한루프 방지
+  }, [state]); // state를 의존성에 추가하여 최신 상태 확인
 
   return (
     <CartContext.Provider value={{ cart: state.items, dispatch }}>

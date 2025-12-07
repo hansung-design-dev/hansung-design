@@ -18,6 +18,17 @@ function PaymentFailContent() {
     const errorMessage = searchParams.get('errorMessage');
     const orderId = searchParams.get('orderId');
 
+    // 결제 실패 시 localStorage의 이전 주문 데이터 삭제 (주문이 매번 달라지므로)
+    if (typeof window !== 'undefined') {
+      const pendingOrderData = localStorage.getItem('pending_order_data');
+      if (pendingOrderData) {
+        console.warn(
+          '🔍 [결제 실패 페이지] ⚠️ localStorage에 pending_order_data가 있습니다. 삭제합니다.'
+        );
+        localStorage.removeItem('pending_order_data');
+      }
+    }
+
     if (errorCode || errorMessage) {
       setErrorInfo({
         errorCode: errorCode || 'UNKNOWN_ERROR',

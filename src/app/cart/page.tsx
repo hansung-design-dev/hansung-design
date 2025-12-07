@@ -326,6 +326,7 @@ function CartItemRow({
                 halfPeriod={item.halfPeriod || 'first_half'}
                 selectedYear={item.selectedYear}
                 selectedMonth={item.selectedMonth}
+                districtName={item.district}
                 onPeriodChange={(year, month, halfPeriod) => {
                   onPeriodChange?.(item.id, year, month, halfPeriod);
                 }}

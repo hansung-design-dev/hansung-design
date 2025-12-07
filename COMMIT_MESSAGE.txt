@@ -1,0 +1,10 @@
+feat: improve period selection in cart - apply same logic as banner display list
+
+- Apply same period calculation logic as HalfPeriodTabs to PeriodSelector component
+- Dynamically determine display periods based on current date
+- Allow selection until 2 days before period start date, auto-remove buttons after
+- Apply special rules for Mapo-gu and Gangbuk-gu (first half: 5-19th, second half: 20th-next month 4th)
+- UI improvement: remove year/month display, show only first/second half buttons
+- First half button: select second period (typically next month first half)
+- Second half button: select first period (typically current month second half)
+- Pass districtName prop when using PeriodSelector in cart
