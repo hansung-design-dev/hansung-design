@@ -96,6 +96,36 @@ const CART_STORAGE_KEY = 'hansung_cart';
 // 20분을 밀리초로 변환
 const CART_EXPIRY_TIME = 20 * 60 * 1000;
 
+const buildCartDebugMetadata = (
+  label: string,
+  details: Record<string, unknown> = {}
+) => {
+  if (typeof window === 'undefined') {
+    return {
+      label,
+      timestamp: new Date().toISOString(),
+      ...details,
+    };
+  }
+
+  return {
+    label,
+    timestamp: new Date().toISOString(),
+    userAgent: navigator.userAgent,
+    url: window.location.href,
+    host: window.location.host,
+    ...details,
+  };
+};
+
+const logCartDebug = (label: string, details: Record<string, unknown> = {}) => {
+  if (typeof window === 'undefined') return;
+  const title = `🧭 [장바구니 디버그] ${label}`;
+  console.groupCollapsed(title);
+  console.log(buildCartDebugMetadata(label, details));
+  console.groupEnd();
+};
+
 // localStorage에서 장바구니 로드 (무한루프 방지)
 const loadCartFromStorage = (): CartState => {
   if (typeof window === 'undefined') {
@@ -150,9 +180,17 @@ const loadCartFromStorage = (): CartState => {
           hasUserProfileId: !!item.user_profile_id,
         })) || [],
     });
+    logCartDebug('장바구니 저장소에서 로드됨', {
+      action: 'LOAD_CART',
+      items: cartState.items.map((item) => ({
+        id: item.id,
+        user_profile_id: item.user_profile_id,
+      })),
+    });
     return cartState;
   } catch (error) {
     console.error('🔍 Error loading cart from storage:', error);
+    logCartDebug('장바구니 로드 실패', { error });
     return { items: [], lastUpdated: Date.now() };
   }
 };
@@ -225,6 +263,11 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         lastUpdated: Date.now(),
       };
       console.log('🔍 New cart state after ADD_ITEM:', newState);
+      logCartDebug('아이템 추가됨', {
+        action: 'ADD_ITEM',
+        itemId: action.item.id,
+        totalItems: newState.items.length,
+      });
       saveCartToStorage(newState);
       return newState;
 
@@ -234,6 +277,11 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         lastUpdated: Date.now(),
       };
       console.log('🔍 New cart state after REMOVE_ITEM:', newState);
+      logCartDebug('아이템 제거됨', {
+        action: 'REMOVE_ITEM',
+        removedId: action.id,
+        totalItems: newState.items.length,
+      });
       saveCartToStorage(newState);
       return newState;
 
@@ -253,11 +301,18 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         lastUpdated: Date.now(),
       };
       console.log('🔍 New cart state after UPDATE_CART:', newState);
+      logCartDebug('장바구니 갱신됨', {
+        action: 'UPDATE_CART',
+        totalItems: newState.items.length,
+      });
       saveCartToStorage(newState);
       return newState;
 
     case 'CLEAR_CART':
       console.log('🔍 Clearing cart');
+      logCartDebug('장바구니 초기화됨', {
+        action: 'CLEAR_CART',
+      });
       newState = { items: [], lastUpdated: Date.now() };
       saveCartToStorage(newState);
       return newState;

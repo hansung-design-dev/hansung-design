@@ -65,6 +65,39 @@ type BankAccountInfo = {
   owner: string;
 };
 
+const buildPaymentDebugMetadata = (
+  label: string,
+  details: Record<string, unknown> = {}
+) => {
+  const base = {
+    label,
+    timestamp: new Date().toISOString(),
+    ...(typeof window !== 'undefined'
+      ? {
+          userAgent: navigator.userAgent,
+          userActivation: navigator.userActivation?.hasBeenActive,
+          documentHasFocus: document.hasFocus?.() ?? true,
+          origin: window.location.origin,
+          href: window.location.href,
+        }
+      : {}),
+    ...details,
+  };
+
+  return base;
+};
+
+const logPaymentDebug = (
+  label: string,
+  details: Record<string, unknown> = {}
+) => {
+  if (typeof window === 'undefined') return;
+  const title = `🧩 [결제 디버그] ${label}`;
+  console.groupCollapsed(title);
+  console.log(buildPaymentDebugMetadata(label, details));
+  console.groupEnd();
+};
+
 function PaymentPageContent() {
   const { user } = useAuth();
   const { cart, dispatch: cartDispatch } = useCart();
@@ -148,6 +181,64 @@ function PaymentPageContent() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isProcessing, setIsProcessing] = useState(false);
   // completedDistricts, successModalOpen, successDistrict 제거 - 토스 위젯에서 직접 처리
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const handleGlobalError = (event: ErrorEvent) => {
+      logPaymentDebug('전역 에러 이벤트', {
+        message: event.message,
+        filename: event.filename,
+        lineno: event.lineno,
+        colno: event.colno,
+      });
+    };
+
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      logPaymentDebug('처리되지 않은 프로미스 예외', {
+        reason: event.reason,
+      });
+    };
+
+    window.addEventListener('error', handleGlobalError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+    return () => {
+      window.removeEventListener('error', handleGlobalError);
+      window.removeEventListener(
+        'unhandledrejection',
+        handleUnhandledRejection
+      );
+    };
+  }, []);
+
+  useEffect(() => {
+    logPaymentDebug('결제 페이지 마운트됨', {
+      cartLength: cart.length,
+    });
+  }, [cart.length]);
+
+  useEffect(() => {
+    if (bankModalOpen && bankModalGroup) {
+      logPaymentDebug('계좌이체 모달 표시', {
+        groupId: bankModalGroup.id,
+        district: bankModalGroup.district,
+        groupTotal: bankModalGroup.totalPrice,
+        modalError: bankModalError,
+      });
+    }
+  }, [bankModalOpen, bankModalGroup, bankModalError]);
+
+  useEffect(() => {
+    if (tossWidgetOpen && tossWidgetData) {
+      logPaymentDebug('토스 결제 모달 표시', {
+        groupId: tossWidgetData.id,
+        district: tossWidgetData.district,
+        itemsCount: tossWidgetData.items.length,
+        totalPrice: tossWidgetData.totalPrice,
+      });
+    }
+  }, [tossWidgetOpen, tossWidgetData]);
 
   // 일괄적용 핸들러들
   const handleBulkProjectNameToggle = () => {
@@ -1454,10 +1545,20 @@ function PaymentPageContent() {
     setBankModalGroup(group);
     setBankModalLoading(true);
     setBankModalOpen(true);
+    logPaymentDebug('계좌이체 모달 열기 시도', {
+      groupId: group.id,
+      district: group.district,
+      totalPrice: group.totalPrice,
+      itemsCount: group.items.length,
+    });
     const displayType = getDisplayTypeForBankAccount(group);
     if (!displayType) {
       setBankModalError('현재 상품은 계좌이체를 지원하지 않습니다.');
       setBankModalLoading(false);
+      logPaymentDebug('계좌이체 모달 지원 불가', {
+        groupId: group.id,
+        reason: 'displayType missing',
+      });
       return;
     }
     const account = await fetchBankAccountForDistrict(
@@ -1469,10 +1570,21 @@ function PaymentPageContent() {
         `${group.district}의 계좌정보가 아직 등록되지 않았습니다.`
       );
       setBankModalLoading(false);
+      logPaymentDebug('계좌정보 없음', {
+        district: group.district,
+        displayType,
+      });
       return;
     }
     setBankAccountInfo(account);
     setBankModalLoading(false);
+    logPaymentDebug('계좌정보 확인 완료', {
+      district: group.district,
+      account: {
+        bankName: account.bankName,
+        last4: account.accountNumber.slice(-4),
+      },
+    });
   };
 
   const handleBankTransferPayment = async (
@@ -1481,6 +1593,13 @@ function PaymentPageContent() {
   ) => {
     if (isBankTransferProcessing) return;
     setIsBankTransferProcessing(true);
+    logPaymentDebug('계좌이체 결제 시작', {
+      groupId: group.id,
+      district: group.district,
+      totalAmount: group.totalPrice,
+      userId: user?.id,
+      accountName: account.bankName,
+    });
     try {
       if (!user?.id) {
         alert('로그인이 필요합니다.');
@@ -1541,6 +1660,10 @@ function PaymentPageContent() {
         return;
       }
       const paymentMethodId: string = paymentMethodJson.data.id;
+      logPaymentDebug('계좌이체 결제수단 확보', {
+        paymentMethodId,
+        paymentMethodPayload: paymentMethodJson,
+      });
 
       const today = new Date();
       const dateStr = `${today.getFullYear()}${String(
@@ -1585,6 +1708,14 @@ function PaymentPageContent() {
         }
       }
 
+      logPaymentDebug('계좌이체 주문 요청 페이로드', {
+        userAuthId: user.id,
+        userProfileId: group.user_profile_id,
+        draftDeliveryMethod,
+        paymentMethodId,
+        projectName,
+        itemCount: itemsForOrder.length,
+      });
       const orderRes = await fetch('/api/orders', {
         method: 'POST',
         headers: {
@@ -1614,6 +1745,11 @@ function PaymentPageContent() {
         alert(orderJson.error || '계좌이체 주문을 생성할 수 없습니다.');
         return;
       }
+      logPaymentDebug('계좌이체 주문 생성 성공', {
+        orderNumber:
+          orderJson.order?.orderNumber || orderJson.order?.orderId || '(none)',
+        totalPrice: group.totalPrice,
+      });
 
       cartDispatch({ type: 'CLEAR_CART' });
       const orderNumber =
@@ -1628,6 +1764,11 @@ function PaymentPageContent() {
     } catch (error) {
       console.error('🔍 [계좌이체] exception', error);
       alert('계좌이체 주문 처리 중 오류가 발생했습니다.');
+      logPaymentDebug('계좌이체 예외 발생', {
+        error,
+        groupId: group.id,
+        district: group.district,
+      });
     } finally {
       setIsBankTransferProcessing(false);
       closeBankModal();
@@ -1690,6 +1831,14 @@ function PaymentPageContent() {
       })),
     });
 
+    logPaymentDebug('토스 위젯 열기 컨텍스트', {
+      groupId: group.id,
+      district: group.district,
+      totalPrice: group.totalPrice,
+      user_profile_id: group.user_profile_id,
+      itemsCount: group.items.length,
+    });
+
     setTossWidgetData(group);
     setTossWidgetOpen(true);
   };
@@ -1712,6 +1861,13 @@ function PaymentPageContent() {
             currentUserProfiles.length > 0
               ? currentUserProfiles
               : currentProfilesFromContext || [];
+
+          logPaymentDebug('토스 위젯 초기화 시작', {
+            groupId: currentTossWidgetData.id,
+            profilesLoaded: currentProfiles.length,
+            hasClientKey: !!process.env.NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY,
+            cartLength: cart.length,
+          });
 
           // 토스페이먼츠 통합결제창 SDK 동적 로드
           // 문서: https://docs.tosspayments.com/guides/v2/payment-window/integration
@@ -1821,6 +1977,13 @@ function PaymentPageContent() {
                   typeof window !== 'undefined' &&
                   !!(window as unknown as { currentTossOrderId?: string })
                     .currentTossOrderId,
+              });
+
+              logPaymentDebug('결제 버튼 클릭됨', {
+                groupId: currentTossWidgetData.id,
+                totalPrice: currentTossWidgetData.totalPrice,
+                userProfileId: currentTossWidgetData.user_profile_id,
+                clickTimestamp: performance.now(),
               });
 
               // 버튼 비활성화
@@ -2651,6 +2814,21 @@ function PaymentPageContent() {
               }
 
               // 일반 유저는 기존대로 토스 위젯 열기
+              const paymentRequestStart = performance.now();
+
+              logPaymentDebug('결제 요청 페이로드 준비됨', {
+                isTestUser,
+                clientKey: process.env.NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY
+                  ? '[REDACTED]'
+                  : '(없음)',
+                paymentMethod: 'CARD',
+                amount: currentTossWidgetData.totalPrice,
+                hasUserActivation:
+                  typeof navigator !== 'undefined'
+                    ? navigator.userActivation?.hasBeenActive
+                    : null,
+              });
+
               console.log('🔍 [통합결제창] 결제 요청 시작:', {
                 orderId: paymentParams.orderId,
                 orderName: paymentParams.orderName,
@@ -2660,6 +2838,7 @@ function PaymentPageContent() {
                 isTestFreePaymentEnabled,
                 hasTossPayments: !!tossPayments,
                 paymentMethod: 'CARD',
+                paymentRequestStart,
               });
 
               // 통합결제창 방식: tossPayments.requestPayment() 직접 호출
@@ -2673,6 +2852,11 @@ function PaymentPageContent() {
                 customerMobilePhone: paymentParams.customerMobilePhone,
                 successUrl: paymentParams.successUrl,
                 failUrl: paymentParams.failUrl,
+              });
+
+              logPaymentDebug('requestPayment 호출됨', {
+                orderId: paymentParams.orderId,
+                requestCompletionTimestamp: performance.now(),
               });
 
               console.log(
@@ -3572,6 +3756,11 @@ function PaymentPageContent() {
                     className="flex-1 py-2 rounded-lg bg-gray-900 text-white hover:bg-gray-800"
                     onClick={() => {
                       if (tossWidgetData) {
+                        logPaymentDebug('토스 위젯 계좌이체 버튼 클릭', {
+                          groupId: tossWidgetData.id,
+                          district: tossWidgetData.district,
+                          totalPrice: tossWidgetData.totalPrice,
+                        });
                         openBankTransferModal(tossWidgetData);
                       }
                     }}
