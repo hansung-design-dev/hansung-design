@@ -437,7 +437,7 @@ function PaymentPageContent() {
     };
 
     fetchUserProfiles();
-  }, [user?.id, cart, cartDispatch]);
+  }, [user?.id, cart, cartDispatch, user, profiles]);
 
   // cart 업데이트 후 cart가 변경되면 그룹화 다시 수행
   useEffect(() => {
@@ -480,7 +480,6 @@ function PaymentPageContent() {
         }
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cartUpdated, cart]);
 
   // Direct 모드일 때 프로필 정보가 로드된 후 그룹화 다시 수행
@@ -538,6 +537,7 @@ function PaymentPageContent() {
   }, [userProfiles, selectedItems, searchParams, projectName]);
 
   // 묶음 결제를 위한 아이템 그룹화 함수 (useCallback으로 안정화)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const groupItemsByDistrict = useCallback(
     (items: CartItem[], isDirectMode = false): GroupedCartItem[] => {
       // localStorage에서 기본 프로필 ID 직접 가져오기 (항상 확인)
@@ -1103,7 +1103,15 @@ function PaymentPageContent() {
     } else {
       console.log('🔍 Payment page - no items param found');
     }
-  }, [searchParams, cart, isApprovedOrder, groupItemsByDistrict, user]);
+  }, [
+    searchParams,
+    cart,
+    isApprovedOrder,
+    groupItemsByDistrict,
+    user,
+    profiles?.length,
+    userProfiles.length,
+  ]);
 
   // // selectedItems 상태 변경 감지 (디버깅용 - 주기적 실행 방지)
   // useEffect(() => {
@@ -3169,60 +3177,38 @@ function PaymentPageContent() {
                     const isButtonEnabled =
                       hasProjectName && hasFileUploadMethod && hasAgreedToTerms;
 
-                    const bankDisplayType = getDisplayTypeForBankAccount(group);
-                    const bankButtonDisabled =
-                      !isButtonEnabled ||
-                      !bankDisplayType ||
-                      isBankTransferProcessing;
-
                     return (
                       <>
-                        <div className="flex flex-col gap-2">
-                          <div className="flex gap-2">
-                            <Button
-                              onClick={() => openTossWidget(group)}
-                              disabled={!isButtonEnabled}
-                              className={`flex-1 py-2 rounded-lg border border-blue-600 ${
-                                isButtonEnabled
-                                  ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                  : 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                              }`}
-                            >
-                              {group.name} 결제하기
-                            </Button>
-                            <Button
-                              onClick={() => openBankTransferModal(group)}
-                              disabled={bankButtonDisabled}
-                              className={`flex-1 py-2 rounded-lg border border-blue-600 ${
-                                bankButtonDisabled
-                                  ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                                  : 'bg-gray-900 text-white hover:bg-gray-800'
-                              }`}
-                            >
-                              {isBankTransferProcessing
-                                ? '처리중...'
-                                : '계좌이체하기'}
-                            </Button>
+                        <Button
+                          onClick={() => openTossWidget(group)}
+                          disabled={!isButtonEnabled}
+                          className={`w-full py-2 rounded-lg border border-blue-600 ${
+                            isButtonEnabled
+                              ? 'bg-blue-600 text-white hover:bg-blue-700'
+                              : 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                          }`}
+                        >
+                          {group.name} 결제하기
+                        </Button>
+
+                        {!isButtonEnabled && (
+                          <div className="mt-2 text-xs text-red">
+                            {!hasProjectName && (
+                              <div>• 작업이름을 입력해주세요</div>
+                            )}
+                            {!hasFileUploadMethod && (
+                              <div>
+                                •{' '}
+                                {bulkApply.fileUpload || bulkApply.emailMethod
+                                  ? '파일 업로드 방법을 선택해주세요'
+                                  : '모든 아이템의 시안 업로드 방법을 선택해주세요'}
+                              </div>
+                            )}
+                            {!hasAgreedToTerms && (
+                              <div>• 유의사항에 동의해주세요</div>
+                            )}
                           </div>
-                          {!isButtonEnabled && (
-                            <div className="text-xs text-red">
-                              {!hasProjectName && (
-                                <div>• 작업이름을 입력해주세요</div>
-                              )}
-                              {!hasFileUploadMethod && (
-                                <div>
-                                  •{' '}
-                                  {bulkApply.fileUpload || bulkApply.emailMethod
-                                    ? '파일 업로드 방법을 선택해주세요'
-                                    : '모든 아이템의 시안 업로드 방법을 선택해주세요'}
-                                </div>
-                              )}
-                              {!hasAgreedToTerms && (
-                                <div>• 유의사항에 동의해주세요</div>
-                              )}
-                            </div>
-                          )}
-                        </div>
+                        )}
                       </>
                     );
                   })()}
@@ -3577,8 +3563,23 @@ function PaymentPageContent() {
                 {/* 통합결제창 안내 메시지가 여기에 표시됩니다 */}
               </div>
 
-              <div id="toss-payment-button" className="mt-4">
-                {/* 결제 버튼이 여기에 동적으로 추가됩니다 */}
+              <div className="mt-4">
+                <div className="flex gap-2">
+                  <div id="toss-payment-button" className="flex-1">
+                    {/* 결제 버튼이 여기에 동적으로 추가됩니다 */}
+                  </div>
+                  <Button
+                    className="flex-1 py-2 rounded-lg bg-gray-900 text-white hover:bg-gray-800"
+                    onClick={() => {
+                      if (tossWidgetData) {
+                        openBankTransferModal(tossWidgetData);
+                      }
+                    }}
+                    disabled={!tossWidgetData || isBankTransferProcessing}
+                  >
+                    {isBankTransferProcessing ? '처리중...' : '계좌이체하기'}
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
