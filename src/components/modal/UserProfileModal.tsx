@@ -445,6 +445,17 @@ export default function UserProfileModal({
     }
   };
 
+  const handlePhoneVerification = () => {
+    setAlertModal({
+      isOpen: true,
+      title: '나이스 인증 준비 중',
+      message:
+        '나이스 휴대폰 인증은 곧 도입될 예정입니다. 현재는 번호를 입력한 뒤 프로필을 저장해주세요.',
+      type: 'info',
+      onConfirm: () => {},
+    });
+  };
+
   const handleSubmit = async () => {
     try {
       if (!user?.id) {
@@ -673,18 +684,28 @@ export default function UserProfileModal({
             <label className="block text-1 text-gray-2 font-500 mb-2 w-29">
               전화번호<span className="text-red">*</span>
             </label>
-            <input
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => handleInputChange('phone', e.target.value)}
-              className={`w-[80%] px-3 ${
-                className.includes('compact') ? 'py-2' : 'py-4'
-              } border-solid border-1 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-1`}
-              placeholder="010-1234-5678"
-              maxLength={13}
-              inputMode="numeric"
-              autoComplete="tel"
-            />
+            <div className="w-[80%] flex gap-2 items-center">
+              <input
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => handleInputChange('phone', e.target.value)}
+                className={`flex-1 px-3 ${
+                  className.includes('compact') ? 'py-2' : 'py-4'
+                } border-solid border-1 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-1`}
+                placeholder="010-1234-5678"
+                maxLength={13}
+                inputMode="numeric"
+                autoComplete="tel"
+              />
+              <Button
+                onClick={handlePhoneVerification}
+                size="sm"
+                variant="outlineGray"
+                className="rounded-lg"
+              >
+                인증하기
+              </Button>
+            </div>
           </div>
 
           {/* 이메일 */}
