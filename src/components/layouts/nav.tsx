@@ -54,6 +54,34 @@ const IconButton = ({
   const { signOut, user } = useAuth();
   const router = useRouter();
   const [isHovered, setIsHovered] = useState(false);
+  const [isMenuHovered, setIsMenuHovered] = useState(false);
+  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleMenuMouseEnter = () => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    setIsMenuHovered(true);
+  };
+
+  const handleMenuMouseLeave = () => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+    hoverTimeoutRef.current = setTimeout(() => {
+      setIsMenuHovered(false);
+      hoverTimeoutRef.current = null;
+    }, 150);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -92,35 +120,61 @@ const IconButton = ({
   if (label === '마이페이지') {
     if (!user) {
       return (
-        <Link href="/signin" className="relative z-50">
-          <button
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-            className="border-none p-2 rounded-full transition-colors hover:cursor-pointer relative"
-            aria-label={label}
-          >
-            <Image
-              src={iconPath}
-              alt={label}
-              width={30}
-              height={30}
-              className={`w-7 h-7 ${TextInvert ? 'invert' : ''} ${className}`}
-            />
-            {isHovered && (
-              <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-black text-white text-xs rounded whitespace-nowrap z-50">
-                {label}
-              </div>
-            )}
-          </button>
-        </Link>
+        <div className="relative z-50">
+          <Link href="/signin">
+            <button
+              onMouseEnter={() => {
+                setIsHovered(true);
+                handleMenuMouseEnter();
+              }}
+              onMouseLeave={() => {
+                setIsHovered(false);
+                handleMenuMouseLeave();
+              }}
+              className="border-none p-2 rounded-full transition-colors hover:cursor-pointer relative"
+              aria-label={label}
+            >
+              <Image
+                src={iconPath}
+                alt={label}
+                width={30}
+                height={30}
+                className={`w-7 h-7 ${TextInvert ? 'invert' : ''} ${className}`}
+              />
+              {isHovered && (
+                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-black text-white text-xs rounded whitespace-nowrap z-50">
+                  {label}
+                </div>
+              )}
+            </button>
+          </Link>
+          {isMenuHovered && (
+            <div
+              className="absolute right-0 mt-2 w-36 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200"
+              onMouseEnter={handleMenuMouseEnter}
+              onMouseLeave={handleMenuMouseLeave}
+            >
+              <Link
+                href="/signin"
+                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              >
+                로그인
+              </Link>
+            </div>
+          )}
+        </div>
       );
     }
+
+    const dropdownVisible = showDropdown || isMenuHovered;
 
     return (
       <div className="relative">
         <button
           ref={buttonRef}
           onClick={() => onToggleDropdown?.()}
+          onMouseEnter={handleMenuMouseEnter}
+          onMouseLeave={handleMenuMouseLeave}
           className="border-none p-2 rounded-full transition-colors hover:cursor-pointer relative"
           aria-label={label}
         >
@@ -133,9 +187,11 @@ const IconButton = ({
           />
         </button>
 
-        {showDropdown && (
+        {dropdownVisible && (
           <div
             ref={dropdownRef}
+            onMouseEnter={handleMenuMouseEnter}
+            onMouseLeave={handleMenuMouseLeave}
             className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200"
           >
             <Link
