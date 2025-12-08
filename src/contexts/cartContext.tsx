@@ -62,6 +62,8 @@ export interface CartItem {
   email?: string;
   user_profile_id?: string; // 실제 user_profiles 테이블의 ID
   user_auth_id?: string; // 사용자 인증 ID
+  led_slot_id?: string;
+  digitalProductUuid?: string;
   // 파일 업로드 관련 정보 추가
   selectedFile?: File | null;
   fileUploadMethod?: 'upload' | 'email' | null;

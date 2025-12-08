@@ -238,6 +238,7 @@ export default function LEDDisplayPage() {
         panel_slot_status: firstSlot?.panel_slot_status || '',
         panel_id: item.id, // 원본 panels UUID
         maintenance_notes: item.maintenance_notes, // 유지보수 노트 추가
+        led_slot_id: firstSlot?.id,
       };
     });
 

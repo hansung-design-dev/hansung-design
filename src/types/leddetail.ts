@@ -31,4 +31,5 @@ export interface LEDBillboard {
   panel_slot_status: string;
   panel_id?: string;
   maintenance_notes?: string;
+  led_slot_id?: string;
 }

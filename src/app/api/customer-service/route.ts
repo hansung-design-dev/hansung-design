@@ -19,6 +19,32 @@ function getUserIdFromRequest(request: NextRequest): string | null {
   }
 }
 
+type CustomerInquiryProductType = 'led' | 'top_fixed' | 'digital_media_product';
+
+const normalizeProductType = (
+  rawType?: string
+): CustomerInquiryProductType => {
+  if (!rawType) {
+    return 'digital_media_product';
+  }
+
+  const normalized = rawType.toLowerCase();
+  if (normalized.includes('led')) {
+    return 'led';
+  }
+
+  if (
+    normalized.includes('top_fixed') ||
+    normalized.includes('top-fixed') ||
+    normalized.includes('top') ||
+    normalized.includes('banner')
+  ) {
+    return 'top_fixed';
+  }
+
+  return 'digital_media_product';
+};
+
 // 1:1 상담 내역 조회
 export async function GET(request: NextRequest) {
   try {
@@ -111,6 +137,7 @@ export async function GET(request: NextRequest) {
         answered_at: inquiry.answered_at,
         created_at: inquiry.created_at,
         product_name: inquiry.product_name,
+        product_type: inquiry.product_type,
       })) || [];
 
     return NextResponse.json({
@@ -146,8 +173,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { title, content, product_name, product_id, consultationKey } =
-      await request.json();
+    const {
+      title,
+      content,
+      product_name,
+      product_id,
+      product_type,
+      consultationKey,
+      led_slot_id,
+      top_fixed_id,
+      digital_product_id,
+      panel_id,
+    } = await request.json();
 
     if (!title || !content) {
       return NextResponse.json(
@@ -163,18 +200,89 @@ export async function POST(request: NextRequest) {
       consultationKey || product_name || product_id || null;
 
     // 1:1 상담 문의 생성 (새로운 스키마 사용)
+    const normalizedType = normalizeProductType(product_type);
+
+    const inquiryPayload: Record<string, unknown> = {
+      user_auth_id: userId,
+      title,
+      content,
+      product_name: storedProductName ?? null,
+      inquiry_status: 'pending',
+      product_type: normalizedType,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    if (normalizedType === 'led') {
+      let resolvedLedSlotId = led_slot_id ?? null;
+
+      if (!resolvedLedSlotId && panel_id) {
+        const { data: slotRecord, error: lookupError } = await supabase
+          .from('led_slots')
+          .select('id')
+          .eq('panel_id', panel_id)
+          .limit(1)
+          .maybeSingle();
+
+        if (lookupError) {
+          console.error('LED slot lookup failed', lookupError);
+        }
+
+        resolvedLedSlotId = slotRecord?.id ?? null;
+      }
+
+      inquiryPayload.led_slot_id = resolvedLedSlotId;
+    } else if (normalizedType === 'top_fixed') {
+      let resolvedTopFixedId = top_fixed_id ?? null;
+
+      if (resolvedTopFixedId) {
+        const {
+          data: existingTopFixed,
+          error: validationError,
+        } = await supabase
+          .from('top_fixed_banner_inventory')
+          .select('id')
+          .eq('id', resolvedTopFixedId)
+          .limit(1)
+          .maybeSingle();
+
+        if (validationError) {
+          console.error(
+            'Top fixed validation lookup failed:',
+            validationError.message
+          );
+          resolvedTopFixedId = null;
+        }
+
+        if (!existingTopFixed) {
+          resolvedTopFixedId = null;
+        }
+      }
+
+      if (!resolvedTopFixedId && panel_id) {
+        const { data: matchingTopFixed, error: lookupError } = await supabase
+          .from('top_fixed_banner_inventory')
+          .select('id')
+          .eq('panel_id', panel_id)
+          .limit(1)
+          .maybeSingle();
+
+        if (lookupError) {
+          console.error('Top fixed inventory lookup failed:', lookupError);
+        }
+
+        resolvedTopFixedId = matchingTopFixed?.id ?? resolvedTopFixedId;
+      }
+
+      inquiryPayload.top_fixed_id = resolvedTopFixedId ?? null;
+    } else {
+      inquiryPayload.digital_product_id =
+        digital_product_id ?? product_id ?? null;
+    }
+
     const { data: inquiry, error: inquiryError } = await supabase
       .from('customer_inquiries')
-      .insert({
-        user_auth_id: userId,
-        title,
-        content,
-        // Supabase 타입 호환을 위해 undefined 대신 null 처리
-        product_name: storedProductName ?? null,
-        inquiry_status: 'pending',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
+      .insert(inquiryPayload)
       .select()
       .single();
 

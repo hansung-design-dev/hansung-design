@@ -18,6 +18,8 @@ interface Inquiry {
   answer?: string;
   answered_at?: string;
   created_at: string;
+  product_type?: string;
+  product_name?: string;
 }
 
 interface CustomerServiceResponse {
@@ -158,6 +160,32 @@ export default function CustomerServicePage() {
     }
   };
 
+  const getProductLabel = (inquiry: Inquiry) => {
+    const typeMap: Record<string, string> = {
+      led: 'LED 전자게시대',
+      top_fixed: '상단광고',
+      digital_media_product: '디지털미디어 쇼핑몰',
+    };
+
+    if (inquiry.product_type && typeMap[inquiry.product_type]) {
+      return typeMap[inquiry.product_type];
+    }
+
+    if (inquiry.product_name?.startsWith('top_fixed:')) {
+      return '상단광고';
+    }
+
+    if (inquiry.product_name?.startsWith('banner:')) {
+      return '현수막게시대';
+    }
+
+    if (inquiry.product_name?.startsWith('digital_product:')) {
+      return '디지털미디어 쇼핑몰';
+    }
+
+    return inquiry.product_name || '상품 상담';
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('ko-KR');
   };
@@ -211,7 +239,7 @@ export default function CustomerServicePage() {
                         onClick={() => toggleItem(item.id)}
                       >
                         <td className=" py-3 md:py-4 text-center ">
-                          {item.id.slice(0, 8)}
+                          {getProductLabel(item)}
                         </td>
                         <td className="px-2 md:px-4 py-3 md:py-8 border-b border-gray-200">
                           {item.title}

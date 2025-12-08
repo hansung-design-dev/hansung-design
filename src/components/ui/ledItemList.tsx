@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import ArrowLeft from '@/src/icons/arrow-left.svg';
 import ArrowRight from '@/src/icons/arrow-right.svg';
-import Image from 'next/image';
 import { LEDBillboard } from '@/src/types/leddetail';
 
 const statusColorMap: Record<string, string> = {
@@ -257,8 +256,9 @@ const LEDItemList: React.FC<LEDItemTableProps> = ({
             onClick={() => setPage(Math.max(1, page - 1))}
             disabled={page === 1}
             className="p-2 disabled:opacity-50"
+            aria-label="Previous page"
           >
-            <Image src={ArrowLeft} alt="Previous" width={20} height={20} />
+            <ArrowLeft width={20} height={20} />
           </button>
           <span className="text-sm">
             {page} / {totalPages}
@@ -267,8 +267,9 @@ const LEDItemList: React.FC<LEDItemTableProps> = ({
             onClick={() => setPage(Math.min(totalPages, page + 1))}
             disabled={page === totalPages}
             className="p-2 disabled:opacity-50"
+            aria-label="Next page"
           >
-            <Image src={ArrowRight} alt="Next" width={20} height={20} />
+            <ArrowRight width={20} height={20} />
           </button>
         </div>
       )}

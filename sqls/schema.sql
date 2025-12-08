@@ -141,12 +141,18 @@ CREATE TABLE public.center_ad_inventory (
   CONSTRAINT center_ad_inventory_panel_id_fkey FOREIGN KEY (panel_id) REFERENCES public.panels(id),
   CONSTRAINT center_ad_inventory_occupied_slot_id_fkey FOREIGN KEY (occupied_slot_id) REFERENCES public.banner_slots(id)
 );
+CREATE TYPE customer_inquiry_product_type_enum AS ENUM ('led', 'top_fixed', 'digital_media_product');
+
 CREATE TABLE public.customer_inquiries (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_auth_id uuid NOT NULL,
   title text NOT NULL,
   content text NOT NULL,
   product_name text,
+  product_type customer_inquiry_product_type_enum DEFAULT 'digital_media_product',
+  led_slot_id uuid,
+  top_fixed_id uuid,
+  digital_product_id uuid,
   inquiry_status USER-DEFINED DEFAULT 'pending'::inquiry_status_enum,
   answer_content text,
   answer_admin_id uuid,
@@ -154,7 +160,10 @@ CREATE TABLE public.customer_inquiries (
   updated_at timestamp with time zone DEFAULT now(),
   answered_at timestamp with time zone,
   closed_at timestamp with time zone,
-  CONSTRAINT customer_inquiries_pkey PRIMARY KEY (id)
+  CONSTRAINT customer_inquiries_pkey PRIMARY KEY (id),
+  CONSTRAINT customer_inquiries_led_slot_id_fkey FOREIGN KEY (led_slot_id) REFERENCES public.led_slots(id),
+  CONSTRAINT customer_inquiries_top_fixed_id_fkey FOREIGN KEY (top_fixed_id) REFERENCES public.top_fixed_banner_inventory(id),
+  CONSTRAINT customer_inquiries_digital_product_id_fkey FOREIGN KEY (digital_product_id) REFERENCES public.digital_products(id)
 );
 CREATE TABLE public.design_drafts (
   id uuid NOT NULL DEFAULT gen_random_uuid(),

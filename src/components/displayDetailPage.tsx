@@ -876,6 +876,7 @@ export default function DisplayDetailPage({
       // 리스트에 표시된 가격 그대로 사용
       const priceForCart = targetItem.total_price || 0;
       let panelSlotSnapshot = null;
+      let selectedSlotId: string | null = null;
 
       console.log('🔍 Item selected:', {
         district: targetItem.district,
@@ -974,6 +975,8 @@ export default function DisplayDetailPage({
             road_usage_fee: p.road_usage_fee,
           })),
         });
+
+        selectedSlotId = slotInfo?.id || null;
 
         if (
           slotInfo.banner_slot_price_policy &&
@@ -1246,6 +1249,8 @@ export default function DisplayDetailPage({
         });
       }
 
+      const topFixedIdentifier = selectedSlotId || targetItem.panel_id;
+
       const cartItem = {
         id: uniqueCartItemId, // 상반기/하반기 정보를 포함한 고유 ID
         type: 'banner-display' as const,
@@ -1271,8 +1276,8 @@ export default function DisplayDetailPage({
         // - 상단광고: panel_id 기준
         // - 일반 현수막게시대: 상반기/하반기까지 포함한 uniqueCartItemId 기준 (이후 확장 가능)
         consultationKey: isTopFixed
-          ? targetItem.panel_id
-            ? `top_fixed:${targetItem.panel_id}`
+          ? topFixedIdentifier
+            ? `top_fixed:${topFixedIdentifier}`
             : `top_fixed:${uniqueCartItemId}`
           : `banner:${uniqueCartItemId}`,
         // 사용자 프로필 정보 추가 (프로필이 있으면 사용, 없으면 undefined - 장바구니에서 설정 가능)

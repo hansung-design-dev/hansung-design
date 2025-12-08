@@ -65,9 +65,10 @@ async function getDigitalProducts() {
     }
 
     // product_group_code별로 그룹화
-    interface ProductItem {
-      product_group_code: string | null;
-      display_order: number | null;
+interface ProductItem {
+  id?: string;
+  product_group_code: string | null;
+  display_order: number | null;
       product_code?: string;
       title?: string;
       main_image_url?: string;
@@ -115,8 +116,9 @@ async function getDigitalProducts() {
         }
       }
 
-      return {
-        id: product.product_group_code, // 그룹 코드를 id로 사용
+    return {
+      id: product.product_group_code, // 그룹 코드를 id로 사용
+      product_uuid: product.id,
         product_code: product.product_code,
         product_group_code: product.product_group_code,
         title: product.title,

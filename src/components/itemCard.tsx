@@ -14,6 +14,7 @@ interface ItemCardProps {
     title: string;
     src: string;
     images?: string[];
+    productUuid?: string;
   };
 }
 
@@ -58,6 +59,7 @@ export default function ItemCard({ item }: ItemCardProps) {
         email: defaultProfile?.email,
         user_profile_id: defaultProfile?.id,
         user_auth_id: defaultProfile?.user_auth_id || user?.id,
+        digitalProductUuid: item.productUuid,
       };
 
       dispatch({

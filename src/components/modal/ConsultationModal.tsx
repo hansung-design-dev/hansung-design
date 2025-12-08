@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import ModalContainer from './ModalContainer';
 import { Button } from '../button/button';
 import { useAuth } from '@/src/contexts/authContext';
@@ -12,6 +12,7 @@ interface ConsultationModalProps {
   productId?: string;
   productType?: CartItem['type'];
   consultationKey?: string;
+  cartItem?: CartItem;
   onSuccess?: () => void;
 }
 
@@ -39,6 +40,58 @@ interface ExistingInquiry {
   answered_at?: string;
   created_at: string;
 }
+
+type CustomerInquiryProductType = 'led' | 'top_fixed' | 'digital_media_product';
+
+const determineProductType = (
+  cartType?: CartItem['type'],
+  cartItem?: CartItem
+): CustomerInquiryProductType => {
+  if (cartType === 'led-display') {
+    return 'led';
+  }
+
+  const isTopFixed =
+    cartItem?.isTopFixed ||
+    cartItem?.panel_slot_snapshot?.banner_type === 'top_fixed' ||
+    cartItem?.panel_type === 'top_fixed';
+
+  if (cartType === 'banner-display' && isTopFixed) {
+    return 'top_fixed';
+  }
+
+  if (
+    cartType === 'digital-product' ||
+    cartType === 'digital-signage' ||
+    cartType === 'public-design'
+  ) {
+    return 'digital_media_product';
+  }
+
+  if (!cartType) {
+    return 'digital_media_product';
+  }
+
+  const normalized = cartType.toLowerCase();
+  if (normalized.includes('led')) {
+    return 'led';
+  }
+  if (
+    normalized.includes('top') ||
+    normalized.includes('fixed') ||
+    normalized.includes('banner')
+  ) {
+    return 'top_fixed';
+  }
+
+  return 'digital_media_product';
+};
+
+const resolveSlotId = (cartItem?: CartItem) =>
+  cartItem?.led_slot_id ||
+  cartItem?.panel_slot_snapshot?.id ||
+  cartItem?.panel_slot_usage_id ||
+  null;
 
 // 성공 모달 컴포넌트
 function SuccessModal({
@@ -124,6 +177,7 @@ export default function ConsultationModal({
   productId,
   productType,
   consultationKey,
+  cartItem,
   onSuccess,
 }: ConsultationModalProps) {
   const [consultationContent, setConsultationContent] = useState('');
@@ -136,6 +190,23 @@ export default function ConsultationModal({
   const { user } = useAuth();
 
   const isPendingExistingInquiry = existingInquiry?.status === 'pending';
+
+  const derivedProductInfo = useMemo(() => {
+    const normalizedProductType = determineProductType(productType, cartItem);
+    const slotId = resolveSlotId(cartItem);
+    const digitalProductId = cartItem?.digitalProductUuid || null;
+
+    return {
+      product_type: normalizedProductType,
+      led_slot_id: normalizedProductType === 'led' ? slotId : null,
+      top_fixed_id: normalizedProductType === 'top_fixed' ? slotId : null,
+      digital_product_id:
+        normalizedProductType === 'digital_media_product'
+          ? digitalProductId
+          : null,
+      panel_id: cartItem?.panel_id || null,
+    };
+  }, [cartItem, productType]);
 
   // 모달이 열릴 때 기존 문의 확인
   useEffect(() => {
@@ -211,19 +282,43 @@ export default function ConsultationModal({
     setError('');
 
     try {
+      if (
+        derivedProductInfo.product_type === 'digital_media_product' &&
+        !derivedProductInfo.digital_product_id
+      ) {
+        setError(
+          '상품 정보를 새로 받아오지 못했습니다. 장바구니에서 해당 상품을 제거하고 다시 담은 뒤 문의해주세요.'
+        );
+        setLoading(false);
+        return;
+      }
+      const payload: Record<string, unknown> = {
+        title: `${productName} 상담문의`,
+        content: consultationContent,
+        // 새로운 스키마에서는 product_name 컬럼에 consultationKey를 저장
+        product_name: consultationKey || productName,
+        product_type: derivedProductInfo.product_type,
+        led_slot_id: derivedProductInfo.led_slot_id,
+        top_fixed_id: derivedProductInfo.top_fixed_id,
+        digital_product_id: derivedProductInfo.digital_product_id,
+        panel_id: derivedProductInfo.panel_id,
+      };
+
+      const legacyProductId =
+        derivedProductInfo.digital_product_id || productId || null;
+      if (
+        legacyProductId &&
+        derivedProductInfo.product_type === 'digital_media_product'
+      ) {
+        payload.product_id = legacyProductId;
+      }
+
       const response = await fetch('/api/customer-service', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          title: `${productName} 상담문의`,
-          content: consultationContent,
-          // 새로운 스키마에서는 product_name 컬럼에 consultationKey를 저장
-          product_name: consultationKey || productName,
-          product_id: productId,
-          product_type: productType,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data: InquiryResponse = await response.json();

@@ -338,6 +338,7 @@ export default function LEDDisplayDetailPage({
           panel_code: item.panel_code?.toString(),
           photo_url: item.photo_url || undefined, // 게시대 사진 URL 추가
           total_price: item.total_price, // LED 아이템의 실제 가격 정보 추가
+          led_slot_id: item.led_slot_id,
           // 상담 중복 방지를 위한 공통 키 (LED 전자게시대는 panel_id 기준)
           consultationKey: item.panel_id
             ? `led:${item.panel_id}`
@@ -403,6 +404,7 @@ export default function LEDDisplayDetailPage({
         panel_id: item.panel_id, // 원본 UUID
         panel_code: item.panel_code?.toString(),
         photo_url: item.photo_url || undefined, // 게시대 사진 URL 추가
+        led_slot_id: item.led_slot_id,
         // 상담 중복 방지를 위한 공통 키 (LED 전자게시대는 panel_id 기준)
         consultationKey: item.panel_id
           ? `led:${item.panel_id}`

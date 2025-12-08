@@ -16,6 +16,7 @@ interface DigitalMediaItem {
   title: string;
   src: string;
   images?: string[];
+  productUuid?: string;
 }
 
 // API 응답 타입
@@ -23,6 +24,7 @@ interface DigitalProductItem {
   id?: string;
   product_code?: string;
   product_group_code?: string;
+  product_uuid?: string;
   title: string;
   main_image_url: string;
   image_urls?: string[] | string;
@@ -111,6 +113,7 @@ function DigitalSignagePageContent() {
             const uniqueImages = Array.from(new Set(allImages.filter(Boolean)));
             return {
               id: item.product_group_code || item.product_code || item.id || '',
+              productUuid: item.product_uuid || item.id || '',
               title: item.title,
               src: uniqueImages[0] || item.main_image_url,
               images:

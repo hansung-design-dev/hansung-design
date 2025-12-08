@@ -464,6 +464,9 @@ function CartContent() {
   const [selectedConsultationKey, setSelectedConsultationKey] = useState<
     string | undefined
   >(undefined);
+  const [selectedCartItem, setSelectedCartItem] = useState<CartItem | null>(
+    null
+  );
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<CartItem | null>(null);
   const [isGroupDeleteModalOpen, setIsGroupDeleteModalOpen] = useState(false);
@@ -946,11 +949,15 @@ function CartContent() {
         // fallback: 타입 + ID 조합으로 기본 키 생성
         `${productType}:${productId}`
     );
+    setSelectedCartItem(
+      cart.find((item) => item.id === productId) || null
+    );
     setIsConsultationModalOpen(true);
   };
 
   const handleConsultationSuccess = () => {
     setIsConsultationModalOpen(false);
+    setSelectedCartItem(null);
 
     // 상담신청이 완료된 아이템을 장바구니에서 즉시 제거
     if (selectedProductId) {
@@ -979,6 +986,11 @@ function CartContent() {
 
     // 문의 상태 다시 확인 (기존 로직 유지 - 임시 비활성화)
     // fetchInquiryStatuses(cart);
+  };
+
+  const handleConsultationModalClose = () => {
+    setIsConsultationModalOpen(false);
+    setSelectedCartItem(null);
   };
 
   // 기간 변경 핸들러 추가
@@ -2195,11 +2207,12 @@ function CartContent() {
 
       <ConsultationModal
         isOpen={isConsultationModalOpen}
-        onClose={() => setIsConsultationModalOpen(false)}
+        onClose={handleConsultationModalClose}
         productName={selectedProductName}
         productId={selectedProductId}
         productType={selectedProductType}
         consultationKey={selectedConsultationKey}
+        cartItem={selectedCartItem ?? undefined}
         onSuccess={handleConsultationSuccess}
       />
 
