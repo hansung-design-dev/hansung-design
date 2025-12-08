@@ -277,7 +277,10 @@ function PaymentSuccessContent() {
           const paidItemIds =
             orderData?.items
               ?.map((item: { id?: string }) => item.id)
-              .filter((id): id is string => Boolean(id)) ?? [];
+              .filter(
+                (id: string | undefined): id is string =>
+                  typeof id === 'string' && id.length > 0
+              ) ?? [];
           console.log('🔍 [결제 성공 페이지] 제거할 아이템 ID', {
             paidItemIds,
           });
