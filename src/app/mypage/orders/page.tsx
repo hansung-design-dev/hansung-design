@@ -188,6 +188,7 @@ interface DisplayItem {
   isClosed?: boolean; // 마감 여부
   panelCode?: string; // 게시대번호 (현수막게시대용)
   category?: string; // 품명 (현수막게시대, 전자게시대 등)
+  orderDetailId?: string; // 연결된 order_detail ID
   order?: Order; // 전체 주문 정보
 }
 
@@ -224,6 +225,10 @@ interface OrderCardData {
   profileCompany?: string; // 주문 프로필 회사명
 }
 
+type CancelTarget =
+  | { kind: 'order'; orderNumber: string }
+  | { kind: 'detail'; orderNumber: string; orderDetailId: string };
+
 // 상담문의 데이터 (주문내역 페이지에서 사용)
 interface InquiryForOrders {
   id: string;
@@ -250,7 +255,7 @@ export default function OrdersPage() {
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isCancelSuccessModalOpen, setIsCancelSuccessModalOpen] =
     useState(false);
-  const [orderToCancel, setOrderToCancel] = useState<string | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<CancelTarget | null>(null);
   const [isCancelNotAllowedModalOpen, setIsCancelNotAllowedModalOpen] =
     useState(false);
   const [inquiries, setInquiries] = useState<InquiryForOrders[]>([]);
@@ -258,7 +263,7 @@ export default function OrdersPage() {
   const [receiptData, setReceiptData] = useState<OrderCardData | null>(null);
 
   // 신청취소 핸들러
-  const handleCancelClick = (order: Order) => {
+  const handleCancelClick = (order: Order, orderDetailId?: string) => {
     if (!order) return;
 
     try {
@@ -271,36 +276,57 @@ export default function OrdersPage() {
 
         // 주문일로부터 2일(48시간) 이상 경과한 경우: 취소 불가
         if (diffDays >= 2) {
-          setOrderToCancel(null);
+          setCancelTarget(null);
           setIsCancelModalOpen(false);
           setIsCancelNotAllowedModalOpen(true);
           return;
         }
       }
 
+      const target: CancelTarget = orderDetailId
+        ? {
+            kind: 'detail',
+            orderNumber: order.order_number,
+            orderDetailId,
+          }
+        : {
+            kind: 'order',
+            orderNumber: order.order_number,
+          };
+
       // 2일 이내인 경우에만 실제 취소 확인 모달 표시
-      setOrderToCancel(order.order_number);
+      setCancelTarget(target);
       setIsCancelModalOpen(true);
     } catch (e) {
       console.error('신청 취소 가능 여부 판단 중 오류:', e);
-      setOrderToCancel(null);
+      setCancelTarget(null);
       setIsCancelModalOpen(false);
     }
   };
 
   const handleCancelConfirm = async () => {
-    if (!orderToCancel) return;
+    if (!cancelTarget) return;
 
     try {
-      const response = await fetch(`/api/orders/cancel`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          orderNumber: orderToCancel,
-        }),
-      });
+      let response: Response;
+      if (cancelTarget.kind === 'detail') {
+        response = await fetch(
+          `/api/order-details/${cancelTarget.orderDetailId}`,
+          {
+            method: 'DELETE',
+          }
+        );
+      } else {
+        response = await fetch(`/api/orders/cancel`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            orderNumber: cancelTarget.orderNumber,
+          }),
+        });
+      }
 
       const data = await response.json();
 
@@ -326,13 +352,13 @@ export default function OrdersPage() {
       alert('주문 취소 중 오류가 발생했습니다.');
     } finally {
       setIsCancelModalOpen(false);
-      setOrderToCancel(null);
+      setCancelTarget(null);
     }
   };
 
   const handleCancelModalClose = () => {
     setIsCancelModalOpen(false);
-    setOrderToCancel(null);
+    setCancelTarget(null);
   };
 
   // 결제하기 핸들러
@@ -452,6 +478,24 @@ export default function OrdersPage() {
     let globalIndex = 1;
     const displayItems: DisplayItem[] = [];
 
+    const safeTrim = (value?: string | number): string => {
+      if (value === undefined || value === null) return '';
+      if (typeof value === 'string') return value.trim();
+      return String(value).trim();
+    };
+
+    const buildBoardLabel = (
+      rowNumber: number,
+      panelCode?: string | number,
+      panelName?: string,
+      panelAddress?: string
+    ): string => {
+      const codeLabel = safeTrim(panelCode) || '-';
+      const addressLabel = safeTrim(panelAddress) || '-';
+      const nameLabel = safeTrim(panelName) || addressLabel || '-';
+      return `${rowNumber}. ${codeLabel} / ${nameLabel} / ${addressLabel}`;
+    };
+
     orders.forEach((order) => {
       const orderDetails = order.order_details || [];
 
@@ -463,9 +507,13 @@ export default function OrdersPage() {
             order.projectName && order.projectName !== '프로젝트명 없음'
               ? order.projectName
               : (() => {
-                  const orderWithDrafts = order as Order & { design_drafts?: Array<{ project_name?: string }> };
-                  const draftProjectName = orderWithDrafts.design_drafts?.[0]?.project_name;
-                  return draftProjectName && draftProjectName !== '프로젝트명 없음'
+                  const orderWithDrafts = order as Order & {
+                    design_drafts?: Array<{ project_name?: string }>;
+                  };
+                  const draftProjectName =
+                    orderWithDrafts.design_drafts?.[0]?.project_name;
+                  return draftProjectName &&
+                    draftProjectName !== '프로젝트명 없음'
                     ? draftProjectName
                     : null;
                 })();
@@ -473,15 +521,21 @@ export default function OrdersPage() {
           // 품명 확인 (현수막게시대인지 확인)
           const displayTypeName = item.panels?.display_types?.name || '';
           const category = formatDisplayType(displayTypeName);
-          const isBannerDisplay = category === '현수막게시대';
-          
+          const panelAddress = item.panels?.address;
+          const panelName = item.panels?.nickname;
+          const panelCode = item.panels?.panel_code || item.panel_id;
+          const rowNumber = globalIndex++;
+          const boardLabel = buildBoardLabel(
+            rowNumber,
+            panelCode,
+            panelName,
+            panelAddress
+          );
+
           displayItems.push({
-            id: globalIndex++,
-            // 게시대명: address (nickname) [게시대번호]
-            title:
-              (item.panels?.address || '') +
-              (item.panels?.nickname ? ` (${item.panels.nickname})` : '') +
-              (isBannerDisplay && item.panels?.panel_code ? ` [${item.panels.panel_code}]` : ''),
+            id: rowNumber,
+            // 게시대명 (넘버. 게시대번호 / 게시대명 / 주소)
+            title: boardLabel,
             // 작업명을 subtitle로 추가
             subtitle: projectName || undefined,
             // 행정동
@@ -491,6 +545,7 @@ export default function OrdersPage() {
             // 결제여부
             paymentStatus: getPaymentStatusDisplay(order.payment_status),
             orderId: order.order_number,
+            orderDetailId: item.id,
             totalAmount:
               (order.payments?.[0]?.amount || 0).toLocaleString() + '원',
             startDate: item.display_start_date,
@@ -504,14 +559,14 @@ export default function OrdersPage() {
       } else {
         // 상담신청 기반 등 order_details가 없는 주문도 목록에 표시
         const inquiry = findInquiryForOrder(order);
-
-        let title = order.projectName || '상담신청 주문';
         let location = order.user_profiles?.company_name || '';
 
+        let panelAlias = order.projectName || '상담신청 주문';
+        let panelAddress = '';
         if (inquiry?.product_name) {
           const { alias, address } = splitProductName(inquiry.product_name);
-          // 게시대명 컬럼: "수유사거리 앞 - 서울 강북구 도봉로 316-1"
-          title = `${alias}${address ? ` - ${address}` : ''}`;
+          panelAlias = alias || panelAlias;
+          panelAddress = address || '';
 
           // 행정동 컬럼: 주소에서 "강북구" 같은 구 이름만 추출
           const addressParts = address.split(' ');
@@ -519,12 +574,21 @@ export default function OrdersPage() {
             addressParts.length >= 2 ? addressParts[1] : address || '';
           location = guName;
         } else if (inquiry?.title) {
-          title = inquiry.title;
+          panelAlias = inquiry.title;
         }
 
+        const rowNumber = globalIndex++;
+        const boardLabel = buildBoardLabel(
+          rowNumber,
+          undefined,
+          panelAlias,
+          panelAddress
+        );
+
         displayItems.push({
-          id: globalIndex++,
-          title,
+          id: rowNumber,
+          title: boardLabel,
+          subtitle: order.projectName || undefined,
           location,
           status: '진행중',
           paymentStatus: getPaymentStatusDisplay(order.payment_status),
@@ -639,6 +703,24 @@ export default function OrdersPage() {
     displayEndDate: '-',
   };
 
+  // 주문일시 포맷 (년월일)
+  const formatOrderDate = (dateString?: string): string => {
+    if (!dateString) return '-';
+    try {
+      const date = new Date(dateString);
+      if (Number.isNaN(date.getTime())) {
+        return '-';
+      }
+      return date.toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+    } catch {
+      return '-';
+    }
+  };
+
   // 송출기간 포맷팅 함수 (현수막게시대는 상/하반기까지 표시)
   const formatDisplayPeriod = (startDate: string, endDate: string): string => {
     if (!startDate || !endDate || startDate === '-' || endDate === '-') {
@@ -751,10 +833,13 @@ export default function OrdersPage() {
     // - design_drafts[0].project_name 우선 사용 (원본 데이터)
     // - 없으면 order.projectName 사용 (API에서 이미 처리된 값)
     // - 둘 다 없으면 '프로젝트명 없음' 또는 '미정'
-    const orderWithDrafts = order as Order & { design_drafts?: Array<{ project_name?: string }> };
-    const projectNameFromDraft = orderWithDrafts.design_drafts?.[0]?.project_name;
+    const orderWithDrafts = order as Order & {
+      design_drafts?: Array<{ project_name?: string }>;
+    };
+    const projectNameFromDraft =
+      orderWithDrafts.design_drafts?.[0]?.project_name;
     const projectNameFromOrder = order.projectName;
-    
+
     console.log('🔍 [mapOrderDetailToCard] 프로젝트명 확인 (상세):', {
       orderNumber: order.order_number,
       design_drafts: orderWithDrafts.design_drafts,
@@ -762,29 +847,29 @@ export default function OrdersPage() {
       projectNameFromOrder,
       design_drafts_id: order.design_drafts_id,
     });
-    
+
     const hasRealProjectName =
-      (projectNameFromDraft && 
-       projectNameFromDraft.trim() !== '' &&
-       projectNameFromDraft !== '프로젝트명 없음' && 
-       projectNameFromDraft !== '미정') ||
-      (projectNameFromOrder && 
-       projectNameFromOrder !== '프로젝트명 없음' && 
-       projectNameFromOrder !== '미정');
-    
+      (projectNameFromDraft &&
+        projectNameFromDraft.trim() !== '' &&
+        projectNameFromDraft !== '프로젝트명 없음' &&
+        projectNameFromDraft !== '미정') ||
+      (projectNameFromOrder &&
+        projectNameFromOrder !== '프로젝트명 없음' &&
+        projectNameFromOrder !== '미정');
+
     // design_drafts의 project_name을 우선 사용 (원본 데이터)
     let finalProjectName =
-      (projectNameFromDraft && 
-       projectNameFromDraft.trim() !== '' &&
-       projectNameFromDraft !== '프로젝트명 없음' && 
-       projectNameFromDraft !== '미정')
+      projectNameFromDraft &&
+      projectNameFromDraft.trim() !== '' &&
+      projectNameFromDraft !== '프로젝트명 없음' &&
+      projectNameFromDraft !== '미정'
         ? projectNameFromDraft
-        : (projectNameFromOrder && 
-           projectNameFromOrder !== '프로젝트명 없음' && 
-           projectNameFromOrder !== '미정')
+        : projectNameFromOrder &&
+          projectNameFromOrder !== '프로젝트명 없음' &&
+          projectNameFromOrder !== '미정'
         ? projectNameFromOrder
         : '프로젝트명 없음';
-    
+
     // 게시대 명: 주소 + 별칭 조합
     let panelDisplayName = '-';
     if (panelInfo.address) {
@@ -793,10 +878,10 @@ export default function OrdersPage() {
         panelDisplayName += ` (${panelInfo.nickname})`;
       }
     }
-    
+
     // 게시대번호 추출 (현수막게시대용)
     const panelCode = panelInfo.panel_code || undefined;
-    
+
     console.log('🔍 [mapOrderDetailToCard] 프로젝트명 확인:', {
       orderNumber: order.order_number,
       projectNameFromOrder,
@@ -848,7 +933,7 @@ export default function OrdersPage() {
       paymentMethod: latestPayment?.payment_methods?.name ?? '-',
       paymentMethodCode: latestPayment?.payment_methods?.method_code,
       depositorName: latestPayment?.depositor_name ?? '-',
-      orderDate: order.created_at ?? '-',
+      orderDate: formatOrderDate(order.created_at ?? undefined),
       canCancel,
       daysSinceOrder,
       // 추가 필드들

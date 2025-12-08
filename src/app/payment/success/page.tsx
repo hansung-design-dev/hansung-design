@@ -8,7 +8,7 @@ import { useCart } from '@/src/contexts/cartContext';
 function PaymentSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { dispatch: cartDispatch } = useCart();
+  const { cart, dispatch: cartDispatch } = useCart();
   const [paymentInfo, setPaymentInfo] = useState<{
     paymentId: string;
     orderId: string;
@@ -272,9 +272,23 @@ function PaymentSuccessContent() {
             status: 'completed',
           });
 
-          // 주문 완료 후 장바구니 초기화
-          console.log('🔍 [결제 성공 페이지] 장바구니 초기화');
-          cartDispatch({ type: 'CLEAR_CART' });
+          // 주문 완료 후 장바구니에서 결제된 항목만 제거
+          console.log('🔍 [결제 성공 페이지] 장바구니 로직 계산');
+          const paidItemIds =
+            orderData?.items
+              ?.map((item: { id?: string }) => item.id)
+              .filter((id): id is string => Boolean(id)) ?? [];
+          console.log('🔍 [결제 성공 페이지] 제거할 아이템 ID', {
+            paidItemIds,
+          });
+          if (paidItemIds.length > 0) {
+            cartDispatch({ type: 'REMOVE_ITEMS', ids: paidItemIds });
+          } else {
+            console.log(
+              '🔍 [결제 성공 페이지] orderData가 없어 장바구니 상태 유지',
+              { cartLength: cart.length }
+            );
+          }
         } catch (error) {
           console.error('🔍 [결제 성공 페이지] ❌ 결제 확인 중 예외 발생:', {
             error,
@@ -326,6 +340,21 @@ function PaymentSuccessContent() {
   const handleGoToHome = () => {
     router.push('/');
   };
+
+  const handleContinuePayment = () => {
+    if (cart.length === 0) {
+      router.push('/payment');
+      return;
+    }
+
+    const remainingItemIds = cart.map((item) => item.id);
+    const serializedItems = encodeURIComponent(JSON.stringify(remainingItemIds));
+    router.push(`/payment?items=${serializedItems}`);
+  };
+
+  const hasPendingItems = cart.length > 0;
+  const shouldShowContinuePaymentButton =
+    Boolean(paymentInfo) && !isProcessing && !error && hasPendingItems;
 
   return (
     <main className="min-h-screen bg-white pt-[5.5rem] bg-gray-100 lg:px-[10rem]">
@@ -428,6 +457,15 @@ function PaymentSuccessContent() {
               >
                 주문 내역 보기
               </button>
+
+              {shouldShowContinuePaymentButton && (
+                <button
+                  onClick={handleContinuePayment}
+                  className="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg hover:bg-indigo-700 transition-colors"
+                >
+                  남은 구 계속 결제하기
+                </button>
+              )}
 
               <button
                 onClick={handleGoToHome}

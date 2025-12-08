@@ -1751,7 +1751,10 @@ function PaymentPageContent() {
         totalPrice: group.totalPrice,
       });
 
-      cartDispatch({ type: 'CLEAR_CART' });
+      const paidItemIds = itemsForOrder.map((item) => item.id);
+      if (paidItemIds.length > 0) {
+        cartDispatch({ type: 'REMOVE_ITEMS', ids: paidItemIds });
+      }
       const orderNumber =
         orderJson.order?.orderNumber || orderJson.order?.orderId || '';
       const paymentId = `bank_${orderNumber || dateStr}`;
@@ -2798,7 +2801,10 @@ function PaymentPageContent() {
                   );
 
                   console.log('🔍 [결제 페이지] 장바구니 초기화');
-                  cartDispatch({ type: 'CLEAR_CART' });
+                  const paidItemIds = paymentData.items.map((item) => item.id);
+                  if (paidItemIds.length > 0) {
+                    cartDispatch({ type: 'REMOVE_ITEMS', ids: paidItemIds });
+                  }
 
                   window.location.href = `/payment/success?orderId=${
                     confirmResult.data?.orderId || finalOrderId
@@ -3272,7 +3278,7 @@ function PaymentPageContent() {
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">부가세:</span>
+                      <span className="text-gray-600">수수료:</span>
                       <span className="font-medium">
                         {group.items
                           .reduce(
@@ -3307,6 +3313,10 @@ function PaymentPageContent() {
                     <label htmlFor="modal-tax">
                       세금계산서 발급을 원합니다
                     </label>
+                    <span>
+                      *세금계산서 발행시 입금자명을 사업자명으로 표시해주세요.
+                    </span>
+                    <span>*세금계산서 미발행시 현금영수증 가능합니다.</span>
                   </div>
                 </div>
                 {/* 결제 버튼 */}
@@ -3437,11 +3447,11 @@ function PaymentPageContent() {
                 </h4>
                 <ul className="text-sm text-gray-700 space-y-2 mb-4">
                   <li>
-                    • 법정공휴일 또는 강풍, 우천, 폭설 시에는 현수막 게시 일정이
+                    법정공휴일 또는 강풍, 우천, 폭설 시에는 현수막 게시 일정이
                     전후날로 변경 될 수 있습니다.
                   </li>
                   <li>
-                    • 현수막 게시 기간 중, 태풍, 재난, 긴급 공사 등의 사유가
+                    현수막 게시 기간 중, 태풍, 재난, 긴급 공사 등의 사유가
                     발생할 때에는 광고주에게 사전 통보 없이 게시를 일시 중지 할
                     수 있습니다.
                   </li>
@@ -3464,28 +3474,28 @@ function PaymentPageContent() {
                 </h4>
                 <ul className="text-sm text-gray-700 space-y-2">
                   <li>
-                    · 현수막 접수일 기준(주말·공휴일 제외)으로 3일내에 입금 및
+                    현수막 접수일 기준(주말·공휴일 제외)으로 3일내에 입금 및
                     결제를 진행해야 합니다.
                   </li>
                   <li>
-                    · 결제기간 내 결제하지 않을 시 통보 후 기간 조율 또는 취소를
+                    결제기간 내 결제하지 않을 시 통보 후 기간 조율 또는 취소를
                     진행할 수 있습니다.
                   </li>
-                  <li>· 게시일 기준 2주 전까지는 100% 환불할 수 있습니다.</li>
+                  <li>게시일 기준 2주 전까지는 100% 환불할 수 있습니다.</li>
                   <li>
-                    · 디자인 조율 후 출력 및 제작이 들어간 상태라면 출력비용을
+                    디자인 조율 후 출력 및 제작이 들어간 상태라면 출력비용을
                     제외하고 환불받을 수 있습니다.
                   </li>
                   <li>
-                    · 출력 후 게시 준비까지 마무리되었다면 환불을 받을 수
+                    출력 후 게시 준비까지 마무리되었다면 환불을 받을 수
                     없습니다.
                   </li>
                   <li>
-                    · 게시 후, 단순 변심으로 인한 게시 취소일 경우
+                    게시 후, 단순 변심으로 인한 게시 취소일 경우
                     철거비용(인건비와 장비비용)을 지불하고 철거해야 합니다.
                   </li>
                   <li>
-                    · 게시물 허용한 내용이 미관을 해치거나 혐오를 줄 수 있는
+                    게시물 허용한 내용이 미관을 해치거나 혐오를 줄 수 있는
                     내용일 시 강제취소를 통보받을 수 있으며 환불을 진행받을 수
                     있습니다.
                   </li>
@@ -3543,7 +3553,7 @@ function PaymentPageContent() {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">부가세:</span>
+                <span className="text-gray-600">수수료:</span>
                 <span className="font-medium">
                   {finalPriceSummary.taxPrice.toLocaleString()}원
                 </span>

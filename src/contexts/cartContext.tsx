@@ -82,6 +82,7 @@ type CartAction =
   | { type: 'ADD_ITEM'; item: CartItem }
   | { type: 'REMOVE_ITEM'; id: string }
   | { type: 'UPDATE_CART'; items: CartItem[] }
+  | { type: 'REMOVE_ITEMS'; ids: string[] }
   | { type: 'CLEAR_CART' }
   | { type: 'LOAD_CART'; state: CartState };
 
@@ -307,6 +308,28 @@ function cartReducer(state: CartState, action: CartAction): CartState {
       });
       saveCartToStorage(newState);
       return newState;
+
+    case 'REMOVE_ITEMS': {
+      if (action.ids.length === 0) {
+        return state;
+      }
+      const idsToRemove = new Set(action.ids);
+      const filteredItems = state.items.filter(
+        (item) => !idsToRemove.has(item.id)
+      );
+      const newState = {
+        items: filteredItems,
+        lastUpdated: Date.now(),
+      };
+      console.log('🔍 New cart state after REMOVE_ITEMS:', newState);
+      logCartDebug('여러 아이템 제거됨', {
+        action: 'REMOVE_ITEMS',
+        removedIds: action.ids,
+        totalItems: newState.items.length,
+      });
+      saveCartToStorage(newState);
+      return newState;
+    }
 
     case 'CLEAR_CART':
       console.log('🔍 Clearing cart');

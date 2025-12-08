@@ -75,6 +75,7 @@ interface ListItem {
   orderId?: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   order?: any; // 전체 주문 정보
+  orderDetailId?: string;
 }
 
 const statusColorMap: Record<string, string> = {

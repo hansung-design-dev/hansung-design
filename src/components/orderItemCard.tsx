@@ -63,7 +63,9 @@ export default function OrderItemCard({
   // 카드/온라인 결제 대기인지 확인 (결제하기 버튼 표시)
   const isPaymentPending =
     !isBankTransferPending &&
-    (paymentStatus === '대기' || paymentStatus === 'pending_payment' || paymentStatus === 'pending');
+    (paymentStatus === '대기' ||
+      paymentStatus === 'pending_payment' ||
+      paymentStatus === 'pending');
 
   return (
     <div className="rounded-lg overflow-hidden py-[2rem] sm:py-4">
@@ -110,6 +112,10 @@ export default function OrderItemCard({
                     ' / ' +
                     (orderDetail.profileCompany || '-')}
                 </div>
+                <div className="text-gray-600 mb-2">주문일시</div>
+                <div className="font-700 text-1.25 sm:text-1">
+                  {orderDetail.orderDate || '-'}
+                </div>
 
                 <div className="col-span-2 border-t border-gray-3 my-2 sm:col-span-2">
                   <svg
@@ -135,14 +141,15 @@ export default function OrderItemCard({
                 </div>
 
                 {/* 현수막게시대인 경우 게시대번호 표시 */}
-                {orderDetail.category === '현수막게시대' && orderDetail.panelCode && (
-                  <>
-                    <div className="text-gray-600 mb-2">게시대번호</div>
-                    <div className="font-700 text-1.25 sm:text-1">
-                      {orderDetail.panelCode}
-                    </div>
-                  </>
-                )}
+                {orderDetail.category === '현수막게시대' &&
+                  orderDetail.panelCode && (
+                    <>
+                      <div className="text-gray-600 mb-2">게시대번호</div>
+                      <div className="font-700 text-1.25 sm:text-1">
+                        {orderDetail.panelCode}
+                      </div>
+                    </>
+                  )}
 
                 <div className="text-gray-600 mb-2">위치</div>
                 <div className="font-700 text-1.25 sm:text-1">
@@ -171,7 +178,7 @@ export default function OrderItemCard({
                   {orderDetail.advertisingFee?.toLocaleString?.() ?? '-'}원
                 </div>
 
-                <div className="text-gray-600 mb-2">부가세</div>
+                <div className="text-gray-600 mb-2">수수료금 주</div>
                 <div className="text-1.25 sm:text-1">
                   {orderDetail.vat?.toLocaleString?.() ?? '-'}원
                 </div>
