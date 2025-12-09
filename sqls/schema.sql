@@ -485,9 +485,13 @@ CREATE TABLE public.public_design_contents (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   image_urls ARRAY DEFAULT '{}'::text[],
+  parent_id uuid,
   project_category USER-DEFINED NOT NULL,
   CONSTRAINT public_design_contents_pkey PRIMARY KEY (id)
 );
+ALTER TABLE public.public_design_contents
+  ADD CONSTRAINT public_design_contents_parent_id_fkey
+  FOREIGN KEY (parent_id) REFERENCES public.public_design_contents(id);
 CREATE TABLE public.digital_media_signages (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   district_code character varying NOT NULL UNIQUE,

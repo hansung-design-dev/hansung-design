@@ -38,23 +38,50 @@ export async function GET(
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
-    // 상세 이미지들 가져오기 (detail 타입) - 해당 display_order의 프로젝트만
-    const { data: detailContents, error: detailError } = await supabase
-      .from('public_design_contents')
-      .select('*')
-      .eq('project_category', project_category)
-      .eq('design_contents_type', 'detail')
-      .eq('display_order', displayOrderNum)
-      .eq('is_active', true)
-      .order('display_order', { ascending: true });
+    // 상세 이미지들 가져오기 (detail 타입) - parent_id 기반으로 우선 조회 후 fallback
+    const buildDetailQuery = (
+      filters: Record<string, string | number>
+    ) => {
+      let query = supabase
+        .from('public_design_contents')
+        .select('*')
+        .eq('project_category', project_category)
+        .eq('design_contents_type', 'detail')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true });
 
-    if (detailError) {
-      console.error('Error fetching detail contents:', detailError);
+      for (const [column, value] of Object.entries(filters)) {
+        query = query.eq(column, value);
+      }
+
+      return query;
+    };
+
+    type DetailQueryResult = Awaited<ReturnType<typeof buildDetailQuery>>;
+    let detailQueryResult: DetailQueryResult | null = null;
+
+    const listProject = projectDataList[0];
+
+    if (listProject?.id) {
+      detailQueryResult = await buildDetailQuery({ parent_id: listProject.id });
+    }
+
+    if (
+      !detailQueryResult ||
+      detailQueryResult.data?.length === 0
+    ) {
+      detailQueryResult = await buildDetailQuery({ display_order: displayOrderNum });
+    }
+
+    if (detailQueryResult.error) {
+      console.error('Error fetching detail contents:', detailQueryResult.error);
       return NextResponse.json(
         { error: 'Failed to fetch detail contents' },
         { status: 500 }
       );
     }
+
+    const detailContents = detailQueryResult.data || [];
 
     // 응답 데이터 구성
     const response = {
@@ -85,6 +112,7 @@ export async function GET(
         is_active: content.is_active,
         created_at: content.created_at,
         updated_at: content.updated_at,
+        parent_id: content.parent_id,
       })),
       listData: {
         id: projectDataList[0]?.id || '',

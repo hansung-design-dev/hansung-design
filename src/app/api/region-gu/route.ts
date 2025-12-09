@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type PostgrestError } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
       );
 
       let displayTypeRecord: { id: string; name: string } | null = null;
-      let displayTypeFetchError: any = null;
+      let displayTypeFetchError: PostgrestError | null = null;
       if (displayType) {
         const displayTypeResult = await supabase
           .from('display_types')

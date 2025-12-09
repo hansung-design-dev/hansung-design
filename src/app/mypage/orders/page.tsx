@@ -626,8 +626,8 @@ export default function OrdersPage() {
             title: boardLabel,
             // 작업명을 subtitle로 추가
             subtitle: projectName || undefined,
-            // 행정동
-            location: item.panels?.region_gu?.name || '',
+            // 행정구
+            location: item.panels?.region_gu?.name || '-',
             // 마감여부
             status: getClosureStatus(item, order),
             // 결제여부
@@ -657,7 +657,7 @@ export default function OrdersPage() {
           panelAlias = alias || panelAlias;
           panelAddress = address || '';
 
-          // 행정동 컬럼: 주소에서 "강북구" 같은 구 이름만 추출
+          // 행정구 컬럼: 주소에서 "강북구" 같은 구 이름만 추출
           const addressParts = address.split(' ');
           const guName =
             addressParts.length >= 2 ? addressParts[1] : address || '';
@@ -678,7 +678,7 @@ export default function OrdersPage() {
           id: rowNumber,
           title: boardLabel,
           subtitle: order.projectName || undefined,
-          location,
+          location: location || '-',
           status: '진행중',
           paymentStatus: getPaymentStatusDisplay(order.payment_status),
           orderId: order.order_number,

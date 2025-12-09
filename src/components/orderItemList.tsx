@@ -69,6 +69,7 @@ interface ListItem {
   title: string;
   subtitle?: string;
   location?: string;
+  productType?: string;
   status: string; // 마감여부
   paymentStatus?: string; // 결제여부
   quantity?: number;
@@ -271,7 +272,7 @@ const OrderItemList: React.FC<ItemTableProps> = ({
                 <tr className="border-b-solid border-b-1 border-gray-300 h-[3rem] text-gray-2 text-1.25 ">
                     {showCheckbox && <th className="w-10">no</th>}
                     <th className="text-left pl-10">게시대 명</th>
-                    <th className="text-center">행정동</th>
+                    <th className="text-center">행정구</th>
                   <th className="text-center">상품유형</th>
                     <th className="text-center">마감여부</th>
                     <th className="text-center">결제여부</th>

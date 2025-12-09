@@ -20,6 +20,7 @@ export interface PublicDesignContent {
   image_url?: string;
   image_urls?: string[];
   alt_text?: string;
+  parent_id?: string;
   display_order: number;
   is_active: boolean;
   created_at: string;
@@ -56,5 +57,6 @@ export interface PublicDesignDetailResponse {
     listImages: string[];
     categoryId: string;
     displayOrder: number;
+    parentId?: string;
   };
 }
