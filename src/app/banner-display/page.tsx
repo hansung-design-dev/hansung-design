@@ -208,7 +208,23 @@ export default function BannerDisplayPage() {
           });
         });
 
-        setDistricts(processedDistricts);
+        const maintenanceDistricts = processedDistricts.filter(
+          (district) => district.panel_status === 'maintenance'
+        );
+        const readyDistricts = processedDistricts.filter(
+          (district) => district.panel_status !== 'maintenance'
+        );
+        const orderedDistricts = [...readyDistricts, ...maintenanceDistricts];
+
+        console.log(
+          '🔍 District display order (maintenance last):',
+          orderedDistricts.map((d) => ({
+            name: d.name,
+            status: d.panel_status,
+          }))
+        );
+
+        setDistricts(orderedDistricts);
       } catch (err) {
         console.error('Error fetching optimized data:', err);
         setError(err instanceof Error ? err.message : 'Failed to fetch data');

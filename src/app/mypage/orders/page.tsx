@@ -188,6 +188,7 @@ interface DisplayItem {
   isClosed?: boolean; // 마감 여부
   panelCode?: string; // 게시대번호 (현수막게시대용)
   category?: string; // 품명 (현수막게시대, 전자게시대 등)
+  productType: string;
   orderDetailId?: string; // 연결된 order_detail ID
   order?: Order; // 전체 주문 정보
 }
@@ -223,6 +224,7 @@ interface OrderCardData {
   // 주문 프로필 정보
   profileTitle?: string; // 주문 프로필명
   profileCompany?: string; // 주문 프로필 회사명
+  productType?: string;
 }
 
 type CancelTarget =
@@ -238,7 +240,66 @@ interface InquiryForOrders {
   product_name?: string;
   answered_at?: string;
   created_at: string;
+  product_type?: string;
 }
+
+const PRODUCT_TYPE_LABELS = {
+  BANNER: '현수막게시대',
+  TOP_FIXED: '현수막게시대 상단광고',
+  LED: 'led전자게시대',
+  DIGITAL_MEDIA: '디지털미디어 쇼핑몰아이템',
+};
+
+interface ProductTypeLookupParams {
+  bannerType?: string | null;
+  panelType?: string | null;
+  displayTypeName?: string | null;
+  inquiryProductType?: string | null;
+}
+
+const getProductTypeLabel = ({
+  bannerType,
+  panelType,
+  displayTypeName,
+  inquiryProductType,
+}: ProductTypeLookupParams = {}) => {
+  const normalizedBannerType = bannerType?.toLowerCase();
+  const normalizedPanelType = panelType?.toLowerCase();
+  const normalizedDisplayType = displayTypeName?.toLowerCase();
+  const normalizedInquiryType = inquiryProductType?.toLowerCase();
+
+  if (
+    normalizedBannerType === 'top_fixed' ||
+    normalizedPanelType === 'top_fixed' ||
+    normalizedInquiryType === 'top_fixed'
+  ) {
+    return PRODUCT_TYPE_LABELS.TOP_FIXED;
+  }
+
+  if (normalizedInquiryType === 'led') {
+    return PRODUCT_TYPE_LABELS.LED;
+  }
+
+  if (normalizedInquiryType === 'digital_media_product') {
+    return PRODUCT_TYPE_LABELS.DIGITAL_MEDIA;
+  }
+
+  if (
+    normalizedDisplayType === 'led_display' ||
+    normalizedPanelType?.includes('led')
+  ) {
+    return PRODUCT_TYPE_LABELS.LED;
+  }
+
+  if (
+    normalizedDisplayType === 'digital_signage' ||
+    normalizedPanelType?.includes('digital')
+  ) {
+    return PRODUCT_TYPE_LABELS.DIGITAL_MEDIA;
+  }
+
+  return PRODUCT_TYPE_LABELS.BANNER;
+};
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -258,6 +319,7 @@ export default function OrdersPage() {
   const [cancelTarget, setCancelTarget] = useState<CancelTarget | null>(null);
   const [isCancelNotAllowedModalOpen, setIsCancelNotAllowedModalOpen] =
     useState(false);
+  const [isCancelProcessing, setIsCancelProcessing] = useState(false);
   const [inquiries, setInquiries] = useState<InquiryForOrders[]>([]);
   const [receiptModalOpen, setReceiptModalOpen] = useState(false);
   const [receiptData, setReceiptData] = useState<OrderCardData | null>(null);
@@ -305,7 +367,22 @@ export default function OrdersPage() {
   };
 
   const handleCancelConfirm = async () => {
-    if (!cancelTarget) return;
+    if (!cancelTarget || isCancelProcessing) return;
+
+    const targetOrderNumber = cancelTarget.orderNumber?.trim();
+
+    if (!targetOrderNumber) {
+      console.error(
+        '주문 취소 요청 실패: 주문번호가 누락되었습니다.',
+        cancelTarget
+      );
+      alert('주문번호를 확인할 수 없어 신청을 취소할 수 없습니다.');
+      setIsCancelModalOpen(false);
+      setCancelTarget(null);
+      return;
+    }
+
+    setIsCancelProcessing(true);
 
     try {
       let response: Response;
@@ -317,13 +394,14 @@ export default function OrdersPage() {
           }
         );
       } else {
+        console.log('🔍 [주문 취소] 요청 보내는 주문번호:', targetOrderNumber);
         response = await fetch(`/api/orders/cancel`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            orderNumber: cancelTarget.orderNumber,
+            orderNumber: targetOrderNumber,
           }),
         });
       }
@@ -338,7 +416,11 @@ export default function OrdersPage() {
         setExpandedItemId(null);
         setSelectedOrderDetail(null);
       } else {
-        console.error('주문 취소 실패:', data.error);
+        console.error('주문 취소 실패:', {
+          orderNumber: targetOrderNumber,
+          error: data.error,
+          code: data.code,
+        });
 
         // 취소 가능 기간 초과 에러 처리
         if (data.code === 'CANCEL_PERIOD_EXPIRED') {
@@ -351,6 +433,7 @@ export default function OrdersPage() {
       console.error('주문 취소 중 오류:', error);
       alert('주문 취소 중 오류가 발생했습니다.');
     } finally {
+      setIsCancelProcessing(false);
       setIsCancelModalOpen(false);
       setCancelTarget(null);
     }
@@ -521,6 +604,11 @@ export default function OrdersPage() {
           // 품명 확인 (현수막게시대인지 확인)
           const displayTypeName = item.panels?.display_types?.name || '';
           const category = formatDisplayType(displayTypeName);
+          const productType = getProductTypeLabel({
+            bannerType: item.panel_slot_usage?.banner_type,
+            panelType: item.panels?.panel_type,
+            displayTypeName,
+          });
           const panelAddress = item.panels?.address;
           const panelName = item.panels?.nickname;
           const panelCode = item.panels?.panel_code || item.panel_id;
@@ -553,6 +641,7 @@ export default function OrdersPage() {
             isClosed: item.panel_slot_usage?.is_closed === true,
             panelCode: item.panels?.panel_code,
             category: category,
+            productType,
             order: order,
           });
         });
@@ -596,6 +685,9 @@ export default function OrdersPage() {
           totalAmount:
             (order.payments?.[0]?.amount || 0).toLocaleString() + '원',
           order: order,
+          productType: getProductTypeLabel({
+            inquiryProductType: inquiry?.product_type,
+          }),
         });
       }
     });
@@ -701,6 +793,7 @@ export default function OrdersPage() {
     projectName: '-',
     displayStartDate: '-',
     displayEndDate: '-',
+    productType: '-',
   };
 
   // 주문일시 포맷 (년월일)
@@ -900,6 +993,11 @@ export default function OrdersPage() {
 
     let finalLocation = panelInfo.address || '-';
     let finalCategory = formatDisplayType(panelInfo.display_types?.name || '');
+    const productTypeLabel = getProductTypeLabel({
+      bannerType: orderDetail.panel_slot_usage?.banner_type,
+      panelType: panelInfo.panel_type,
+      displayTypeName: panelInfo.display_types?.name,
+    });
 
     if (isInquiryOrder && !panelInfo.address && inquiryAddress) {
       if (!hasRealProjectName) {
@@ -945,6 +1043,7 @@ export default function OrdersPage() {
       // 주문 프로필 정보 (없으면 '-'로 표시)
       profileTitle: userProfile.profile_title || '-',
       profileCompany: userProfile.company_name || '-',
+      productType: productTypeLabel,
     };
 
     console.log('🔍 [mapOrderDetailToCard] 결과:', result);
@@ -1069,9 +1168,14 @@ export default function OrdersPage() {
                   variant="filledBlack"
                   size="md"
                   onClick={handleCancelConfirm}
-                  className="w-[6.5rem] h-[2.5rem] text-0.875 font-200 hover:cursor-pointer"
+                  disabled={isCancelProcessing}
+                  className={`w-[6.5rem] h-[2.5rem] text-0.875 font-200 ${
+                    isCancelProcessing
+                      ? 'cursor-not-allowed opacity-60'
+                      : 'hover:cursor-pointer'
+                  }`}
                 >
-                  예
+                  {isCancelProcessing ? '취소 요청 중…' : '예'}
                 </Button>
               </div>
             </div>

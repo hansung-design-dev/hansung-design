@@ -351,7 +351,9 @@ function PaymentSuccessContent() {
     }
 
     const remainingItemIds = cart.map((item) => item.id);
-    const serializedItems = encodeURIComponent(JSON.stringify(remainingItemIds));
+    const serializedItems = encodeURIComponent(
+      JSON.stringify(remainingItemIds)
+    );
     router.push(`/payment?items=${serializedItems}`);
   };
 

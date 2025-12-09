@@ -31,6 +31,7 @@ interface OrderDetail {
   // 주문 프로필 정보
   profileTitle?: string; // 주문 프로필명
   profileCompany?: string; // 주문 프로필 회사명
+  productType?: string;
 }
 
 interface OrderItemCardProps {
@@ -133,6 +134,11 @@ export default function OrderItemCard({
                 <div className="text-gray-600 mb-2">품명</div>
                 <div className="font-700 text-1.25 sm:text-1">
                   {orderDetail.category}
+                </div>
+
+                <div className="text-gray-600 mb-2">상품유형</div>
+                <div className="font-700 text-1.25 sm:text-1">
+                  {orderDetail.productType || '-'}
                 </div>
 
                 <div className="text-gray-600 mb-2">게시대 명</div>

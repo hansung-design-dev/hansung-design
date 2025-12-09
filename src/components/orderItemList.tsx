@@ -182,11 +182,17 @@ const OrderItemList: React.FC<ItemTableProps> = ({
   const handleConfirmCancel = async () => {
     if (itemToCancel) {
       try {
-        // orderId가 있으면 orderId를, 없으면 id를 사용
-        const orderId = itemToCancel.orderId || itemToCancel.id.toString();
+        const orderNumber =
+          itemToCancel.order?.order_number ||
+          itemToCancel.orderId ||
+          itemToCancel.id.toString();
 
-        const response = await fetch(`/api/orders/cancel?orderId=${orderId}`, {
-          method: 'DELETE',
+        const response = await fetch(`/api/orders/cancel`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ orderNumber }),
         });
 
         const result = await response.json();
@@ -262,10 +268,11 @@ const OrderItemList: React.FC<ItemTableProps> = ({
             <table className="w-full border-collapse border-t border-gray-200 text-1.25 font-500">
               {showHeader && (
                 <thead>
-                  <tr className="border-b-solid border-b-1 border-gray-300 h-[3rem] text-gray-2 text-1.25 ">
+                <tr className="border-b-solid border-b-1 border-gray-300 h-[3rem] text-gray-2 text-1.25 ">
                     {showCheckbox && <th className="w-10">no</th>}
                     <th className="text-left pl-10">게시대 명</th>
                     <th className="text-center">행정동</th>
+                  <th className="text-center">상품유형</th>
                     <th className="text-center">마감여부</th>
                     <th className="text-center">결제여부</th>
                     <th className="text-center">&nbsp;</th>
@@ -295,19 +302,22 @@ const OrderItemList: React.FC<ItemTableProps> = ({
                         />
                       </td>
                     )}
-                    <td className="px-4 text-left pl-10 text-1.25 font-500">
-                      <span className="font-medium text-black">
-                        {item.title}
-                        {item.subtitle && (
-                          <span className="ml-1 text-gray-500">
-                            {item.subtitle}
-                          </span>
-                        )}
-                      </span>
-                    </td>
-                    <td className="text-center text-1.25 font-500">
-                      {item.location}
-                    </td>
+                  <td className="px-4 text-left pl-10 text-1.25 font-500">
+                    <span className="font-medium text-black">
+                      {item.title}
+                      {item.subtitle && (
+                        <span className="ml-1 text-gray-500">
+                          {item.subtitle}
+                        </span>
+                      )}
+                    </span>
+                  </td>
+                  <td className="text-center text-1.25 font-500">
+                    {item.location}
+                  </td>
+                  <td className="text-center text-1.25 font-500">
+                    {item.productType}
+                  </td>
                     <td
                       className={`text-center font-semibold text-1.25 font-500 ${getStatusClass(
                         item.status
@@ -341,7 +351,7 @@ const OrderItemList: React.FC<ItemTableProps> = ({
                 {/* 확장된 상세 정보 표시 */}
                 {expandedItemId && expandedContent && (
                   <tr>
-                    <td colSpan={showCheckbox ? 6 : 5} className="p-0">
+                    <td colSpan={showCheckbox ? 7 : 6} className="p-0">
                       <div>{expandedContent}</div>
                     </td>
                   </tr>
@@ -352,7 +362,7 @@ const OrderItemList: React.FC<ItemTableProps> = ({
                   length: ITEMS_PER_PAGE - paginatedItems.length,
                 }).map((_, i) => (
                   <tr key={`empty-${i}`} className="h-[3.5rem]">
-                    <td colSpan={showCheckbox ? 6 : 5} />
+                    <td colSpan={showCheckbox ? 7 : 6} />
                   </tr>
                 ))}
               </tbody>
@@ -390,6 +400,9 @@ const OrderItemList: React.FC<ItemTableProps> = ({
                 )}
                 <div className="text-1.25 font-500">
                   행정동: {item.location}
+                </div>
+                <div className="text-1.25 font-500">
+                  상품유형: {item.productType}
                 </div>
                 <div className="text-1.25 font-500">
                   마감여부:&nbsp;

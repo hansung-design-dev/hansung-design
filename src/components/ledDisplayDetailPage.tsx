@@ -514,6 +514,18 @@ export default function LEDDisplayDetailPage({
       {filteredBillboards.map((item, index) => {
         const isSelected = selectedIds.includes(item.id);
         const uniqueKey = item.id || `led-gallery-${index}`; // fallback key
+        const gallerySizeLabel = (() => {
+          if (item.panel_width && item.panel_height) {
+            return `${item.panel_width} x ${item.panel_height} mm`;
+          }
+          if (item.size && item.size !== '0x0') {
+            return `${item.size.replace('x', ' x ')} mm`;
+          }
+          if (item.slot_width_px && item.slot_height_px) {
+            return `${item.slot_width_px} x ${item.slot_height_px} px`;
+          }
+          return null;
+        })();
         return (
           <div
             key={uniqueKey}
@@ -554,6 +566,11 @@ export default function LEDDisplayDetailPage({
                 )}
               </h3>
               <p className="text-0.875 text-gray-600">{item.neighborhood}</p>
+              {gallerySizeLabel && (
+                <div className="text-0.875 mt-1 font-semibold text-[#0F6DF0]">
+                  사이즈: {gallerySizeLabel}
+                </div>
+              )}
               <div className="mt-2 text-0.875  font-medium">
                 기간: 1달 | 가격:{' '}
                 {item.total_price
@@ -846,7 +863,7 @@ export default function LEDDisplayDetailPage({
       <div className="lg:min-w-[70rem] lg:max-w-[1500px]  mx-auto px-4 pt-[7rem]">
         <BackToListButton
           label="구 목록으로 돌아가기"
-          onClick={() => router.push('/banner-display')}
+          onClick={() => router.push('/led-display')}
         />
         <div className="mb-8">
           <div className="flex gap-2 items-center">

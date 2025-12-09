@@ -70,13 +70,40 @@ export async function GET(request: NextRequest) {
         'displayType:',
         displayType
       );
-      // 특정 구의 전체 정보 가져오기 (로고 + 계좌번호 + 전화번호)
-      const { data: regionData, error: regionError } = await supabase
+
+      let displayTypeRecord: { id: string; name: string } | null = null;
+      let displayTypeFetchError: any = null;
+      if (displayType) {
+        const displayTypeResult = await supabase
+          .from('display_types')
+          .select('id, name')
+          .eq('name', displayType)
+          .limit(1)
+          .single();
+
+        displayTypeRecord = displayTypeResult.data;
+        displayTypeFetchError = displayTypeResult.error;
+      }
+
+      let forcedDisplayTypeId: string | null = null;
+      if (displayTypeRecord?.id) {
+        forcedDisplayTypeId = displayTypeRecord.id;
+      } else if (displayType === 'led_display') {
+        forcedDisplayTypeId = '3119f6ed-81e4-4d62-b785-6a33bc7928f9';
+      }
+
+      const regionQuery = supabase
         .from('region_gu')
         .select('id, name, code, logo_image_url, phone_number')
         .eq('name', districtName)
-        .limit(1)
-        .single();
+        .limit(1);
+
+      if (forcedDisplayTypeId) {
+        regionQuery.eq('display_type_id', forcedDisplayTypeId);
+      }
+
+      const { data: regionData, error: regionError } =
+        await regionQuery.single();
 
       console.log('🔍 🔍 🔍 API - Region data result:', regionData);
       console.log('🔍 🔍 🔍 API - Region error:', regionError);
@@ -133,23 +160,18 @@ export async function GET(request: NextRequest) {
             console.log('🔍 🔍 🔍 API - No cache data found for LED display');
           }
         } else {
-          // 기존 로직: bank_accounts 테이블에서 계좌정보 가져오기
-          const { data: displayTypeData, error: displayTypeError } =
-            await supabase
-              .from('display_types')
-              .select('id, name')
-              .eq('name', displayType)
-              .single();
+          console.log('🔍 🔍 🔍 API - Display type result:', displayTypeRecord);
+          console.log(
+            '🔍 🔍 🔍 API - Display type error:',
+            displayTypeFetchError
+          );
 
-          console.log('🔍 🔍 🔍 API - Display type result:', displayTypeData);
-          console.log('🔍 🔍 🔍 API - Display type error:', displayTypeError);
-
-          if (!displayTypeError) {
+          if (!displayTypeFetchError && displayTypeRecord) {
             console.log(
               '🔍 🔍 🔍 API - Looking for bank account with region_gu_id:',
               regionData.id,
               'display_type_id:',
-              displayTypeData.id
+              displayTypeRecord.id
             );
 
             const { data: bankAccountData, error: bankError } = await supabase
@@ -165,7 +187,7 @@ export async function GET(request: NextRequest) {
               `
               )
               .eq('region_gu_id', regionData.id)
-              .eq('display_type_id', displayTypeData.id)
+              .eq('display_type_id', displayTypeRecord.id)
               .limit(1)
               .single();
 
@@ -183,8 +205,8 @@ export async function GET(request: NextRequest) {
                   name: regionData.name,
                 },
                 display_types: {
-                  id: displayTypeData.id,
-                  name: displayTypeData.name,
+                  id: displayTypeRecord.id,
+                  name: displayTypeRecord.name,
                 },
               };
               console.log('🔍 🔍 🔍 API - Created bank data:', bankData);

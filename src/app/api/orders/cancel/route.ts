@@ -5,23 +5,93 @@ export async function POST(request: NextRequest) {
   try {
     const { orderNumber } = await request.json();
 
-    if (!orderNumber) {
+    const normalizeOrderNumber = (value: unknown) => {
+      if (typeof value === 'string') {
+        return value.trim();
+      }
+      if (value === undefined || value === null) {
+        return '';
+      }
+      return String(value).trim();
+    };
+
+    const normalizedOrderNumber = normalizeOrderNumber(orderNumber);
+
+    if (!normalizedOrderNumber) {
       return NextResponse.json(
         { success: false, error: '주문번호가 필요합니다.' },
         { status: 400 }
       );
     }
 
+    console.log('🔍 [주문 취소] 요청 받은 주문번호:', {
+      rawOrderNumber: orderNumber,
+      normalizedOrderNumber,
+      requestId: request.headers.get('x-request-id') || null,
+    });
+
     // 주문 정보 조회 (취소 가능 기간 검증을 위해 created_at 포함)
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .select('id, design_drafts_id, created_at, order_number, payment_status')
-      .eq('order_number', orderNumber)
-      .single();
+    const selectFields =
+      'id, design_drafts_id, created_at, order_number, payment_status';
+
+    const fetchOrder = async (useIlike = false) => {
+      const query = supabase
+        .from('orders')
+        .select(selectFields, { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (useIlike) {
+        return await query.ilike('order_number', normalizedOrderNumber);
+      }
+      return await query.eq('order_number', normalizedOrderNumber);
+    };
+
+    const eqResult = await fetchOrder();
+    let order = eqResult.data?.[0] ?? null;
+    let totalMatches = eqResult.count ?? 0;
+    let orderError = eqResult.error ?? null;
+
+    if (totalMatches > 1) {
+      console.warn('🔍 [주문 취소] 주문번호 중복:', {
+        normalizedOrderNumber,
+        count: totalMatches,
+      });
+    }
+
+    if (!order) {
+      const ilikeResult = await fetchOrder(true);
+      order = ilikeResult.data?.[0] ?? null;
+      totalMatches = ilikeResult.count ?? totalMatches;
+      orderError = ilikeResult.error ?? orderError;
+
+      if (order) {
+        console.info(
+          '🔍 [주문 취소] 대소문자 구분 없이 주문을 찾았습니다:',
+          order.order_number
+        );
+      }
+
+      if ((ilikeResult.count ?? 0) > 1) {
+        console.warn('🔍 [주문 취소] ilike 검색에서 많은 결과:', {
+          normalizedOrderNumber,
+          count: ilikeResult.count,
+        });
+      }
+    }
 
     if (orderError || !order) {
+      console.warn('🔍 [주문 취소] 주문 조회 실패:', {
+        normalizedOrderNumber,
+        orderError,
+      });
+
       return NextResponse.json(
-        { success: false, error: '주문을 찾을 수 없습니다.' },
+        {
+          success: false,
+          error: '주문을 찾을 수 없습니다.',
+          details: { orderNumber: normalizedOrderNumber },
+        },
         { status: 404 }
       );
     }

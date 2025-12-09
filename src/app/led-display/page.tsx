@@ -214,12 +214,14 @@ export default function LEDDisplayPage() {
         );
 
         // 구별 가나다순 정렬
-        processedDistricts.sort((a, b) => a.name.localeCompare(b.name));
+        const sortedDistricts = processedDistricts.sort((a, b) =>
+          a.name.localeCompare(b.name)
+        );
 
-        console.log('🔍 Final processed LED districts:', processedDistricts);
+        console.log('🔍 Final processed LED districts:', sortedDistricts);
 
         // maintenance 상태인 구들 출력
-        const maintenanceDistricts = processedDistricts.filter(
+        const maintenanceDistricts = sortedDistricts.filter(
           (district) => district.panel_status === 'maintenance'
         );
         console.log(
@@ -230,8 +232,20 @@ export default function LEDDisplayPage() {
             count: d.count,
           }))
         );
+        const readyDistricts = sortedDistricts.filter(
+          (district) => district.panel_status !== 'maintenance'
+        );
+        const orderedDistricts = [...readyDistricts, ...maintenanceDistricts];
 
-        setUpdatedDistricts(processedDistricts);
+        console.log(
+          '🔍 District display order (maintenance last):',
+          orderedDistricts.map((d) => ({
+            name: d.name,
+            status: d.panel_status,
+          }))
+        );
+
+        setUpdatedDistricts(orderedDistricts);
       } catch (err) {
         console.error('Error fetching optimized LED data:', err);
         setError(err instanceof Error ? err.message : 'Failed to fetch data');

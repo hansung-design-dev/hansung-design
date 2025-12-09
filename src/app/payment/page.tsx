@@ -3302,17 +3302,20 @@ function PaymentPageContent() {
                 </div>
                 {/* 세금계산서 */}
                 <div className="mb-4">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="modal-tax"
-                      checked={modalTaxInvoice}
-                      onChange={(e) => setModalTaxInvoice(e.target.checked)}
-                      className="w-4 h-4"
-                    />
-                    <label htmlFor="modal-tax">
-                      세금계산서 발급을 원합니다
-                    </label>
+                  <div className="flex flex-col items-start gap-2">
+                    <div className="flex items-center justify-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="modal-tax"
+                        checked={modalTaxInvoice}
+                        onChange={(e) => setModalTaxInvoice(e.target.checked)}
+                        className="w-4 h-4"
+                      />
+
+                      <label htmlFor="modal-tax">
+                        세금계산서 발급을 원합니다
+                      </label>
+                    </div>
                     <span>
                       *세금계산서 발행시 입금자명을 사업자명으로 표시해주세요.
                     </span>
@@ -3399,7 +3402,9 @@ function PaymentPageContent() {
                               </div>
                             )}
                             {!hasAgreedToTerms && (
-                              <div>• 유의사항에 동의해주세요</div>
+                              <div className="text-1">
+                                • 유의사항에 동의해주세요
+                              </div>
                             )}
                           </div>
                         )}
