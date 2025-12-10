@@ -7,7 +7,31 @@ import { CartItem } from '@/src/contexts/cartContext';
 // 주문 아이템 타입 (CartItem에 quantity 추가)
 interface OrderItem extends CartItem {
   quantity: number;
+  design_draft_id?: string | null;
+  projectName?: string;
+  draftDeliveryMethod?: string | null;
 }
+
+const createEmptyPanelSlotSnapshot = (): NonNullable<
+  CartItem['panel_slot_snapshot']
+> => ({
+  id: null,
+  notes: null,
+  max_width: null,
+  slot_name: null,
+  tax_price: null,
+  created_at: null,
+  max_height: null,
+  price_unit: null,
+  updated_at: null,
+  banner_type: null,
+  slot_number: null,
+  total_price: null,
+  panel_id: null,
+  road_usage_fee: null,
+  advertising_fee: null,
+  panel_slot_status: null,
+});
 
 // 주문 생성 로직 (결제 확인 API에서 직접 사용)
 async function createOrderAfterPayment(
@@ -222,7 +246,7 @@ async function createOrderAfterPayment(
     panelSlotUsageId = slotResolution.panelSlotUsageId;
 
     if (!item.panel_slot_snapshot) {
-      item.panel_slot_snapshot = {};
+      item.panel_slot_snapshot = createEmptyPanelSlotSnapshot();
     }
 
     if (slotResolution.slotNumber !== null) {
