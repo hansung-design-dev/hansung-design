@@ -362,14 +362,12 @@ export async function GET(
 
         // 우선순위: 사용자 타입에 맞는 정책 > default > 첫 번째 정책
         let selectedPolicy = policies.find(
-          (p: { price_usage_type: string }) =>
-            p.price_usage_type === preferredPriceUsageType
+          (p) => p.price_usage_type === preferredPriceUsageType
         );
 
         if (!selectedPolicy) {
           selectedPolicy = policies.find(
-            (p: { price_usage_type: string }) =>
-              p.price_usage_type === 'default'
+            (p) => p.price_usage_type === 'default'
           );
         }
 
