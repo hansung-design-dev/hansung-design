@@ -36,6 +36,28 @@ interface DesignDraft {
   admin_profiles?: AdminProfile;
 }
 
+interface BannerSlotPricePolicy {
+  price_usage_type?: string;
+  tax_price?: number;
+  advertising_fee?: number;
+  road_usage_fee?: number;
+  total_price?: number;
+}
+
+interface BannerSlots {
+  banner_slot_price_policy?: BannerSlotPricePolicy[];
+}
+
+interface PanelSlotUsage {
+  unit_price?: number;
+  banner_slots?: BannerSlots;
+}
+
+interface OrderDetail {
+  slot_order_quantity?: number;
+  panel_slot_usage?: PanelSlotUsage;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ orderNumber: string }> }
@@ -261,6 +283,42 @@ export async function GET(
       );
     }
 
+    const getDetailPrice = (detail: OrderDetail): number => {
+      const quantity = detail.slot_order_quantity || 1;
+      const isPublicInstitution =
+        order.user_profiles?.is_public_institution || false;
+      const preferredPriceUsageType = isPublicInstitution
+        ? 'public_institution'
+        : 'default';
+
+      const policies: BannerSlotPricePolicy[] =
+        detail.panel_slot_usage?.banner_slots?.banner_slot_price_policy || [];
+      let selectedPolicy = policies.find(
+        (p) => p.price_usage_type === preferredPriceUsageType
+      );
+
+      if (!selectedPolicy) {
+        selectedPolicy = policies.find(
+          (p) => p.price_usage_type === 'default'
+        );
+      }
+
+      if (!selectedPolicy && policies.length > 0) {
+        selectedPolicy = policies[0];
+      }
+
+      if (selectedPolicy) {
+        const totalPrice = Number(selectedPolicy.total_price || 0) * quantity;
+        return totalPrice;
+      }
+
+      if (detail.panel_slot_usage?.unit_price) {
+        return Number(detail.panel_slot_usage.unit_price) * quantity;
+      }
+
+      return 0;
+    };
+
     // 가격 정보 계산 (각 주문에서 "대표 아이템" 1개의 정책만 사용)
     const calculateOrderPrice = () => {
       // 1) order_details가 없고, 결제 정보만 있는 경우 (상담신청 기반 주문 등)
@@ -284,7 +342,7 @@ export async function GET(
       }
 
       // 2) 첫 번째 order_detail 기준으로 banner_slot_price_policy 한 줄만 사용
-      const detail = orderDetails[0];
+      const detail = orderDetails[0] as OrderDetail;
       const quantity = detail.slot_order_quantity || 1;
 
       // 사용자 타입 확인 (공공기관 여부)
@@ -379,6 +437,11 @@ export async function GET(
       };
     };
 
+    const enrichedOrderDetails = (orderDetails || []).map((detail) => ({
+      ...detail,
+      price: getDetailPrice(detail),
+    }));
+
     // 프로젝트 이름 추출 (디자인 드래프트에서)
     const getProjectName = () => {
       console.log('🔍 [getProjectName] designDrafts:', designDrafts);
@@ -441,7 +504,7 @@ export async function GET(
         projectName: getProjectName(),
         design_drafts: designDrafts, // design_drafts를 응답에 포함
       },
-      orderDetails: orderDetails || [],
+      orderDetails: enrichedOrderDetails,
       payments: payments || [],
       customerInfo: {
         name: customerInfo.name || '',

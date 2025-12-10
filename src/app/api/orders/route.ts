@@ -262,6 +262,14 @@ export async function GET(request: NextRequest) {
           });
         }
 
+        (order.order_details || []).forEach((orderDetail) => {
+          const detailDraft = orderDetail.design_draft;
+          if (detailDraft && !draftIds.has(detailDraft.id)) {
+            designDrafts.push(detailDraft as DesignDraft);
+            draftIds.add(detailDraft.id);
+          }
+        });
+
         console.log(`🔍 주문 ${order.id}의 design_drafts 조회 결과:`, {
           design_drafts_id: order.design_drafts_id,
           designDraftsLength: designDrafts.length,

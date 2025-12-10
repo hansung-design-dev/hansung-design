@@ -93,6 +93,7 @@ interface Payment {
   id: string;
   order_id: string;
   payment_method_id: string;
+  payment_provider?: string;
   amount: number;
   payment_status: string;
   payment_date?: string;
@@ -209,7 +210,7 @@ interface DisplayItem {
   productType: string;
   orderDetailId?: string; // 연결된 order_detail ID
   order?: Order; // 전체 주문 정보
-  isInquiryOrder?: boolean; // 상담결제 여부
+  requiresManualPayment?: boolean;
 }
 
 interface OrderCardData {
@@ -244,7 +245,7 @@ interface OrderCardData {
   profileTitle?: string; // 주문 프로필명
   profileCompany?: string; // 주문 프로필 회사명
   productType?: string;
-  isInquiryOrder?: boolean;
+  requiresManualPayment?: boolean;
 }
 
 type CancelTarget =
@@ -628,6 +629,34 @@ export default function OrdersPage() {
     return { alias, address };
   };
 
+  const requiresManualPayment = (
+    order: Order,
+    payments?: Payment[]
+  ): boolean => {
+    const latestPayment =
+      payments && payments.length > 0
+        ? payments[0]
+        : order.payments && order.payments.length > 0
+        ? order.payments[0]
+        : null;
+
+    const manualMethodCode =
+      latestPayment?.payment_methods?.method_code ||
+      latestPayment?.payment_provider;
+
+    const hasAdminProjectTag =
+      order.projectName?.includes('[행정/기업용 결제대기]');
+    const isTempOrder = Boolean(order.order_number?.startsWith('temp_'));
+
+    return (
+      Boolean(order.order_number?.startsWith('INQ-')) ||
+      order.payment_status === 'waiting_admin_approval' ||
+      manualMethodCode === 'admin_approval' ||
+      hasAdminProjectTag ||
+      isTempOrder
+    );
+  };
+
   // 리스트에 표시할 데이터 변환
   const transformOrdersForDisplay = (): DisplayItem[] => {
     let globalIndex = 1;
@@ -653,8 +682,7 @@ export default function OrdersPage() {
 
     orders.forEach((order) => {
       const orderDetails = order.order_details || [];
-      const isInquiryOrder =
-        Boolean(order.order_number) && order.order_number.startsWith('INQ-');
+      const manualPaymentRequired = requiresManualPayment(order);
 
       // 작업명 추출 (order.projectName 또는 design_drafts에서)
       const projectName =
@@ -710,7 +738,7 @@ export default function OrdersPage() {
           category: category,
           productType,
           order: order,
-          isInquiryOrder,
+          requiresManualPayment: manualPaymentRequired,
         });
       } else {
         // 상담신청 기반 등 order_details가 없는 주문도 목록에 표시
@@ -753,7 +781,7 @@ export default function OrdersPage() {
           productType: getProductTypeLabel({
             inquiryProductType: inquiry?.product_type,
           }),
-          isInquiryOrder,
+          requiresManualPayment: manualPaymentRequired,
         });
       }
     });
@@ -768,6 +796,8 @@ export default function OrdersPage() {
         // 카드/온라인 결제 대기 (결제하기 버튼 표시)
         return '결제대기 중';
       case 'pending_payment':
+        return '결제대기 중';
+      case 'waiting_admin_approval':
         return '결제대기 중';
       case 'pending_deposit':
         // 계좌이체 입금 대기 (결제하기 버튼 숨김)
@@ -825,7 +855,7 @@ export default function OrdersPage() {
     displayStartDate: '-',
     displayEndDate: '-',
     productType: '-',
-    isInquiryOrder: false,
+    requiresManualPayment: false,
   };
 
   // 주문일시 포맷 (년월일)
@@ -1123,6 +1153,7 @@ export default function OrdersPage() {
     // - 품명: 전자게시대 (상담신청 아이템 기본값)
     const isInquiryOrder =
       Boolean(order.order_number) && order.order_number.startsWith('INQ-');
+    const manualPaymentRequired = requiresManualPayment(order, payments);
 
     let finalLocation = panelInfo.address || '-';
     let finalCategory = formatDisplayType(panelInfo.display_types?.name || '');
@@ -1177,7 +1208,7 @@ export default function OrdersPage() {
       profileTitle: userProfile.profile_title || '-',
       profileCompany: userProfile.company_name || '-',
       productType: productTypeLabel,
-      isInquiryOrder,
+      requiresManualPayment: manualPaymentRequired,
     };
 
     console.log('🔍 [mapOrderDetailToCard] 결과:', result);

@@ -32,7 +32,7 @@ interface OrderDetail {
   profileTitle?: string; // 주문 프로필명
   profileCompany?: string; // 주문 프로필 회사명
   productType?: string;
-  isInquiryOrder?: boolean;
+  requiresManualPayment?: boolean;
 }
 
 interface OrderItemCardProps {
@@ -63,7 +63,7 @@ export default function OrderItemCard({
     (orderDetail.depositorName && orderDetail.depositorName !== '-');
 
   // 카드/온라인 결제 대기인지 확인 (결제하기 버튼 표시)
-  const isConsultationOrder = Boolean(orderDetail.isInquiryOrder);
+  const isConsultationOrder = Boolean(orderDetail.requiresManualPayment);
 
   const isPaymentPending =
     !isBankTransferPending &&

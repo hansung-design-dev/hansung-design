@@ -8,11 +8,34 @@ export interface SlotResolverItem {
     banner_type?: string | null;
     banner_slot_id?: string | null;
   };
+  panel_type?: string | null;
+  itemType?: string | null;
 }
 
 export interface SlotResolutionResult {
   panelSlotUsageId: string | null;
   slotNumber: number | null;
+  slotCategory: 'banner' | 'led';
+}
+
+const LED_TRIGGERS = ['led', 'electronic', 'edp', 'lcd', 'display'];
+
+function detectSlotCategory(item: SlotResolverItem): 'banner' | 'led' {
+  const candidates = [
+    item.panel_slot_snapshot?.banner_type,
+    item.panel_type,
+    item.itemType,
+  ];
+
+  for (const raw of candidates) {
+    if (!raw) continue;
+    const value = raw.toLowerCase();
+    if (LED_TRIGGERS.some((trigger) => value.includes(trigger))) {
+      return 'led';
+    }
+  }
+
+  return 'banner';
 }
 
 async function getPanelInfoAndPeriod(
@@ -167,11 +190,13 @@ export async function ensurePanelSlotUsageForItem({
   displayStartDate: string;
   displayEndDate: string;
 }): Promise<SlotResolutionResult> {
+  const slotCategory = detectSlotCategory(item);
   const panelId = item.panel_id;
   if (!panelId) {
     return {
       panelSlotUsageId: existingPanelSlotUsageId ?? null,
       slotNumber: item.panel_slot_snapshot?.slot_number ?? null,
+      slotCategory,
     };
   }
 
@@ -227,6 +252,7 @@ export async function ensurePanelSlotUsageForItem({
     return {
       panelSlotUsageId: existingUsage.id,
       slotNumber: existingUsage.slot_number ?? availableSlot.slotNumber,
+      slotCategory,
     };
   }
 
@@ -242,6 +268,7 @@ export async function ensurePanelSlotUsageForItem({
     return {
       panelSlotUsageId: existingSlotUsage.id,
       slotNumber: existingSlotUsage.slot_number ?? availableSlot.slotNumber,
+      slotCategory,
     };
   }
 
@@ -249,9 +276,11 @@ export async function ensurePanelSlotUsageForItem({
     return {
       panelSlotUsageId: existingUsage?.id ?? null,
       slotNumber: availableSlot.slotNumber,
+      slotCategory,
     };
   }
 
+  const usageType = slotCategory === 'led' ? 'led_display' : 'banner_display';
   const { data: newUsage, error: newUsageError } = await supabase
     .from('panel_slot_usage')
     .insert({
@@ -259,7 +288,7 @@ export async function ensurePanelSlotUsageForItem({
       panel_id: panelId,
       slot_number: availableSlot.slotNumber,
       banner_slot_id: availableSlot.bannerSlotId,
-      usage_type: 'banner_display',
+      usage_type: usageType,
       attach_date_from: displayStartDate,
       is_active: true,
       is_closed: false,
@@ -287,6 +316,7 @@ export async function ensurePanelSlotUsageForItem({
       return {
         panelSlotUsageId: conflictingUsageId,
         slotNumber: availableSlot.slotNumber,
+        slotCategory,
       };
     }
 
@@ -296,5 +326,6 @@ export async function ensurePanelSlotUsageForItem({
   return {
     panelSlotUsageId: newUsage.id,
     slotNumber: availableSlot.slotNumber,
+    slotCategory,
   };
 }

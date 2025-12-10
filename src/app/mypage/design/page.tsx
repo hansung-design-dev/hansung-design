@@ -71,29 +71,32 @@ export default function DesignPage() {
         const completedOrders = (data.orders || []).filter((order: Order) =>
           visibleStatuses.includes(order.payment_status)
         );
-        console.log(
-          '🔍 [시안보기] 필터링된 주문:',
-          {
-            totalOrders: data.orders.length,
-            filteredOrders: completedOrders.length,
-            orders: completedOrders.map((o: Order) => ({
-              id: o.id,
-              order_number: o.order_number,
-              payment_status: o.payment_status,
-              hasDesignDraftsId: !!(o as Order & { design_drafts_id?: string }).design_drafts_id,
-              hasDesignDrafts: !!(o.design_drafts && o.design_drafts.length > 0),
-              designDraftsCount: o.design_drafts?.length || 0,
-              projectName: (o as Order & { projectName?: string }).projectName || o.design_drafts?.[0]?.project_name || '없음',
-            }))
-          }
-        );
+        console.log('🔍 [시안보기] 필터링된 주문:', {
+          totalOrders: data.orders.length,
+          filteredOrders: completedOrders.length,
+          orders: completedOrders.map((o: Order) => ({
+            id: o.id,
+            order_number: o.order_number,
+            payment_status: o.payment_status,
+            hasDesignDraftsId: !!(o as Order & { design_drafts_id?: string })
+              .design_drafts_id,
+            hasDesignDrafts: !!(o.design_drafts && o.design_drafts.length > 0),
+            designDraftsCount: o.design_drafts?.length || 0,
+            projectName:
+              (o as Order & { projectName?: string }).projectName ||
+              o.design_drafts?.[0]?.project_name ||
+              '없음',
+          })),
+        });
         // setOrders는 더 이상 사용하지 않음 (draftCards만 사용)
 
         // 주문 배열을 시안 배열로 변환
         const cards: DraftCard[] = [];
         completedOrders.forEach((order: Order) => {
-          const hasDrafts = order.design_drafts && order.design_drafts.length > 0;
-          const isEmailOnly = order.draft_delivery_method === 'email' && !hasDrafts;
+          const hasDrafts =
+            order.design_drafts && order.design_drafts.length > 0;
+          const isEmailOnly =
+            order.draft_delivery_method === 'email' && !hasDrafts;
 
           if (hasDrafts) {
             // 시안이 있는 경우: 각 시안마다 카드 생성
@@ -148,7 +151,10 @@ export default function DesignPage() {
           })),
         });
 
-        setDraftCards(cards);
+        const uniqueCards = Array.from(
+          new Map(cards.map((card) => [card.id, card])).values()
+        );
+        setDraftCards(uniqueCards);
       }
     } catch (error) {
       console.error('Failed to fetch orders:', error);
@@ -163,7 +169,11 @@ export default function DesignPage() {
     }
   }, [user, fetchOrders]);
 
-  const handleFileUpload = async (orderId: string, file: File, draftId?: string) => {
+  const handleFileUpload = async (
+    orderId: string,
+    file: File,
+    draftId?: string
+  ) => {
     try {
       const uploadKey = draftId || orderId;
       setUploadingFile(uploadKey);
@@ -217,9 +227,7 @@ export default function DesignPage() {
           {draftCards.map((card) => {
             const isImagePreview =
               card.draft?.file_url &&
-              card.draft.file_name
-                ?.toLowerCase()
-                .match(/\.(jpg|jpeg|png)$/);
+              card.draft.file_name?.toLowerCase().match(/\.(jpg|jpeg|png)$/);
 
             return (
               <div
@@ -232,7 +240,8 @@ export default function DesignPage() {
                       주문번호: {card.orderNumber}
                     </h3>
                     <p className="text-gray-600">
-                      주문일: {new Date(card.orderCreatedAt).toLocaleDateString()}
+                      주문일:{' '}
+                      {new Date(card.orderCreatedAt).toLocaleDateString()}
                     </p>
                     {card.projectName &&
                       card.projectName !== '프로젝트명 없음' && (
@@ -262,8 +271,8 @@ export default function DesignPage() {
                     <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-sm text-blue-700">
-                          이메일로 시안을 보내셨지만, 홈페이지에서도 업로드할
-                          수 있습니다.
+                          이메일로 시안을 보내셨지만, 홈페이지에서도 업로드할 수
+                          있습니다.
                         </span>
                       </div>
                     </div>
@@ -319,21 +328,25 @@ export default function DesignPage() {
                     onFileSelect={(file) =>
                       handleFileUpload(card.orderId, file, card.draft?.id)
                     }
-                    disabled={uploadingFile === (card.draft?.id || card.orderId)}
+                    disabled={
+                      uploadingFile === (card.draft?.id || card.orderId)
+                    }
                     placeholder="시안 파일을 선택해주세요"
                     className="w-[13rem]"
                   />
 
                   {uploadingFile === (card.draft?.id || card.orderId) && (
                     <div className="text-center py-2">
-                      <span className="text-sm text-gray-500">업로드 중...</span>
+                      <span className="text-sm text-gray-500">
+                        업로드 중...
+                      </span>
                     </div>
                   )}
                 </div>
               </div>
             );
           })}
-      </div>
+        </div>
       )}
       {/* 시안 이미지 미리보기 모달 */}
       {previewImageUrl && (

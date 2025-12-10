@@ -77,7 +77,7 @@ interface ListItem {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   order?: any; // 전체 주문 정보
   orderDetailId?: string;
-  isInquiryOrder?: boolean;
+  requiresManualPayment?: boolean;
 }
 
 const statusColorMap: Record<string, string> = {
@@ -435,19 +435,19 @@ const OrderItemList: React.FC<ItemTableProps> = ({
                   결제여부: {item.paymentStatus || '-'}
                 </div>
                 <div className="flex gap-2 mt-2">
-                {item.paymentStatus === '대기' &&
-                  item.isInquiryOrder &&
-                  onPaymentClick && (
-                    <button
-                      className="bg-blue-600 text-white px-4 py-1 rounded hover:bg-blue-700 transition-colors text-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onPaymentClick(item);
-                      }}
-                    >
-                      결제하기
-                    </button>
-                  )}
+                  {item.paymentStatus === '대기' &&
+                    item.requiresManualPayment &&
+                    onPaymentClick && (
+                      <button
+                        className="bg-blue-600 text-white px-4 py-1 rounded hover:bg-blue-700 transition-colors text-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onPaymentClick(item);
+                        }}
+                      >
+                        결제하기
+                      </button>
+                    )}
                   <button
                     className={`border px-4 py-1 rounded text-black border-black hover:bg-gray-100 text-sm`}
                     onClick={(e) => {
