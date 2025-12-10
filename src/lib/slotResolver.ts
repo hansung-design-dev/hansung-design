@@ -4,9 +4,9 @@ export interface SlotResolverItem {
   panel_id?: string;
   panel_slot_usage_id?: string | null;
   panel_slot_snapshot?: {
-    slot_number?: number;
-    banner_type?: string;
-    banner_slot_id?: string;
+    slot_number?: number | null;
+    banner_type?: string | null;
+    banner_slot_id?: string | null;
   };
 }
 
