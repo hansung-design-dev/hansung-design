@@ -90,6 +90,7 @@ export async function POST(request: NextRequest) {
             file_extension: data.file_extension,
             file_size: data.file_size,
             notes: data.notes,
+            draft_category: 'revision',
             updated_at: new Date().toISOString(),
           })
           .eq('id', draftId)

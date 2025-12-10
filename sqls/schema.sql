@@ -142,6 +142,7 @@ CREATE TABLE public.center_ad_inventory (
   CONSTRAINT center_ad_inventory_occupied_slot_id_fkey FOREIGN KEY (occupied_slot_id) REFERENCES public.banner_slots(id)
 );
 CREATE TYPE customer_inquiry_product_type_enum AS ENUM ('led', 'top_fixed', 'digital_media_product');
+CREATE TYPE draft_category_enum AS ENUM ('initial', 'feedback', 'revision', 'final');
 
 CREATE TABLE public.customer_inquiries (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -173,7 +174,7 @@ CREATE TABLE public.design_drafts (
   file_url text,
   file_extension text,
   file_size integer,
-  draft_category text NOT NULL DEFAULT 'initial'::text CHECK (draft_category = ANY (ARRAY['initial'::text, 'feedback'::text, 'revision'::text, 'final'::text])),
+  draft_category draft_category_enum NOT NULL DEFAULT 'initial'::draft_category_enum,
   notes text,
   is_approved boolean DEFAULT false,
   created_at timestamp with time zone DEFAULT now(),

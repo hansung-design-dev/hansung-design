@@ -20,7 +20,7 @@ interface DesignDraft {
   id: string;
   user_profile_id?: string;
   admin_profile_id?: string;
-  draft_category?: string;
+  draft_category?: 'initial' | 'feedback' | 'revision' | 'final';
   project_name?: string;
   notes?: string;
   file_url?: string;
@@ -111,6 +111,13 @@ export async function GET(
             name,
             description
           )
+        ),
+        design_draft:design_draft_id (
+          id,
+          project_name,
+          file_name,
+          file_url,
+          is_approved
         ),
         panel_slot_usage!order_details_panel_slot_usage_id_fkey (
           id,

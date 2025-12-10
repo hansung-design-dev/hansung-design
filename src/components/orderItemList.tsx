@@ -77,6 +77,7 @@ interface ListItem {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   order?: any; // 전체 주문 정보
   orderDetailId?: string;
+  isInquiryOrder?: boolean;
 }
 
 const statusColorMap: Record<string, string> = {
@@ -266,14 +267,25 @@ const OrderItemList: React.FC<ItemTableProps> = ({
         <>
           {/* ✅ 데스크탑/tablet 이상: table로 표시 */}
           <div className="overflow-x-auto hidden lg:block">
-            <table className="w-full border-collapse border-t border-gray-200 text-1.25 font-500">
+            <table className="w-full table-fixed border-collapse border-t border-gray-200 text-1.25 font-500">
+              <colgroup>
+                {showCheckbox && <col className="w-[3.5rem]" />}
+                <col className="w-[7%]" />
+                <col className="w-[45%] xl:w-[40%]" />
+                <col className="w-[13%]" />
+                <col className="w-[13%]" />
+                <col className="w-[12%]" />
+                <col className="w-[12%]" />
+                <col className="w-[10%]" />
+              </colgroup>
               {showHeader && (
                 <thead>
-                <tr className="border-b-solid border-b-1 border-gray-300 h-[3rem] text-gray-2 text-1.25 ">
-                    {showCheckbox && <th className="w-10">no</th>}
+                  <tr className="border-b-solid border-b-1 border-gray-300 h-[3rem] text-gray-2 text-1.25">
+                    {showCheckbox && <th className="text-center">선택</th>}
+                    <th className="text-center">No</th>
                     <th className="text-left pl-10">게시대 명</th>
                     <th className="text-center">행정구</th>
-                  <th className="text-center">상품유형</th>
+                    <th className="text-center">상품유형</th>
                     <th className="text-center">마감여부</th>
                     <th className="text-center">결제여부</th>
                     <th className="text-center">&nbsp;</th>
@@ -303,30 +315,34 @@ const OrderItemList: React.FC<ItemTableProps> = ({
                         />
                       </td>
                     )}
-                  <td className="px-4 text-left pl-10 text-1.25 font-500">
-                    <span className="font-medium text-black">
-                      {item.title}
-                      {item.subtitle && (
-                        <span className="ml-1 text-gray-500">
-                          {item.subtitle}
-                        </span>
-                      )}
-                    </span>
-                  </td>
-                  <td className="text-center text-1.25 font-500">
-                    {item.location}
-                  </td>
-                  <td className="text-center text-1.25 font-500">
-                    {item.productType}
-                  </td>
+                    <td className="text-center text-1.125 font-500">
+                      {item.id}
+                    </td>
+                    <td className="text-left pl-10 text-1.125 font-500 lg:whitespace-normal">
+                      <span className="font-medium text-black">
+                        {item.title?.replace(/^\s*\d+\.\s*/, '')}
+                        <br className="line-height-1" />
+                        {item.subtitle && (
+                          <span className="ml-1 text-gray-500 text-0.875">
+                            파일제목: {item.subtitle}
+                          </span>
+                        )}
+                      </span>
+                    </td>
+                    <td className="text-center text-1.125 font-500">
+                      {item.location}
+                    </td>
+                    <td className="text-center text-1.125 font-500">
+                      {item.productType}
+                    </td>
                     <td
-                      className={`text-center font-semibold text-1.25 font-500 ${getStatusClass(
+                      className={`text-center font-semibold text-1.125 font-500 ${getStatusClass(
                         item.status
                       )}`}
                     >
                       {item.status}
                     </td>
-                    <td className="text-center text-1.25 font-500">
+                    <td className="text-center text-1.125 font-500">
                       {item.paymentStatus || '-'}
                     </td>
                     <td className="text-center">
@@ -352,7 +368,7 @@ const OrderItemList: React.FC<ItemTableProps> = ({
                 {/* 확장된 상세 정보 표시 */}
                 {expandedItemId && expandedContent && (
                   <tr>
-                    <td colSpan={showCheckbox ? 7 : 6} className="p-0">
+                    <td colSpan={showCheckbox ? 8 : 7} className="p-0">
                       <div>{expandedContent}</div>
                     </td>
                   </tr>
@@ -363,7 +379,7 @@ const OrderItemList: React.FC<ItemTableProps> = ({
                   length: ITEMS_PER_PAGE - paginatedItems.length,
                 }).map((_, i) => (
                   <tr key={`empty-${i}`} className="h-[3.5rem]">
-                    <td colSpan={showCheckbox ? 7 : 6} />
+                    <td colSpan={showCheckbox ? 8 : 7} />
                   </tr>
                 ))}
               </tbody>
@@ -379,7 +395,7 @@ const OrderItemList: React.FC<ItemTableProps> = ({
                   enableRowClick ? 'cursor-pointer' : ''
                 }`}
                 onClick={() => {
-                  if (enableRowClick && !showCheckbox) {
+                  if (enableRowClick) {
                     // 확장 기능이 있으면 확장 처리
                     if (onExpandItem) {
                       if (expandedItemId === item.id) {
@@ -419,7 +435,9 @@ const OrderItemList: React.FC<ItemTableProps> = ({
                   결제여부: {item.paymentStatus || '-'}
                 </div>
                 <div className="flex gap-2 mt-2">
-                  {item.paymentStatus === '대기' && onPaymentClick && (
+                {item.paymentStatus === '대기' &&
+                  item.isInquiryOrder &&
+                  onPaymentClick && (
                     <button
                       className="bg-blue-600 text-white px-4 py-1 rounded hover:bg-blue-700 transition-colors text-sm"
                       onClick={(e) => {

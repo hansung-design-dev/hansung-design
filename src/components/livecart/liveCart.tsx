@@ -154,13 +154,13 @@ export default function LiveCart() {
 
   return (
     <div className="fixed bottom-0 left-0 w-full bg-white shadow-lg z-50 flex flex-col">
-      <div
-        className={`bottom-8 left-0 w-full bg-white shadow-lg z-50 flex sm:flex-col md:flex-row transition-all duration-300 ${
-          expanded ? 'h-[25rem]' : 'h-[12rem]'
-        } sm:h-auto md:justify-center lg:justify-center`}
-      >
+        <div
+          className={`bottom-8 left-0 w-full bg-white shadow-lg z-50 flex sm:flex-col md:flex-row transition-all duration-300 ${
+            expanded ? 'h-[22rem]' : 'h-[10rem]'
+          } sm:h-auto md:justify-center lg:justify-center xl:justify-between xl:max-w-[1400px] xl:mx-auto`}
+        >
         {/* 장바구니 */}
-        <div className={`relative ${expanded ? 'h-[35rem]' : 'h-[12rem]'}`}>
+        <div className={`relative ${expanded ? 'h-[26rem]' : 'h-[10rem]'}`}>
           {/* Arrow-up 버튼 */}
           <button
             className="absolute top-2 left-1/2 -translate-x-1/2 z-10 bg-white rounded-full p-1 shadow-md hover:bg-gray-50 transition-colors"
@@ -177,7 +177,7 @@ export default function LiveCart() {
             />
           </button>
           <div
-            className={`lg:w-[40rem] sm:w-full flex flex-col gap-2 overflow-y-auto py-6 sm:py-4 sm:px-4 h-full`}
+            className={`lg:w-[40rem] xl:w-[50rem] sm:w-full flex flex-col gap-2 overflow-y-auto py-6 sm:py-4 sm:px-4 h-full`}
           >
             {/* 남은 시간 표시 (일반 아이템이 있을 때만) */}
             {hasRegularItems && (
@@ -264,8 +264,8 @@ export default function LiveCart() {
 
         {/* 장바구니 버튼 */}
         <div
-          className={`lg:w-[27rem] flex lg:flex-col md:flex-col sm:flex-row justify-center items-center p-6 sm:p-4 gap-2 ${
-            expanded ? 'h-[35rem]' : 'h-[15rem]'
+          className={`lg:w-[27rem] xl:w-[34rem] flex lg:flex-col md:flex-col sm:flex-row justify-center items-center p-6 sm:p-4 gap-2 xl:gap-4 ${
+            expanded ? 'h-[26rem]' : 'h-[12rem]'
           }`}
         >
           <Button
@@ -289,7 +289,7 @@ export default function LiveCart() {
         </div>
       </div>
       {/* 최근 방문한 사람*/}
-      <div className="h-[2rem] bg-[#E6E6E6] flex items-center justify-center py-3 text-1.5 md:text-1.25 font-weight-700 sm:text-0.875 sm:font-weight-500">
+      <div className="h-[2rem] bg-[#E6E6E6] flex items-center justify-center py-3 text-1.5 md:text-1.25 xl:text-1.75 font-weight-700 sm:text-0.875 sm:font-weight-500">
         <div>최근 방문한 사람이 20명 이에요.</div>
       </div>
     </div>

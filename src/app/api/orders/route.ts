@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/src/lib/supabase';
+import { ensureDesignDraftForOrderItem } from '@/src/lib/designDrafts';
+import { ensurePanelSlotUsageForItem } from '@/src/lib/slotResolver';
 
 // Type definitions for the orders API
 interface Panel {
@@ -26,6 +28,8 @@ interface OrderDetail {
   selected_month?: number;
   start_date?: string;
   end_date?: string;
+  design_draft_id?: string | null;
+  design_draft?: DesignDraft | null;
   created_at: string;
   updated_at: string;
   panels?: Panel;
@@ -151,6 +155,13 @@ export async function GET(request: NextRequest) {
               name,
               description
             )
+          ),
+          design_draft:design_draft_id (
+            id,
+            project_name,
+            file_name,
+            file_url,
+            is_approved
           )
         ),
         payments (
@@ -347,7 +358,6 @@ export async function POST(request: NextRequest) {
       paymentMethodId, // 결제수단 ID 추가
       projectName, // 파일제목 필수
       depositorName, // 계좌이체 시 입금자명 (선택)
-      draftId,
     } = body;
 
     console.log(
@@ -577,6 +587,7 @@ export async function POST(request: NextRequest) {
     // 3. order_details 생성
     console.log('🔍 [주문 생성 API] order_details 생성 시작...');
     const orderDetails = [];
+    const designDraftIdsByItem: Record<string, string | null> = {};
 
     for (const item of items) {
       console.log('🔍 [주문 생성 API] order_detail 처리 중:', {
@@ -636,57 +647,61 @@ export async function POST(request: NextRequest) {
       // 재고 중복 확인은 DB 트리거가 자동으로 처리
 
       // 2. panel_slot_usage 레코드 생성 (order_details_id는 나중에 업데이트)
-      let panelSlotUsageId = item.panel_slot_usage_id;
+      let panelSlotUsageId: string | null | undefined = null;
 
-      if (!panelSlotUsageId && item.panel_slot_snapshot) {
-        // panel_slot_snapshot에서 banner_slots 찾기
-        const { data: bannerSlotData, error: bannerError } = await supabase
-          .from('banner_slots')
-          .select('id')
-          .eq('panel_id', item.panel_id)
-          .eq('slot_number', item.panel_slot_snapshot.slot_number)
-          .single();
-
-        if (bannerError) {
-          console.error('🔍 banner_slots 조회 오류:', bannerError);
-        } else if (bannerSlotData) {
-          // panels에서 display_type_id 가져오기
-          const { data: panelData, error: panelError } = await supabase
-            .from('panels')
-            .select('display_type_id')
-            .eq('id', item.panel_id)
-            .single();
-
-          if (panelError) {
-            console.error('🔍 panels 조회 오류:', panelError);
-          } else {
-            // panel_slot_usage 레코드 생성 (order_details_id는 나중에 설정)
-            const { data: newPanelSlotUsage, error: usageError } =
-              await supabase
-                .from('panel_slot_usage')
-                .insert({
-                  display_type_id: panelData.display_type_id,
-                  panel_id: item.panel_id,
-                  slot_number: item.panel_slot_snapshot.slot_number,
-                  banner_slot_id: bannerSlotData.id,
-                  usage_type: 'banner_display',
-                  attach_date_from: displayStartDate,
-                  is_active: true,
-                  is_closed: false,
-                  banner_type: item.panel_slot_snapshot.banner_type || 'panel',
-                })
-                .select('id')
-                .single();
-
-            if (usageError) {
-              console.error('🔍 panel_slot_usage 생성 오류:', usageError);
-            } else {
-              panelSlotUsageId = newPanelSlotUsage.id;
-              console.log('🔍 생성된 panel_slot_usage_id:', panelSlotUsageId);
-            }
+      try {
+        const slotResult = await ensurePanelSlotUsageForItem({
+          item,
+          existingPanelSlotUsageId: item.panel_slot_usage_id,
+          displayStartDate,
+          displayEndDate,
+        });
+        panelSlotUsageId = slotResult.panelSlotUsageId;
+        if (slotResult.slotNumber) {
+          if (!item.panel_slot_snapshot) {
+            item.panel_slot_snapshot = {};
           }
+          item.panel_slot_snapshot.slot_number = slotResult.slotNumber;
         }
+      } catch (error) {
+        console.error(
+          '🔍 [주문 생성 API] 슬롯 확보 실패:',
+          error,
+          item.id,
+          item.panel_id
+        );
+        return NextResponse.json(
+          {
+            error:
+              (error as Error).message || '슬롯 확보 중 오류가 발생했습니다.',
+          },
+          { status: 500 }
+        );
       }
+
+      const existingItemDraftId = item.designDraftId || item.draftId || null;
+      const projectNameForItem =
+        item.projectName?.trim() ||
+        projectName?.trim() ||
+        item.name ||
+        '프로젝트명 없음' ||
+        '프로젝트명 없음';
+      const itemDraftDeliveryMethod =
+        item.draftDeliveryMethod || draftDeliveryMethod || 'upload';
+      const designDraftIdForItem =
+        existingItemDraftId ||
+        (userProfile?.id
+          ? await ensureDesignDraftForOrderItem({
+              userProfileId: userProfile.id,
+              projectName: projectNameForItem,
+              orderNumber,
+              panelId: item.panel_id,
+              itemLabel: item.name || item.panel_id,
+              draftDeliveryMethod: itemDraftDeliveryMethod,
+            })
+          : null);
+
+      designDraftIdsByItem[item.id] = designDraftIdForItem;
 
       // 2. order_details 생성
       const orderDetail = {
@@ -696,6 +711,7 @@ export async function POST(request: NextRequest) {
         slot_order_quantity: item.quantity,
         display_start_date: displayStartDate,
         display_end_date: displayEndDate,
+        design_draft_id: designDraftIdForItem,
         // half_period 컬럼이 없으므로 제거
       };
 
@@ -757,82 +773,35 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 3. design_drafts row 생성 (항상)
-    if (userProfile?.id) {
-      console.log('🔍 [주문 생성 API] design_drafts 처리 시작...');
-      let designDraftId = draftId || null;
+    const representativeDesignDraftId = Object.values(
+      designDraftIdsByItem
+    ).find((id): id is string => Boolean(id));
 
-      if (designDraftId) {
-        const { data: existingDraft, error: existingDraftError } =
-          await supabase
-            .from('design_drafts')
-            .select('id')
-            .eq('id', designDraftId)
-            .single();
-        if (existingDraftError || !existingDraft) {
-          console.warn(
-            '🔍 [주문 생성 API] 전달받은 draftId 유효하지 않음, 새로 생성:',
-            { designDraftId, error: existingDraftError }
-          );
-          designDraftId = null;
-        }
-      }
+    if (representativeDesignDraftId) {
+      const { error: designDraftUpdateError } = await supabase
+        .from('orders')
+        .update({
+          design_drafts_id: representativeDesignDraftId,
+        })
+        .eq('id', order.id);
 
-      if (!designDraftId) {
-        const { data: draft, error: draftError } = await supabase
-          .from('design_drafts')
-          .insert({
-            user_profile_id: userProfile.id,
-            draft_category: 'initial',
-            project_name: projectName,
-            notes: `주문 생성 시 자동 생성 (전송방식: ${
-              draftDeliveryMethod || 'upload'
-            })`,
-          })
-          .select('id, project_name')
-          .single();
-
-        console.log('🔍 [주문 생성 API] design_drafts 생성 결과:', {
-          success: !draftError,
-          draftId: draft?.id,
-          project_name: draft?.project_name,
-          error: draftError,
-        });
-
-        if (draftError) {
-          console.error(
-            '🔍 [주문 생성 API] ❌ design_drafts 생성 실패:',
-            draftError
-          );
-        } else {
-          designDraftId = draft?.id || null;
-        }
-      }
-
-      if (designDraftId) {
-        const { error: updateError } = await supabase
-          .from('orders')
-          .update({
-            design_drafts_id: designDraftId,
-            draft_delivery_method: draftDeliveryMethod || 'upload',
-          })
-          .eq('id', order.id);
-        if (updateError) {
-          console.error(
-            '🔍 [주문 생성 API] ⚠️ orders.design_drafts_id 업데이트 실패:',
-            updateError
-          );
-        } else {
-          console.log('🔍 [주문 생성 API] ✅ orders.design_drafts_id 업데이트 성공');
-        }
-      } else {
+      if (designDraftUpdateError) {
         console.error(
-          '🔍 [주문 생성 API] ❌ design_drafts_id를 확보할 수 없어 연결 실패'
+          '🔍 [주문 생성 API] ⚠️ orders.design_drafts_id 업데이트 실패:',
+          designDraftUpdateError
+        );
+      } else {
+        console.log(
+          '🔍 [주문 생성 API] ✅ 대표 design_drafts_id를 orders에 연결:',
+          {
+            orderId: order.id,
+            designDraftId: representativeDesignDraftId,
+          }
         );
       }
     } else {
-      console.error(
-        '🔍 [주문 생성 API] ❌ userProfile.id가 없어서 design_drafts 생성 불가'
+      console.warn(
+        '🔍 [주문 생성 API] 디자인 draft 생성되지 않음 (user profile 혹은 아이템 로직 확인 필요)'
       );
     }
 

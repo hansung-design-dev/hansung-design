@@ -26,22 +26,6 @@ export default function DesktopMyPage({ activeTab, userName }: Props) {
         <div className="flex flex-col md:flex-row lg:items-start md:items-center lg:justify-between lg:gap-6 md:gap-2">
           <h2 className="md:text-1 lg:text-1 font-500">{userName}님</h2>
           <div className="grid grid-cols-2 gap-4">
-            {/* 주문내역 카드 */}
-            <div className="flex items-center rounded-lg p-4 md:p-6 hover:bg-transparent">
-              <div className="w-12 h-12 md:w-10 md:h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                <img
-                  src="/svg/document.svg"
-                  alt="주문내역"
-                  className="w-6 h-6 object-contain"
-                />
-              </div>
-              <div className="flex flex-col pl-4 md:pl-6">
-                <div className="lg:text-1 md:text-1 font-medium mb-2">
-                  주문내역
-                </div>
-                <div className="lg:text-1.5 md:text-1.6 font-bold">3건</div>
-              </div>
-            </div>
             {/* 상담내역 카드 */}
             <div className="flex items-center rounded-lg p-4 md:p-6 hover:bg-transparent">
               <div className="w-12 h-12 md:w-10 md:h-10 bg-gray-200 rounded-full flex items-center justify-center">

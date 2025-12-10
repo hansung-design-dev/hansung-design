@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useState, Suspense, useRef } from 'react';
+import { useEffect, useMemo, useState, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Nav from '@/src/components/layouts/nav';
-import { useCart } from '@/src/contexts/cartContext';
+import { CartItem, useCart } from '@/src/contexts/cartContext';
+
+const PENDING_PAYMENT_ITEMS_KEY = 'pending_payment_items';
 
 function PaymentSuccessContent() {
   const router = useRouter();
@@ -17,6 +19,27 @@ function PaymentSuccessContent() {
   } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingItemsParam, setPendingItemsParam] = useState<string | null>(
+    null
+  );
+  const remainingCartItemIds = useMemo(
+    () => cart.map((item) => item.id),
+    [cart]
+  );
+  const remainingItemsParam = useMemo(() => {
+    if (remainingCartItemIds.length === 0) return null;
+
+    try {
+      return encodeURIComponent(JSON.stringify(remainingCartItemIds));
+    } catch (serializationError) {
+      console.error(
+        '🔍 [결제 성공 페이지] 결제 대상 아이디 직렬화 실패:',
+        serializationError
+      );
+      return null;
+    }
+  }, [remainingCartItemIds]);
+  const hasPendingCartItems = remainingCartItemIds.length > 0;
   const hasCalledConfirm = useRef(false); // 무한 루프 방지용 ref
 
   useEffect(() => {
@@ -288,8 +311,7 @@ function PaymentSuccessContent() {
             cartDispatch({ type: 'REMOVE_ITEMS', ids: paidItemIds });
           } else {
             console.log(
-              '🔍 [결제 성공 페이지] orderData가 없어 장바구니 상태 유지',
-              { cartLength: cart.length }
+              '🔍 [결제 성공 페이지] orderData가 없어 장바구니 상태 유지'
             );
           }
         } catch (error) {
@@ -334,7 +356,39 @@ function PaymentSuccessContent() {
         status: status || undefined,
       });
     }
-  }, [searchParams, isProcessing]);
+  }, [searchParams, isProcessing, cartDispatch]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const storedPendingItems = window.localStorage.getItem(
+      PENDING_PAYMENT_ITEMS_KEY
+    );
+    setPendingItemsParam(storedPendingItems);
+  }, []);
+
+  const clearPendingItemsStorage = () => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.removeItem(PENDING_PAYMENT_ITEMS_KEY);
+  };
+
+  useEffect(() => {
+    if (hasPendingCartItems) return;
+    if (!pendingItemsParam) return;
+
+    clearPendingItemsStorage();
+    setPendingItemsParam(null);
+  }, [hasPendingCartItems, pendingItemsParam]);
+
+  const formatItemPeriodLabel = (item: CartItem) => {
+    const parts: string[] = [];
+    if (item.selectedYear) parts.push(`${item.selectedYear}년`);
+    if (item.selectedMonth) parts.push(`${item.selectedMonth}월`);
+    if (item.halfPeriod) {
+      const periodText = item.halfPeriod === 'first_half' ? '상반기' : '하반기';
+      parts.push(periodText);
+    }
+    return parts.join(' ');
+  };
 
   const handleGoToOrders = () => {
     router.push('/mypage/orders');
@@ -345,19 +399,22 @@ function PaymentSuccessContent() {
   };
 
   const handleContinuePayment = () => {
-    if (cart.length === 0) {
-      router.push('/payment');
+    if (hasPendingCartItems && remainingItemsParam) {
+      clearPendingItemsStorage();
+      router.push(`/payment?items=${remainingItemsParam}`);
       return;
     }
 
-    const remainingItemIds = cart.map((item) => item.id);
-    const serializedItems = encodeURIComponent(
-      JSON.stringify(remainingItemIds)
-    );
-    router.push(`/payment?items=${serializedItems}`);
+    if (pendingItemsParam) {
+      clearPendingItemsStorage();
+      router.push(`/payment?items=${pendingItemsParam}`);
+      return;
+    }
+
+    router.push('/payment');
   };
 
-  const hasPendingItems = cart.length > 0;
+  const hasPendingItems = hasPendingCartItems;
   const shouldShowContinuePaymentButton =
     Boolean(paymentInfo) && !isProcessing && !error && hasPendingItems;
 
@@ -455,6 +512,41 @@ function PaymentSuccessContent() {
               </div>
             )}
 
+            {hasPendingCartItems && (
+              <div className="mb-6 rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm text-gray-700">
+                <div className="mb-3 flex items-center justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+                    결제하지 않은 내역 ({cart.length}건)
+                  </p>
+                  <span className="text-xs text-blue-500">남은 구별 결제</span>
+                </div>
+                <div className="space-y-3">
+                  {cart.map((item) => {
+                    const periodLabel = formatItemPeriodLabel(item);
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex items-start justify-between gap-4"
+                      >
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {item.name || '광고 상품'}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {item.district}
+                            {periodLabel && ` · ${periodLabel}`}
+                          </p>
+                        </div>
+                        <span className="text-sm font-semibold text-gray-900">
+                          {(item.price ?? 0).toLocaleString()}원
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="space-y-3">
               <button
                 onClick={handleGoToOrders}
@@ -468,7 +560,7 @@ function PaymentSuccessContent() {
                   onClick={handleContinuePayment}
                   className="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg hover:bg-indigo-700 transition-colors"
                 >
-                  남은 구 계속 결제하기
+                  남은 결제 하기
                 </button>
               )}
 

@@ -230,14 +230,26 @@ export default function CustomerServicePage() {
             <CustomerServiceSkeleton />
           ) : (
             <>
-              <table className="w-full">
-                <tbody>
-                  {inquiries.map((item) => (
+                <table className="w-full">
+                  <thead className="text-left">
+                    <tr className="text-0.75 text-gray-500 uppercase tracking-wide">
+                      <th className="text-center py-2">No</th>
+                      <th className="text-center py-2">상품</th>
+                      <th className="px-2 py-2 text-center">제목</th>
+                      <th className="text-center py-2">작성일</th>
+                      <th className="px-4 py-2 text-end">상태</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {inquiries.map((item, index) => (
                     <React.Fragment key={item.id}>
                       <tr
                         className="border-b-solid border-b-1 border-b-black md:border-b-[3px] text-1 font-500 cursor-pointer"
                         onClick={() => toggleItem(item.id)}
                       >
+                        <td className="py-3 md:py-4 text-center">
+                          {(currentPage - 1) * itemsPerPage + index + 1}
+                        </td>
                         <td className=" py-3 md:py-4 text-center ">
                           {getProductLabel(item)}
                         </td>
@@ -285,9 +297,9 @@ export default function CustomerServicePage() {
                           </div>
                         </td>
                       </tr>
-                      {openItemId === item.id && (
-                        <tr>
-                          <td colSpan={4}>
+                    {openItemId === item.id && (
+                      <tr>
+                        <td colSpan={5}>
                             {/* 질문 내용 */}
                             <div className="bg-[#F9F9F9] p-6 flex flex-col gap-4">
                               <h3 className="font-bold">{item.title}</h3>

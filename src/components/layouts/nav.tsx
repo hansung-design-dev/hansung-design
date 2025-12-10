@@ -141,11 +141,6 @@ const IconButton = ({
                 height={30}
                 className={`w-7 h-7 ${TextInvert ? 'invert' : ''} ${className}`}
               />
-              {isHovered && (
-                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-black text-white text-xs rounded whitespace-nowrap z-50">
-                  {label}
-                </div>
-              )}
             </button>
           </Link>
           {isMenuHovered && (

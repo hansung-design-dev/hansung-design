@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/src/lib/supabase';
+import { ensureDesignDraftForOrderItem } from '@/src/lib/designDrafts';
+import { ensurePanelSlotUsageForItem } from '@/src/lib/slotResolver';
 import { CartItem } from '@/src/contexts/cartContext';
 
 // 주문 아이템 타입 (CartItem에 quantity 추가)
@@ -168,6 +170,7 @@ async function createOrderAfterPayment(
 
   // 3. order_details 및 panel_slot_usage 생성
   const orderDetails = [];
+  const designDraftIdsByItem: Record<string, string | null> = {};
 
   for (const item of items) {
     // 기간 설정
@@ -208,49 +211,50 @@ async function createOrderAfterPayment(
       displayEndDate = endDate.toISOString().split('T')[0];
     }
 
-    // panel_slot_usage 레코드 생성
-    let panelSlotUsageId = item.panel_slot_usage_id;
+    // panel_slot_usage 레코드 확보 (닫힌 슬롯이면 열린 슬롯으로 대체)
+    let panelSlotUsageId = item.panel_slot_usage_id ?? null;
+    const slotResolution = await ensurePanelSlotUsageForItem({
+      item,
+      existingPanelSlotUsageId: panelSlotUsageId,
+      displayStartDate,
+      displayEndDate,
+    });
+    panelSlotUsageId = slotResolution.panelSlotUsageId;
 
-    if (!panelSlotUsageId && item.panel_slot_snapshot) {
-      const { data: bannerSlotData } = await supabase
-        .from('banner_slots')
-        .select('id')
-        .eq('panel_id', item.panel_id)
-        .eq('slot_number', item.panel_slot_snapshot.slot_number)
-        .single();
+    if (!item.panel_slot_snapshot) {
+      item.panel_slot_snapshot = {};
+    }
 
-      if (bannerSlotData) {
-        const { data: panelData } = await supabase
-          .from('panels')
-          .select('display_type_id')
-          .eq('id', item.panel_id)
-          .single();
-
-        if (panelData) {
-          const { data: newPanelSlotUsage } = await supabase
-            .from('panel_slot_usage')
-            .insert({
-              display_type_id: panelData.display_type_id,
-              panel_id: item.panel_id,
-              slot_number: item.panel_slot_snapshot.slot_number,
-              banner_slot_id: bannerSlotData.id,
-              usage_type: 'banner_display',
-              attach_date_from: displayStartDate,
-              is_active: true,
-              is_closed: false,
-              banner_type: item.panel_slot_snapshot.banner_type || 'panel',
-            })
-            .select('id')
-            .single();
-
-          if (newPanelSlotUsage) {
-            panelSlotUsageId = newPanelSlotUsage.id;
-          }
-        }
-      }
+    if (slotResolution.slotNumber !== null) {
+      item.panel_slot_snapshot.slot_number = slotResolution.slotNumber;
     }
 
     // order_details 생성
+    const existingItemDraftId =
+      item.designDraftId || item.design_draft_id || item.draftId || null;
+    const projectNameForItem =
+      item.projectName?.trim() ||
+      projectName?.trim() ||
+      item.name ||
+      '프로젝트명 없음' ||
+      '프로젝트명 없음';
+    const itemDraftDeliveryMethod =
+      item.draftDeliveryMethod || draftDeliveryMethod || 'upload';
+    const designDraftIdForItem =
+      existingItemDraftId ||
+      (userProfile?.id
+        ? await ensureDesignDraftForOrderItem({
+            userProfileId: userProfile.id,
+            projectName: projectNameForItem,
+            orderNumber: order.order_number,
+            panelId: item.panel_id,
+            itemLabel: item.name || item.panel_id,
+            draftDeliveryMethod: itemDraftDeliveryMethod,
+          })
+        : null);
+
+    designDraftIdsByItem[item.id] = designDraftIdForItem;
+
     orderDetails.push({
       order_id: order.id,
       panel_id: item.panel_id,
@@ -258,6 +262,7 @@ async function createOrderAfterPayment(
       slot_order_quantity: item.quantity,
       display_start_date: displayStartDate,
       display_end_date: displayEndDate,
+      design_draft_id: designDraftIdForItem,
     });
   }
 
@@ -280,62 +285,33 @@ async function createOrderAfterPayment(
     orderDetailsResult?.length
   );
 
-  // 4. design_drafts 생성 또는 기존 시안과 연결
-  if (userProfile?.id) {
-    let designDraftId = orderData.draftId || null;
+  const representativeDesignDraftId = Object.values(designDraftIdsByItem).find(
+    (id): id is string => Boolean(id)
+  );
 
-    // 이미 결제 페이지에서 direct-upload로 생성된 시안이 있는 경우 우선 사용
-    if (designDraftId) {
-      const { data: existingDraft, error: existingDraftError } = await supabase
-        .from('design_drafts')
-        .select('id')
-        .eq('id', designDraftId)
-        .single();
+  if (representativeDesignDraftId) {
+    const { error: orderDraftUpdateError } = await supabase
+      .from('orders')
+      .update({
+        design_drafts_id: representativeDesignDraftId,
+      })
+      .eq('id', order.id);
 
-      if (existingDraftError || !existingDraft) {
-        console.warn(
-          '🔍 [주문 생성] 지정된 draftId를 찾을 수 없어 새 시안을 생성합니다:',
-          {
-            draftId: designDraftId,
-            error: existingDraftError,
-          }
-        );
-        designDraftId = null;
-      }
+    if (orderDraftUpdateError) {
+      console.error(
+        '🔍 [주문 생성] orders.design_drafts_id 업데이트 실패:',
+        orderDraftUpdateError
+      );
+    } else {
+      console.log('🔍 [주문 생성] ✅ 대표 design_drafts_id를 orders에 연결:', {
+        orderId: order.id,
+        designDraftId: representativeDesignDraftId,
+      });
     }
-
-    // draftId가 없으면 기존 방식대로 새 design_drafts 생성
-    if (!designDraftId) {
-      const { data: draft, error: draftError } = await supabase
-        .from('design_drafts')
-        .insert({
-          user_profile_id: userProfile.id,
-          draft_category: 'initial',
-          project_name: projectName,
-          notes: `주문 생성 시 자동 생성 (전송방식: ${
-            draftDeliveryMethod || 'upload'
-          })`,
-        })
-        .select('id, project_name')
-        .single();
-
-      if (draftError || !draft) {
-        console.error('🔍 [주문 생성] ❌ design_drafts 생성 실패:', draftError);
-      } else {
-        designDraftId = draft.id as string;
-      }
-    }
-
-    // design_drafts가 존재하면 orders와 연결
-    if (designDraftId) {
-      await supabase
-        .from('orders')
-        .update({
-          design_drafts_id: designDraftId,
-          draft_delivery_method: draftDeliveryMethod || 'upload',
-        })
-        .eq('id', order.id);
-    }
+  } else {
+    console.warn(
+      '🔍 [주문 생성] 디자인 draft 생성되지 않음 (userProfile 혹은 아이템 로직 확인 필요)'
+    );
   }
 
   return {
@@ -368,7 +344,7 @@ export async function POST(request: NextRequest) {
 
     // 테스트 결제 확인 (paymentKey가 test_free_로 시작하면 테스트 결제)
     const isTestPayment = paymentKey.startsWith('test_free_');
-    
+
     // TODO: 테스트 완료 후 0원 결제 로직 제거
     // [임시] 테스트용 0원 결제 로직 (dev/stage 전용)
     const isTestFreePaymentEnabled =
@@ -379,22 +355,20 @@ export async function POST(request: NextRequest) {
     const userId = orderData?.userAuthId;
 
     // 테스트 유저인지 확인
-    const isTestUser = !isProd && isTestFreePaymentEnabled && userId === testFreePaymentUserId;
+    const isTestUser =
+      !isProd && isTestFreePaymentEnabled && userId === testFreePaymentUserId;
 
     // 테스트 결제인 경우 0원 처리
     let finalAmount = amount;
     if (isTestPayment || isTestUser) {
       finalAmount = 0;
-      console.log(
-        '🔍 [결제 확인 API] ⚠️ 테스트용 0원 결제 적용:',
-        {
-          userId,
-          originalAmount: amount,
-          finalAmount: 0,
-          isTestPayment,
-          isTestUser,
-        }
-      );
+      console.log('🔍 [결제 확인 API] ⚠️ 테스트용 0원 결제 적용:', {
+        userId,
+        originalAmount: amount,
+        finalAmount: 0,
+        isTestPayment,
+        isTestUser,
+      });
     }
 
     // 테스트 결제가 아니면 시크릿 키 필요
@@ -458,7 +432,9 @@ export async function POST(request: NextRequest) {
       console.log(
         '🔍 [결제 확인 API] 토스페이먼츠 결제 승인 API 호출 시작...',
         {
-          paymentKey: paymentKey ? `${paymentKey.substring(0, 30)}...` : '(없음)',
+          paymentKey: paymentKey
+            ? `${paymentKey.substring(0, 30)}...`
+            : '(없음)',
           orderId,
           amount: finalAmount,
           originalAmount: amount !== finalAmount ? amount : undefined,

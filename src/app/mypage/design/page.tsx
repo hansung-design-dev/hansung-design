@@ -10,7 +10,7 @@ import Image from 'next/image';
 interface DesignDraft {
   id: string;
   project_name?: string;
-  draft_category: string;
+  draft_category: 'initial' | 'feedback' | 'revision' | 'final';
   file_name?: string;
   file_url?: string;
   created_at: string;
@@ -170,6 +170,9 @@ export default function DesignPage() {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('orderId', orderId);
+      if (draftId) {
+        formData.append('draftId', draftId);
+      }
 
       const response = await fetch('/api/design-drafts/upload', {
         method: 'POST',
@@ -211,106 +214,126 @@ export default function DesignPage() {
         </div>
       ) : (
         <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {draftCards.map((card) => (
-            <div
-              key={card.id}
-              className="border-solid border-1 border-gray-200 rounded-lg p-6 bg-white shadow-sm"
-            >
-              <div className="">
-                <div>
-                  <h3 className="text-1 font-semibold">
-                    주문번호: {card.orderNumber}
-                  </h3>
-                  <p className="text-gray-600">
-                    주문일: {new Date(card.orderCreatedAt).toLocaleDateString()}
-                  </p>
-                  {card.projectName && card.projectName !== '프로젝트명 없음' && (
-                    <p className="text-blue-600 font-medium">
-                      작업명: {card.projectName}
+          {draftCards.map((card) => {
+            const isImagePreview =
+              card.draft?.file_url &&
+              card.draft.file_name
+                ?.toLowerCase()
+                .match(/\.(jpg|jpeg|png)$/);
+
+            return (
+              <div
+                key={card.id}
+                className="border-solid border-1 border-gray-200 rounded-lg p-6 bg-white shadow-sm"
+              >
+                <div className="">
+                  <div>
+                    <h3 className="text-1 font-semibold">
+                      주문번호: {card.orderNumber}
+                    </h3>
+                    <p className="text-gray-600">
+                      주문일: {new Date(card.orderCreatedAt).toLocaleDateString()}
                     </p>
-                  )}
-                  <div className="items-end justify-end flex flex-col gap-2"></div>
-                </div>
-              </div>
-
-              {/* 이메일로 보내기 신청한 경우 표기 */}
-              {card.isEmailOnly && (
-                <div className="flex items-center gap-2 mt-2 mb-4">
-                  <span className="text-sm text-blue-600 font-medium">
-                    이메일로 보내기 신청:
-                  </span>
-                  <span className="text-xs text-blue-800 px-2 py-1 rounded bg-blue-50">
-                    banner114@hanmail.net
-                  </span>
-                </div>
-              )}
-
-              <div className="space-y-4">
-                {/* 이메일로 보내기 신청한 경우 안내 메시지 */}
-                {card.isEmailOnly && (
-                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-sm text-blue-700">
-                        이메일로 시안을 보내셨지만, 홈페이지에서도 업로드할 수
-                        있습니다.
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {/* 이미 업로드된 시안 미리보기 표시 */}
-                {card.draft && card.draft.file_name && (
-                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="flex items-center gap-3 flex-wrap">
-                      {card.draft.file_url &&
-                      card.draft.file_name
-                        ?.toLowerCase()
-                        .match(/\.(jpg|jpeg|png)$/) ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setPreviewImageUrl(card.draft!.file_url!);
-                            setPreviewImageName(card.draft!.file_name || null);
-                          }}
-                          className="cursor-pointer"
-                        >
-                          <div className="relative h-16 w-16">
-                            <Image
-                              src={card.draft.file_url!}
-                              alt={card.draft.file_name || '시안'}
-                              fill
-                              className="rounded border border-green-300 object-contain bg-white"
-                            />
-                          </div>
-                        </button>
-                      ) : (
-                        <span className="text-sm text-green-600">
-                          {card.draft.file_name}
-                        </span>
+                    {card.projectName &&
+                      card.projectName !== '프로젝트명 없음' && (
+                        <p className="text-blue-600 font-medium">
+                          작업명: {card.projectName}
+                        </p>
                       )}
+                    <div className="items-end justify-end flex flex-col gap-2"></div>
+                  </div>
+                </div>
+
+                {/* 이메일로 보내기 신청한 경우 표기 */}
+                {card.isEmailOnly && (
+                  <div className="flex items-center gap-2 mt-2 mb-4">
+                    <span className="text-sm text-blue-600 font-medium">
+                      이메일로 보내기 신청:
+                    </span>
+                    <span className="text-xs text-blue-800 px-2 py-1 rounded bg-blue-50">
+                      banner114@hanmail.net
+                    </span>
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  {/* 이메일로 보내기 신청한 경우 안내 메시지 */}
+                  {card.isEmailOnly && (
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-sm text-blue-700">
+                          이메일로 시안을 보내셨지만, 홈페이지에서도 업로드할
+                          수 있습니다.
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* 커스텀 파일 업로드 */}
-                <CustomFileUpload
-                  onFileSelect={(file) =>
-                    handleFileUpload(card.orderId, file, card.draft?.id)
-                  }
-                  disabled={uploadingFile === (card.draft?.id || card.orderId)}
-                  placeholder="시안 파일을 선택해주세요"
-                  className="w-[13rem]"
-                />
+                  {/* 이미 업로드된 시안 미리보기 표시 */}
+                  {card.draft && card.draft.file_name && (
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        {isImagePreview && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPreviewImageUrl(card.draft!.file_url!);
+                              setPreviewImageName(
+                                card.draft!.file_name || null
+                              );
+                            }}
+                            className="cursor-pointer"
+                          >
+                            <div className="relative h-16 w-16">
+                              <Image
+                                src={card.draft.file_url!}
+                                alt={card.draft.file_name || '시안'}
+                                fill
+                                className="rounded border border-green-300 object-contain bg-white"
+                              />
+                            </div>
+                          </button>
+                        )}
+                        <div className="flex flex-col gap-1">
+                          <span className="text-sm text-green-600 break-words">
+                            {card.draft.file_name}
+                          </span>
+                          {card.draft.file_url && (
+                            <a
+                              className="text-xs text-green-700 hover:underline"
+                              href={card.draft.file_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              download={card.draft.file_name}
+                            >
+                              다운로드
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
-                {uploadingFile === (card.draft?.id || card.orderId) && (
-                  <div className="text-center py-2">
-                    <span className="text-sm text-gray-500">업로드 중...</span>
-                  </div>
-                )}
+                  {/* 커스텀 파일 업로드 */}
+                  <CustomFileUpload
+                    onFileSelect={(file) =>
+                      handleFileUpload(card.orderId, file, card.draft?.id)
+                    }
+                    disabled={uploadingFile === (card.draft?.id || card.orderId)}
+                    placeholder="시안 파일을 선택해주세요"
+                    className="w-[13rem]"
+                  />
+
+                  {uploadingFile === (card.draft?.id || card.orderId) && (
+                    <div className="text-center py-2">
+                      <span className="text-sm text-gray-500">업로드 중...</span>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            );
+          })}
+      </div>
       )}
       {/* 시안 이미지 미리보기 모달 */}
       {previewImageUrl && (

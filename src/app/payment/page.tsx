@@ -65,6 +65,8 @@ type BankAccountInfo = {
   owner: string;
 };
 
+const PENDING_PAYMENT_ITEMS_KEY = 'pending_payment_items';
+
 const buildPaymentDebugMetadata = (
   label: string,
   details: Record<string, unknown> = {}
@@ -104,6 +106,8 @@ function PaymentPageContent() {
   const { profiles } = useProfile();
   // router 제거 - 토스 위젯에서 직접 처리
   const searchParams = useSearchParams();
+  const itemsParam = searchParams.get('items');
+  const encodedItemsParam = itemsParam ? encodeURIComponent(itemsParam) : null;
 
   const [selectedItems, setSelectedItems] = useState<CartItem[]>([]);
   const [groupedItems, setGroupedItems] = useState<GroupedCartItem[]>([]);
@@ -1622,6 +1626,9 @@ function PaymentPageContent() {
       }
       const draftDeliveryMethod =
         groupState?.sendByEmail === true ? 'email' : 'upload';
+      const requiresGroupFileUpload =
+        draftDeliveryMethod === 'upload' &&
+        (group.items.length === 1 || bulkApply.fileUpload);
 
       const itemsForOrder = group.items.map((item) => {
         const itemState = itemStates[item.id];
@@ -1640,6 +1647,7 @@ function PaymentPageContent() {
           draftDeliveryMethod:
             itemState?.sendByEmail === true ? 'email' : 'upload',
           projectName: itemProjectName,
+          designDraftId: null as string | null,
         };
       });
 
@@ -1676,7 +1684,7 @@ function PaymentPageContent() {
       let draftId: string | undefined;
       const itemDraftIds: Record<string, string> = {};
 
-      if (draftDeliveryMethod === 'upload') {
+      if (requiresGroupFileUpload) {
         if (!groupState?.selectedFile) {
           alert('시안 파일을 선택해주세요.');
           return;
@@ -1707,6 +1715,10 @@ function PaymentPageContent() {
           }
         }
       }
+
+      itemsForOrder.forEach((orderItem) => {
+        orderItem.designDraftId = itemDraftIds[orderItem.id] || draftId || null;
+      });
 
       logPaymentDebug('계좌이체 주문 요청 페이로드', {
         userAuthId: user.id,
@@ -1931,8 +1943,8 @@ function PaymentPageContent() {
           if (container) {
             container.innerHTML = `
               <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <div class="text-blue-800 font-medium mb-2">통합결제창 방식</div>
-                <div class="text-blue-600 text-sm">결제하기 버튼을 클릭하면 토스페이먼츠 통합결제창이 열립니다.</div>
+                
+                <div class="text-blue-600 text-sm">카드 또는 계좌이체 버튼을 눌러 결제 해 주세요.</div>
               </div>
             `;
           }
@@ -2606,6 +2618,7 @@ function PaymentPageContent() {
                   panel_slot_snapshot: item.panel_slot_snapshot,
                   // 아이템별 정보 추가
                   draftId: itemDraftIds[item.id] || undefined,
+                  designDraftId: itemDraftIds[item.id] || draftId || null,
                   draftDeliveryMethod:
                     itemDraftDeliveryMethods[item.id] || draftDeliveryMethod,
                   projectName:
@@ -2671,6 +2684,17 @@ function PaymentPageContent() {
               // 결제 요청 파라미터 검증
               const successUrl = `${window.location.origin}/payment/success?orderId=${finalOrderId}`;
               const failUrl = `${window.location.origin}/payment/fail?orderId=${finalOrderId}`;
+
+              if (typeof window !== 'undefined') {
+                if (encodedItemsParam) {
+                  window.localStorage.setItem(
+                    PENDING_PAYMENT_ITEMS_KEY,
+                    encodedItemsParam
+                  );
+                } else {
+                  window.localStorage.removeItem(PENDING_PAYMENT_ITEMS_KEY);
+                }
+              }
 
               console.log('🔍 [로컬 디버깅] 결제 URL 생성:', {
                 windowOrigin: window.location.origin,
@@ -3672,7 +3696,7 @@ function PaymentPageContent() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">토스페이먼츠 결제</h2>
+              <h2 className="text-xl font-bold">결제</h2>
               <button
                 onClick={() => {
                   setTossWidgetOpen(false);

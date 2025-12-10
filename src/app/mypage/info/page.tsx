@@ -7,7 +7,6 @@ import { useProfile } from '@/src/contexts/profileContext';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/src/components/button/button';
 import Image from 'next/image';
-import Link from 'next/link';
 import MypageContainer from '@/src/components/mypageContainer';
 import UserProfileModal from '@/src/components/modal/UserProfileModal';
 import UserInfoSkeleton from '@/src/components/skeleton/UserInfoSkeleton';
@@ -149,7 +148,6 @@ export default function UserInfoPage() {
     message: '',
     onConfirm: () => {},
   });
-
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 3;
 
@@ -301,182 +299,226 @@ export default function UserInfoPage() {
     <main className="min-h-screen flex flex-col bg-[#F1F1F1]">
       <Nav variant="default" className="bg-white sm:px-0" />
       <MypageContainer activeTab={activeTab}>
-        <div className="flex flex-col sm:items-start">
-          <Link href="/mypage" className="md:hidden lg:hidden sm:inline">
-            <Image
-              src="/svg/arrow-left.svg"
-              alt="orders"
-              width={20}
-              height={20}
-              className="w-[1.5rem] h-[1.5rem]"
-            />
-          </Link>
-          <h2 className="text-1.5 md:text-2.25 font-500 mb-4 md:mb-8 border-b-solid border-gray-3 pb-4 md:pb-8 w-full">
-            간편정보관리
-          </h2>
-          <div className="space-y-4 md:space-y-6 max-w-2xl w-full">
-            <div className="flex flex-col gap-3 md:gap-[1.25rem] bg-white p-4 md:p-6 rounded-lg">
-              <div className="">
-                <div className="text-0.875 text-gray-500 mb-2 border border-b-solid border-gray-3 pb-2">
-                  닉네임
+        <div className="flex justify-center w-full">
+          <div className="w-full max-w-4xl bg-white rounded-lg p-6 md:p-10 flex flex-col items-center gap-6">
+            <h2 className="text-1.5 md:text-2.25 font-500 mb-2 text-left w-full">
+              간편정보관리
+            </h2>
+            <div className="space-y-4 md:space-y-6 w-full flex flex-col items-center px-4 md:px-0">
+              <div className="w-full max-w-3xl mx-auto flex flex-col gap-4">
+                <div className="flex flex-col gap-1">
+                  <div className="text-0.75 text-gray-500">아이디</div>
+                  <p className="text-1 font-500">{user?.username || '-'}</p>
+                  <div className="border-b border-gray-200" />
                 </div>
-                <div className="flex items-center sm:justify-between">
-                  <p className="text-0.875 md:text-1 font-500 w-full md:w-[16rem]">
-                    {user?.username || '닉네임'}
+                <div className="flex flex-col gap-1">
+                  <div className="text-0.75 text-gray-500">이메일정보</div>
+                  <p className="text-1 font-500">
+                    {user?.email || '이메일 없음'}
                   </p>
-                  <Button variant="ghost" size="sm" className="bg-gray-4">
-                    수정
-                  </Button>
+                  <div className="border-b border-gray-200" />
                 </div>
               </div>
-              <div className="">
-                <div className="text-0.875 text-gray-500 mb-2 border border-b-solid border-gray-3 pb-2">
-                  이메일정보
-                </div>
-                <p className="text-0.875 md:text-1 font-500">
-                  {user?.email || '이메일 없음'}
-                </p>
-              </div>
-            </div>
 
-            <div className="bg-white p-4 md:p-6 rounded-lg">
-              <button
-                className="flex flex-col gap-2 items-center justify-center w-full mb-4 md:mb-6 text-0.875 md:text-1 font-500 text-black py-3 border border-solid border-gray-3 rounded-lg"
-                onClick={handleAddProfile}
-              >
-                <div>+</div>
-                <div>간편정보 추가하기</div>
-              </button>
+              <div className="bg-white p-4 md:p-6 max-w-3xl mx-auto w-full flex flex-col items-center justify-center">
+                <div className="w-full flex flex-col items-center gap-4">
+                  <button
+                    className="flex flex-col gap-2 items-center justify-center w-full max-w-[28rem] text-0.875 md:text-1 font-500 text-black py-3 border border-solid border-gray-3 rounded-lg mx-auto mb-4 md:mb-6"
+                    onClick={handleAddProfile}
+                  >
+                    <div>+</div>
+                    <div>간편정보 추가하기</div>
+                  </button>
 
-              {loading ? (
-                <UserInfoSkeleton />
-              ) : currentItems.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  등록된 간편정보가 없습니다.
-                </div>
-              ) : (
-                currentItems.map((profile) => {
-                  console.log('🔍 렌더링할 프로필:', {
-                    id: profile.id,
-                    title: profile.profile_title,
-                    is_public_institution: profile.is_public_institution,
-                    is_company: profile.is_company,
-                  });
-
-                  return (
-                    <div
-                      key={profile.id}
-                      className="border border-solid border-gray-3 rounded-lg px-3 md:px-4 py-4 md:py-8 mb-3 md:mb-4 flex flex-col md:flex-row justify-between items-start gap-3 md:gap-0"
-                    >
-                      <div className="font-500 text-gray-2 flex flex-col gap-1 md:gap-2">
-                        <div className="text-1 md:text-1.25 mb-1 flex items-center gap-2">
-                          {profile.profile_title}
-                          {profile.is_default && (
-                            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                              기본
-                            </span>
-                          )}
-                          {profile.is_public_institution && (
-                            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                              행정용
-                            </span>
-                          )}
-                          {profile.is_company && (
-                            <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded">
-                              기업용
-                            </span>
-                          )}
-                          {(profile.is_public_institution ||
-                            profile.is_company) && (
-                            <span
-                              className={`flex items-center gap-1 text-xs ${
-                                profile.is_approved ? 'text-green' : 'text-red'
-                              }`}
-                            >
-                              <span
-                                className={`w-4 h-4 flex items-center justify-center rounded-full border text-[10px] leading-none ${
-                                  profile.is_approved
-                                    ? 'border-green-500 bg-green-50'
-                                    : 'border-red-500 bg-red-50'
-                                }`}
-                              >
-                                ✓
-                              </span>
-                              <span>
-                                {profile.is_approved ? '승인됨' : '승인대기'}
-                              </span>
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-0.875 md:text-1">
-                          {profile.contact_person_name}
-                        </div>
-                        <div className="text-0.875 md:text-1">
-                          {profile.phone}
-                        </div>
-                        <div className="text-0.875 md:text-1">
-                          {profile.email}
-                        </div>
-                        {profile.company_name && (
-                          <div className="text-0.875 md:text-1 text-gray-500">
-                            {profile.company_name}
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex gap-2 mt-2 md:mt-0">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="bg-gray-4"
-                          onClick={() => handleEditProfile(profile)}
-                        >
-                          수정
-                        </Button>
-                        {!profile.is_default && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="bg-red-100 text-red-600"
-                            onClick={() => handleDeleteProfile(profile.id)}
-                          >
-                            삭제
-                          </Button>
-                        )}
+                  {loading ? (
+                    <div className="w-full flex justify-center">
+                      <div className="w-full max-w-[28rem] md:max-w-[56rem]">
+                        <UserInfoSkeleton />
                       </div>
                     </div>
-                  );
-                })
-              )}
+                  ) : currentItems.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500 w-full max-w-[28rem] md:max-w-[56rem]">
+                      등록된 간편정보가 없습니다.
+                    </div>
+                  ) : (
+                    <div className="w-full flex justify-center">
+                      <div className="grid w-full max-w-[28rem] md:max-w-[56rem] grid-cols-1 md:grid-cols-2 gap-4 justify-center justify-items-center">
+                        {currentItems.map((profile) => {
+                          console.log('🔍 렌더링할 프로필:', {
+                            id: profile.id,
+                            title: profile.profile_title,
+                            is_public_institution:
+                              profile.is_public_institution,
+                            is_company: profile.is_company,
+                          });
 
-              {totalPages > 1 && (
-                <div className="flex justify-center items-center gap-2 md:gap-4 text-gray-500 mt-4">
-                  <div className="flex gap-2 md:gap-4 text-1 md:text-1.25 items-center justify-center">
-                    {Array.from({ length: totalPages }, (_, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => handlePageChange(idx + 1)}
-                        className={`border-none text-1 md:text-1.25 font-500 ${
-                          currentPage === idx + 1 ? 'text-black' : 'text-gray-5'
-                        }`}
-                      >
-                        {idx + 1}
-                      </button>
-                    ))}
-                  </div>
-                  {currentPage < totalPages && (
-                    <Image
-                      src="/svg/arrow-right.svg"
-                      alt="arrow-right"
-                      width={13}
-                      height={13}
-                      onClick={() => handlePageChange(currentPage + 1)}
-                      className="cursor-pointer"
-                    />
+                          return (
+                            <div
+                              key={profile.id}
+                              className="border border-solid border-gray-3 rounded-lg px-3 md:px-4 py-4 md:py-8 flex flex-col items-center text-center gap-3 w-full max-w-[22rem] mx-auto"
+                            >
+                              <div className="font-500 text-gray-2 flex flex-col gap-2 items-center">
+                                <div className="flex flex-wrap gap-2 justify-center text-xs font-semibold">
+                                  {profile.is_default && (
+                                    <span className="border border-blue-200 bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
+                                      기본
+                                    </span>
+                                  )}
+                                  {profile.is_public_institution && (
+                                    <span className="border border-green-200 bg-green-50 text-green-700 px-2 py-0.5 rounded-full">
+                                      행정용
+                                    </span>
+                                  )}
+                                  {profile.is_company && (
+                                    <span className="border border-orange-200 bg-orange-50 text-orange-700 px-2 py-0.5 rounded-full">
+                                      기업용
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 text-xs">
+                                  <span
+                                    className={`flex items-center gap-1 px-2 py-0.5 rounded-full border ${
+                                      profile.is_approved
+                                        ? 'border-green-500 bg-green-50 text-green-700'
+                                        : 'border-red-500 bg-red-50 text-red-600'
+                                    }`}
+                                  >
+                                    <span className="w-3 h-3 flex items-center justify-center rounded-full border text-[10px] leading-none">
+                                      {profile.is_approved ? '✓' : '!'}
+                                    </span>
+                                    {profile.is_approved
+                                      ? '승인됨'
+                                      : '승인대기'}
+                                  </span>
+                                </div>
+                                <div className="text-1 md:text-1.25">
+                                  {profile.profile_title}
+                                </div>
+                              </div>
+                              <div className="text-0.875 md:text-1">
+                                {profile.contact_person_name}
+                              </div>
+                              <div className="text-0.875 md:text-1">
+                                {profile.phone}
+                              </div>
+                              <div className="text-0.875 md:text-1">
+                                {profile.email}
+                              </div>
+                              {profile.company_name && (
+                                <div className="text-0.875 md:text-1 text-gray-500">
+                                  {profile.company_name}
+                                </div>
+                              )}
+                              <div className="flex gap-2 mt-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="bg-gray-4"
+                                  onClick={() => handleEditProfile(profile)}
+                                >
+                                  수정
+                                </Button>
+                                {!profile.is_default && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="bg-red-100 text-red-600"
+                                    onClick={() =>
+                                      handleDeleteProfile(profile.id)
+                                    }
+                                  >
+                                    삭제
+                                  </Button>
+                                )}
+                              </div>
+                              {/* {isNicknameModalOpen && (
+                                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] px-4">
+                                  <div className="bg-white rounded-lg p-6 w-full max-w-md">
+                                    <div className="text-xl font-semibold mb-4">
+                                      닉네임 변경
+                                    </div>
+                                    <label className="text-sm text-gray-600 mb-1 block">
+                                      새 닉네임을 입력해주세요.
+                                    </label>
+                                    <input
+                                      className="w-full border border-gray-300 rounded px-3 py-2 mb-2"
+                                      value={nicknameInput}
+                                      onChange={(e) =>
+                                        setNicknameInput(e.target.value)
+                                      }
+                                      placeholder="닉네임을 입력하세요"
+                                    />
+                                    {nicknameError && (
+                                      <p className="text-sm text-red-500 mb-2">
+                                        {nicknameError}
+                                      </p>
+                                    )}
+                                    <div className="flex justify-end gap-3 mt-4">
+                                      <Button
+                                        size="md"
+                                        variant="outlinedGray"
+                                        onClick={() =>
+                                          setIsNicknameModalOpen(false)
+                                        }
+                                        disabled={isUpdatingNickname}
+                                        className="px-4"
+                                      >
+                                        취소
+                                      </Button>
+                                      <Button
+                                        size="md"
+                                        variant="filledBlack"
+                                        onClick={handleNicknameSave}
+                                        disabled={isUpdatingNickname}
+                                        className="px-4"
+                                      >
+                                        {isUpdatingNickname
+                                          ? '저장 중…'
+                                          : '저장'}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                              )} */}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {totalPages > 1 && (
+                    <div className="flex justify-center items-center gap-2 md:gap-4 text-gray-500 mt-4">
+                      <div className="flex gap-2 md:gap-4 text-1 md:text-1.25 items-center justify-center">
+                        {Array.from({ length: totalPages }, (_, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => handlePageChange(idx + 1)}
+                            className={`border-none text-1 md:text-1.25 font-500 ${
+                              currentPage === idx + 1
+                                ? 'text-black'
+                                : 'text-gray-5'
+                            }`}
+                          >
+                            {idx + 1}
+                          </button>
+                        ))}
+                      </div>
+                      {currentPage < totalPages && (
+                        <Image
+                          src="/svg/arrow-right.svg"
+                          alt="arrow-right"
+                          width={13}
+                          height={13}
+                          onClick={() => handlePageChange(currentPage + 1)}
+                          className="cursor-pointer"
+                        />
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
+              </div>
             </div>
-
             <div className="flex   md:flex-row gap-3 md:gap-4 justify-center ">
               <Button
                 variant="outlineGray"

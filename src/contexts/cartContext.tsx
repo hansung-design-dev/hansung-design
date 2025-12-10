@@ -71,6 +71,8 @@ export interface CartItem {
   fileSize?: number | null;
   fileType?: string | null;
   emailAddress?: string | null;
+  draftId?: string | null;
+  designDraftId?: string | null;
   // 아이템이 장바구니에 추가된 시간 (밀리초)
   addedAt?: number;
 }

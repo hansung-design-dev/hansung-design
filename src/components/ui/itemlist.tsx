@@ -637,19 +637,6 @@ const ItemList: React.FC<ItemTableProps> = ({
                 </>
               ) : (
                 <>
-                  {!hideStatusColumn && (
-                    <div className="text-0.875">
-                      상태:&nbsp;
-                      <span
-                        className={`text-0.875 ${getStatusClass(
-                          displayStatus
-                        )} font-medium`}
-                      >
-                        {displayStatus}
-                      </span>
-                    </div>
-                  )}
-
                   <div className="text-0.875">구분: {categoryDisplay}</div>
                   <div className="text-0.875">
                     기간:{' '}

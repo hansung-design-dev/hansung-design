@@ -25,6 +25,13 @@ export async function GET(request: NextRequest) {
             region_gu (
               name
             )
+          ),
+          design_draft:design_draft_id (
+            id,
+            project_name,
+            file_name,
+            file_url,
+            is_approved
           )
         ),
         user_profiles (

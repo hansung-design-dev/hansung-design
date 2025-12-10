@@ -136,48 +136,76 @@ export async function POST(request: NextRequest) {
       filePath,
     });
 
-    // orders 테이블에서 design_drafts_id 조회
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .select('design_drafts_id')
-      .eq('id', orderId)
+    const formDraftId = formData.get('draftId') as string | null;
+    let targetDraftId = formDraftId;
+    if (!targetDraftId) {
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .select('design_drafts_id')
+        .eq('id', orderId)
+        .single();
+
+      if (orderError) {
+        console.error('🔍 [시안 업로드] 주문 design_drafts_id 조회 실패:', orderError);
+      } else if (order?.design_drafts_id) {
+        targetDraftId = order.design_drafts_id;
+      }
+    }
+
+    if (!targetDraftId) {
+      console.error(
+        '🔍 [시안 업로드] 해당 주문에 연결된 design_drafts_id 없음:',
+        { orderId }
+      );
+      return NextResponse.json(
+        { success: false, error: '주문에 연결된 시안을 찾을 수 없습니다.' },
+        { status: 400 }
+      );
+    }
+
+    const { data: existingDraft, error: existingDraftError } = await supabase
+      .from('design_drafts')
+      .select('id, file_url')
+      .eq('id', targetDraftId)
       .single();
 
-    let existingDraft = null;
-    if (!orderError && order?.design_drafts_id) {
-      const { data: draft } = await supabase
-        .from('design_drafts')
-        .select('id')
-        .eq('id', order.design_drafts_id)
-        .eq('draft_category', 'initial')
-        .single();
-      existingDraft = draft;
+    if (existingDraftError || !existingDraft) {
+      console.error(
+        '🔍 [시안 업로드] design_drafts 조회 실패:',
+        existingDraftError,
+        { draftId: targetDraftId }
+      );
+      return NextResponse.json(
+        { success: false, error: '디자인 정보를 가져올 수 없습니다.' },
+        { status: 404 }
+      );
     }
 
-    let draftId: string;
+    const shouldUseRevision = Boolean(existingDraft.file_url);
+    const { data: updatedDraft, error: updateError } = await supabase
+      .from('design_drafts')
+      .update({
+        file_name: file.name,
+        file_url: fileUrl,
+        file_extension: file.name.split('.').pop(),
+        file_size: file.size,
+        notes: '사용자가 업로드한 시안',
+        draft_category: shouldUseRevision ? 'revision' : 'initial',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', targetDraftId)
+      .select()
+      .single();
 
-    if (existingDraft) {
-      // 기존 시안 업데이트
-      const { data: updatedDraft, error: updateError } = await supabase
-        .from('design_drafts')
-        .update({
-          file_name: file.name,
-          file_url: fileUrl,
-          file_extension: file.name.split('.').pop(),
-          file_size: file.size,
-          notes: '사용자가 업로드한 시안',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', existingDraft.id)
-        .select()
-        .single();
-
-      if (updateError) throw updateError;
-      draftId = updatedDraft.id;
-    } else {
-      // 새로운 시안 생성 (이 경우는 주문 생성 시 이미 design_drafts가 생성되어 있어야 함)
-      throw new Error('주문에 해당하는 design_drafts를 찾을 수 없습니다.');
+    if (updateError || !updatedDraft) {
+      console.error('🔍 [시안 업로드] design_drafts 업데이트 실패:', updateError);
+      return NextResponse.json(
+        { success: false, error: '파일 등록에 실패했습니다.' },
+        { status: 500 }
+      );
     }
+
+    const draftId = updatedDraft.id;
 
     return NextResponse.json({
       success: true,

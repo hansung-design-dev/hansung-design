@@ -56,7 +56,17 @@ interface PanelSlotUsage {
     price_unit?: string;
     panel_slot_status?: string;
     notes?: string;
+    banner_slot_price_policy?: BannerSlotPricePolicy[];
   };
+}
+
+interface BannerSlotPricePolicy {
+  id: string;
+  price_usage_type?: string;
+  tax_price?: number;
+  road_usage_fee?: number;
+  advertising_fee?: number;
+  total_price?: number;
 }
 
 interface OrderDetail {
@@ -69,6 +79,14 @@ interface OrderDetail {
   display_end_date?: string;
   panels?: PanelInfo;
   panel_slot_usage?: PanelSlotUsage;
+  design_draft_id?: string;
+  design_draft?: {
+    id: string;
+    project_name?: string;
+    file_name?: string;
+    file_url?: string;
+    is_approved?: boolean;
+  };
 }
 
 interface Payment {
@@ -191,6 +209,7 @@ interface DisplayItem {
   productType: string;
   orderDetailId?: string; // 연결된 order_detail ID
   order?: Order; // 전체 주문 정보
+  isInquiryOrder?: boolean; // 상담결제 여부
 }
 
 interface OrderCardData {
@@ -225,6 +244,7 @@ interface OrderCardData {
   profileTitle?: string; // 주문 프로필명
   profileCompany?: string; // 주문 프로필 회사명
   productType?: string;
+  isInquiryOrder?: boolean;
 }
 
 type CancelTarget =
@@ -305,6 +325,7 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedItemId, setExpandedItemId] = useState<number | null>(null);
+  const [detailPage, setDetailPage] = useState(1);
   const [selectedOrderDetail, setSelectedOrderDetail] =
     useState<OrderDetailResponse | null>(null);
   const [loadingOrderDetail, setLoadingOrderDetail] = useState<string | null>(
@@ -366,6 +387,39 @@ export default function OrdersPage() {
     }
   };
 
+  const fetchOrderDetail = useCallback(async (orderId: string) => {
+    if (!orderId) {
+      return;
+    }
+
+    setLoadingOrderDetail(orderId);
+    try {
+      const response = await fetch(`/api/orders/${orderId}`);
+      const data = await response.json();
+
+      if (data.success && data.data) {
+        setSelectedOrderDetail(data.data);
+      } else {
+        console.error(
+          '🔍 [주문 상세 조회] API 실패:',
+          data.error || '알 수 없는 오류'
+        );
+        alert(
+          `주문 상세 정보를 불러올 수 없습니다: ${
+            data.error || '알 수 없는 오류'
+          }`
+        );
+        setSelectedOrderDetail(null);
+      }
+    } catch (error) {
+      console.error('🔍 [주문 상세 조회] 에러:', error);
+      alert('주문 상세 조회 중 오류가 발생했습니다.');
+      setSelectedOrderDetail(null);
+    } finally {
+      setLoadingOrderDetail(null);
+    }
+  }, []);
+
   const handleCancelConfirm = async () => {
     if (!cancelTarget || isCancelProcessing) return;
 
@@ -412,9 +466,18 @@ export default function OrdersPage() {
         setIsCancelSuccessModalOpen(true);
         // 주문 목록 새로고침
         fetchOrders();
-        // 아코디언 닫기
-        setExpandedItemId(null);
-        setSelectedOrderDetail(null);
+        if (cancelTarget.kind === 'detail') {
+          if (cancelTarget.orderNumber) {
+            await fetchOrderDetail(cancelTarget.orderNumber);
+          } else {
+            setExpandedItemId(null);
+            setSelectedOrderDetail(null);
+          }
+        } else {
+          // 아코디언 닫기
+          setExpandedItemId(null);
+          setSelectedOrderDetail(null);
+        }
       } else {
         console.error('주문 취소 실패:', {
           orderNumber: targetOrderNumber,
@@ -499,6 +562,15 @@ export default function OrdersPage() {
     fetchInquiriesForOrders();
   }, [user?.id]);
 
+  useEffect(() => {
+    if (!selectedOrderDetail) return;
+    const detailCount = selectedOrderDetail.orderDetails?.length ?? 0;
+    const maxPage = Math.max(1, detailCount);
+    if (detailPage > maxPage) {
+      setDetailPage(maxPage);
+    }
+  }, [selectedOrderDetail, detailPage]);
+
   // 마감여부 판단 함수
   const getClosureStatus = (item: OrderDetail, order: Order): string => {
     // panel_slot_usage의 is_closed가 true이거나 order_status가 completed이면 완료
@@ -581,69 +653,64 @@ export default function OrdersPage() {
 
     orders.forEach((order) => {
       const orderDetails = order.order_details || [];
+      const isInquiryOrder =
+        Boolean(order.order_number) && order.order_number.startsWith('INQ-');
+
+      // 작업명 추출 (order.projectName 또는 design_drafts에서)
+      const projectName =
+        order.projectName && order.projectName !== '프로젝트명 없음'
+          ? order.projectName
+          : (() => {
+              const orderWithDrafts = order as Order & {
+                design_drafts?: Array<{ project_name?: string }>;
+              };
+              const draftProjectName =
+                orderWithDrafts.design_drafts?.[0]?.project_name;
+              return draftProjectName && draftProjectName !== '프로젝트명 없음'
+                ? draftProjectName
+                : null;
+            })();
+
+      const rowNumber = globalIndex++;
 
       if (orderDetails.length > 0) {
-        // 일반 주문: order_details 기준으로 행 생성
-        orderDetails.forEach((item: OrderDetail) => {
-          // 작업명 추출 (order.projectName 또는 design_drafts에서)
-          const projectName =
-            order.projectName && order.projectName !== '프로젝트명 없음'
-              ? order.projectName
-              : (() => {
-                  const orderWithDrafts = order as Order & {
-                    design_drafts?: Array<{ project_name?: string }>;
-                  };
-                  const draftProjectName =
-                    orderWithDrafts.design_drafts?.[0]?.project_name;
-                  return draftProjectName &&
-                    draftProjectName !== '프로젝트명 없음'
-                    ? draftProjectName
-                    : null;
-                })();
+        // 대표 상세 정보(첫 번째 항목)로 대표 정보 생성
+        const item = orderDetails[0];
+        const displayTypeName = item.panels?.display_types?.name || '';
+        const category = formatDisplayType(displayTypeName);
+        const productType = getProductTypeLabel({
+          bannerType: item.panel_slot_usage?.banner_type,
+          panelType: item.panels?.panel_type,
+          displayTypeName,
+        });
+        const panelAddress = item.panels?.address;
+        const panelName = item.panels?.nickname;
+        const panelCode = item.panels?.panel_code || item.panel_id;
+        const boardLabel = buildBoardLabel(
+          rowNumber,
+          panelCode,
+          panelName,
+          panelAddress
+        );
 
-          // 품명 확인 (현수막게시대인지 확인)
-          const displayTypeName = item.panels?.display_types?.name || '';
-          const category = formatDisplayType(displayTypeName);
-          const productType = getProductTypeLabel({
-            bannerType: item.panel_slot_usage?.banner_type,
-            panelType: item.panels?.panel_type,
-            displayTypeName,
-          });
-          const panelAddress = item.panels?.address;
-          const panelName = item.panels?.nickname;
-          const panelCode = item.panels?.panel_code || item.panel_id;
-          const rowNumber = globalIndex++;
-          const boardLabel = buildBoardLabel(
-            rowNumber,
-            panelCode,
-            panelName,
-            panelAddress
-          );
-
-          displayItems.push({
-            id: rowNumber,
-            // 게시대명 (넘버. 게시대번호 / 게시대명 / 주소)
-            title: boardLabel,
-            // 작업명을 subtitle로 추가
-            subtitle: projectName || undefined,
-            // 행정구
-            location: item.panels?.region_gu?.name || '-',
-            // 마감여부
-            status: getClosureStatus(item, order),
-            // 결제여부
-            paymentStatus: getPaymentStatusDisplay(order.payment_status),
-            orderId: order.order_number,
-            orderDetailId: item.id,
-            totalAmount:
-              (order.payments?.[0]?.amount || 0).toLocaleString() + '원',
-            startDate: item.display_start_date,
-            endDate: item.display_end_date,
-            isClosed: item.panel_slot_usage?.is_closed === true,
-            panelCode: item.panels?.panel_code,
-            category: category,
-            productType,
-            order: order,
-          });
+        displayItems.push({
+          id: rowNumber,
+          title: boardLabel,
+          subtitle: projectName || undefined,
+          location: item.panels?.region_gu?.name || '-',
+          status: getClosureStatus(item, order),
+          paymentStatus: getPaymentStatusDisplay(order.payment_status),
+          orderId: order.order_number,
+          totalAmount:
+            (order.payments?.[0]?.amount || 0).toLocaleString() + '원',
+          startDate: item.display_start_date,
+          endDate: item.display_end_date,
+          isClosed: item.panel_slot_usage?.is_closed === true,
+          panelCode: item.panels?.panel_code,
+          category: category,
+          productType,
+          order: order,
+          isInquiryOrder,
         });
       } else {
         // 상담신청 기반 등 order_details가 없는 주문도 목록에 표시
@@ -657,7 +724,6 @@ export default function OrdersPage() {
           panelAlias = alias || panelAlias;
           panelAddress = address || '';
 
-          // 행정구 컬럼: 주소에서 "강북구" 같은 구 이름만 추출
           const addressParts = address.split(' ');
           const guName =
             addressParts.length >= 2 ? addressParts[1] : address || '';
@@ -666,7 +732,6 @@ export default function OrdersPage() {
           panelAlias = inquiry.title;
         }
 
-        const rowNumber = globalIndex++;
         const boardLabel = buildBoardLabel(
           rowNumber,
           undefined,
@@ -688,6 +753,7 @@ export default function OrdersPage() {
           productType: getProductTypeLabel({
             inquiryProductType: inquiry?.product_type,
           }),
+          isInquiryOrder,
         });
       }
     });
@@ -719,49 +785,14 @@ export default function OrdersPage() {
   };
 
   // 상세 정보 fetch (orderId 기준)
-  const handleOrderClick = async (orderId: string, itemId: number) => {
+  const handleOrderClick = (orderId: string, itemId: number) => {
     const isExpanding = expandedItemId !== itemId;
     setExpandedItemId(isExpanding ? itemId : null);
+    setDetailPage(1);
 
     if (isExpanding) {
-      // 기존 데이터 초기화 및 로딩 시작
       setSelectedOrderDetail(null);
-      setLoadingOrderDetail(orderId);
-
-      try {
-        console.log('🔍 [주문 상세 조회] API 호출:', `/api/orders/${orderId}`);
-        const response = await fetch(`/api/orders/${orderId}`);
-        const data = await response.json();
-        console.log('🔍 [주문 상세 조회] API 응답:', data);
-
-        if (data.success && data.data) {
-          console.log('🔍 [주문 상세 조회] 데이터 확인:', {
-            order: data.data.order,
-            orderDetails: data.data.orderDetails,
-            customerInfo: data.data.customerInfo,
-            priceInfo: data.data.priceInfo,
-            payments: data.data.payments,
-          });
-          setSelectedOrderDetail(data.data);
-        } else {
-          console.error(
-            '🔍 [주문 상세 조회] API 실패:',
-            data.error || '알 수 없는 오류'
-          );
-          alert(
-            `주문 상세 정보를 불러올 수 없습니다: ${
-              data.error || '알 수 없는 오류'
-            }`
-          );
-          setSelectedOrderDetail(null);
-        }
-      } catch (error) {
-        console.error('🔍 [주문 상세 조회] 에러:', error);
-        alert('주문 상세 조회 중 오류가 발생했습니다.');
-        setSelectedOrderDetail(null);
-      } finally {
-        setLoadingOrderDetail(null);
-      }
+      fetchOrderDetail(orderId);
     } else {
       setSelectedOrderDetail(null);
       setLoadingOrderDetail(null);
@@ -794,6 +825,7 @@ export default function OrdersPage() {
     displayStartDate: '-',
     displayEndDate: '-',
     productType: '-',
+    isInquiryOrder: false,
   };
 
   // 주문일시 포맷 (년월일)
@@ -868,7 +900,139 @@ export default function OrdersPage() {
   };
 
   // 상세 데이터 → OrderItemCard용 데이터로 변환
-  function mapOrderDetailToCard(detail: OrderDetailResponse): OrderCardData {
+  interface DetailPriceInfo {
+    totalPrice: number;
+    totalTaxPrice: number;
+    totalAdvertisingFee: number;
+    totalRoadUsageFee: number;
+    finalPrice: number;
+  }
+
+  const getDetailProjectName = (order: Order, detail: OrderDetail): string => {
+    const projectNameFromDetail = detail.design_draft?.project_name;
+    if (
+      projectNameFromDetail &&
+      projectNameFromDetail.trim() !== '' &&
+      projectNameFromDetail !== '프로젝트명 없음' &&
+      projectNameFromDetail !== '미정'
+    ) {
+      return projectNameFromDetail;
+    }
+
+    if (
+      order.projectName &&
+      order.projectName.trim() !== '' &&
+      order.projectName !== '프로젝트명 없음' &&
+      order.projectName !== '미정'
+    ) {
+      return order.projectName;
+    }
+
+    const orderWithDrafts = order as Order & {
+      design_drafts?: Array<{ project_name?: string }>;
+    };
+    const draftProjectName =
+      orderWithDrafts.design_drafts?.[0]?.project_name ?? undefined;
+    if (
+      draftProjectName &&
+      draftProjectName.trim() !== '' &&
+      draftProjectName !== '프로젝트명 없음' &&
+      draftProjectName !== '미정'
+    ) {
+      return draftProjectName;
+    }
+
+    return '프로젝트명 없음';
+  };
+
+  const getDetailPriceInfo = (
+    order: Order,
+    detail: OrderDetail,
+    allDetails: OrderDetail[],
+    payments: Payment[]
+  ): DetailPriceInfo => {
+    const quantity = detail.slot_order_quantity || 1;
+    const policies =
+      detail.panel_slot_usage?.banner_slots?.banner_slot_price_policy || [];
+    const isPublicInstitution =
+      order.user_profiles?.is_public_institution || false;
+    const preferredType = isPublicInstitution
+      ? 'public_institution'
+      : 'default';
+
+    let selectedPolicy = policies.find(
+      (policy) => policy.price_usage_type === preferredType
+    );
+    if (!selectedPolicy) {
+      selectedPolicy = policies.find(
+        (policy) => policy.price_usage_type === 'default'
+      );
+    }
+    if (!selectedPolicy && policies.length > 0) {
+      selectedPolicy = policies[0];
+    }
+
+    if (selectedPolicy) {
+      const totalPrice = Number(selectedPolicy.total_price || 0) * quantity;
+      const totalTaxPrice = Number(selectedPolicy.tax_price || 0) * quantity;
+      const totalAdvertisingFee =
+        Number(selectedPolicy.advertising_fee || 0) * quantity;
+      const totalRoadUsageFee =
+        Number(selectedPolicy.road_usage_fee || 0) * quantity;
+      return {
+        totalPrice,
+        totalTaxPrice,
+        totalAdvertisingFee,
+        totalRoadUsageFee,
+        finalPrice: totalPrice,
+      };
+    }
+
+    if (detail.panel_slot_usage?.unit_price) {
+      const unitPrice = Number(detail.panel_slot_usage.unit_price);
+      const totalPrice = unitPrice * quantity;
+      return {
+        totalPrice,
+        totalTaxPrice: 0,
+        totalAdvertisingFee: totalPrice,
+        totalRoadUsageFee: 0,
+        finalPrice: totalPrice,
+      };
+    }
+
+    const paymentAmount = Number(payments?.[0]?.amount ?? 0);
+    const totalSlots = allDetails.reduce(
+      (sum, current) => sum + (current.slot_order_quantity || 1),
+      0
+    );
+
+    if (paymentAmount > 0 && totalSlots > 0) {
+      const detailSlots = detail.slot_order_quantity || 1;
+      const distributedPrice = Math.round(
+        (paymentAmount * detailSlots) / totalSlots
+      );
+      return {
+        totalPrice: distributedPrice,
+        totalTaxPrice: 0,
+        totalAdvertisingFee: distributedPrice,
+        totalRoadUsageFee: 0,
+        finalPrice: distributedPrice,
+      };
+    }
+
+    return {
+      totalPrice: 0,
+      totalTaxPrice: 0,
+      totalAdvertisingFee: 0,
+      totalRoadUsageFee: 0,
+      finalPrice: 0,
+    };
+  };
+
+  function mapOrderDetailToCard(
+    detail: OrderDetailResponse,
+    targetDetailId?: string
+  ): OrderCardData {
     console.log('🔍 [mapOrderDetailToCard] 입력 데이터:', detail);
 
     // 빈 객체인지 확인
@@ -879,19 +1043,29 @@ export default function OrdersPage() {
 
     const order = detail.order || ({} as Order);
     const orderDetails = detail.orderDetails || [];
-    const orderDetail = orderDetails[0] || ({} as OrderDetail);
+    const orderDetail =
+      (targetDetailId
+        ? orderDetails.find((item) => item.id === targetDetailId)
+        : undefined) ||
+      orderDetails[0] ||
+      ({} as OrderDetail);
     const panelInfo = orderDetail.panels || ({} as PanelInfo);
     const userProfile = order.user_profiles || ({} as UserProfile);
     const customerInfo = detail.customerInfo || {};
-    const priceInfo = detail.priceInfo || {};
     const payments = detail.payments || [];
+    const detailPriceInfo = getDetailPriceInfo(
+      order,
+      orderDetail,
+      orderDetails,
+      payments
+    );
 
     console.log('🔍 [mapOrderDetailToCard] 파싱된 데이터:', {
       order: order.order_number,
       orderDetailsCount: orderDetails.length,
       panelInfo: panelInfo.address,
       customerInfo,
-      priceInfo,
+      detailPriceInfo,
       paymentsCount: payments.length,
     });
 
@@ -926,42 +1100,9 @@ export default function OrdersPage() {
     // - design_drafts[0].project_name 우선 사용 (원본 데이터)
     // - 없으면 order.projectName 사용 (API에서 이미 처리된 값)
     // - 둘 다 없으면 '프로젝트명 없음' 또는 '미정'
-    const orderWithDrafts = order as Order & {
-      design_drafts?: Array<{ project_name?: string }>;
-    };
-    const projectNameFromDraft =
-      orderWithDrafts.design_drafts?.[0]?.project_name;
-    const projectNameFromOrder = order.projectName;
-
-    console.log('🔍 [mapOrderDetailToCard] 프로젝트명 확인 (상세):', {
-      orderNumber: order.order_number,
-      design_drafts: orderWithDrafts.design_drafts,
-      projectNameFromDraft,
-      projectNameFromOrder,
-      design_drafts_id: order.design_drafts_id,
-    });
-
+    let finalProjectName = getDetailProjectName(order, orderDetail);
     const hasRealProjectName =
-      (projectNameFromDraft &&
-        projectNameFromDraft.trim() !== '' &&
-        projectNameFromDraft !== '프로젝트명 없음' &&
-        projectNameFromDraft !== '미정') ||
-      (projectNameFromOrder &&
-        projectNameFromOrder !== '프로젝트명 없음' &&
-        projectNameFromOrder !== '미정');
-
-    // design_drafts의 project_name을 우선 사용 (원본 데이터)
-    let finalProjectName =
-      projectNameFromDraft &&
-      projectNameFromDraft.trim() !== '' &&
-      projectNameFromDraft !== '프로젝트명 없음' &&
-      projectNameFromDraft !== '미정'
-        ? projectNameFromDraft
-        : projectNameFromOrder &&
-          projectNameFromOrder !== '프로젝트명 없음' &&
-          projectNameFromOrder !== '미정'
-        ? projectNameFromOrder
-        : '프로젝트명 없음';
+      finalProjectName !== '프로젝트명 없음' && finalProjectName !== '미정';
 
     // 게시대 명: 주소 + 별칭 조합
     let panelDisplayName = '-';
@@ -975,21 +1116,13 @@ export default function OrdersPage() {
     // 게시대번호 추출 (현수막게시대용)
     const panelCode = panelInfo.panel_code || undefined;
 
-    console.log('🔍 [mapOrderDetailToCard] 프로젝트명 확인:', {
-      orderNumber: order.order_number,
-      projectNameFromOrder,
-      projectNameFromDraft,
-      finalProjectName,
-      hasRealProjectName,
-      panelDisplayName,
-    });
-
     // 상담신청(INQ-*) 주문이고 패널 정보가 없으면
     // - 결제 전: 파일이름은 '미정'
     // - 결제 후(projectName이 생긴 후): 파일이름은 실제 projectName 유지
     // - 위치: 상담신청 주소
     // - 품명: 전자게시대 (상담신청 아이템 기본값)
-    const isInquiryOrder = order.order_number?.startsWith('INQ-');
+    const isInquiryOrder =
+      Boolean(order.order_number) && order.order_number.startsWith('INQ-');
 
     let finalLocation = panelInfo.address || '-';
     let finalCategory = formatDisplayType(panelInfo.display_types?.name || '');
@@ -1023,11 +1156,11 @@ export default function OrdersPage() {
       phone: customerInfo.phone ?? '-',
       companyName: customerInfo.company ?? '-',
       productName: panelInfo.panel_type ?? '-',
-      price: priceInfo.totalPrice ?? 0,
-      vat: priceInfo.totalTaxPrice ?? 0,
-      advertisingFee: priceInfo.totalAdvertisingFee ?? 0,
-      roadUsageFee: priceInfo.totalRoadUsageFee ?? 0,
-      totalAmount: priceInfo.finalPrice ?? 0,
+      price: detailPriceInfo.totalPrice,
+      vat: detailPriceInfo.totalTaxPrice,
+      advertisingFee: detailPriceInfo.totalAdvertisingFee,
+      roadUsageFee: detailPriceInfo.totalRoadUsageFee,
+      totalAmount: detailPriceInfo.finalPrice,
       paymentMethod: latestPayment?.payment_methods?.name ?? '-',
       paymentMethodCode: latestPayment?.payment_methods?.method_code,
       depositorName: latestPayment?.depositor_name ?? '-',
@@ -1044,6 +1177,7 @@ export default function OrdersPage() {
       profileTitle: userProfile.profile_title || '-',
       profileCompany: userProfile.company_name || '-',
       productType: productTypeLabel,
+      isInquiryOrder,
     };
 
     console.log('🔍 [mapOrderDetailToCard] 결과:', result);
@@ -1105,38 +1239,95 @@ export default function OrdersPage() {
                     );
                   }
 
-                  const mapped = mapOrderDetailToCard(selectedOrderDetail);
+                  return (() => {
+                    const orderDetails =
+                      selectedOrderDetail?.orderDetails || [];
+                    const detailCount = orderDetails.length;
+                    const totalDetailPages = Math.max(1, detailCount);
+                    const currentDetail = orderDetails[detailPage - 1];
+                    const currentCardData =
+                      currentDetail && selectedOrderDetail
+                        ? mapOrderDetailToCard(
+                            selectedOrderDetail,
+                            currentDetail.id
+                          )
+                        : null;
 
-                  return (
-                    <OrderItemCard
-                      orderDetail={mapped}
-                      paymentStatus={paymentStatus}
-                      onClose={() => setExpandedItemId(null)}
-                      onCancel={() => {
-                        if (selectedOrderDetail?.order) {
-                          handleCancelClick(selectedOrderDetail.order);
-                        }
-                      }}
-                      onPaymentClick={() => {
-                        if (currentOrder) {
-                          handlePaymentClick(currentOrder);
-                        }
-                      }}
-                      onResendFile={() => {
-                        if (mapped.order_number) {
-                          window.location.href = `/mypage/design?orderNumber=${encodeURIComponent(
-                            mapped.order_number
-                          )}&tab=upload`;
-                        } else {
-                          window.location.href = `/mypage/design?tab=upload`;
-                        }
-                      }}
-                      onReceiptClick={() => {
-                        setReceiptData(mapped);
-                        setReceiptModalOpen(true);
-                      }}
-                    />
-                  );
+                    return (
+                      <div className="flex flex-col gap-6 bg-white px-4 py-6 border border-t-0 border-gray-200">
+                        {currentCardData ? (
+                          <OrderItemCard
+                            orderDetail={currentCardData}
+                            paymentStatus={paymentStatus}
+                            onClose={() => setExpandedItemId(null)}
+                            onCancel={() => {
+                              if (
+                                selectedOrderDetail?.order &&
+                                currentDetail?.id
+                              ) {
+                                handleCancelClick(
+                                  selectedOrderDetail.order,
+                                  currentDetail.id
+                                );
+                              }
+                            }}
+                            onPaymentClick={() => {
+                              if (currentOrder) {
+                                handlePaymentClick(currentOrder);
+                              }
+                            }}
+                            onResendFile={() => {
+                              if (currentCardData.order_number) {
+                                window.location.href = `/mypage/design?orderNumber=${encodeURIComponent(
+                                  currentCardData.order_number
+                                )}&tab=upload`;
+                              } else {
+                                window.location.href = `/mypage/design?tab=upload`;
+                              }
+                            }}
+                            onReceiptClick={() => {
+                              setReceiptData(currentCardData);
+                              setReceiptModalOpen(true);
+                            }}
+                          />
+                        ) : (
+                          <div className="text-center py-10 text-gray-500">
+                            주문 상세 정보를 불러올 수 없습니다.
+                          </div>
+                        )}
+
+                        {detailCount > 0 && (
+                          <div className="flex items-center justify-between gap-4 pt-2 border-t border-gray-200">
+                            <Button
+                              size="xs"
+                              variant="outlinedGray"
+                              disabled={detailPage <= 1}
+                              onClick={() =>
+                                setDetailPage((prev) => Math.max(1, prev - 1))
+                              }
+                            >
+                              이전 상세
+                            </Button>
+                            <div className="text-sm font-medium text-gray-600">
+                              {detailPage} / {totalDetailPages}
+                            </div>
+                            <Button
+                              size="xs"
+                              variant="outlinedGray"
+                              disabled={detailPage >= totalDetailPages}
+                              onClick={() =>
+                                setDetailPage((prev) =>
+                                  Math.min(totalDetailPages, prev + 1)
+                                )
+                              }
+                            >
+                              다음 상세
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })();
                 })()
               : null
           }
@@ -1175,7 +1366,7 @@ export default function OrdersPage() {
                       : 'hover:cursor-pointer'
                   }`}
                 >
-                  {isCancelProcessing ? '취소 요청 중…' : '예'}
+                  {isCancelProcessing ? '처리중...' : '예'}
                 </Button>
               </div>
             </div>
