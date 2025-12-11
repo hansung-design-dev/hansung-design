@@ -7,6 +7,7 @@ import { useAuth } from '@/src/contexts/authContext';
 import { useProfile } from '@/src/contexts/profileContext';
 import Image from 'next/image';
 import { formatPhoneInput } from '@/src/lib/utils';
+import { usePhoneVerification } from '@/src/lib/hooks/usePhoneVerification';
 
 export interface UserProfile {
   id: string;
@@ -213,6 +214,63 @@ export default function UserProfileModal({
     type: 'info' as 'info' | 'success' | 'error' | 'warning',
     onConfirm: () => {},
   });
+  const [isPhoneVerified, setIsPhoneVerified] = useState(false);
+  const [lastVerifiedPhone, setLastVerifiedPhone] = useState('');
+  const {
+    step: phoneVerificationStep,
+    message: phoneVerificationMessage,
+    error: phoneVerificationError,
+    code: phoneVerificationCode,
+    setCode: setPhoneVerificationCode,
+    isRequesting: isPhoneVerificationRequesting,
+    isConfirming: isPhoneVerificationConfirming,
+    requestVerification: requestPhoneVerification,
+    confirmVerification: confirmPhoneVerification,
+    resetVerification: resetPhoneVerification,
+    verifiedReference: phoneVerificationReference,
+  } = usePhoneVerification({
+    onVerified: () => {
+      setIsPhoneVerified(true);
+    },
+  });
+
+  useEffect(() => {
+    if (phoneVerificationStep === 'verified') {
+      setLastVerifiedPhone(formData.phone);
+    }
+  }, [phoneVerificationStep, formData.phone]);
+
+  useEffect(() => {
+    if (!formData.phone) {
+      resetPhoneVerification();
+      setIsPhoneVerified(false);
+      setLastVerifiedPhone('');
+      return;
+    }
+
+    if (formData.phone !== lastVerifiedPhone) {
+      if (isPhoneVerified) {
+        setIsPhoneVerified(false);
+      }
+      resetPhoneVerification();
+    }
+  }, [
+    formData.phone,
+    isPhoneVerified,
+    lastVerifiedPhone,
+    resetPhoneVerification,
+  ]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      resetPhoneVerification();
+      setIsPhoneVerified(false);
+      setLastVerifiedPhone('');
+    }
+  }, [isOpen, resetPhoneVerification]);
+
+  const canSubmitProfile =
+    isPhoneVerified && Boolean(phoneVerificationReference);
 
   // 사용자의 프로필 목록 가져오기
   const fetchUserProfiles = async () => {
@@ -240,6 +298,10 @@ export default function UserProfileModal({
 
   // 수정 모드일 때 기존 데이터 로드
   useEffect(() => {
+    resetPhoneVerification();
+    setIsPhoneVerified(false);
+    setLastVerifiedPhone('');
+
     if (profileToEdit) {
       setFormData({
         profile_title: profileToEdit.profile_title || '',
@@ -276,7 +338,7 @@ export default function UserProfileModal({
       setSelectedProfileId(null);
       setFileName('');
     }
-  }, [profileToEdit, user]);
+  }, [profileToEdit, user, resetPhoneVerification]);
 
   // 모달이 열릴 때 프로필 목록 가져오기
   useEffect(() => {
@@ -446,14 +508,18 @@ export default function UserProfileModal({
   };
 
   const handlePhoneVerification = () => {
-    setAlertModal({
-      isOpen: true,
-      title: '나이스 인증 준비 중',
-      message:
-        '나이스 휴대폰 인증은 곧 도입될 예정입니다. 현재는 번호를 입력한 뒤 프로필을 저장해주세요.',
-      type: 'info',
-      onConfirm: () => {},
-    });
+    if (!formData.phone) {
+      setAlertModal({
+        isOpen: true,
+        title: '전화번호 입력 필요',
+        message: '휴대폰 번호를 입력한 후 인증을 요청해주세요.',
+        type: 'warning',
+        onConfirm: () => {},
+      });
+      return;
+    }
+
+    requestPhoneVerification(formData.phone);
   };
 
   const handleSubmit = async () => {
@@ -469,9 +535,21 @@ export default function UserProfileModal({
         return;
       }
 
+      if (!canSubmitProfile) {
+        setAlertModal({
+          isOpen: true,
+          title: '휴대폰 인증 필요',
+          message: '먼저 휴대폰 인증을 완료한 뒤 프로필을 저장해주세요.',
+          type: 'warning',
+          onConfirm: () => {},
+        });
+        return;
+      }
+
       const requestData = {
         user_auth_id: user.id,
         ...formData,
+        phoneVerificationReference: phoneVerificationReference ?? undefined,
       };
 
       let response;
@@ -680,31 +758,84 @@ export default function UserProfileModal({
           </div>
 
           {/* 전화번호 */}
-          <div className="flex gap-2 items-center">
+          <div className="flex gap-2 items-start">
             <label className="block text-1 text-gray-2 font-500 mb-2 w-29">
               전화번호<span className="text-red">*</span>
             </label>
-            <div className="w-[80%] flex gap-2 items-center">
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => handleInputChange('phone', e.target.value)}
-                className={`flex-1 px-3 ${
-                  className.includes('compact') ? 'py-2' : 'py-4'
-                } border-solid border-1 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-1`}
-                placeholder="010-1234-5678"
-                maxLength={13}
-                inputMode="numeric"
-                autoComplete="tel"
-              />
-              <Button
-                onClick={handlePhoneVerification}
-                size="sm"
-                variant="outlineGray"
-                className="rounded-lg"
-              >
-                인증하기
-              </Button>
+            <div className="w-[80%] flex flex-col gap-2">
+              <div className="flex gap-2 items-center">
+                <input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  className={`flex-1 px-3 ${
+                    className.includes('compact') ? 'py-2' : 'py-4'
+                  } border-solid border-1 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-1`}
+                  placeholder="010-1234-5678"
+                  maxLength={13}
+                  inputMode="numeric"
+                  autoComplete="tel"
+                />
+                <Button
+                  onClick={handlePhoneVerification}
+                  size="sm"
+                  variant="outlineGray"
+                  className="rounded-lg disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={
+                    isPhoneVerificationRequesting || !formData.phone
+                  }
+                >
+                  {isPhoneVerificationRequesting ? '요청 중...' : '인증번호 받기'}
+                </Button>
+              </div>
+              {phoneVerificationStep === 'requested' && (
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="text"
+                    placeholder="인증번호 6자리"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-1 font-200"
+                    value={phoneVerificationCode}
+                    onChange={(e) =>
+                      setPhoneVerificationCode(e.target.value.replace(/\D/g, ''))
+                    }
+                    maxLength={6}
+                    inputMode="numeric"
+                  />
+                  <Button
+                    size="sm"
+                    variant="outlineGray"
+                    className="rounded-lg disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={() =>
+                      confirmPhoneVerification(formData.phone, phoneVerificationCode)
+                    }
+                    disabled={
+                      isPhoneVerificationConfirming ||
+                      phoneVerificationCode.length < 4
+                    }
+                  >
+                    {isPhoneVerificationConfirming ? '확인 중...' : '확인'}
+                  </Button>
+                </div>
+              )}
+              {phoneVerificationMessage && (
+                <p className="text-blue-600 text-xs leading-snug">
+                  {phoneVerificationMessage}
+                </p>
+              )}
+              {phoneVerificationError && (
+                <p className="text-red-500 text-xs leading-snug">
+                  {phoneVerificationError}
+                </p>
+              )}
+              {isPhoneVerified ? (
+                <p className="text-green-600 text-xs leading-snug">
+                  휴대폰 인증이 완료되었습니다.
+                </p>
+              ) : (
+                <p className="text-gray-500 text-xs leading-snug">
+                  인증번호를 받고 입력한 뒤 저장하세요.
+                </p>
+              )}
             </div>
           </div>
 
@@ -935,11 +1066,17 @@ export default function UserProfileModal({
             ) : (
               // 마이페이지 모드: 저장/수정 버튼과 취소 버튼
               <>
+                <p className="text-xs text-gray-500 text-center">
+                  {canSubmitProfile
+                    ? '인증된 번호로 프로필을 저장합니다.'
+                    : '휴대폰 인증을 완료한 뒤 저장하실 수 있습니다.'}
+                </p>
                 <Button
                   onClick={handleSubmit}
                   size="lg"
                   variant="filledBlack"
-                  className="text-white rounded-lg hover:bg-gray-2 lg:text-1 lg:font-300"
+                  className="text-white rounded-lg hover:bg-gray-2 lg:text-1 lg:font-300 disabled:opacity-60 disabled:cursor-not-allowed"
+                  disabled={!canSubmitProfile}
                 >
                   {getSubmitButtonText()}
                 </Button>

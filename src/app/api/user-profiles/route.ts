@@ -129,6 +129,7 @@ export async function POST(request: NextRequest) {
       is_default = false,
       is_public_institution = false,
       is_company = false,
+      phoneVerificationReference,
     } = await request.json();
 
     // 필수 필드 검증
@@ -141,6 +142,16 @@ export async function POST(request: NextRequest) {
     ) {
       return NextResponse.json(
         { success: false, error: '필수 정보를 모두 입력해주세요.' },
+        { status: 400 }
+      );
+    }
+
+    if (!phoneVerificationReference) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: '휴대폰 인증을 완료한 후 프로필을 저장해주세요.',
+        },
         { status: 400 }
       );
     }

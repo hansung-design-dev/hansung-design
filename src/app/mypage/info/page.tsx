@@ -342,7 +342,7 @@ export default function UserInfoPage() {
                     </div>
                   ) : (
                     <div className="w-full flex justify-center">
-                      <div className="grid w-full max-w-[28rem] md:max-w-[56rem] gap-5 grid-cols-1 md:grid-cols-2 items-stretch justify-items-stretch gap-4">
+                      <div className="grid w-full max-w-[88rem] md:max-w-[68rem] gap-5 grid-cols-1 md:grid-cols-2 items-stretch justify-items-stretch gap-4">
                         {currentItems.map((profile) => {
                           console.log('🔍 렌더링할 프로필:', {
                             id: profile.id,

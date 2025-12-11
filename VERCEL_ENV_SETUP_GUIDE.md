@@ -224,3 +224,4 @@ A: 다음을 확인하세요:
 
 - [Vercel 환경 변수 문서](https://vercel.com/docs/concepts/projects/environment-variables)
 - [Next.js 환경 변수 문서](https://nextjs.org/docs/basic-features/environment-variables)
+
