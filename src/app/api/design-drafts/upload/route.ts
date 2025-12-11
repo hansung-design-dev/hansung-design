@@ -146,7 +146,10 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (orderError) {
-        console.error('🔍 [시안 업로드] 주문 design_drafts_id 조회 실패:', orderError);
+        console.error(
+          '🔍 [시안 업로드] 주문 design_drafts_id 조회 실패:',
+          orderError
+        );
       } else if (order?.design_drafts_id) {
         targetDraftId = order.design_drafts_id;
       }
@@ -198,7 +201,10 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (updateError || !updatedDraft) {
-      console.error('🔍 [시안 업로드] design_drafts 업데이트 실패:', updateError);
+      console.error(
+        '🔍 [시안 업로드] design_drafts 업데이트 실패:',
+        updateError
+      );
       return NextResponse.json(
         { success: false, error: '파일 등록에 실패했습니다.' },
         { status: 500 }

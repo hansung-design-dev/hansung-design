@@ -7,8 +7,11 @@ const CLIENT_SECRET =
   process.env.NEXT_PUBLIC_NICE_CLIENT_SECRET ||
   process.env.NEXT_PUCLIC_NICE_CLIENT_SECRET;
 const MOCK_MODE =
-  (process.env.NICEPAY_MOCK_MODE ?? process.env.NEXT_PUBLIC_NICEPAY_MOCK_MODE ?? '')
-    .toLowerCase() !== 'false';
+  (
+    process.env.NICEPAY_MOCK_MODE ??
+    process.env.NEXT_PUBLIC_NICEPAY_MOCK_MODE ??
+    ''
+  ).toLowerCase() !== 'false';
 
 const DEFAULT_EXPIRY_MS = 5 * 60 * 1000;
 
@@ -22,17 +25,17 @@ if (!CLIENT_ID || !CLIENT_SECRET) {
   );
 }
 
-interface RequestResult {
-  requestId: string;
-  expiresAt: string;
-  phone: string;
-}
+// interface RequestResult {
+//   requestId: string;
+//   expiresAt: string;
+//   phone: string;
+// }
 
-interface ConfirmResult {
-  verificationId: string;
-  verifiedAt: string;
-  phone: string;
-}
+// interface ConfirmResult {
+//   verificationId: string;
+//   verifiedAt: string;
+//   phone: string;
+// }
 
 export async function requestPhoneVerification(phone: string) {
   const sanitizedPhone = sanitizePhone(phone);
@@ -52,7 +55,9 @@ export async function requestPhoneVerification(phone: string) {
   // 실제 나이스페이 연동을 위해 여기를 구현하세요.
   // 필요한 엔드포인트/파라미터는 나이스페이 개발자 가이드에서 확인하고,
   // 클라이언트 ID/SECRET을 요청 헤더 또는 payload에 포함시켜 호출합니다.
-  throw new Error('Nicepay /phone-verification/request 호출은 아직 구현되지 않았습니다.');
+  throw new Error(
+    'Nicepay /phone-verification/request 호출은 아직 구현되지 않았습니다.'
+  );
 }
 
 export async function confirmPhoneVerification({
@@ -86,6 +91,7 @@ export async function confirmPhoneVerification({
     };
   }
 
-  throw new Error('Nicepay /phone-verification/confirm 호출은 아직 구현되지 않았습니다.');
+  throw new Error(
+    'Nicepay /phone-verification/confirm 호출은 아직 구현되지 않았습니다.'
+  );
 }
-

@@ -41,7 +41,8 @@ export async function ensureDesignDraftForOrderItem(
     draftDeliveryMethod ? `전송방식: ${draftDeliveryMethod}` : null,
   ].filter(Boolean);
 
-  const notes = noteParts.length > 0 ? `자동 생성 (${noteParts.join(' | ')})` : null;
+  const notes =
+    noteParts.length > 0 ? `자동 생성 (${noteParts.join(' | ')})` : null;
 
   try {
     console.log('🔍 [designDrafts helper] 시안 자동 생성 시작:', {
@@ -83,4 +84,3 @@ export async function ensureDesignDraftForOrderItem(
     return null;
   }
 }
-

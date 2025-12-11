@@ -281,8 +281,8 @@ export default function Signup() {
   useEffect(() => {
     if (formData.phone && formData.phone !== lastVerifiedPhone) {
       if (isPhoneVerified) {
-        setIsPhoneVerified(false);
-      }
+      setIsPhoneVerified(false);
+    }
       resetPhoneVerification();
     }
   }, [formData.phone, lastVerifiedPhone, resetPhoneVerification, isPhoneVerified]);
@@ -518,36 +518,36 @@ export default function Signup() {
         {/* 휴대폰 번호 인풋 */}
         <div className="w-full mb-6">
           <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <div className="flex flex-1 items-center h-[4rem] bg-white rounded">
-                <Image
-                  src="/svg/login-password.svg"
-                  alt="휴대폰"
-                  width={20}
-                  height={20}
-                  className="h-[1.25rem] w-[1.25rem] pl-2"
-                />
-                <input
-                  type="tel"
-                  placeholder="  휴대폰 번호를 입력해주세요. (예: 010-1234-5678)"
-                  className="flex-1 outline-none border-none font-200"
-                  value={formData.phone}
-                  onChange={(e) => handleInputChange('phone', e.target.value)}
-                  onBlur={(e) => handleInputBlur('phone', e.target.value)}
-                  maxLength={13}
-                  inputMode="numeric"
-                  autoComplete="tel"
-                />
-              </div>
-              <Button
-                size="sm"
-                className="text-0-75-500 h-[4rem]"
+          <div className="flex items-center gap-2">
+            <div className="flex flex-1 items-center h-[4rem] bg-white rounded">
+              <Image
+                src="/svg/login-password.svg"
+                alt="휴대폰"
+                width={20}
+                height={20}
+                className="h-[1.25rem] w-[1.25rem] pl-2"
+              />
+              <input
+                type="tel"
+                placeholder="  휴대폰 번호를 입력해주세요. (예: 010-1234-5678)"
+                className="flex-1 outline-none border-none font-200"
+                value={formData.phone}
+                onChange={(e) => handleInputChange('phone', e.target.value)}
+                onBlur={(e) => handleInputBlur('phone', e.target.value)}
+                maxLength={13}
+                inputMode="numeric"
+                autoComplete="tel"
+              />
+            </div>
+            <Button
+              size="sm"
+              className="text-0-75-500 h-[4rem]"
                 onClick={() => requestPhoneVerification(formData.phone)}
                 disabled={isPhoneVerificationRequesting || !formData.phone}
-              >
+            >
                 {isPhoneVerificationRequesting ? '요청 중...' : '인증번호 받기'}
-              </Button>
-            </div>
+            </Button>
+          </div>
             {phoneVerificationStep === 'requested' && (
               <div className="flex items-center gap-2">
                 <input
