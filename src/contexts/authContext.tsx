@@ -33,7 +33,8 @@ interface AuthContextType {
     name: string,
     username: string,
     phone: string,
-    agreements: Agreements
+    agreements: Agreements,
+    phoneVerificationReference?: string
   ) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<{ success: boolean; error?: string }>;
 }
@@ -140,7 +141,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     name: string,
     username: string,
     phone: string,
-    agreements: Agreements
+    agreements: Agreements,
+    phoneVerificationReference?: string
   ) => {
     try {
       const response = await fetch('/api/auth/signup', {
@@ -155,6 +157,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           username,
           phone,
           agreements,
+          phoneVerificationReference,
         }),
       });
 

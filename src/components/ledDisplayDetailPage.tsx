@@ -22,6 +22,7 @@ import {
 } from '@/src/utils/polygonColors';
 import { calculateConvexHull } from '@/src/utils/convexHull';
 import BackToListButton from './BackToListButton';
+import LoginPromptModal from './modal/LoginPromptModal';
 //import HalfPeriodTabs from './ui/HalfPeriodTabs';
 
 const fadeInUp = {
@@ -113,6 +114,7 @@ export default function LEDDisplayDetailPage({
   );
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showAllPins, setShowAllPins] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   // const [selectedHalfPeriod, setSelectedHalfPeriod] = useState<
   //   'first_half' | 'second_half'
@@ -471,7 +473,7 @@ export default function LEDDisplayDetailPage({
             profileUserAuthId: defaultProfile?.user_auth_id,
           }
         );
-        alert('사용자 정보를 찾을 수 없습니다. 로그인 상태를 확인해주세요.');
+        setShowLoginModal(true);
         return;
       }
 
@@ -993,6 +995,10 @@ export default function LEDDisplayDetailPage({
           )}
         </motion.div>
       </div>
+      <LoginPromptModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+      />
     </main>
   );
 }

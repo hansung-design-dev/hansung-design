@@ -6,7 +6,15 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     console.log('🔍 회원가입 요청 데이터:', body);
 
-    const { email, password, name, username, phone, agreements } = body;
+    const {
+      email,
+      password,
+      name,
+      username,
+      phone,
+      agreements,
+      phoneVerificationReference,
+    } = body;
 
     console.log('🔍 필수 필드 검증:', {
       email: !!email,
@@ -49,6 +57,14 @@ export async function POST(request: NextRequest) {
       console.log('🔍 약관 동의 누락');
       return NextResponse.json(
         { success: false, error: '모든 필수 약관에 동의해주세요.' },
+        { status: 400 }
+      );
+    }
+
+    if (!phoneVerificationReference) {
+      console.log('🔍 휴대폰 인증 누락');
+      return NextResponse.json(
+        { success: false, error: '휴대폰 인증을 완료해주세요.' },
         { status: 400 }
       );
     }
@@ -113,6 +129,7 @@ export async function POST(request: NextRequest) {
         agreed_at: new Date().toISOString(),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        is_verified: true,
       })
       .select()
       .single();

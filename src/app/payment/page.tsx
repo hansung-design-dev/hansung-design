@@ -2798,6 +2798,7 @@ function PaymentPageContent() {
                     }
                   );
 
+                  const confirmResponseClone = confirmResponse.clone();
                   const confirmResult = await confirmResponse.json();
 
                   if (!confirmResponse.ok || !confirmResult.success) {
@@ -2806,9 +2807,7 @@ function PaymentPageContent() {
                       {
                         confirmResult,
                         confirmResponseStatus: confirmResponse.status,
-                        confirmResponseText: await confirmResponse
-                          .clone()
-                          .text(),
+                        confirmResponseText: await confirmResponseClone.text(),
                       }
                     );
                     alert(
@@ -2832,7 +2831,9 @@ function PaymentPageContent() {
 
                   window.location.href = `/payment/success?orderId=${
                     confirmResult.data?.orderId || finalOrderId
-                  }&amount=0&status=SUCCESS`;
+                  }&amount=0&status=SUCCESS&paymentKey=${encodeURIComponent(
+                    testPaymentKey
+                  )}`;
                   return;
                 } catch (error) {
                   console.error('🔍 [결제 페이지] ❌ 테스트 결제 예외:', error);

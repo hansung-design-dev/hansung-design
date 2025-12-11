@@ -1,7 +1,7 @@
 'use client';
 import Image from 'next/image';
 import { Button } from '@/src/components/button/button';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getModalContent } from './modalContent';
 import { useAuth } from '@/src/contexts/authContext';
 import { useRouter } from 'next/navigation';
@@ -9,6 +9,7 @@ import {
   formatPhoneInput,
   isValidPhoneFormatted,
 } from '@/src/lib/utils';
+import { usePhoneVerification } from '@/src/lib/hooks/usePhoneVerification';
 
 export default function Signup() {
   const [agreements, setAgreements] = useState({
@@ -24,8 +25,7 @@ export default function Signup() {
 
   // 휴대폰 인증 상태
   const [isPhoneVerified, setIsPhoneVerified] = useState(false);
-  const [phoneVerificationLoading, setPhoneVerificationLoading] =
-    useState(false);
+  const [lastVerifiedPhone, setLastVerifiedPhone] = useState('');
 
   // 입력 필드 상태
   const [formData, setFormData] = useState({
@@ -59,6 +59,29 @@ export default function Signup() {
 
   const { signUp } = useAuth();
   const router = useRouter();
+
+  const {
+    step: phoneVerificationStep,
+    isRequesting: isPhoneVerificationRequesting,
+    isConfirming: isPhoneVerificationConfirming,
+    message: phoneVerificationMessage,
+    code: phoneVerificationCode,
+    setCode: setPhoneVerificationCode,
+    requestVerification: requestPhoneVerification,
+    confirmVerification: confirmPhoneVerification,
+    resetVerification: resetPhoneVerification,
+    verifiedReference: phoneVerificationReference,
+  } = usePhoneVerification({
+    onRequest: () => {
+      setError('');
+    },
+    onVerified: () => {
+      setIsPhoneVerified(true);
+    },
+    onError: (message) => {
+      setError(message);
+    },
+  });
 
   const handleAgreementChange = (key: keyof typeof agreements) => {
     if (key === 'all') {
@@ -249,35 +272,20 @@ export default function Signup() {
     setValidation((prev) => ({ ...prev, [field]: validationResult }));
   };
 
-  // 휴대폰 인증 핸들러
-  const handlePhoneVerification = async () => {
-    if (!formData.phone) {
-      setError('휴대폰 번호를 먼저 입력해주세요.');
-      return;
+  useEffect(() => {
+    if (phoneVerificationStep === 'verified') {
+      setLastVerifiedPhone(formData.phone);
     }
+  }, [phoneVerificationStep, formData.phone]);
 
-    // 휴대폰 번호 유효성 검사
-    const phoneValidation = validatePhone(formData.phone);
-    if (!phoneValidation.isValid) {
-      setError(phoneValidation.message);
-      return;
+  useEffect(() => {
+    if (formData.phone && formData.phone !== lastVerifiedPhone) {
+      if (isPhoneVerified) {
+        setIsPhoneVerified(false);
+      }
+      resetPhoneVerification();
     }
-
-    setPhoneVerificationLoading(true);
-    setError('');
-
-    try {
-      // 실제 인증 로직은 나중에 구현하고, 현재는 모의 처리
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // 1초 대기
-      setIsPhoneVerified(true);
-      setError(''); // 성공 메시지는 validation 메시지로 표시
-    } catch {
-      setError('휴대폰 인증 중 오류가 발생했습니다.');
-      setIsPhoneVerified(false);
-    } finally {
-      setPhoneVerificationLoading(false);
-    }
-  };
+  }, [formData.phone, lastVerifiedPhone, resetPhoneVerification, isPhoneVerified]);
 
   // 회원가입 가능 여부 확인
   const canSignup = () => {
@@ -380,7 +388,8 @@ export default function Signup() {
         formData.name,
         formData.id,
         formData.phone,
-        agreements
+        agreements,
+        phoneVerificationReference ?? undefined
       );
 
       console.log('🔍 signUp 결과:', result);
@@ -508,36 +517,70 @@ export default function Signup() {
 
         {/* 휴대폰 번호 인풋 */}
         <div className="w-full mb-6">
-          <div className="flex items-center gap-2">
-            <div className="flex flex-1 items-center h-[4rem] bg-white rounded">
-              <Image
-                src="/svg/login-password.svg"
-                alt="휴대폰"
-                width={20}
-                height={20}
-                className="h-[1.25rem] w-[1.25rem] pl-2"
-              />
-              <input
-                type="tel"
-                placeholder="  휴대폰 번호를 입력해주세요. (예: 010-1234-5678)"
-                className="flex-1 outline-none border-none font-200"
-                value={formData.phone}
-                onChange={(e) => handleInputChange('phone', e.target.value)}
-                onBlur={(e) => handleInputBlur('phone', e.target.value)}
-                maxLength={13}
-                inputMode="numeric"
-                autoComplete="tel"
-              />
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <div className="flex flex-1 items-center h-[4rem] bg-white rounded">
+                <Image
+                  src="/svg/login-password.svg"
+                  alt="휴대폰"
+                  width={20}
+                  height={20}
+                  className="h-[1.25rem] w-[1.25rem] pl-2"
+                />
+                <input
+                  type="tel"
+                  placeholder="  휴대폰 번호를 입력해주세요. (예: 010-1234-5678)"
+                  className="flex-1 outline-none border-none font-200"
+                  value={formData.phone}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  onBlur={(e) => handleInputBlur('phone', e.target.value)}
+                  maxLength={13}
+                  inputMode="numeric"
+                  autoComplete="tel"
+                />
+              </div>
+              <Button
+                size="sm"
+                className="text-0-75-500 h-[4rem]"
+                onClick={() => requestPhoneVerification(formData.phone)}
+                disabled={isPhoneVerificationRequesting || !formData.phone}
+              >
+                {isPhoneVerificationRequesting ? '요청 중...' : '인증번호 받기'}
+              </Button>
             </div>
-            <Button
-              size="sm"
-              className="text-0-75-500 h-[4rem]"
-              onClick={handlePhoneVerification}
-              disabled={phoneVerificationLoading || !formData.phone}
-            >
-              {phoneVerificationLoading ? '인증중...' : '인증'}
-            </Button>
+            {phoneVerificationStep === 'requested' && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="  인증번호 6자리"
+                  className="flex-1 h-[3.5rem] px-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-1 font-200"
+                  value={phoneVerificationCode}
+                  onChange={(e) =>
+                    setPhoneVerificationCode(e.target.value.replace(/\D/g, ''))
+                  }
+                  maxLength={6}
+                  inputMode="numeric"
+                />
+                <Button
+                  size="sm"
+                  className="text-0-75-500 h-[3.5rem]"
+                  onClick={() =>
+                    confirmPhoneVerification(formData.phone, phoneVerificationCode)
+                  }
+                  disabled={
+                    isPhoneVerificationConfirming || phoneVerificationCode.length < 4
+                  }
+                >
+                  {isPhoneVerificationConfirming ? '확인 중...' : '확인'}
+                </Button>
+              </div>
+            )}
           </div>
+          {phoneVerificationMessage && (
+            <div className="text-blue-600 text-0.75 mt-2 ml-2">
+              {phoneVerificationMessage}
+            </div>
+          )}
           {validation.phone.message && (
             <div className="text-red text-0.75 mt-2 ml-2">
               {validation.phone.message}

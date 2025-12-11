@@ -347,7 +347,18 @@ async function createOrderAfterPayment(
 
 export async function POST(request: NextRequest) {
   try {
-    const { paymentKey, orderId, amount, orderData } = await request.json();
+    const {
+      paymentKey,
+      orderId,
+      amount: rawAmount,
+      orderData,
+    } = await request.json();
+    const requestedAmount =
+      typeof rawAmount === 'number'
+        ? rawAmount
+        : typeof rawAmount === 'string'
+        ? Number(rawAmount)
+        : NaN;
 
     console.log(
       '🔍 [결제 확인 API] 시작 =========================================='
@@ -355,11 +366,11 @@ export async function POST(request: NextRequest) {
     console.log('🔍 [결제 확인 API] 입력 파라미터:', {
       paymentKey: paymentKey ? `${paymentKey.substring(0, 20)}...` : '없음',
       orderId,
-      amount,
+      amount: requestedAmount,
       hasOrderData: !!orderData,
     });
 
-    if (!paymentKey || !orderId || !amount) {
+    if (!paymentKey || !orderId || Number.isNaN(requestedAmount)) {
       return NextResponse.json(
         { error: '필수 필드가 누락되었습니다.' },
         { status: 400 }
@@ -383,12 +394,12 @@ export async function POST(request: NextRequest) {
       !isProd && isTestFreePaymentEnabled && userId === testFreePaymentUserId;
 
     // 테스트 결제인 경우 0원 처리
-    let finalAmount = amount;
+    let finalAmount = requestedAmount;
     if (isTestPayment || isTestUser) {
       finalAmount = 0;
       console.log('🔍 [결제 확인 API] ⚠️ 테스트용 0원 결제 적용:', {
         userId,
-        originalAmount: amount,
+        originalAmount: requestedAmount,
         finalAmount: 0,
         isTestPayment,
         isTestUser,
@@ -461,7 +472,8 @@ export async function POST(request: NextRequest) {
             : '(없음)',
           orderId,
           amount: finalAmount,
-          originalAmount: amount !== finalAmount ? amount : undefined,
+          originalAmount:
+            requestedAmount !== finalAmount ? requestedAmount : undefined,
           timestamp: new Date().toISOString(),
         }
       );
@@ -700,7 +712,7 @@ export async function POST(request: NextRequest) {
       await supabase.from('payments').upsert(
         {
           order_id: actualOrderIdForFail,
-          amount: amount,
+          amount: requestedAmount,
           payment_status: 'failed',
           transaction_id: paymentKey,
           payment_provider: paymentProviderForDb,

@@ -28,6 +28,7 @@ import {
 import DistrictInfo from './districtInfo';
 import HalfPeriodTabs from './ui/HalfPeriodTabs';
 import BackToListButton from './BackToListButton';
+import LoginPromptModal from './modal/LoginPromptModal';
 
 const fadeInUp = {
   initial: { y: 60, opacity: 0 },
@@ -249,6 +250,7 @@ export default function DisplayDetailPage({
     second_half_to: string;
   } | null>(null);
   const [showAllPins, setShowAllPins] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   // period prop이 변경될 때 selectedDistrictPeriod 업데이트
   useEffect(() => {
@@ -1381,7 +1383,7 @@ export default function DisplayDetailPage({
             profileUserAuthId: profileToUse?.user_auth_id,
           }
         );
-        alert('사용자 정보를 찾을 수 없습니다. 로그인 상태를 확인해주세요.');
+        setShowLoginModal(true);
         return;
       }
 
@@ -2092,6 +2094,10 @@ export default function DisplayDetailPage({
           )}
         </motion.div>
       </div>
+      <LoginPromptModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+      />
     </main>
   );
 }

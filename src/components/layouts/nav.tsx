@@ -155,6 +155,12 @@ const IconButton = ({
               >
                 로그인
               </Link>
+              <Link
+                href="/signup"
+                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              >
+                회원가입
+              </Link>
             </div>
           )}
         </div>

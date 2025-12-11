@@ -418,6 +418,16 @@ function PaymentSuccessContent() {
   const shouldShowContinuePaymentButton =
     Boolean(paymentInfo) && !isProcessing && !error && hasPendingItems;
 
+  useEffect(() => {
+    console.log('🔍 [결제 성공 페이지] 남은 결제 버튼 조건 확인:', {
+      paymentInfo,
+      isProcessing,
+      error,
+      hasPendingItems,
+      cartLength: cart.length,
+    });
+  }, [paymentInfo, isProcessing, error, hasPendingItems, cart.length]);
+
   return (
     <main className="min-h-screen bg-white pt-[5.5rem] bg-gray-100 lg:px-[10rem]">
       <Nav variant="default" className="bg-white" />

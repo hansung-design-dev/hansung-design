@@ -342,7 +342,7 @@ export default function UserInfoPage() {
                     </div>
                   ) : (
                     <div className="w-full flex justify-center">
-                      <div className="grid w-full max-w-[28rem] md:max-w-[56rem] grid-cols-1 md:grid-cols-2 gap-4 justify-center justify-items-center">
+                      <div className="grid w-full max-w-[28rem] md:max-w-[56rem] gap-5 grid-cols-1 md:grid-cols-2 items-stretch justify-items-stretch gap-4">
                         {currentItems.map((profile) => {
                           console.log('🔍 렌더링할 프로필:', {
                             id: profile.id,
@@ -355,7 +355,7 @@ export default function UserInfoPage() {
                           return (
                             <div
                               key={profile.id}
-                              className="border border-solid border-gray-3 rounded-lg px-3 md:px-4 py-4 md:py-8 flex flex-col items-center text-center gap-3 w-full max-w-[22rem] mx-auto"
+                              className="border border-solid border-gray-3 rounded-lg px-3 md:px-4 py-4 md:py-8 flex flex-col items-center text-center gap-3 w-full h-full"
                             >
                               <div className="font-500 text-gray-2 flex flex-col gap-2 items-center">
                                 <div className="flex flex-wrap gap-2 justify-center text-xs font-semibold">
@@ -384,7 +384,7 @@ export default function UserInfoPage() {
                                     }`}
                                   >
                                     <span className="w-3 h-3 flex items-center justify-center rounded-full border text-[10px] leading-none">
-                                      {profile.is_approved ? '✓' : '!'}
+                                      {profile.is_approved ? '✓' : ' '}
                                     </span>
                                     {profile.is_approved
                                       ? '승인됨'
