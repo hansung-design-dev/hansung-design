@@ -28,8 +28,8 @@ const getStatusClass = (status: string) => {
 };
 
 const getEffectiveIsClosed = (item: DisplayBillboard) =>
-  (item as DisplayBillboard & { effectiveIsClosed?: boolean }).effectiveIsClosed ??
-  item.is_closed;
+  (item as DisplayBillboard & { effectiveIsClosed?: boolean })
+    .effectiveIsClosed ?? item.is_closed;
 
 const getEffectiveStatusKey = (item: DisplayBillboard) =>
   (item as DisplayBillboard & { effectiveStatus?: string }).effectiveStatus ||
@@ -278,9 +278,7 @@ const ItemList: React.FC<ItemTableProps> = ({
                           }
                           disabled={isClosed}
                           className={`hover:cursor-pointer ${
-                            isClosed
-                              ? 'opacity-50 cursor-not-allowed'
-                              : ''
+                            isClosed ? 'opacity-50 cursor-not-allowed' : ''
                           }`}
                         />
                       )}

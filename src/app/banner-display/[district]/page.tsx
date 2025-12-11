@@ -736,7 +736,7 @@ export default function BannerDisplayPage({
           }
 
           // 관악구인 경우 마감된 게시대를 하드코딩으로 추가
-          let finalBillboards = transformed as BannerBillboard[];
+          const finalBillboards = transformed as BannerBillboard[];
 
           console.log(
             `🔍 ${districtName} ${panelTypeFilter} - 최종 설정할 데이터:`,
