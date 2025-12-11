@@ -440,6 +440,45 @@ export default function DisplayDetailPage({
   };
 
   // 아이템이 선택 가능한지 확인하는 함수
+  const getAvailableFacesForSelectedHalf = (item: DisplayBillboard) => {
+    if (item.inventory_info) {
+      if (
+        selectedHalfPeriod === 'first_half' &&
+        item.inventory_info.first_half
+      ) {
+        return item.inventory_info.first_half.available_slots;
+      }
+      if (
+        selectedHalfPeriod === 'second_half' &&
+        item.inventory_info.second_half
+      ) {
+        return item.inventory_info.second_half.available_slots;
+      }
+      if (item.inventory_info.current_period) {
+        return item.inventory_info.current_period.available_slots;
+      }
+    }
+
+    if (typeof item.available_faces === 'number') {
+      return item.available_faces;
+    }
+
+    if (typeof item.faces === 'number') {
+      const closedCount =
+        selectedHalfPeriod === 'first_half'
+          ? item.first_half_closure_quantity || 0
+          : item.second_half_closure_quantity || 0;
+      return Math.max(item.faces - closedCount, 0);
+    }
+
+    return null;
+  };
+
+  const isStockDepleted = (item: DisplayBillboard) => {
+    const availableFaces = getAvailableFacesForSelectedHalf(item);
+    return typeof availableFaces === 'number' && availableFaces <= 0;
+  };
+
   const isItemSelectable = (item: DisplayBillboard) => {
     // 0. 마감된 게시대인지 확인
     if (item.is_closed) {
@@ -453,13 +492,7 @@ export default function DisplayDetailPage({
       : true;
 
     // 2. 재고 확인: 선택된 기간의 재고가 0인지 확인
-    let hasStock = true;
-    const totalFaces = item.faces || 1;
-    if (selectedHalfPeriod === 'first_half') {
-      hasStock = (item.first_half_closure_quantity || 0) < totalFaces;
-    } else if (selectedHalfPeriod === 'second_half') {
-      hasStock = (item.second_half_closure_quantity || 0) < totalFaces;
-    }
+    const hasStock = !isStockDepleted(item);
 
     return isPeriodValid && hasStock;
   };
@@ -635,6 +668,15 @@ export default function DisplayDetailPage({
           a.district.localeCompare(b.district)
         )
       : filteredByHalfPeriod;
+
+  const listViewBillboards = filteredBillboards.map((item) => {
+    const closedByStock = isStockDepleted(item);
+    return {
+      ...item,
+      effectiveIsClosed: item.is_closed || closedByStock,
+      effectiveStatus: closedByStock ? 'inactive' : item.status,
+    };
+  });
 
   if (currentPanelTypeFilter === 'top_fixed') {
     console.log(`🔍 ${district} 최종 렌더링 데이터:`, {
@@ -1439,7 +1481,8 @@ export default function DisplayDetailPage({
       return Boolean(
         extendedItem.is_closed ||
           extendedItem.panel_slot_status === 'closed' ||
-          extendedItem.panel_slot_status === '마감'
+          extendedItem.panel_slot_status === '마감' ||
+          isStockDepleted(item)
       );
     };
 
@@ -2023,7 +2066,7 @@ export default function DisplayDetailPage({
           ) : viewType === 'list' ? (
             <>
               <ItemList
-                items={filteredBillboards}
+                items={listViewBillboards}
                 showHeader
                 showCheckbox={
                   !isAllDistrictsView ||

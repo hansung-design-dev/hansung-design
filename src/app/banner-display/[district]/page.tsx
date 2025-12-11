@@ -738,60 +738,6 @@ export default function BannerDisplayPage({
           // 관악구인 경우 마감된 게시대를 하드코딩으로 추가
           let finalBillboards = transformed as BannerBillboard[];
 
-          if (district === 'gwanak') {
-            const closedItem: BannerBillboard = {
-              id: '0',
-              type: 'banner',
-              district: '관악구',
-              name: '마감된 게시대 (데모)',
-              address: '관악구 봉천동 123-45',
-              nickname: '마감데모',
-              neighborhood: '봉천동',
-              period: '',
-              price: '50,000원',
-              total_price: 50000,
-              size: '300x200',
-              faces: 1,
-              lat: 37.4784,
-              lng: 126.9516,
-              panel_width: 300,
-              panel_height: 200,
-              is_for_admin: false,
-              status: 'inactive', // 마감 상태
-              panel_code: 0,
-              banner_type: 'panel',
-              panel_type: 'panel',
-              first_half_closure_quantity: 1, // 마감된 수량
-              second_half_closure_quantity: 1,
-              panel_id: 'closed-demo-panel-id',
-              photo_url: '/images/banner-display/panel_photos/gwanak/1.jpg',
-              banner_slots: [],
-              inventory_info: {
-                current_period: {
-                  total_slots: 1,
-                  available_slots: 0, // 사용 가능한 슬롯 0개
-                  closed_slots: 1, // 마감된 슬롯 1개
-                  period: '2024-01',
-                  year_month: '2024-01',
-                },
-                first_half: {
-                  total_slots: 1,
-                  available_slots: 0,
-                  closed_slots: 1,
-                },
-                second_half: {
-                  total_slots: 1,
-                  available_slots: 0,
-                  closed_slots: 1,
-                },
-              },
-              is_closed: true, // 마감 상태 플래그
-            };
-
-            // 마감된 아이템을 맨 앞에 추가
-            finalBillboards = [closedItem, ...finalBillboards];
-          }
-
           console.log(
             `🔍 ${districtName} ${panelTypeFilter} - 최종 설정할 데이터:`,
             {

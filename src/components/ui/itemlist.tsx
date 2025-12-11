@@ -27,6 +27,14 @@ const getStatusClass = (status: string) => {
   return statusColorMap[status] || 'text-black';
 };
 
+const getEffectiveIsClosed = (item: DisplayBillboard) =>
+  (item as DisplayBillboard & { effectiveIsClosed?: boolean }).effectiveIsClosed ??
+  item.is_closed;
+
+const getEffectiveStatusKey = (item: DisplayBillboard) =>
+  (item as DisplayBillboard & { effectiveStatus?: string }).effectiveStatus ||
+  item.status;
+
 interface ItemTableProps {
   items: DisplayBillboard[];
   showHeader?: boolean;
@@ -87,6 +95,20 @@ const ItemList: React.FC<ItemTableProps> = ({
     const target = e.target as HTMLElement;
     if (target.closest('button') || target.tagName === 'BUTTON') {
       return;
+    }
+
+    const clickedItem = items.find((entry) => entry.id === itemId);
+    if (clickedItem) {
+      const isClosed = getEffectiveIsClosed(clickedItem);
+      const statusKey = getEffectiveStatusKey(clickedItem);
+      if (isClosed) {
+        console.log('[ItemList] 마감여부 클릭', {
+          id: itemId,
+          statusKey,
+          isClosed,
+        });
+        return;
+      }
     }
 
     handleItemClick(itemId.toString());
@@ -220,8 +242,9 @@ const ItemList: React.FC<ItemTableProps> = ({
           )}
           <tbody>
             {paginatedItems.map((item) => {
-              const displayStatus =
-                statusDisplayMap[item.status] || item.status;
+              const isClosed = getEffectiveIsClosed(item);
+              const statusKey = getEffectiveStatusKey(item);
+              const displayStatus = statusDisplayMap[statusKey] || statusKey;
               const categoryDisplay = getCategoryDisplay(item);
               const isSpecialDistrict =
                 item.district === '송파구' || item.district === '용산구';
@@ -234,9 +257,7 @@ const ItemList: React.FC<ItemTableProps> = ({
                     item.type === 'banner' && item.is_for_admin
                       ? 'bg-yellow-100 hover:bg-yellow-200'
                       : ''
-                  } ${
-                    item.is_closed ? 'bg-gray-100 text-gray-500 opacity-60' : ''
-                  }`}
+                  } ${isClosed ? 'bg-gray-100 text-gray-500 opacity-60' : ''}`}
                   onClick={(e) => handleRowClick(e, item.id)}
                 >
                   {showCheckbox && (
@@ -255,9 +276,9 @@ const ItemList: React.FC<ItemTableProps> = ({
                           onChange={(e) =>
                             onItemSelect?.(item.id, e.target.checked)
                           }
-                          disabled={item.is_closed}
+                          disabled={isClosed}
                           className={`hover:cursor-pointer ${
-                            item.is_closed
+                            isClosed
                               ? 'opacity-50 cursor-not-allowed'
                               : ''
                           }`}

@@ -67,6 +67,8 @@ export interface BaseBillboard {
       closed_slots: number;
     } | null;
   };
+  effectiveIsClosed?: boolean;
+  effectiveStatus?: string;
   center_ad_status?: string; // 중앙광고 신청현황
   center_ad_slot?: {
     id: string;
