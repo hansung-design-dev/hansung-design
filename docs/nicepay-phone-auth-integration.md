@@ -34,11 +34,15 @@ NICEPAY_PHONE_VERIFICATION_REQUEST_PATH=/authn/mobile
 NICEPAY_PHONE_VERIFICATION_CONFIRM_PATH=/authn/mobile/confirm
 NICEPAY_PHONE_VERIFICATION_RETURN_URL=https://localhost:3000/phone-verification/callback
 NICEPAY_PHONE_VERIFICATION_CANCEL_URL=https://localhost:3000/phone-verification/cancel
+NEXT_PUBLIC_NICE_STANDARD_POPUP_ACTION=https://svc.niceapi.co.kr:22001/digital/niceid/api/v1.0/common/crypto/auth
+NICEPAY_CRYPTO_TOKEN_PATH=/digital/niceid/api/v1.0/common/crypto/token
 NICEPAY_MOCK_MODE=false
 ```
 
 - `NICEPAY_CLIENT_ID`/`NICEPAY_CLIENT_SECRET`는 서버에서만 사용하는 민감 정보이며, `NEXT_PUBLIC_` 접두어가 붙은 변수는 필요 시(예: 브라우저 스크립트가 직접 필요할 경우) 노출 가능하게 설정.
 - `NICEPAY_API_BASE_URL`과 `TOKEN_PATH`/`TOKEN_SCOPE`/`REQUEST_PATH`/`CONFIRM_PATH`를 NicePay 문서에 따라 실제 엔드포인트로 맞추고, `RETURN_URL`/`CANCEL_URL`은 인증창 결과를 받는 URL입니다.
+- `NEXT_PUBLIC_NICE_STANDARD_POPUP_ACTION`은 클라이언트가 `enc_data`를 제출할 Nice 표준창 엔드포인트이며, 실제 Nice 인증창이 열리도록 설정합니다.
+- `NICEPAY_CRYPTO_TOKEN_PATH`는 Nice에서 표준창에 채워줄 암호화 토큰(`enc_data`, `token_version_id`, `integrity_value`)을 발급받는 API 경로입니다 (`/api/nice/crypto-token`에서 호출).
 - `NICEPAY_MOCK_MODE=false`로 두면 `phoneVerificationService.ts` 내부에서 토큰을 발급받고 인증 요청/확인을 NicePay에 직접 전달합니다.
 
 ## 테스트 시나리오

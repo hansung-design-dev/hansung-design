@@ -162,6 +162,7 @@ CREATE TABLE public.customer_inquiries (
   answered_at timestamp with time zone,
   closed_at timestamp with time zone,
   CONSTRAINT customer_inquiries_pkey PRIMARY KEY (id),
+  CONSTRAINT customer_inquiries_user_auth_id_fkey FOREIGN KEY (user_auth_id) REFERENCES public.user_auth(id),
   CONSTRAINT customer_inquiries_led_slot_id_fkey FOREIGN KEY (led_slot_id) REFERENCES public.led_slots(id),
   CONSTRAINT customer_inquiries_top_fixed_id_fkey FOREIGN KEY (top_fixed_id) REFERENCES public.top_fixed_banner_inventory(id),
   CONSTRAINT customer_inquiries_digital_product_id_fkey FOREIGN KEY (digital_product_id) REFERENCES public.digital_products(id)
@@ -374,6 +375,7 @@ CREATE TABLE public.orders (
   design_drafts_id uuid,
   draft_delivery_method text CHECK (draft_delivery_method = ANY (ARRAY['email'::text, 'upload'::text])),
   order_status USER-DEFINED DEFAULT 'pending'::order_status_enum,
+  is_admin_reservation boolean DEFAULT false,
   CONSTRAINT orders_pkey PRIMARY KEY (id),
   CONSTRAINT orders_user_profile_id_fkey FOREIGN KEY (user_profile_id) REFERENCES public.user_profiles(id),
   CONSTRAINT orders_auth_user_id_fkey FOREIGN KEY (auth_user_id) REFERENCES public.user_auth(id),

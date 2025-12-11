@@ -28,6 +28,9 @@ const MOCK_MODE =
   ).toLowerCase() !== 'false';
 
 const sanitizePhone = (phone: string) => phone.replace(/\D/g, '');
+const CRYPTO_TOKEN_PATH =
+  process.env.NICEPAY_CRYPTO_TOKEN_PATH ??
+  '/digital/niceid/api/v1.0/common/crypto/token';
 
 interface RequestResult {
   requestId: string;
@@ -107,6 +110,53 @@ const requestWithToken = async (url: string, body: Record<string, unknown>) => {
 
   return response.json();
 };
+
+interface CryptoTokenResponse {
+  enc_data: string;
+  token_version_id: string;
+  integrity_value: string;
+}
+
+export async function generateCryptoToken({
+  returnUrl,
+  cancelUrl,
+}: {
+  returnUrl: string;
+  cancelUrl?: string;
+}) {
+  if (MOCK_MODE) {
+    return {
+      enc_data: 'mock-enc',
+      token_version_id: 'mock-token-version',
+      integrity_value: 'mock-integrity',
+    };
+  }
+
+  if (!returnUrl) {
+    throw new Error('returnUrl은 반드시 필요합니다.');
+  }
+
+  const payload = {
+    returnUrl,
+    cancelUrl: cancelUrl ?? '',
+  };
+
+  const response = await requestWithToken(
+    `${BASE_URL}${CRYPTO_TOKEN_PATH}`,
+    payload
+  );
+
+  const cryptoResult = response as Partial<CryptoTokenResponse>;
+  if (!cryptoResult.enc_data || !cryptoResult.token_version_id) {
+    throw new Error('Nice 인증용 암호화 토큰을 발급받지 못했습니다.');
+  }
+
+  return {
+    enc_data: cryptoResult.enc_data,
+    token_version_id: cryptoResult.token_version_id,
+    integrity_value: cryptoResult.integrity_value ?? '',
+  };
+}
 
 const ensureEnvWarning = () => {
   if (!CLIENT_ID || !CLIENT_SECRET) {

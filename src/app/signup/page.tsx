@@ -1,14 +1,11 @@
 'use client';
 import Image from 'next/image';
 import { Button } from '@/src/components/button/button';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { getModalContent } from './modalContent';
 import { useAuth } from '@/src/contexts/authContext';
 import { useRouter } from 'next/navigation';
-import {
-  formatPhoneInput,
-  isValidPhoneFormatted,
-} from '@/src/lib/utils';
+import { formatPhoneInput, isValidPhoneFormatted } from '@/src/lib/utils';
 import { usePhoneVerification } from '@/src/lib/hooks/usePhoneVerification';
 
 export default function Signup() {
@@ -56,9 +53,15 @@ export default function Signup() {
   // 비밀번호 보기/숨기기 상태
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
+  const [standardPopupMessage, setStandardPopupMessage] = useState('');
+  const [standardPopupError, setStandardPopupError] = useState('');
+  const [standardPopupLoading, setStandardPopupLoading] = useState(false);
+  const standardFormRef = useRef<HTMLFormElement | null>(null);
 
   const { signUp } = useAuth();
   const router = useRouter();
+  const standardPopupAction =
+    process.env.NEXT_PUBLIC_NICE_STANDARD_POPUP_ACTION ?? '';
 
   const {
     step: phoneVerificationStep,
@@ -281,11 +284,16 @@ export default function Signup() {
   useEffect(() => {
     if (formData.phone && formData.phone !== lastVerifiedPhone) {
       if (isPhoneVerified) {
-      setIsPhoneVerified(false);
-    }
+        setIsPhoneVerified(false);
+      }
       resetPhoneVerification();
     }
-  }, [formData.phone, lastVerifiedPhone, resetPhoneVerification, isPhoneVerified]);
+  }, [
+    formData.phone,
+    lastVerifiedPhone,
+    resetPhoneVerification,
+    isPhoneVerified,
+  ]);
 
   // 회원가입 가능 여부 확인
   const canSignup = () => {
@@ -296,13 +304,13 @@ export default function Signup() {
       agreements.collection &&
       agreements.thirdParty;
 
-    console.log('회원가입 조건 확인:', {
-      allFieldsValid,
-      allRequiredAgreements,
-      isPhoneVerified,
-      usernameChecked,
-      agreements,
-    });
+    // console.log('회원가입 조건 확인:', {
+    //   allFieldsValid,
+    //   allRequiredAgreements,
+    //   isPhoneVerified,
+    //   usernameChecked,
+    //   agreements,
+    // });
 
     return (
       allFieldsValid &&
@@ -352,6 +360,97 @@ export default function Signup() {
       setUsernameChecked(false);
     } finally {
       setUsernameCheckLoading(false);
+    }
+  };
+
+  const handleStandardCertify = async () => {
+    if (!formData.phone) {
+      setStandardPopupError('휴대폰 번호를 먼저 입력해주세요.');
+      return;
+    }
+
+    if (!standardPopupAction) {
+      setStandardPopupError('표준창 URL이 설정되지 않았습니다.');
+      return;
+    }
+
+    setStandardPopupLoading(true);
+    setStandardPopupError('');
+    setStandardPopupMessage('');
+
+    try {
+      console.log('표준창 인증 시작', { phone: formData.phone });
+      await requestPhoneVerification(formData.phone);
+
+      const origin =
+        typeof window !== 'undefined' ? window.location.origin : '';
+      if (!origin) {
+        throw new Error('브라우저 환경에서만 표준창을 호출할 수 있습니다.');
+      }
+
+      const params = new URLSearchParams({
+        returnUrl: `${origin}/api/nice/callback`,
+        cancelUrl: `${origin}/api/nice/callback`,
+      });
+
+      const response = await fetch(
+        `/api/nice/crypto-token?${params.toString()}`
+      );
+      console.log('crypto-token 호출', response.status);
+      if (!response.ok) {
+        throw new Error('Nice 토큰 발급 API 호출에 실패했습니다.');
+      }
+
+      const result = await response.json();
+      console.log('crypto-token 결과', result);
+      if (!result.success || !result.data) {
+        throw new Error(
+          result.error || '표준창용 암호화 토큰을 가져오지 못했습니다.'
+        );
+      }
+
+      const form = standardFormRef.current;
+      if (!form) {
+        throw new Error('Nice 표준창 폼을 찾을 수 없습니다.');
+      }
+
+      const setFormValue = (name: string, value: string) => {
+        const input = form.querySelector<HTMLInputElement>(
+          `input[name="${name}"]`
+        );
+        if (input) {
+          input.value = value;
+        }
+      };
+
+      setFormValue('enc_data', result.data.enc_data);
+      setFormValue('token_version_id', result.data.token_version_id);
+      setFormValue('integrity_value', result.data.integrity_value ?? '');
+
+      const screenWidth =
+        typeof window !== 'undefined' ? window.screen.width : 1024;
+      const screenHeight =
+        typeof window !== 'undefined' ? window.screen.height : 768;
+      const width = 500;
+      const height = 600;
+      const left = Math.max(0, screenWidth / 2 - width / 2);
+      const top = Math.max(0, screenHeight / 2 - height / 2);
+      const option = `status=no, menubar=no, toolbar=no, resizable=no, width=${width}, height=${height}, left=${left}, top=${top}`;
+
+      window.open('', 'nicePopup', option);
+      form.target = 'nicePopup';
+      form.submit();
+      console.log('표준창 제출 완료', { option });
+      setStandardPopupMessage('표준창이 열렸습니다. 인증을 완료해주세요.');
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : '표준창 인증 준비 중 오류가 발생했습니다.';
+      console.error('표준창 호출 오류', error);
+      setStandardPopupError(message);
+    } finally {
+      setStandardPopupLoading(false);
     }
   };
 
@@ -518,36 +617,42 @@ export default function Signup() {
         {/* 휴대폰 번호 인풋 */}
         <div className="w-full mb-6">
           <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <div className="flex flex-1 items-center h-[4rem] bg-white rounded">
-              <Image
-                src="/svg/login-password.svg"
-                alt="휴대폰"
-                width={20}
-                height={20}
-                className="h-[1.25rem] w-[1.25rem] pl-2"
-              />
-              <input
-                type="tel"
-                placeholder="  휴대폰 번호를 입력해주세요. (예: 010-1234-5678)"
-                className="flex-1 outline-none border-none font-200"
-                value={formData.phone}
-                onChange={(e) => handleInputChange('phone', e.target.value)}
-                onBlur={(e) => handleInputBlur('phone', e.target.value)}
-                maxLength={13}
-                inputMode="numeric"
-                autoComplete="tel"
-              />
+            <div className="flex items-center gap-2">
+              <div className="flex flex-1 items-center h-[4rem] bg-white rounded">
+                <Image
+                  src="/svg/login-password.svg"
+                  alt="휴대폰"
+                  width={20}
+                  height={20}
+                  className="h-[1.25rem] w-[1.25rem] pl-2"
+                />
+                <input
+                  type="tel"
+                  placeholder="  휴대폰 번호를 입력해주세요. (예: 010-1234-5678)"
+                  className="flex-1 outline-none border-none font-200"
+                  value={formData.phone}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  onBlur={(e) => handleInputBlur('phone', e.target.value)}
+                  maxLength={13}
+                  inputMode="numeric"
+                  autoComplete="tel"
+                />
+              </div>
+              <Button
+                size="sm"
+                className="text-0-75-500 h-[4rem]"
+                onClick={handleStandardCertify}
+                disabled={
+                  standardPopupLoading ||
+                  isPhoneVerificationRequesting ||
+                  !formData.phone
+                }
+              >
+                {standardPopupLoading || isPhoneVerificationRequesting
+                  ? '요청 중...'
+                  : '인증번호 받기'}
+              </Button>
             </div>
-            <Button
-              size="sm"
-              className="text-0-75-500 h-[4rem]"
-                onClick={() => requestPhoneVerification(formData.phone)}
-                disabled={isPhoneVerificationRequesting || !formData.phone}
-            >
-                {isPhoneVerificationRequesting ? '요청 중...' : '인증번호 받기'}
-            </Button>
-          </div>
             {phoneVerificationStep === 'requested' && (
               <div className="flex items-center gap-2">
                 <input
@@ -565,10 +670,14 @@ export default function Signup() {
                   size="sm"
                   className="text-0-75-500 h-[3.5rem]"
                   onClick={() =>
-                    confirmPhoneVerification(formData.phone, phoneVerificationCode)
+                    confirmPhoneVerification(
+                      formData.phone,
+                      phoneVerificationCode
+                    )
                   }
                   disabled={
-                    isPhoneVerificationConfirming || phoneVerificationCode.length < 4
+                    isPhoneVerificationConfirming ||
+                    phoneVerificationCode.length < 4
                   }
                 >
                   {isPhoneVerificationConfirming ? '확인 중...' : '확인'}
@@ -579,6 +688,16 @@ export default function Signup() {
           {phoneVerificationMessage && (
             <div className="text-blue-600 text-0.75 mt-2 ml-2">
               {phoneVerificationMessage}
+            </div>
+          )}
+          {standardPopupMessage && !standardPopupError && (
+            <div className="text-blue-600 text-0.75 mt-1 ml-2">
+              {standardPopupMessage}
+            </div>
+          )}
+          {standardPopupError && (
+            <div className="text-red text-0.75 mt-1 ml-2">
+              {standardPopupError}
             </div>
           )}
           {validation.phone.message && (
@@ -862,6 +981,17 @@ export default function Signup() {
         >
           {loading ? '회원가입 중...' : '회원가입'}
         </button>
+        <form
+          ref={standardFormRef}
+          action={standardPopupAction}
+          method="post"
+          target="nicePopup"
+          style={{ display: 'none' }}
+        >
+          <input type="hidden" name="enc_data" defaultValue="" />
+          <input type="hidden" name="token_version_id" defaultValue="" />
+          <input type="hidden" name="integrity_value" defaultValue="" />
+        </form>
       </div>
 
       {/* 약관 모달 */}
