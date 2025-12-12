@@ -22,6 +22,7 @@
     "bcryptjs": "^3.0.2",
     "clsx": "^2.1.1",
     "framer-motion": "^12.5.0",
+    "iconv-lite": "^0.7.0",
     "next": "15.3.6",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

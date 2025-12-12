@@ -1,6 +1,7 @@
+// NiceAuthHandler 흐름에 따라 환경변수로 기관 token / 암호화 token / 인증 API를 구성합니다.
 const CLIENT_ID =
   process.env.NICEPAY_CLIENT_ID ||
-  process.env.NEXT_PUBLIC_NICE_CLIENT_ID ||
+  process.env.NEXT_PUBLIC_NICEPAY_CLIENT_ID ||
   process.env.NEXT_PUCLIC_NICE_CLIENT_ID;
 const CLIENT_SECRET =
   process.env.NICEPAY_CLIENT_SECRET ||
@@ -10,6 +11,8 @@ const BASE_URL =
   process.env.NICEPAY_API_BASE_URL ??
   process.env.NEXT_PUBLIC_NICEPAY_API_BASE_URL ??
   'https://sandbox-api.nicepay.co.kr/v1';
+// (1) Access Token 요청: NiceAuthHandler.getAccessToken와 동일한 흐름
+//     grant_type=client_credentials & scope=default, Authorization 헤더 포함
 const ACCESS_TOKEN_PATH = process.env.NICEPAY_TOKEN_PATH ?? '/access-token';
 const ACCESS_TOKEN_SCOPE =
   process.env.NICEPAY_TOKEN_SCOPE ??
@@ -20,6 +23,7 @@ const PHONE_VERIFICATION_REQUEST_PATH =
 const PHONE_VERIFICATION_CONFIRM_PATH =
   process.env.NICEPAY_PHONE_VERIFICATION_CONFIRM_PATH ??
   '/authn/mobile/confirm';
+
 const MOCK_MODE =
   (
     process.env.NICEPAY_MOCK_MODE ??
@@ -28,6 +32,7 @@ const MOCK_MODE =
   ).toLowerCase() !== 'false';
 
 const sanitizePhone = (phone: string) => phone.replace(/\D/g, '');
+// (2) 암호화 토큰 요청: NiceAuthHandler.getEncryptionToken와 사양 일치
 const CRYPTO_TOKEN_PATH =
   process.env.NICEPAY_CRYPTO_TOKEN_PATH ??
   '/digital/niceid/api/v1.0/common/crypto/token';
@@ -54,6 +59,7 @@ let cachedAccessToken: {
   expiresAt: number;
 } | null = null;
 
+// 기관 Token 발급(Authorization 헤더 + form-encoded body) --> NiceAuthHandler.getAccessToken
 const ensureAccessToken = async () => {
   if (!CLIENT_ID || !CLIENT_SECRET) {
     throw new Error('NicePay Client ID/Secret이 설정되어 있지 않습니다.');
@@ -62,6 +68,11 @@ const ensureAccessToken = async () => {
   if (cachedAccessToken && cachedAccessToken.expiresAt > Date.now()) {
     return cachedAccessToken.token;
   }
+  // NiceAuthHandler.getAccessToken: grant_type=client_credentials scope=default
+  const payload = new URLSearchParams({
+    grant_type: 'client_credentials',
+    scope: ACCESS_TOKEN_SCOPE,
+  }).toString();
 
   const response = await fetch(`${BASE_URL}${ACCESS_TOKEN_PATH}`, {
     method: 'POST',
@@ -71,10 +82,7 @@ const ensureAccessToken = async () => {
         `${CLIENT_ID}:${CLIENT_SECRET}`
       ).toString('base64')}`,
     },
-    body: new URLSearchParams({
-      grant_type: 'client_credentials',
-      scope: ACCESS_TOKEN_SCOPE,
-    }).toString(),
+    body: payload,
   });
 
   if (!response.ok) {
@@ -117,6 +125,7 @@ interface CryptoTokenResponse {
   integrity_value: string;
 }
 
+// (3) 암호화 토큰을 받아 대칭키/요청데이터 암호화에 사용할 토큰값을 준비
 export async function generateCryptoToken({
   returnUrl,
   cancelUrl,
@@ -166,6 +175,8 @@ const ensureEnvWarning = () => {
   }
 };
 
+// 휴대폰 인증 대칭키 요청 / 인증요청: Nice 가이드의 authn/mobile flow
+// (4) 대칭키 요청 / requestId 생성을 겸한 인증 시작(문서의 authn/mobile 호출)
 export async function requestPhoneVerification(phone: string) {
   const sanitizedPhone = sanitizePhone(phone);
   if (!sanitizedPhone) {

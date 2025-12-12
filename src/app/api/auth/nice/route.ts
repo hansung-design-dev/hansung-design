@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { NiceAuthHandler } from '@/lib/NiceAuthHandler';
+import { NiceAuthHandler } from '@/src/lib/NiceAuthHandler';
 import { v4 as uuidv4 } from 'uuid';
-import { saveNiceKey } from '@/lib/niceAuthKeyStore';
+import { saveNiceKey } from '@/src/lib/niceAuthKeyStore';
 
 export const runtime = 'nodejs';
 
@@ -12,13 +12,25 @@ export async function GET(request: NextRequest) {
     const accessToken = process.env.NICE_ACCESS_TOKEN;
     const productId = process.env.NICE_PRODUCT_ID;
     const returnUrl = process.env.NICE_RETURN_URL;
+    const absoluteReturnUrl = returnUrl
+      ? returnUrl.startsWith('/')
+        ? new URL(returnUrl, request.nextUrl.origin).toString()
+        : returnUrl
+      : '';
+    console.log('[NICE_ENV]', {
+      clientId,
+      accessToken,
+      productId,
+      returnUrl,
+      absoluteReturnUrl,
+    });
 
     if (
       !clientId ||
       !clientSecret ||
       !accessToken ||
       !productId ||
-      !returnUrl
+      !absoluteReturnUrl
     ) {
       return NextResponse.json(
         { error: 'NICE 환경변수가 부족합니다.' },
@@ -57,12 +69,18 @@ export async function GET(request: NextRequest) {
     );
 
     const requestno = reqNo;
+    // HTTPS returnUrl이면 POST 콜백이 안전(권장).
+    // HTTP returnUrl로 POST하면(https -> http form submit) 브라우저에서 Mixed Content로 차단될 수 있어
+    // 로컬/사설IP(http) 환경에서는 GET 콜백으로 자동 전환한다.
+    const methodtype = absoluteReturnUrl.startsWith('https://')
+      ? 'post'
+      : 'get';
     const requestPayload = {
       requestno,
-      returnurl: returnUrl,
+      returnurl: absoluteReturnUrl,
       sitecode: siteCode,
       authtype: '',
-      methodtype: 'get',
+      methodtype,
       popupyn: 'Y',
       receivedata: '',
     };
@@ -70,12 +88,13 @@ export async function GET(request: NextRequest) {
     const encData = niceAuthHandler.encryptData(requestPayload, key, iv);
     const integrityValue = niceAuthHandler.hmac256(encData, hmacKey);
 
-    saveNiceKey(reqNo, key, iv, hmacKey);
+    saveNiceKey(tokenVersionId, key, iv, hmacKey);
 
     console.log('[Nice auth] response', {
       tokenVersionId,
       requestno,
       siteCode,
+      methodtype,
       encDataSample: encData.slice(0, 20),
     });
 
@@ -85,10 +104,12 @@ export async function GET(request: NextRequest) {
       integrityValue,
       requestno,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Nice auth] error', error);
     return NextResponse.json(
-      { error: error?.message ?? 'Internal Server Error' },
+      {
+        error: error instanceof Error ? error.message : 'Internal Server Error',
+      },
       { status: 500 }
     );
   }
