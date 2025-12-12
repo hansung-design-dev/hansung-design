@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import ModalContainer from './ModalContainer';
 import { Button } from '../button/button';
@@ -7,7 +7,6 @@ import { useAuth } from '@/src/contexts/authContext';
 import { useProfile } from '@/src/contexts/profileContext';
 import Image from 'next/image';
 import { formatPhoneInput } from '@/src/lib/utils';
-import { usePhoneVerification } from '@/src/lib/hooks/usePhoneVerification';
 
 export interface UserProfile {
   id: string;
@@ -188,6 +187,7 @@ export default function UserProfileModal({
   const router = useRouter();
   const { user } = useAuth();
   const { updateProfile } = useProfile();
+  const niceFormRef = useRef<HTMLFormElement | null>(null);
   const [formData, setFormData] = useState({
     profile_title: '',
     company_name: '',
@@ -214,63 +214,89 @@ export default function UserProfileModal({
     type: 'info' as 'info' | 'success' | 'error' | 'warning',
     onConfirm: () => {},
   });
-  const [isPhoneVerified, setIsPhoneVerified] = useState(false);
   const [lastVerifiedPhone, setLastVerifiedPhone] = useState('');
-  const {
-    step: phoneVerificationStep,
-    message: phoneVerificationMessage,
-    error: phoneVerificationError,
-    code: phoneVerificationCode,
-    setCode: setPhoneVerificationCode,
-    isRequesting: isPhoneVerificationRequesting,
-    isConfirming: isPhoneVerificationConfirming,
-    requestVerification: requestPhoneVerification,
-    confirmVerification: confirmPhoneVerification,
-    resetVerification: resetPhoneVerification,
-    verifiedReference: phoneVerificationReference,
-  } = usePhoneVerification({
-    onVerified: () => {
-      setIsPhoneVerified(true);
-    },
-  });
+  const [phoneVerificationReference, setPhoneVerificationReference] =
+    useState<string>('');
+  const [phoneVerificationMessage, setPhoneVerificationMessage] = useState('');
+  const [phoneVerificationError, setPhoneVerificationError] = useState('');
+  const [isPhoneVerificationRequesting, setIsPhoneVerificationRequesting] =
+    useState(false);
 
+  const isPhoneVerified =
+    Boolean(phoneVerificationReference) && lastVerifiedPhone === formData.phone;
+  const canSubmitProfile = isPhoneVerified;
+
+  const niceStandardPopupAction =
+    process.env.NEXT_PUBLIC_NICE_STANDARD_POPUP_ACTION ??
+    'https://nice.checkplus.co.kr/CheckPlusSafeModel/service.cb';
+
+  // 휴대폰 번호가 바뀌면 인증 상태 리셋
   useEffect(() => {
-    if (phoneVerificationStep === 'verified') {
-      setLastVerifiedPhone(formData.phone);
-    }
-  }, [phoneVerificationStep, formData.phone]);
-
-  useEffect(() => {
-    if (!formData.phone) {
-      resetPhoneVerification();
-      setIsPhoneVerified(false);
-      setLastVerifiedPhone('');
-      return;
-    }
-
+    if (!lastVerifiedPhone && !phoneVerificationReference) return;
     if (formData.phone !== lastVerifiedPhone) {
-      if (isPhoneVerified) {
-        setIsPhoneVerified(false);
-      }
-      resetPhoneVerification();
+      setLastVerifiedPhone('');
+      setPhoneVerificationReference('');
+      setPhoneVerificationMessage('');
+      setPhoneVerificationError('');
     }
-  }, [
-    formData.phone,
-    isPhoneVerified,
-    lastVerifiedPhone,
-    resetPhoneVerification,
-  ]);
+  }, [formData.phone, lastVerifiedPhone, phoneVerificationReference]);
 
   useEffect(() => {
     if (!isOpen) {
-      resetPhoneVerification();
-      setIsPhoneVerified(false);
       setLastVerifiedPhone('');
+      setPhoneVerificationReference('');
+      setPhoneVerificationMessage('');
+      setPhoneVerificationError('');
+      setIsPhoneVerificationRequesting(false);
     }
-  }, [isOpen, resetPhoneVerification]);
+  }, [isOpen]);
 
-  const canSubmitProfile =
-    isPhoneVerified && Boolean(phoneVerificationReference);
+  // NICE 팝업 결과 수신 (result 페이지가 postMessage로 전달)
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      const data = event.data as unknown;
+      if (typeof data !== 'object' || data === null) return;
+      const msg = data as {
+        type?: string;
+        payload?: {
+          resultcode?: string;
+          requestno?: string;
+          phone?: string;
+          phoneVerificationReference?: string;
+          error?: string;
+        };
+      };
+      if (msg.type !== 'NICE_AUTH_RESULT') return;
+      const resultcode = msg.payload?.resultcode;
+      const isSuccess = resultcode === '0000';
+      if (isSuccess) {
+        if (msg.payload?.phone && msg.payload?.phoneVerificationReference) {
+          setLastVerifiedPhone(msg.payload.phone);
+          setPhoneVerificationReference(msg.payload.phoneVerificationReference);
+          setPhoneVerificationError('');
+          setPhoneVerificationMessage('인증이 완료되었습니다.');
+        } else {
+          setLastVerifiedPhone('');
+          setPhoneVerificationReference('');
+          setPhoneVerificationError(
+            msg.payload?.error ||
+              '휴대폰 인증 결과를 확인할 수 없습니다. 다시 인증해주세요.'
+          );
+          setPhoneVerificationMessage('');
+        }
+      } else {
+        setLastVerifiedPhone('');
+        setPhoneVerificationReference('');
+        setPhoneVerificationError(
+          `휴대폰 인증에 실패했습니다. (resultcode=${resultcode ?? ''})`
+        );
+        setPhoneVerificationMessage('');
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, []);
 
   // 사용자의 프로필 목록 가져오기
   const fetchUserProfiles = async () => {
@@ -298,9 +324,10 @@ export default function UserProfileModal({
 
   // 수정 모드일 때 기존 데이터 로드
   useEffect(() => {
-    resetPhoneVerification();
-    setIsPhoneVerified(false);
     setLastVerifiedPhone('');
+    setPhoneVerificationReference('');
+    setPhoneVerificationMessage('');
+    setPhoneVerificationError('');
 
     if (profileToEdit) {
       setFormData({
@@ -338,7 +365,7 @@ export default function UserProfileModal({
       setSelectedProfileId(null);
       setFileName('');
     }
-  }, [profileToEdit, user, resetPhoneVerification]);
+  }, [profileToEdit, user]);
 
   // 모달이 열릴 때 프로필 목록 가져오기
   useEffect(() => {
@@ -507,7 +534,7 @@ export default function UserProfileModal({
     }
   };
 
-  const handlePhoneVerification = () => {
+  const handlePhoneVerification = async () => {
     if (!formData.phone) {
       setAlertModal({
         isOpen: true,
@@ -519,7 +546,61 @@ export default function UserProfileModal({
       return;
     }
 
-    requestPhoneVerification(formData.phone);
+    if (!niceFormRef.current) {
+      setAlertModal({
+        isOpen: true,
+        title: '오류',
+        message: 'NICE 폼을 찾을 수 없습니다.',
+        type: 'error',
+        onConfirm: () => {},
+      });
+      return;
+    }
+
+    setIsPhoneVerificationRequesting(true);
+    setPhoneVerificationError('');
+    setPhoneVerificationMessage('');
+
+    try {
+      const res = await fetch('/api/auth/nice?purpose=add_profile');
+      if (!res.ok) {
+        throw new Error('NICE 본인인증 준비에 실패했습니다.');
+      }
+      const data = await res.json();
+      if (!data?.tokenVersionId || !data?.encData || !data?.integrityValue) {
+        throw new Error('Nice API가 필요한 값을 반환하지 않았습니다.');
+      }
+
+      const form = niceFormRef.current;
+      (form.elements.namedItem('token_version_id') as HTMLInputElement).value =
+        data.tokenVersionId;
+      (form.elements.namedItem('enc_data') as HTMLInputElement).value =
+        data.encData;
+      (form.elements.namedItem('integrity_value') as HTMLInputElement).value =
+        data.integrityValue;
+
+      window.name = 'Parent_window';
+      const option = `width=500,height=550,top=100,left=100,fullscreen=no,menubar=no,status=no,toolbar=no,titlebar=yes,location=no,scrollbars=no`;
+      window.open(
+        'https://nice.checkplus.co.kr/CheckPlusSafeModel/service.cb',
+        'popupChk',
+        option
+      );
+
+      form.action =
+        'https://nice.checkplus.co.kr/CheckPlusSafeModel/service.cb';
+      form.target = 'popupChk';
+      form.submit();
+      setPhoneVerificationMessage('-');
+    } catch (e) {
+      const msg =
+        e instanceof Error
+          ? e.message
+          : '표준창 인증 준비 중 오류가 발생했습니다.';
+      setPhoneVerificationError(msg);
+    } finally {
+      setIsPhoneVerificationRequesting(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -549,7 +630,7 @@ export default function UserProfileModal({
       const requestData = {
         user_auth_id: user.id,
         ...formData,
-        phoneVerificationReference: phoneVerificationReference ?? undefined,
+        phoneVerificationReference: phoneVerificationReference || undefined,
       };
 
       let response;
@@ -647,6 +728,18 @@ export default function UserProfileModal({
     <>
       <ModalContainer isOpen={isOpen} onClose={onClose} title={getModalTitle()}>
         <div className="space-y-6">
+          <form
+            ref={niceFormRef}
+            action={niceStandardPopupAction}
+            method="post"
+            target="popupChk"
+            style={{ display: 'none' }}
+          >
+            <input type="hidden" name="m" defaultValue="service" />
+            <input type="hidden" name="enc_data" defaultValue="" />
+            <input type="hidden" name="token_version_id" defaultValue="" />
+            <input type="hidden" name="integrity_value" defaultValue="" />
+          </form>
           {/* 프로필 제목 - create 모드에서는 input, edit 모드에서는 드롭다운 */}
           <div className="flex gap-2 items-center">
             <label className="block text-1 text-gray-2 font-500 mb-2 w-30">
@@ -782,41 +875,18 @@ export default function UserProfileModal({
                   variant="outlineGray"
                   className="rounded-lg disabled:cursor-not-allowed disabled:opacity-60"
                   disabled={
-                    isPhoneVerificationRequesting || !formData.phone
+                    isPhoneVerificationRequesting ||
+                    !formData.phone ||
+                    isPhoneVerified
                   }
                 >
-                  {isPhoneVerificationRequesting ? '요청 중...' : '인증번호 받기'}
+                  {isPhoneVerified
+                    ? '인증완료'
+                    : isPhoneVerificationRequesting
+                    ? '요청 중...'
+                    : '휴대폰번호 인증'}
                 </Button>
               </div>
-              {phoneVerificationStep === 'requested' && (
-                <div className="flex gap-2 items-center">
-                  <input
-                    type="text"
-                    placeholder="인증번호 6자리"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-1 font-200"
-                    value={phoneVerificationCode}
-                    onChange={(e) =>
-                      setPhoneVerificationCode(e.target.value.replace(/\D/g, ''))
-                    }
-                    maxLength={6}
-                    inputMode="numeric"
-                  />
-                  <Button
-                    size="sm"
-                    variant="outlineGray"
-                    className="rounded-lg disabled:cursor-not-allowed disabled:opacity-60"
-                    onClick={() =>
-                      confirmPhoneVerification(formData.phone, phoneVerificationCode)
-                    }
-                    disabled={
-                      isPhoneVerificationConfirming ||
-                      phoneVerificationCode.length < 4
-                    }
-                  >
-                    {isPhoneVerificationConfirming ? '확인 중...' : '확인'}
-                  </Button>
-                </div>
-              )}
               {phoneVerificationMessage && (
                 <p className="text-blue-600 text-xs leading-snug">
                   {phoneVerificationMessage}
@@ -832,9 +902,7 @@ export default function UserProfileModal({
                   휴대폰 인증이 완료되었습니다.
                 </p>
               ) : (
-                <p className="text-gray-500 text-xs leading-snug">
-                  인증번호를 받고 입력한 뒤 저장하세요.
-                </p>
+                <p className="text-gray-500 text-xs leading-snug">인증필요</p>
               )}
             </div>
           </div>

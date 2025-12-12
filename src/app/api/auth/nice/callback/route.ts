@@ -1,8 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { NiceAuthHandler } from '@/src/lib/NiceAuthHandler';
-import { loadNiceKey } from '@/src/lib/niceAuthKeyStore';
+import { loadNiceKey, saveNiceKey } from '@/src/lib/niceAuthKeyStore';
+import {
+  issuePhoneVerificationReference,
+  type PhoneVerificationPurpose,
+} from '@/src/lib/phoneVerification';
+import { normalizePhone } from '@/src/lib/utils';
 
 export const runtime = 'nodejs';
+
+const COOKIE_PREFIX = 'nice_auth_key_';
+
+function asPurpose(value: string | null): PhoneVerificationPurpose {
+  switch ((value ?? '').trim()) {
+    // 호환: 예전 클라이언트가 profile로 보내던 케이스도 add_profile로 매핑
+    case 'profile':
+    case 'add_profile':
+      return 'add_profile';
+    case 'reset_password':
+      return 'reset_password';
+    case 'signup':
+    default:
+      return 'signup';
+  }
+}
+
+function extractPhoneFromNice(decData: Record<string, unknown>): string | null {
+  const candidates = [
+    'mobileno',
+    'mobileNo',
+    'mobile_no',
+    'phone',
+    'phoneno',
+    'phoneNo',
+  ];
+  for (const key of candidates) {
+    const value = decData?.[key];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return null;
+}
 
 async function handleCallback(params: {
   request: NextRequest;
@@ -29,7 +66,33 @@ async function handleCallback(params: {
     );
   }
 
-  const keys = loadNiceKey(tokenVersionId);
+  const keysFromStore = loadNiceKey(tokenVersionId);
+  const keys =
+    keysFromStore ??
+    (() => {
+      const raw = request.cookies.get(`${COOKIE_PREFIX}${tokenVersionId}`)?.value;
+      if (!raw) return null;
+      try {
+        const parsed = JSON.parse(raw) as {
+          key: string;
+          iv: string;
+          hmacKey: string;
+          expiresAt?: number;
+        };
+        if (
+          !parsed?.key ||
+          !parsed?.iv ||
+          !parsed?.hmacKey ||
+          (parsed.expiresAt && Date.now() > parsed.expiresAt)
+        ) {
+          return null;
+        }
+        saveNiceKey(tokenVersionId, parsed.key, parsed.iv, parsed.hmacKey);
+        return { key: parsed.key, iv: parsed.iv, hmacKey: parsed.hmacKey };
+      } catch {
+        return null;
+      }
+    })();
   if (!keys) {
     return NextResponse.json(
       {
@@ -71,17 +134,55 @@ async function handleCallback(params: {
   );
 
   const decData = niceAuthHandler.decryptData(encData, keys.key, keys.iv);
-  const requestno = decData?.requestno;
-  const resultcode = decData?.resultcode ?? '0000';
+  const requestno = (decData as Record<string, unknown>)?.requestno;
+  const resultcodeRaw = (decData as Record<string, unknown>)?.resultcode;
+  const resultcode =
+    typeof resultcodeRaw === 'string' && resultcodeRaw.trim()
+      ? resultcodeRaw.trim()
+      : '0000';
+
+  const purpose = asPurpose(request.nextUrl.searchParams.get('purpose'));
+  const phoneRaw = extractPhoneFromNice(decData as Record<string, unknown>);
+  const phone = phoneRaw ? normalizePhone(phoneRaw) : '';
 
   console.log(`[Nice callback ${source}] decrypted`, {
     resultcode,
     requestno,
+    purpose,
+    hasPhone: Boolean(phone),
   });
 
   const redirectUrl = new URL('/auth/nice/result', request.url);
   redirectUrl.searchParams.set('resultcode', resultcode);
-  if (requestno) redirectUrl.searchParams.set('requestno', requestno);
+  if (typeof requestno === 'string' && requestno)
+    redirectUrl.searchParams.set('requestno', requestno);
+
+  // 성공이면 서버 검증 가능한 phoneVerificationReference 발급
+  if (resultcode === '0000') {
+    if (phone) {
+      try {
+        const issued = await issuePhoneVerificationReference({
+          phone,
+          purpose,
+          requestno: typeof requestno === 'string' ? requestno : null,
+        });
+        redirectUrl.searchParams.set('phone', issued.phone);
+        redirectUrl.searchParams.set(
+          'phoneVerificationReference',
+          issued.verificationId
+        );
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : '인증 reference 발급 실패';
+        console.error('[Nice callback] issue reference error', msg);
+        redirectUrl.searchParams.set('error', msg);
+      }
+    } else {
+      redirectUrl.searchParams.set(
+        'error',
+        '인증된 휴대폰 번호를 확인할 수 없습니다.'
+      );
+    }
+  }
 
   // POST callback -> 결과 페이지는 GET으로 전환 (303)
   return NextResponse.redirect(redirectUrl, 303);

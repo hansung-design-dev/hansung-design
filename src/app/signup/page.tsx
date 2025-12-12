@@ -21,6 +21,8 @@ export default function Signup() {
 
   // 휴대폰 인증 상태
   const [lastVerifiedPhone, setLastVerifiedPhone] = useState('');
+  const [phoneVerificationReference, setPhoneVerificationReference] =
+    useState<string>('');
 
   // 입력 필드 상태
   const [formData, setFormData] = useState({
@@ -60,6 +62,9 @@ export default function Signup() {
   const router = useRouter();
   const standardPopupAction =
     process.env.NEXT_PUBLIC_NICE_STANDARD_POPUP_ACTION ?? '';
+
+  const isPhoneVerified =
+    Boolean(phoneVerificationReference) && lastVerifiedPhone === formData.phone;
 
   const handleAgreementChange = (key: keyof typeof agreements) => {
     if (key === 'all') {
@@ -250,11 +255,14 @@ export default function Signup() {
     setValidation((prev) => ({ ...prev, [field]: validationResult }));
   };
 
+  // 휴대폰 번호가 바뀌면(인증 후 수정 등) 인증 상태를 리셋
   useEffect(() => {
-    if (formData.phone && formData.phone !== lastVerifiedPhone) {
-      setLastVerifiedPhone(formData.phone);
+    if (!lastVerifiedPhone && !phoneVerificationReference) return;
+    if (formData.phone !== lastVerifiedPhone) {
+      setLastVerifiedPhone('');
+      setPhoneVerificationReference('');
     }
-  }, [formData.phone, lastVerifiedPhone]);
+  }, [formData.phone, lastVerifiedPhone, phoneVerificationReference]);
 
   // 회원가입 가능 여부 확인
   const canSignup = () => {
@@ -272,7 +280,12 @@ export default function Signup() {
     //   agreements,
     // });
 
-    return allFieldsValid && allRequiredAgreements && usernameChecked;
+    return (
+      allFieldsValid &&
+      allRequiredAgreements &&
+      usernameChecked &&
+      isPhoneVerified
+    );
   };
 
   // 중복확인 함수
@@ -328,7 +341,7 @@ export default function Signup() {
     setStandardPopupMessage('');
 
     try {
-      const response = await fetch('/api/auth/nice');
+      const response = await fetch('/api/auth/nice?purpose=signup');
       console.log('[NICE] /api/auth/nice response', {
         ok: response.ok,
         status: response.status,
@@ -380,7 +393,7 @@ export default function Signup() {
       form.submit();
       console.log('[NICE] form submitted to service.cb');
 
-      setStandardPopupMessage('표준창이 열렸습니다. 인증을 완료해주세요.');
+      setStandardPopupMessage(' ');
     } catch (error) {
       const message =
         error instanceof Error
@@ -396,25 +409,54 @@ export default function Signup() {
   // 팝업 결과 수신 (result 페이지가 postMessage로 전달)
   useEffect(() => {
     const handler = (event: MessageEvent) => {
+      // 보안: 동일 origin에서 온 메시지만 허용
+      if (event.origin !== window.location.origin) return;
       const data = event.data as unknown;
       if (typeof data !== 'object' || data === null) return;
       const msg = data as {
         type?: string;
-        payload?: { resultcode?: string; requestno?: string };
+        payload?: {
+          resultcode?: string;
+          requestno?: string;
+          phone?: string;
+          phoneVerificationReference?: string;
+          error?: string;
+        };
       };
       if (msg.type !== 'NICE_AUTH_RESULT') return;
       console.log('[NICE] message from popup', msg);
       const resultcode = msg.payload?.resultcode;
       const requestno = msg.payload?.requestno;
-      setStandardPopupMessage(
-        `NICE 인증 결과 수신: resultcode=${resultcode ?? ''} requestno=${
-          requestno ?? ''
-        }`
-      );
+      const verifiedPhone = msg.payload?.phone;
+      const verifiedRef = msg.payload?.phoneVerificationReference;
+      const isSuccess = resultcode === '0000';
+      if (isSuccess) {
+        // 서버가 발급한 reference를 받은 경우에만 "인증 완료" 처리
+        if (verifiedRef && verifiedPhone) {
+          setLastVerifiedPhone(verifiedPhone);
+          setPhoneVerificationReference(verifiedRef);
+        } else {
+          setLastVerifiedPhone('');
+          setPhoneVerificationReference('');
+        }
+        setStandardPopupError('');
+        setStandardPopupMessage('인증이 완료되었습니다.');
+      } else {
+        setLastVerifiedPhone('');
+        setPhoneVerificationReference('');
+        setStandardPopupError(
+          `휴대폰 인증에 실패했습니다. (resultcode=${resultcode ?? ''})`
+        );
+        setStandardPopupMessage(
+          `NICE 인증 결과 수신: resultcode=${resultcode ?? ''} requestno=${
+            requestno ?? ''
+          }`
+        );
+      }
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
-  }, []);
+  }, [formData.phone]);
 
   const handleSignup = async () => {
     console.log('🔍 회원가입 시작');
@@ -448,7 +490,8 @@ export default function Signup() {
         formData.name,
         formData.id,
         formData.phone,
-        agreements
+        agreements,
+        phoneVerificationReference
       );
 
       console.log('🔍 signUp 결과:', result);
@@ -600,11 +643,21 @@ export default function Signup() {
               </div>
               <Button
                 size="sm"
-                className="text-0-75-500 h-[4rem]"
+                className={`text-0-75-500 h-[4rem] ${
+                  isPhoneVerified
+                    ? 'bg-gray-300 text-gray-600 hover:cursor-not-allowed'
+                    : ''
+                }`}
                 onClick={handleStandardCertify}
-                disabled={standardPopupLoading || !formData.phone}
+                disabled={
+                  standardPopupLoading || !formData.phone || isPhoneVerified
+                }
               >
-                {standardPopupLoading ? '요청 중...' : '휴대폰번호 인증!'}
+                {isPhoneVerified
+                  ? '인증완료'
+                  : standardPopupLoading
+                  ? '요청 중...'
+                  : '휴대폰번호 인증'}
               </Button>
             </div>
           </div>
@@ -891,6 +944,7 @@ export default function Signup() {
           target="nicePopup"
           style={{ display: 'none' }}
         >
+          <input type="hidden" name="m" defaultValue="service" />
           <input type="hidden" name="enc_data" defaultValue="" />
           <input type="hidden" name="token_version_id" defaultValue="" />
           <input type="hidden" name="integrity_value" defaultValue="" />

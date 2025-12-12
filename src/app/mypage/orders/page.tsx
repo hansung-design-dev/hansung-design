@@ -8,6 +8,7 @@ import OrderItemList from '@/src/components/orderItemList';
 import OrderApplicationForm from '@/src/components/OrderApplicationForm';
 import { Button } from '@/src/components/button/button';
 import TableSkeleton from '@/src/components/skeleton/TableSkeleton';
+import { applySpecialHalfPeriodFixup } from '@/src/lib/specialHalfPeriodFixup';
 
 // 타입 정의
 interface PanelInfo {
@@ -897,6 +898,22 @@ export default function OrdersPage() {
       const endMonth = end.getMonth() + 1;
       const endDay = end.getDate();
 
+      // (특수) 5일~19일은 상반기
+      if (startYear === endYear && startMonth === endMonth) {
+        if (startDay === 5 && endDay === 19) {
+          return `${startYear}년 ${startMonth}월 상반기`;
+        }
+      }
+
+      // (특수) 20일~다음달4일은 하반기
+      if (startDay === 20 && endDay === 4) {
+        const expectedNextMonth = startMonth === 12 ? 1 : startMonth + 1;
+        const expectedNextYear = startMonth === 12 ? startYear + 1 : startYear;
+        if (endYear === expectedNextYear && endMonth === expectedNextMonth) {
+          return `${startYear}년 ${startMonth}월 하반기`;
+        }
+      }
+
       // 같은 년/월이고, 날짜 범위가 한 달 안에서 끝나는 경우에는 상/하반기까지 표시
       if (startYear === endYear && startMonth === endMonth) {
         const isFirstHalf = startDay <= 15 && endDay <= 15;
@@ -1108,8 +1125,14 @@ export default function OrdersPage() {
     // 최신 결제 정보 (created_at 기준으로 정렬된 첫 번째)
     const latestPayment = payments.length > 0 ? payments[0] : null;
 
-    const displayStartDate = orderDetail.display_start_date ?? '-';
-    const displayEndDate = orderDetail.display_end_date ?? '-';
+    const districtName = panelInfo.region_gu?.name ?? null;
+    const fixedDisplayPeriod = applySpecialHalfPeriodFixup({
+      districtName,
+      startDate: orderDetail.display_start_date ?? null,
+      endDate: orderDetail.display_end_date ?? null,
+    });
+    const displayStartDate = fixedDisplayPeriod.startDate ?? '-';
+    const displayEndDate = fixedDisplayPeriod.endDate ?? '-';
 
     // 주문일 기준 취소 가능 여부 및 경과 일수 계산
     const createdAt = order.created_at ? new Date(order.created_at) : null;

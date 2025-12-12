@@ -5,6 +5,10 @@ import {
   ensurePanelSlotUsageForItem,
   type SlotResolverCache,
 } from '@/src/lib/slotResolver';
+import {
+  resolveRegionGuDisplayPeriodRangeByPanel,
+  type RegionGuDisplayPeriodResolverCache,
+} from '@/src/lib/resolveRegionGuDisplayPeriod';
 
 // Type definitions for the orders API
 interface Panel {
@@ -133,6 +137,22 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/de0826ba-4e91-43eb-b001-5614ace69b75', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: 'debug-session',
+        runId: 'pre-fix',
+        hypothesisId: 'H5',
+        location: 'src/app/api/orders/route.ts:GET:entry',
+        message: 'orders GET called',
+        data: { hasUserId: !!userId, userIdLength: userId?.length ?? 0 },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+
     if (!userId) {
       return NextResponse.json(
         { error: '사용자 ID가 필요합니다.' },
@@ -188,11 +208,65 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('주문 조회 오류:', error);
+      // #region agent log
+      const supabaseError = error as unknown as {
+        details?: string;
+        hint?: string;
+      };
+      fetch(
+        'http://127.0.0.1:7242/ingest/de0826ba-4e91-43eb-b001-5614ace69b75',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: 'debug-session',
+            runId: 'pre-fix',
+            hypothesisId: 'H5',
+            location: 'src/app/api/orders/route.ts:GET:select:error',
+            message: 'orders select failed',
+            data: {
+              errorMessage: error.message,
+              errorDetails: supabaseError.details ?? null,
+              errorHint: supabaseError.hint ?? null,
+            },
+            timestamp: Date.now(),
+          }),
+        }
+      ).catch(() => {});
+      // #endregion
       return NextResponse.json(
         { error: '주문 조회 중 오류가 발생했습니다.' },
         { status: 500 }
       );
     }
+
+    // #region agent log
+    const ordersSample = (orders ?? []).slice(0, 3).map((o) => ({
+      orderId: (o as { id?: string }).id ?? null,
+      orderNumber: (o as { order_number?: string }).order_number ?? null,
+      detailsCount: Array.isArray(
+        (o as { order_details?: unknown }).order_details
+      )
+        ? (o as { order_details: unknown[] }).order_details.length
+        : null,
+      paymentsCount: Array.isArray((o as { payments?: unknown }).payments)
+        ? (o as { payments: unknown[] }).payments.length
+        : null,
+    }));
+    fetch('http://127.0.0.1:7242/ingest/de0826ba-4e91-43eb-b001-5614ace69b75', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: 'debug-session',
+        runId: 'pre-fix',
+        hypothesisId: 'H5',
+        location: 'src/app/api/orders/route.ts:GET:select:ok',
+        message: 'orders select ok',
+        data: { ordersCount: orders?.length ?? 0, sample: ordersSample },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
 
     // 2. 각 주문에 대한 design_drafts 조회
     // - orders.design_drafts_id로 조회
@@ -622,6 +696,11 @@ export async function POST(request: NextRequest) {
       slotUsageByPanelDate: new Map(),
     };
 
+    const periodResolverCache: RegionGuDisplayPeriodResolverCache = {
+      panelInfoByPanelId: new Map(),
+      periodRangeByKey: new Map(),
+    };
+
     // 병목 최적화: 아이템별 슬롯 확보/시안 생성은 병렬 수행 (네트워크 왕복 시간 절감)
     let resolvedOrderDetails: OrderDetailInsert[];
     try {
@@ -650,12 +729,25 @@ export async function POST(request: NextRequest) {
             const year = item.selectedYear;
             const month = item.selectedMonth;
 
-            if (item.halfPeriod === 'first_half') {
-              // 상반기: 1일-15일
+            const resolved = item.panel_id
+              ? await resolveRegionGuDisplayPeriodRangeByPanel({
+                  panelId: item.panel_id,
+                  year,
+                  month,
+                  halfPeriod: item.halfPeriod,
+                  cache: periodResolverCache,
+                })
+              : null;
+
+            if (resolved) {
+              displayStartDate = resolved.from;
+              displayEndDate = resolved.to;
+            } else if (item.halfPeriod === 'first_half') {
+              // fallback (레거시): 상반기 1일-15일
               displayStartDate = `${year}-${String(month).padStart(2, '0')}-01`;
               displayEndDate = `${year}-${String(month).padStart(2, '0')}-15`;
             } else {
-              // 하반기: 16일-마지막일
+              // fallback (레거시): 하반기 16일-마지막일
               const lastDay = new Date(year, month, 0).getDate();
               displayStartDate = `${year}-${String(month).padStart(2, '0')}-16`;
               displayEndDate = `${year}-${String(month).padStart(

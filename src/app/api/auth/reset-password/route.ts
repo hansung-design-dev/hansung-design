@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/src/lib/supabase';
 import { normalizePhone } from '@/src/lib/utils';
+import { assertValidPhoneVerificationReference } from '@/src/lib/phoneVerification';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { username, phone, newPassword } = body as {
+    const { username, phone, newPassword, phoneVerificationReference } = body as {
       username?: string;
       phone?: string;
       newPassword?: string;
+      phoneVerificationReference?: string;
     };
 
     if (!username || !phone || !newPassword) {
@@ -18,7 +20,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!phoneVerificationReference) {
+      return NextResponse.json(
+        { success: false, error: '휴대폰 인증을 완료해주세요.' },
+        { status: 400 }
+      );
+    }
+
     const normalizedPhone = normalizePhone(phone);
+
+    // 휴대폰 인증 reference 검증 (유효기간/번호/목적)
+    try {
+      await assertValidPhoneVerificationReference({
+        reference: phoneVerificationReference,
+        phone: normalizedPhone,
+        purpose: 'reset_password',
+      });
+    } catch (e) {
+      const msg =
+        e instanceof Error ? e.message : '휴대폰 인증 검증에 실패했습니다.';
+      return NextResponse.json({ success: false, error: msg }, { status: 400 });
+    }
 
     // username + phone 이 모두 일치하는 유저 찾기
     const { data: user, error: fetchError } = await supabaseAdmin

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, supabaseAdmin } from '@/src/lib/supabase';
+import { assertValidPhoneVerificationReference } from '@/src/lib/phoneVerification';
+import { normalizePhone } from '@/src/lib/utils';
 
 export async function POST(request: NextRequest) {
   try {
@@ -69,6 +71,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 휴대폰 인증 reference 검증 (유효기간/번호/목적)
+    try {
+      await assertValidPhoneVerificationReference({
+        reference: phoneVerificationReference,
+        phone,
+        purpose: 'signup',
+      });
+    } catch (e) {
+      const msg =
+        e instanceof Error ? e.message : '휴대폰 인증 검증에 실패했습니다.';
+      return NextResponse.json({ success: false, error: msg }, { status: 400 });
+    }
+
+    const normalizedPhone = normalizePhone(phone);
+
     // 1) Supabase Auth 기준으로 이메일/비밀번호 가입
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp(
       {
@@ -78,7 +95,7 @@ export async function POST(request: NextRequest) {
           data: {
             name,
             username,
-            phone,
+            phone: normalizedPhone,
           },
         },
       }
@@ -121,7 +138,7 @@ export async function POST(request: NextRequest) {
         email,
         password, // 현재 스키마 유지: 평문 저장 (나중에 제거 예정)
         name,
-        phone,
+        phone: normalizedPhone,
         terms_agreed: agreements.terms,
         privacy_agreed: agreements.privacy,
         collection_agreed: agreements.collection,

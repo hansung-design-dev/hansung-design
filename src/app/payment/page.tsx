@@ -1,5 +1,11 @@
 'use client';
-import React, { useState, useEffect, useCallback, Suspense, useRef } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  Suspense,
+  useRef,
+} from 'react';
 import { Button } from '@/src/components/button/button';
 import Nav from '@/src/components/layouts/nav';
 import { useAuth } from '@/src/contexts/authContext';
@@ -8,62 +14,12 @@ import { useProfile } from '@/src/contexts/profileContext';
 import { useSearchParams } from 'next/navigation';
 import { CartItem } from '@/src/contexts/cartContext';
 import CustomFileUpload from '@/src/components/ui/CustomFileUpload';
+import type { BankAccountInfo, GroupedCartItem, UserProfile } from './_types';
+import BankTransferModal from './_components/BankTransferModal';
+import TossPaymentModal from './_components/TossPaymentModal';
 // import Image from 'next/image';
 // PaymentMethodSelector import 제거 - 바로 토스 위젯 사용
 // processPayment import 제거 - 토스 위젯에서 직접 처리
-
-// UserProfile 타입 정의
-interface UserProfile {
-  id: string;
-  user_auth_id: string;
-  profile_title: string;
-  company_name?: string;
-  business_registration_file?: string;
-  phone: string;
-  email: string;
-  contact_person_name: string;
-  fax_number?: string;
-  is_default: boolean;
-  is_public_institution?: boolean;
-  is_company?: boolean;
-  is_approved?: boolean;
-  created_at: string;
-}
-
-// 묶음 결제를 위한 그룹화된 아이템 인터페이스
-interface GroupedCartItem {
-  id: string;
-  name: string;
-  items: CartItem[];
-  totalPrice: number;
-  district: string;
-  type: 'banner-display' | 'led-display' | 'digital-signage';
-  panel_type: string;
-  is_public_institution?: boolean;
-  is_company?: boolean;
-  user_profile_id?: string;
-  contact_person_name?: string;
-  phone?: string;
-  company_name?: string;
-  email?: string;
-  selectedFile?: File | null;
-  fileUploadMethod?: 'upload' | 'email' | null;
-  fileName?: string | null;
-  fileSize?: number | null;
-  fileType?: string | null;
-  emailAddress?: string | null;
-  // 상하반기 정보 추가
-  halfPeriod?: 'first_half' | 'second_half';
-  selectedYear?: number;
-  selectedMonth?: number;
-  periodText?: string;
-}
-
-type BankAccountInfo = {
-  bankName: string;
-  accountNumber: string;
-  owner: string;
-};
 
 const PENDING_PAYMENT_ITEMS_KEY = 'pending_payment_items';
 
@@ -99,6 +55,38 @@ const logPaymentDebug = (
   console.log(buildPaymentDebugMetadata(label, details));
   console.groupEnd();
 };
+
+// #region agent log - ndjson ingest helper
+const __DEBUG_INGEST_URL__ =
+  'http://127.0.0.1:7242/ingest/de0826ba-4e91-43eb-b001-5614ace69b75';
+
+type AgentDebugPayload = {
+  sessionId: string;
+  runId: string;
+  hypothesisId: 'A' | 'B' | 'C' | 'D' | 'E';
+  location: string;
+  message: string;
+  data?: Record<string, unknown>;
+  timestamp: number;
+};
+
+const postAgentDebugLog = (payload: AgentDebugPayload) => {
+  if (typeof window === 'undefined') return;
+  // HTTPS 페이지에서 HTTP로 요청하면 브라우저가 Mixed Content로 차단함
+  // 로컬 HTTPS(dev) 사용 시 디버그 ingest는 자동 스킵 (기능에는 영향 없음)
+  if (
+    window.location.protocol === 'https:' &&
+    __DEBUG_INGEST_URL__?.startsWith('http://')
+  ) {
+    return;
+  }
+  fetch(__DEBUG_INGEST_URL__, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  }).catch(() => {});
+};
+// #endregion
 
 function PaymentPageContent() {
   const { user } = useAuth();
@@ -167,6 +155,9 @@ function PaymentPageContent() {
   }>({ group: {}, item: {} });
 
   const draftUploadInFlightRef = useRef<Set<string>>(new Set());
+  const debugRunIdRef = useRef(
+    `payment_${Date.now()}_${Math.random().toString(16).slice(2, 10)}`
+  );
 
   const [bankModalOpen, setBankModalOpen] = useState(false);
   const [bankModalGroup, setBankModalGroup] = useState<GroupedCartItem | null>(
@@ -203,12 +194,68 @@ function PaymentPageContent() {
         lineno: event.lineno,
         colno: event.colno,
       });
+
+      // #region agent log - hypothesis A (global error / CSP / script load)
+      postAgentDebugLog({
+        sessionId: 'debug-session',
+        runId: debugRunIdRef.current,
+        hypothesisId: 'A',
+        location: 'src/app/payment/page.tsx:global-error',
+        message: 'window.error',
+        data: {
+          message: event.message,
+          filename: event.filename,
+          lineno: event.lineno,
+          colno: event.colno,
+          errorName:
+            typeof event.error?.name === 'string'
+              ? event.error.name
+              : undefined,
+          errorMessage:
+            typeof event.error?.message === 'string'
+              ? event.error.message
+              : undefined,
+          stack:
+            typeof event.error?.stack === 'string'
+              ? event.error.stack.slice(0, 800)
+              : undefined,
+          userAgent: navigator.userAgent,
+        },
+        timestamp: Date.now(),
+      });
+      // #endregion
     };
 
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
       logPaymentDebug('처리되지 않은 프로미스 예외', {
         reason: event.reason,
       });
+
+      // #region agent log - hypothesis A (unhandled rejection)
+      const reason = event.reason as unknown;
+      postAgentDebugLog({
+        sessionId: 'debug-session',
+        runId: debugRunIdRef.current,
+        hypothesisId: 'A',
+        location: 'src/app/payment/page.tsx:unhandledrejection',
+        message: 'window.unhandledrejection',
+        data: {
+          reasonType: typeof reason,
+          reasonName:
+            reason && typeof reason === 'object' && 'name' in reason
+              ? String((reason as { name?: unknown }).name)
+              : undefined,
+          reasonMessage:
+            reason && typeof reason === 'object' && 'message' in reason
+              ? String((reason as { message?: unknown }).message)
+              : typeof reason === 'string'
+              ? reason
+              : undefined,
+          userAgent: navigator.userAgent,
+        },
+        timestamp: Date.now(),
+      });
+      // #endregion
     };
 
     window.addEventListener('error', handleGlobalError);
@@ -221,6 +268,61 @@ function PaymentPageContent() {
         handleUnhandledRejection
       );
     };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // #region agent log - hypothesis C (device/env perf characteristics)
+    const nav = navigator as unknown as {
+      deviceMemory?: number;
+      hardwareConcurrency?: number;
+      connection?: { effectiveType?: string; saveData?: boolean };
+    };
+    postAgentDebugLog({
+      sessionId: 'debug-session',
+      runId: debugRunIdRef.current,
+      hypothesisId: 'C',
+      location: 'src/app/payment/page.tsx:env',
+      message: 'payment page env snapshot',
+      data: {
+        userAgent: navigator.userAgent,
+        deviceMemory: nav.deviceMemory,
+        hardwareConcurrency: nav.hardwareConcurrency,
+        effectiveType: nav.connection?.effectiveType,
+        saveData: nav.connection?.saveData,
+        hasUserActivation: !!navigator.userActivation,
+      },
+      timestamp: Date.now(),
+    });
+    // #endregion
+
+    // #region agent log - hypothesis C (long tasks)
+    try {
+      if (typeof PerformanceObserver !== 'undefined') {
+        const observer = new PerformanceObserver((list) => {
+          const entries = list.getEntries();
+          const durations = entries
+            .map((e) => Number(e.duration))
+            .filter((n) => Number.isFinite(n));
+          const maxDuration = durations.length ? Math.max(...durations) : 0;
+          postAgentDebugLog({
+            sessionId: 'debug-session',
+            runId: debugRunIdRef.current,
+            hypothesisId: 'C',
+            location: 'src/app/payment/page.tsx:longtask',
+            message: 'longtask observed',
+            data: { count: entries.length, maxDuration },
+            timestamp: Date.now(),
+          });
+        });
+        observer.observe({ entryTypes: ['longtask'] });
+        return () => observer.disconnect();
+      }
+    } catch {
+      // ignore
+    }
+    // #endregion
   }, []);
 
   useEffect(() => {
@@ -639,14 +741,52 @@ function PaymentPageContent() {
   }, [userProfiles, selectedItems, searchParams, projectName]);
 
   // 묶음 결제를 위한 아이템 그룹화 함수 (useCallback으로 안정화)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const groupItemsByDistrict = useCallback(
     (items: CartItem[], isDirectMode = false): GroupedCartItem[] => {
       // localStorage에서 기본 프로필 ID 직접 가져오기 (항상 확인)
-      const storedDefaultProfileId =
-        typeof window !== 'undefined'
-          ? localStorage.getItem('hansung_profiles_user_id')
-          : null;
+      let storedDefaultProfileId: string | null = null;
+      if (typeof window !== 'undefined') {
+        try {
+          storedDefaultProfileId = localStorage.getItem(
+            'hansung_profiles_user_id'
+          );
+          // #region agent log - hypothesis B (localStorage access)
+          postAgentDebugLog({
+            sessionId: 'debug-session',
+            runId: debugRunIdRef.current,
+            hypothesisId: 'B',
+            location: 'src/app/payment/page.tsx:groupItemsByDistrict',
+            message: 'localStorage.getItem(hansung_profiles_user_id) success',
+            data: {
+              hasValue: !!storedDefaultProfileId,
+              valueLength: storedDefaultProfileId
+                ? storedDefaultProfileId.length
+                : 0,
+            },
+            timestamp: Date.now(),
+          });
+          // #endregion
+        } catch (e) {
+          const err = e as unknown as { name?: unknown; message?: unknown };
+          // #region agent log - hypothesis B (localStorage blocked/throws)
+          postAgentDebugLog({
+            sessionId: 'debug-session',
+            runId: debugRunIdRef.current,
+            hypothesisId: 'B',
+            location: 'src/app/payment/page.tsx:groupItemsByDistrict',
+            message: 'localStorage.getItem threw',
+            data: {
+              key: 'hansung_profiles_user_id',
+              errorName: typeof err?.name === 'string' ? err.name : undefined,
+              errorMessage:
+                typeof err?.message === 'string' ? err.message : undefined,
+            },
+            timestamp: Date.now(),
+          });
+          // #endregion
+          throw e;
+        }
+      }
 
       console.log(
         '🔍 [groupItemsByDistrict] localStorage 기본 프로필 ID:',
@@ -1614,7 +1754,11 @@ function PaymentPageContent() {
           const uploadTargets = group.items
             .map((item): UploadTarget | null => {
               const itemState = itemStates[item.id];
-              if (!itemState || !itemState.selectedFile || itemState.sendByEmail) {
+              if (
+                !itemState ||
+                !itemState.selectedFile ||
+                itemState.sendByEmail
+              ) {
                 return null;
               }
               const itemProjectName =
@@ -1635,7 +1779,11 @@ function PaymentPageContent() {
             if (!cacheHit || cacheHit.sig !== sig) {
               if (!draftUploadInFlightRef.current.has(inFlightKey)) {
                 draftUploadInFlightRef.current.add(inFlightKey);
-                uploadDraftToDesigns(file, itemProjectName, group.user_profile_id)
+                uploadDraftToDesigns(
+                  file,
+                  itemProjectName,
+                  group.user_profile_id
+                )
                   .then((draftId) => {
                     if (!draftId) return;
                     const resolvedDraftId = draftId;
@@ -1824,7 +1972,10 @@ function PaymentPageContent() {
             const resolvedDraftId = draftId;
             setDraftUploadCache((prev) => ({
               ...prev,
-              group: { ...prev.group, [group.id]: { sig, draftId: resolvedDraftId } },
+              group: {
+                ...prev.group,
+                [group.id]: { sig, draftId: resolvedDraftId },
+              },
             }));
           }
         }
@@ -1840,7 +1991,11 @@ function PaymentPageContent() {
         const uploadTargets = group.items
           .map((item): UploadTarget | null => {
             const itemState = itemStates[item.id];
-            if (!itemState || !itemState.selectedFile || itemState.sendByEmail) {
+            if (
+              !itemState ||
+              !itemState.selectedFile ||
+              itemState.sendByEmail
+            ) {
               return null;
             }
             const itemProjectName =
@@ -1879,7 +2034,10 @@ function PaymentPageContent() {
               const resolvedDraftId = itemDraftId;
               setDraftUploadCache((prev) => ({
                 ...prev,
-                item: { ...prev.item, [item.id]: { sig, draftId: resolvedDraftId } },
+                item: {
+                  ...prev.item,
+                  [item.id]: { sig, draftId: resolvedDraftId },
+                },
               }));
             }
             return { itemId: item.id, draftId: itemDraftId };
@@ -2059,6 +2217,29 @@ function PaymentPageContent() {
             cartLength: cart.length,
           });
 
+          // #region agent log - hypothesis D (toss containers / init preflight)
+          postAgentDebugLog({
+            sessionId: 'debug-session',
+            runId: debugRunIdRef.current,
+            hypothesisId: 'D',
+            location: 'src/app/payment/page.tsx:initializeTossWidget',
+            message: 'toss init preflight',
+            data: {
+              groupId: currentTossWidgetData.id,
+              profilesCount: currentProfiles.length,
+              methodsContainerExists: !!document.getElementById(
+                'toss-payment-methods'
+              ),
+              buttonContainerExists: !!document.getElementById(
+                'toss-payment-button'
+              ),
+              userActivation:
+                navigator.userActivation?.hasBeenActive ?? undefined,
+            },
+            timestamp: Date.now(),
+          });
+          // #endregion
+
           // 토스페이먼츠 통합결제창 SDK 동적 로드
           // 문서: https://docs.tosspayments.com/guides/v2/payment-window/integration
           const { loadTossPayments } = await import(
@@ -2175,6 +2356,25 @@ function PaymentPageContent() {
                 userProfileId: currentTossWidgetData.user_profile_id,
                 clickTimestamp: performance.now(),
               });
+
+              // #region agent log - hypothesis E (payment window click / user activation)
+              postAgentDebugLog({
+                sessionId: 'debug-session',
+                runId: debugRunIdRef.current,
+                hypothesisId: 'E',
+                location:
+                  'src/app/payment/page.tsx:paymentButton.click(before-requestPayment)',
+                message: 'payment button clicked',
+                data: {
+                  groupId: currentTossWidgetData.id,
+                  itemsCount: currentTossWidgetData.items.length,
+                  amount: currentTossWidgetData.totalPrice,
+                  userActivation:
+                    navigator.userActivation?.hasBeenActive ?? undefined,
+                },
+                timestamp: Date.now(),
+              });
+              // #endregion
 
               // 버튼 비활성화
               paymentButton.disabled = true;
@@ -3087,6 +3287,32 @@ function PaymentPageContent() {
         } catch (error) {
           console.error('토스 위젯 초기화 실패:', error);
 
+          // #region agent log - hypothesis D (toss init failure)
+          const err = error as unknown as {
+            name?: unknown;
+            message?: unknown;
+            stack?: unknown;
+          };
+          postAgentDebugLog({
+            sessionId: 'debug-session',
+            runId: debugRunIdRef.current,
+            hypothesisId: 'D',
+            location: 'src/app/payment/page.tsx:initializeTossWidget(catch)',
+            message: 'toss init failed',
+            data: {
+              groupId: tossWidgetData?.id,
+              errorName: typeof err?.name === 'string' ? err.name : undefined,
+              errorMessage:
+                typeof err?.message === 'string' ? err.message : undefined,
+              stack:
+                typeof err?.stack === 'string'
+                  ? err.stack.slice(0, 800)
+                  : undefined,
+            },
+            timestamp: Date.now(),
+          });
+          // #endregion
+
           // 에러 발생 시 사용자에게 알림
           const container = document.getElementById('toss-payment-methods');
           if (container) {
@@ -3780,221 +4006,31 @@ function PaymentPageContent() {
         </div>
       </div>
 
-      {bankModalOpen && bankModalGroup && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-xl shadow-lg max-w-md w-full mx-4 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">계좌이체 안내</h2>
-              <button
-                type="button"
-                className="text-gray-400 hover:text-gray-600"
-                onClick={closeBankModal}
-              >
-                ×
-              </button>
-            </div>
-            <p className="text-sm text-gray-600 mb-2">
-              {bankModalGroup.district} ({getDisplayTypeLabel(bankModalGroup)})
-            </p>
-            <p className="text-xs text-gray-500 mb-3">
-              {bankModalGroup.name} · 총 금액{' '}
-              {bankModalGroup.totalPrice.toLocaleString()}원
-            </p>
-            {bankModalLoading ? (
-              <p className="text-sm text-gray-500 mb-4">
-                계좌 정보를 불러오는 중입니다...
-              </p>
-            ) : bankModalError ? (
-              <p className="text-sm text-red-600 mb-4">{bankModalError}</p>
-            ) : bankAccountInfo ? (
-              <div className="space-y-2 mb-4">
-                <div className="text-sm text-gray-600">
-                  프로젝트명:{' '}
-                  <span className="font-medium text-gray-800">
-                    {bankModalGroup.name}
-                  </span>
-                </div>
-                <div className="text-sm text-gray-600">
-                  연락처:{' '}
-                  <span className="font-medium text-gray-800">
-                    {bankModalGroup.contact_person_name || '연락처 없음'}
-                  </span>
-                </div>
-                <div className="text-sm text-gray-600">
-                  은행명:{' '}
-                  <span className="font-medium text-gray-800">
-                    {bankAccountInfo.bankName}
-                  </span>
-                </div>
-                <div className="text-sm text-gray-600">
-                  계좌번호:{' '}
-                  <span className="font-medium text-gray-800">
-                    {bankAccountInfo.accountNumber}
-                  </span>
-                </div>
-                <div className="text-sm text-gray-600">
-                  예금주:{' '}
-                  <span className="font-medium text-gray-800">
-                    {bankAccountInfo.owner}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500">
-                  입금 확인 후 주문이 자동으로 결제완료 처리됩니다.
-                </p>
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500 mb-4">
-                계좌정보를 불러오지 못했습니다.
-              </p>
-            )}
-            <div className="flex items-center justify-end gap-2">
-              <Button
-                className="px-4 py-2 rounded-lg bg-gray-900 text-white hover:bg-gray-800"
-                onClick={closeBankModal}
-              >
-                닫기
-              </Button>
-              <Button
-                className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
-                disabled={
-                  !bankAccountInfo ||
-                  bankModalLoading ||
-                  isBankTransferProcessing
-                }
-                onClick={() => {
-                  if (bankAccountInfo && bankModalGroup) {
-                    handleBankTransferPayment(bankModalGroup, bankAccountInfo);
-                  }
-                }}
-              >
-                {isBankTransferProcessing ? '처리중...' : '입금정보 확인 후 주문'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* 토스 위젯 모달 */}
-      {tossWidgetOpen && tossWidgetData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">결제</h2>
-              <button
-                onClick={() => {
-                  setTossWidgetOpen(false);
-                  setTossWidgetData(null);
-                }}
-                className="text-gray-500 hover:text-gray-700 text-2xl"
-              >
-                ×
-              </button>
-            </div>
+      <BankTransferModal
+        open={bankModalOpen}
+        group={bankModalGroup}
+        loading={bankModalLoading}
+        error={bankModalError}
+        accountInfo={bankAccountInfo}
+        isProcessing={isBankTransferProcessing}
+        onClose={closeBankModal}
+        onConfirm={handleBankTransferPayment}
+        getDisplayTypeLabel={getDisplayTypeLabel}
+      />
 
-            <div className="mb-4 p-3 bg-gray-50 rounded">
-              <div className="flex justify-between font-semibold">
-                <span>결제 금액:</span>
-                <span>
-                  {(() => {
-                    // 테스트용 0원 결제 확인
-                    const isTestFreePaymentEnabled =
-                      process.env.NEXT_PUBLIC_ENABLE_TEST_FREE_PAYMENT ===
-                      'true';
-                    const testFreePaymentUserId =
-                      process.env.NEXT_PUBLIC_TEST_FREE_PAYMENT_USER_ID ||
-                      'testsung';
-                    const isTestUser =
-                      user?.username === testFreePaymentUserId ||
-                      user?.id === testFreePaymentUserId;
-
-                    // 디버깅 로그
-                    console.log('🔍 [토스 위젯] 가격 표시 디버깅:', {
-                      isTestFreePaymentEnabled,
-                      envValue:
-                        process.env.NEXT_PUBLIC_ENABLE_TEST_FREE_PAYMENT,
-                      testFreePaymentUserId,
-                      currentUserUsername: user?.username,
-                      currentUserId: user?.id,
-                      isTestUser,
-                      originalPrice: tossWidgetData.totalPrice,
-                      willDisplayZero: isTestFreePaymentEnabled && isTestUser,
-                    });
-
-                    const displayPrice =
-                      isTestFreePaymentEnabled && isTestUser
-                        ? 0
-                        : tossWidgetData.totalPrice;
-                    return displayPrice.toLocaleString();
-                  })()}
-                  원
-                </span>
-              </div>
-              <div className="text-sm text-gray-600 mt-1">
-                {tossWidgetData.district === '상담신청'
-                  ? '상담신청'
-                  : `${tossWidgetData.district} ${getDisplayTypeLabel(
-                      tossWidgetData
-                    )}`}
-              </div>
-              <div className="text-sm text-gray-600 mt-2">
-                <div className="font-medium mb-1">결제할 게시대 목록:</div>
-                <div className="space-y-1">
-                  {tossWidgetData.items.map((item, index) => {
-                    // 상하반기 정보 표시
-                    const itemHalfPeriod = item.halfPeriod || 'first_half';
-                    const itemYear =
-                      item.selectedYear || new Date().getFullYear();
-                    const itemMonth =
-                      item.selectedMonth || new Date().getMonth() + 1;
-                    const itemPeriodText = `${itemYear}년 ${itemMonth}월 ${
-                      itemHalfPeriod === 'first_half' ? '상반기' : '하반기'
-                    }`;
-
-                    return (
-                      <div key={item.id} className="text-xs text-gray-600">
-                        {index + 1}. 패널번호:{' '}
-                        {item.panel_code || item.panel_id || '-'} / 이름:{' '}
-                        {item.name || '-'} / 구: {item.district} / 기간:{' '}
-                        {itemPeriodText}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* 토스 위젯이 렌더링될 영역 */}
-            <div className="space-y-4">
-              <div id="toss-payment-methods" className="min-h-[100px]">
-                {/* 통합결제창 안내 메시지가 여기에 표시됩니다 */}
-              </div>
-
-              <div className="mt-4">
-                <div className="flex gap-2">
-                  <div id="toss-payment-button" className="flex-1">
-                    {/* 결제 버튼이 여기에 동적으로 추가됩니다 */}
-                  </div>
-                  <Button
-                    className="flex-1 py-2 rounded-lg bg-gray-900 text-white hover:bg-gray-800"
-                    onClick={() => {
-                      if (tossWidgetData) {
-                        logPaymentDebug('토스 위젯 계좌이체 버튼 클릭', {
-                          groupId: tossWidgetData.id,
-                          district: tossWidgetData.district,
-                          totalPrice: tossWidgetData.totalPrice,
-                        });
-                        openBankTransferModal(tossWidgetData);
-                      }
-                    }}
-                    disabled={!tossWidgetData || isBankTransferProcessing}
-                  >
-                    {isBankTransferProcessing ? '처리중...' : '계좌이체하기'}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <TossPaymentModal
+        open={tossWidgetOpen}
+        data={tossWidgetData}
+        user={user as unknown as { username?: string; id?: string } | null}
+        isBankTransferProcessing={isBankTransferProcessing}
+        onClose={() => {
+          setTossWidgetOpen(false);
+          setTossWidgetData(null);
+        }}
+        getDisplayTypeLabel={getDisplayTypeLabel}
+        logPaymentDebug={logPaymentDebug}
+        openBankTransferModal={openBankTransferModal}
+      />
 
       {/* 결제 성공 모달 제거 - 토스 위젯에서 직접 처리 */}
     </main>

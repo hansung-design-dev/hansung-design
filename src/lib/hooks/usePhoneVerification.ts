@@ -26,9 +26,11 @@ const API_ROUTE = '/api/auth/phone-verification';
 
 export function usePhoneVerification(options?: UsePhoneVerificationOptions) {
   const [step, setStep] = useState<VerificationStep>('idle');
-  const [message, setMessage] = useState('');
+
   const [pendingRequestId, setPendingRequestId] = useState<string | null>(null);
-  const [verifiedReference, setVerifiedReference] = useState<string | null>(null);
+  const [verifiedReference, setVerifiedReference] = useState<string | null>(
+    null
+  );
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [isRequesting, setIsRequesting] = useState(false);
@@ -39,7 +41,7 @@ export function usePhoneVerification(options?: UsePhoneVerificationOptions) {
 
   const resetVerification = useCallback(() => {
     setStep('idle');
-    setMessage('');
+
     setPendingRequestId(null);
     setVerifiedReference(null);
     setCode('');
@@ -51,7 +53,7 @@ export function usePhoneVerification(options?: UsePhoneVerificationOptions) {
   const requestVerification = useCallback(
     async (phone: string) => {
       setError('');
-      setMessage('');
+
       setIsRequesting(true);
       try {
         const payload: RequestPayload = { action: 'request', phone };
@@ -75,11 +77,13 @@ export function usePhoneVerification(options?: UsePhoneVerificationOptions) {
 
         setPendingRequestId(result.requestId);
         setStep('requested');
-        setMessage('인증번호가 발송되었습니다. 인증번호를 입력해주세요.');
+
         onRequest?.();
       } catch (err) {
         const errorMessage =
-          err instanceof Error ? err.message : '인증 요청 중 오류가 발생했습니다.';
+          err instanceof Error
+            ? err.message
+            : '인증 요청 중 오류가 발생했습니다.';
         setError(errorMessage);
         onError?.(errorMessage);
       } finally {
@@ -126,7 +130,6 @@ export function usePhoneVerification(options?: UsePhoneVerificationOptions) {
         }
 
         setStep('verified');
-        setMessage('휴대폰 인증이 완료되었습니다.');
         setVerifiedReference(result.verificationId);
         setPendingRequestId(null);
         setCode('');
@@ -135,7 +138,9 @@ export function usePhoneVerification(options?: UsePhoneVerificationOptions) {
         });
       } catch (err) {
         const errorMessage =
-          err instanceof Error ? err.message : '인증 확인 중 오류가 발생했습니다.';
+          err instanceof Error
+            ? err.message
+            : '인증 확인 중 오류가 발생했습니다.';
         setError(errorMessage);
         onError?.(errorMessage);
       } finally {
@@ -147,7 +152,6 @@ export function usePhoneVerification(options?: UsePhoneVerificationOptions) {
 
   return {
     step,
-    message,
     error,
     code,
     setCode,
@@ -159,4 +163,3 @@ export function usePhoneVerification(options?: UsePhoneVerificationOptions) {
     verifiedReference,
   };
 }
-

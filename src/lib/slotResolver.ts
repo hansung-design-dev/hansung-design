@@ -288,6 +288,30 @@ export async function ensurePanelSlotUsageForItem({
 }): Promise<SlotResolutionResult> {
   const slotCategory = detectSlotCategory(item);
   const panelId = item.panel_id;
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/de0826ba-4e91-43eb-b001-5614ace69b75', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      sessionId: 'debug-session',
+      runId: 'pre-fix',
+      hypothesisId: 'H1',
+      location: 'src/lib/slotResolver.ts:ensurePanelSlotUsageForItem:entry',
+      message: 'ensurePanelSlotUsageForItem entry',
+      data: {
+        hasPanelId: !!panelId,
+        slotCategory,
+        existingPanelSlotUsageId: existingPanelSlotUsageId ?? null,
+        snapshotSlotNumber: item.panel_slot_snapshot?.slot_number ?? null,
+        snapshotBannerType: item.panel_slot_snapshot?.banner_type ?? null,
+        hasSnapshotBannerSlotId: !!item.panel_slot_snapshot?.banner_slot_id,
+        displayStartDate,
+        displayEndDate,
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
   if (!panelId) {
     return {
       panelSlotUsageId: existingPanelSlotUsageId ?? null,
@@ -340,6 +364,30 @@ export async function ensurePanelSlotUsageForItem({
     cache
   );
 
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/de0826ba-4e91-43eb-b001-5614ace69b75', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      sessionId: 'debug-session',
+      runId: 'pre-fix',
+      hypothesisId: 'H1',
+      location:
+        'src/lib/slotResolver.ts:ensurePanelSlotUsageForItem:availableSlot',
+      message: 'availableSlot resolved',
+      data: {
+        panelId,
+        periodId,
+        preferredSlotNumber,
+        preferredBannerSlotId: preferredBannerSlotId ?? null,
+        availableBannerSlotId: availableSlot?.bannerSlotId ?? null,
+        availableSlotNumber: availableSlot?.slotNumber ?? null,
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
+
   if (!availableSlot) {
     throw new Error('사용 가능한 슬롯이 없습니다. 잠시 후 다시 시도해주세요.');
   }
@@ -381,6 +429,30 @@ export async function ensurePanelSlotUsageForItem({
   }
 
   const usageType = slotCategory === 'led' ? 'led_display' : 'banner_display';
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/de0826ba-4e91-43eb-b001-5614ace69b75', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      sessionId: 'debug-session',
+      runId: 'pre-fix',
+      hypothesisId: 'H1',
+      location:
+        'src/lib/slotResolver.ts:ensurePanelSlotUsageForItem:insert:before',
+      message: 'inserting panel_slot_usage',
+      data: {
+        panelId,
+        periodId,
+        slotNumber: availableSlot.slotNumber,
+        bannerSlotId: availableSlot.bannerSlotId,
+        usageType,
+        bannerType: item.panel_slot_snapshot?.banner_type ?? 'panel',
+        attachDateFrom: displayStartDate,
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
   const { data: newUsage, error: newUsageError } = await supabase
     .from('panel_slot_usage')
     .insert({
@@ -398,6 +470,29 @@ export async function ensurePanelSlotUsageForItem({
     .single();
 
   if (newUsageError || !newUsage) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/de0826ba-4e91-43eb-b001-5614ace69b75', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: 'debug-session',
+        runId: 'pre-fix',
+        hypothesisId: 'H2',
+        location:
+          'src/lib/slotResolver.ts:ensurePanelSlotUsageForItem:insert:error',
+        message: 'panel_slot_usage insert failed',
+        data: {
+          panelId,
+          slotNumber: availableSlot?.slotNumber ?? null,
+          bannerSlotId: availableSlot?.bannerSlotId ?? null,
+          errorMessage: newUsageError?.message ?? null,
+          errorDetails: newUsageError?.details ?? null,
+          errorHint: newUsageError?.hint ?? null,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     console.error('[slot resolver] panel_slot_usage 생성 실패:', newUsageError);
     // 동시성 경쟁으로 insert가 실패한 경우, 실제로 생성된 레코드를 재조회하여 복구
     const { data: racedUsage, error: racedUsageError } = await supabase

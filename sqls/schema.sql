@@ -814,6 +814,38 @@ CREATE TABLE public.user_profiles (
   CONSTRAINT user_profiles_user_auth_id_fkey FOREIGN KEY (user_auth_id) REFERENCES public.user_auth(id)
 );
 
+-- 휴대폰 인증 결과(서버 검증 가능) 저장 테이블
+-- - phoneVerificationReference 로 API 호출 시 검증에 사용
+-- - purpose 별로 발급 가능 (signup / reset_password / profile 등)
+-- - expires_at(예: 1시간) 내에는 재인증 없이 재사용 가능
+CREATE TYPE phone_verification_purpose_enum AS ENUM (
+  'signup',
+  'reset_password',
+  'profile'
+);
+
+CREATE TABLE public.phone_verifications (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_auth_id uuid,
+  user_profile_id uuid,
+  phone text NOT NULL,
+  purpose phone_verification_purpose_enum NOT NULL,
+  requestno text,
+  verified_at timestamp with time zone NOT NULL DEFAULT now(),
+  expires_at timestamp with time zone NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  revoked_at timestamp with time zone,
+  CONSTRAINT phone_verifications_pkey PRIMARY KEY (id),
+  CONSTRAINT phone_verifications_user_auth_id_fkey FOREIGN KEY (user_auth_id) REFERENCES public.user_auth(id),
+  CONSTRAINT phone_verifications_user_profile_id_fkey FOREIGN KEY (user_profile_id) REFERENCES public.user_profiles(id)
+);
+
+CREATE INDEX phone_verifications_phone_idx ON public.phone_verifications (phone);
+CREATE INDEX phone_verifications_expires_at_idx ON public.phone_verifications (expires_at);
+CREATE INDEX phone_verifications_purpose_idx ON public.phone_verifications (purpose);
+CREATE INDEX phone_verifications_user_auth_id_idx ON public.phone_verifications (user_auth_id);
+CREATE INDEX phone_verifications_user_profile_id_idx ON public.phone_verifications (user_profile_id);
+
 slot_type_enum	manual, semi_automatic, panel, citizen_board	
 
 panel_type_enum	manual, semi_auto, panel, citizen_bulletin-board, bulletin_board, lower_panel, multi_panel, led, fabric, no_lighting, with_lighting	

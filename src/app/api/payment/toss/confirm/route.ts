@@ -3,6 +3,10 @@ import { supabase } from '@/src/lib/supabase';
 import { ensureDesignDraftForOrderItem } from '@/src/lib/designDrafts';
 import { ensurePanelSlotUsageForItem } from '@/src/lib/slotResolver';
 import { CartItem } from '@/src/contexts/cartContext';
+import {
+  resolveRegionGuDisplayPeriodRangeByPanel,
+  type RegionGuDisplayPeriodResolverCache,
+} from '@/src/lib/resolveRegionGuDisplayPeriod';
 
 // 주문 아이템 타입 (CartItem에 quantity 추가)
 interface OrderItem extends CartItem {
@@ -195,6 +199,10 @@ async function createOrderAfterPayment(
   // 3. order_details 및 panel_slot_usage 생성
   const orderDetails = [];
   const designDraftIdsByItem: Record<string, string | null> = {};
+  const periodResolverCache: RegionGuDisplayPeriodResolverCache = {
+    panelInfoByPanelId: new Map(),
+    periodRangeByKey: new Map(),
+  };
 
   for (const item of items) {
     // 기간 설정
@@ -208,13 +216,29 @@ async function createOrderAfterPayment(
       const year = item.selectedYear;
       const month = item.selectedMonth;
 
-      if (item.halfPeriod === 'first_half') {
+      const resolved = item.panel_id
+        ? await resolveRegionGuDisplayPeriodRangeByPanel({
+            panelId: item.panel_id,
+            year,
+            month,
+            halfPeriod: item.halfPeriod,
+            cache: periodResolverCache,
+          })
+        : null;
+
+      if (resolved) {
+        displayStartDate = resolved.from;
+        displayEndDate = resolved.to;
+      } else if (item.halfPeriod === 'first_half') {
         displayStartDate = `${year}-${String(month).padStart(2, '0')}-01`;
         displayEndDate = `${year}-${String(month).padStart(2, '0')}-15`;
       } else {
         const lastDay = new Date(year, month, 0).getDate();
         displayStartDate = `${year}-${String(month).padStart(2, '0')}-16`;
-        displayEndDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
+        displayEndDate = `${year}-${String(month).padStart(
+          2,
+          '0'
+        )}-${lastDay}`;
       }
     } else {
       const priceUnit = item.panel_slot_snapshot?.price_unit || '15 days';
@@ -237,6 +261,9 @@ async function createOrderAfterPayment(
 
     // panel_slot_usage 레코드 확보 (닫힌 슬롯이면 열린 슬롯으로 대체)
     let panelSlotUsageId = item.panel_slot_usage_id ?? null;
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/de0826ba-4e91-43eb-b001-5614ace69b75',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H3',location:'src/app/api/payment/toss/confirm/route.ts:createOrderAfterPayment:beforeEnsureSlot',message:'calling ensurePanelSlotUsageForItem',data:{panel_id:item.panel_id??null,existingPanelSlotUsageId:panelSlotUsageId,displayStartDate,displayEndDate,snapshotSlotNumber:item.panel_slot_snapshot?.slot_number??null,snapshotBannerType:item.panel_slot_snapshot?.banner_type??null},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     const slotResolution = await ensurePanelSlotUsageForItem({
       item,
       existingPanelSlotUsageId: panelSlotUsageId,
@@ -244,6 +271,9 @@ async function createOrderAfterPayment(
       displayEndDate,
     });
     panelSlotUsageId = slotResolution.panelSlotUsageId;
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/de0826ba-4e91-43eb-b001-5614ace69b75',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H3',location:'src/app/api/payment/toss/confirm/route.ts:createOrderAfterPayment:afterEnsureSlot',message:'ensurePanelSlotUsageForItem resolved',data:{panel_id:item.panel_id??null,panelSlotUsageId:panelSlotUsageId,slotNumber:slotResolution.slotNumber,slotCategory:slotResolution.slotCategory},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
 
     if (!item.panel_slot_snapshot) {
       item.panel_slot_snapshot = createEmptyPanelSlotSnapshot();

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { assertValidPhoneVerificationReference } from '@/src/lib/phoneVerification';
+import { normalizePhone } from '@/src/lib/utils';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -45,6 +47,21 @@ export async function PUT(
       );
     }
 
+    // 휴대폰 인증 reference 검증 (유효기간/번호/목적)
+    try {
+      await assertValidPhoneVerificationReference({
+        reference: phoneVerificationReference,
+        phone,
+        purpose: 'add_profile',
+      });
+    } catch (e) {
+      const msg =
+        e instanceof Error ? e.message : '휴대폰 인증 검증에 실패했습니다.';
+      return NextResponse.json({ success: false, error: msg }, { status: 400 });
+    }
+
+    const normalizedPhone = normalizePhone(phone);
+
     // 기본 프로필로 설정하는 경우, 기존 기본 프로필 해제
     if (is_default) {
       const { data: currentProfile } = await supabase
@@ -69,7 +86,7 @@ export async function PUT(
         profile_title,
         company_name,
         business_registration_file,
-        phone,
+        phone: normalizedPhone,
         email,
         contact_person_name,
         fax_number,

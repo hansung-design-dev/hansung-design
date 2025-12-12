@@ -5,27 +5,42 @@ import { useEffect, useMemo, useState } from 'react';
 
 type NicePopupResultMessage = {
   type: 'NICE_AUTH_RESULT';
-  payload: { resultcode: string; requestno?: string };
+  payload: {
+    resultcode: string;
+    requestno?: string;
+    phone?: string;
+    phoneVerificationReference?: string;
+    error?: string;
+  };
 };
 
 export default function NiceResultClient() {
   const searchParams = useSearchParams();
   const resultcode = searchParams.get('resultcode') ?? '';
   const requestno = searchParams.get('requestno') ?? '';
+  const phone = searchParams.get('phone') ?? '';
+  const phoneVerificationReference =
+    searchParams.get('phoneVerificationReference') ?? '';
+  const error = searchParams.get('error') ?? '';
   const canPostToOpener = typeof window !== 'undefined' && !!window.opener;
 
   const message: NicePopupResultMessage = useMemo(
     () => ({
       type: 'NICE_AUTH_RESULT',
-      payload: { resultcode, requestno: requestno || undefined },
+      payload: {
+        resultcode,
+        requestno: requestno || undefined,
+        phone: phone || undefined,
+        phoneVerificationReference: phoneVerificationReference || undefined,
+        error: error || undefined,
+      },
     }),
-    [resultcode, requestno]
+    [resultcode, requestno, phone, phoneVerificationReference, error]
   );
 
   const [sent, setSent] = useState(false);
 
   useEffect(() => {
-    // 디버깅 편의를 위해 자동 close는 하지 않음.
     console.log('[Nice result page] loaded', {
       resultcode,
       requestno,
@@ -37,9 +52,18 @@ export default function NiceResultClient() {
     if (!window.opener) return;
     window.opener.postMessage(message, '*');
     setSent(true);
-    // 디버깅할 때 너무 빨리 닫히지 않도록 약간 지연
     setTimeout(() => window.close(), 300);
   };
+
+  // UX: 인증 완료 후 팝업이 자동으로 부모창에 결과 전달 + 닫히도록 처리
+  useEffect(() => {
+    if (!canPostToOpener) return;
+    if (sent) return;
+    // 쿼리가 아직 안붙은 상태에서는 대기
+    if (!resultcode && !error) return;
+    handleSendAndClose();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canPostToOpener, sent, resultcode, error]);
 
   return (
     <div style={{ padding: 16, fontFamily: 'system-ui, sans-serif' }}>
@@ -48,7 +72,7 @@ export default function NiceResultClient() {
       </h2>
 
       <div style={{ marginBottom: 12, color: '#444' }}>
-        이 페이지는 NICE 표준창이 인증 완료 후 이동하는 결과 페이지입니다.
+        인증 결과를 부모창에 전달한 뒤 자동으로 닫힙니다.
       </div>
 
       <div
@@ -66,6 +90,18 @@ export default function NiceResultClient() {
         <div>
           <b>requestno</b>: {requestno || '(없음)'}
         </div>
+        <div>
+          <b>phone</b>: {phone || '(없음)'}
+        </div>
+        <div>
+          <b>phoneVerificationReference</b>:{' '}
+          {phoneVerificationReference || '(없음)'}
+        </div>
+        {error && (
+          <div style={{ marginTop: 8, color: '#b00020' }}>
+            <b>error</b>: {error}
+          </div>
+        )}
       </div>
 
       {!canPostToOpener ? (
@@ -87,7 +123,7 @@ export default function NiceResultClient() {
           }}
           disabled={sent}
         >
-          {sent ? '전송 완료' : '부모창으로 결과 전달 후 닫기'}
+          {sent ? '전송 완료 (곧 닫힙니다...)' : '부모창으로 결과 전달 후 닫기'}
         </button>
       )}
     </div>

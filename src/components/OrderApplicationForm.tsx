@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/src/components/button/button';
+import { applySpecialHalfPeriodFixup } from '@/src/lib/specialHalfPeriodFixup';
 
 type BankAccountInfo = {
   bankName: string;
@@ -184,6 +185,18 @@ export default function OrderApplicationForm({
     return Array.from(keys);
   }, [details]);
 
+  const districtTitle = useMemo(() => {
+    const districts = Array.from(
+      new Set(
+        details
+          .map((d) => d.panels?.region_gu?.name)
+          .filter((v): v is string => Boolean(v && v.trim()))
+      )
+    );
+    if (districts.length === 0) return '신청';
+    return districts.join(', ');
+  }, [details]);
+
   const [bankAccounts, setBankAccounts] = useState<
     Record<string, BankAccountInfo | null | undefined>
   >({});
@@ -296,11 +309,11 @@ export default function OrderApplicationForm({
           </div>
         </div>
 
-        {/* Table 2: 관악구 신청내역 */}
+        {/* Table 2: 구별 신청내역 */}
         <div>
           <div className="flex items-center gap-2 mb-2">
             <div className="text-sm font-semibold text-gray-900">
-              ■ 관악구 신청내역
+              ■ {districtTitle} 신청내역
             </div>
           </div>
           {/* 스크롤 없이 화면에 들어가도록: min-width 제거 + % 기반 컬럼 + 고정 레이아웃 */}
@@ -363,8 +376,13 @@ export default function OrderApplicationForm({
                       typeof w === 'number' && typeof h === 'number'
                         ? `${w}×${h}`
                         : '-';
-                    const start = formatYyDotMmDotDd(d.display_start_date);
-                    const end = formatYyDotMmDotDd(d.display_end_date);
+                    const fixedPeriod = applySpecialHalfPeriodFixup({
+                      districtName: district,
+                      startDate: d.display_start_date ?? null,
+                      endDate: d.display_end_date ?? null,
+                    });
+                    const start = formatYyDotMmDotDd(fixedPeriod.startDate);
+                    const end = formatYyDotMmDotDd(fixedPeriod.endDate);
                     const price = Number(d.price || 0);
 
                     return (
