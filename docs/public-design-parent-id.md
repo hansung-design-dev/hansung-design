@@ -75,3 +75,4 @@ where design_contents_type = 'detail'
 필요 시 관리자 화면이나 CSV 등을 이용해 `parent_id`를 대량으로 채우는 스크립트를 만들어도 되지만, 우선은 위 SQL로 일치 여부를 확인하고 수동/자동으로 `parent_id`를 채우면 됩니다.
 
 
+

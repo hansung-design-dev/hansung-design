@@ -602,147 +602,170 @@ export async function POST(request: NextRequest) {
 
     // 3. order_details 생성
     console.log('🔍 [주문 생성 API] order_details 생성 시작...');
-    const orderDetails = [];
+    type OrderDetailInsert = {
+      order_id: string;
+      panel_id: string;
+      panel_slot_usage_id: string | null;
+      slot_order_quantity: number;
+      display_start_date: string;
+      display_end_date: string;
+      design_draft_id: string | null;
+    };
+
+    const orderDetails: OrderDetailInsert[] = [];
     const designDraftIdsByItem: Record<string, string | null> = {};
 
     const slotResolverCache: SlotResolverCache = {
       panelInfoAndPeriod: new Map(),
       bannerSlotsByPanel: new Map(),
       inventoryByPeriodPanel: new Map(),
+      slotUsageByPanelDate: new Map(),
     };
 
     // 병목 최적화: 아이템별 슬롯 확보/시안 생성은 병렬 수행 (네트워크 왕복 시간 절감)
-    const resolvedOrderDetails = await Promise.all(
-      items.map(async (item: any) => {
-      console.log('🔍 [주문 생성 API] order_detail 처리 중:', {
-        itemId: item.id,
-        panelId: item.panel_id,
-        quantity: item.quantity,
-        price: item.price,
-      });
-      // 기간 설정 - 수정된 부분: selectedPeriodFrom/selectedPeriodTo 우선 사용
-      let displayStartDate: string;
-      let displayEndDate: string;
+    let resolvedOrderDetails: OrderDetailInsert[];
+    try {
+      resolvedOrderDetails = await Promise.all(
+        items.map(async (item) => {
+          console.log('🔍 [주문 생성 API] order_detail 처리 중:', {
+            itemId: item.id,
+            panelId: item.panel_id,
+            quantity: item.quantity,
+            price: item.price,
+          });
+          // 기간 설정 - 수정된 부분: selectedPeriodFrom/selectedPeriodTo 우선 사용
+          let displayStartDate: string;
+          let displayEndDate: string;
 
-      if (item.selectedPeriodFrom && item.selectedPeriodTo) {
-        // 선택된 기간이 있으면 그것을 사용
-        displayStartDate = item.selectedPeriodFrom;
-        displayEndDate = item.selectedPeriodTo;
-      } else if (item.halfPeriod && item.selectedYear && item.selectedMonth) {
-        // 없으면 halfPeriod로 계산
-        const year = item.selectedYear;
-        const month = item.selectedMonth;
+          if (item.selectedPeriodFrom && item.selectedPeriodTo) {
+            // 선택된 기간이 있으면 그것을 사용
+            displayStartDate = item.selectedPeriodFrom;
+            displayEndDate = item.selectedPeriodTo;
+          } else if (
+            item.halfPeriod &&
+            item.selectedYear &&
+            item.selectedMonth
+          ) {
+            // 없으면 halfPeriod로 계산
+            const year = item.selectedYear;
+            const month = item.selectedMonth;
 
-        if (item.halfPeriod === 'first_half') {
-          // 상반기: 1일-15일
-          displayStartDate = `${year}-${String(month).padStart(2, '0')}-01`;
-          displayEndDate = `${year}-${String(month).padStart(2, '0')}-15`;
-        } else {
-          // 하반기: 16일-마지막일
-          const lastDay = new Date(year, month, 0).getDate();
-          displayStartDate = `${year}-${String(month).padStart(2, '0')}-16`;
-          displayEndDate = `${year}-${String(month).padStart(
-            2,
-            '0'
-          )}-${lastDay}`;
-        }
-      } else {
-        // price_unit에 따른 자동 기간 계산 (기본값)
-        const priceUnit = item.panel_slot_snapshot?.price_unit || '15 days';
-        const startDate = new Date();
-        const endDate = new Date(startDate);
+            if (item.halfPeriod === 'first_half') {
+              // 상반기: 1일-15일
+              displayStartDate = `${year}-${String(month).padStart(2, '0')}-01`;
+              displayEndDate = `${year}-${String(month).padStart(2, '0')}-15`;
+            } else {
+              // 하반기: 16일-마지막일
+              const lastDay = new Date(year, month, 0).getDate();
+              displayStartDate = `${year}-${String(month).padStart(2, '0')}-16`;
+              displayEndDate = `${year}-${String(month).padStart(
+                2,
+                '0'
+              )}-${lastDay}`;
+            }
+          } else {
+            // price_unit에 따른 자동 기간 계산 (기본값)
+            const priceUnit = item.panel_slot_snapshot?.price_unit || '15 days';
+            const startDate = new Date();
+            const endDate = new Date(startDate);
 
-        // price_unit에 따라 기간 계산
-        if (priceUnit === '15 days') {
-          endDate.setDate(startDate.getDate() + 15);
-        } else if (priceUnit === '30 days') {
-          endDate.setDate(startDate.getDate() + 30);
-        } else if (priceUnit === '7 days') {
-          endDate.setDate(startDate.getDate() + 7);
-        } else {
-          // 기본값: 15일
-          endDate.setDate(startDate.getDate() + 15);
-        }
+            // price_unit에 따라 기간 계산
+            if (priceUnit === '15 days') {
+              endDate.setDate(startDate.getDate() + 15);
+            } else if (priceUnit === '30 days') {
+              endDate.setDate(startDate.getDate() + 30);
+            } else if (priceUnit === '7 days') {
+              endDate.setDate(startDate.getDate() + 7);
+            } else {
+              // 기본값: 15일
+              endDate.setDate(startDate.getDate() + 15);
+            }
 
-        displayStartDate = startDate.toISOString().split('T')[0];
-        displayEndDate = endDate.toISOString().split('T')[0];
-      }
-
-      // 재고 중복 확인은 DB 트리거가 자동으로 처리
-
-      // 2. panel_slot_usage 레코드 생성 (order_details_id는 나중에 업데이트)
-      let panelSlotUsageId: string | null | undefined = null;
-
-      try {
-        const slotResult = await ensurePanelSlotUsageForItem({
-          item,
-          existingPanelSlotUsageId: item.panel_slot_usage_id,
-          displayStartDate,
-          displayEndDate,
-          cache: slotResolverCache,
-        });
-        panelSlotUsageId = slotResult.panelSlotUsageId;
-        if (slotResult.slotNumber) {
-          if (!item.panel_slot_snapshot) {
-            item.panel_slot_snapshot = {};
+            displayStartDate = startDate.toISOString().split('T')[0];
+            displayEndDate = endDate.toISOString().split('T')[0];
           }
-          item.panel_slot_snapshot.slot_number = slotResult.slotNumber;
-        }
-      } catch (error) {
-        console.error(
-          '🔍 [주문 생성 API] 슬롯 확보 실패:',
-          error,
-          item.id,
-          item.panel_id
-        );
-        return NextResponse.json(
-          {
-            error:
-              (error as Error).message || '슬롯 확보 중 오류가 발생했습니다.',
-          },
-          { status: 500 }
-        );
-      }
 
-      const existingItemDraftId = item.designDraftId || item.draftId || null;
-      const projectNameForItem =
-        item.projectName?.trim() ||
-        projectName?.trim() ||
-        item.name ||
-        '프로젝트명 없음' ||
-        '프로젝트명 없음';
-      const itemDraftDeliveryMethod =
-        item.draftDeliveryMethod || draftDeliveryMethod || 'upload';
-      const designDraftIdForItem =
-        existingItemDraftId ||
-        (userProfile?.id
-          ? await ensureDesignDraftForOrderItem({
-              userProfileId: userProfile.id,
-              projectName: projectNameForItem,
-              orderNumber,
-              panelId: item.panel_id,
-              itemLabel: item.name || item.panel_id,
-              draftDeliveryMethod: itemDraftDeliveryMethod,
-            })
-          : null);
+          // 재고 중복 확인은 DB 트리거가 자동으로 처리
 
-      designDraftIdsByItem[item.id] = designDraftIdForItem;
+          // 2. panel_slot_usage 레코드 생성 (order_details_id는 나중에 업데이트)
+          let panelSlotUsageId: string | null | undefined = null;
 
-      // 2. order_details 생성
-      const orderDetail = {
-        order_id: order.id,
-        panel_id: item.panel_id,
-        panel_slot_usage_id: panelSlotUsageId,
-        slot_order_quantity: item.quantity,
-        display_start_date: displayStartDate,
-        display_end_date: displayEndDate,
-        design_draft_id: designDraftIdForItem,
-        // half_period 컬럼이 없으므로 제거
-      };
+          try {
+            const slotResult = await ensurePanelSlotUsageForItem({
+              item,
+              existingPanelSlotUsageId: item.panel_slot_usage_id,
+              displayStartDate,
+              displayEndDate,
+              cache: slotResolverCache,
+            });
+            panelSlotUsageId = slotResult.panelSlotUsageId;
+            if (slotResult.slotNumber) {
+              if (!item.panel_slot_snapshot) {
+                item.panel_slot_snapshot = {};
+              }
+              item.panel_slot_snapshot.slot_number = slotResult.slotNumber;
+            }
+          } catch (error) {
+            console.error(
+              '🔍 [주문 생성 API] 슬롯 확보 실패:',
+              error,
+              item.id,
+              item.panel_id
+            );
+            const message =
+              error instanceof Error && error.message
+                ? error.message
+                : '슬롯 확보 중 오류가 발생했습니다.';
+            throw new Error(message);
+          }
 
-        return orderDetail;
-      })
-    );
+          const existingItemDraftId =
+            item.designDraftId || item.draftId || null;
+          const projectNameForItem =
+            item.projectName?.trim() ||
+            projectName?.trim() ||
+            item.name ||
+            '프로젝트명 없음' ||
+            '프로젝트명 없음';
+          const itemDraftDeliveryMethod =
+            item.draftDeliveryMethod || draftDeliveryMethod || 'upload';
+          const designDraftIdForItem =
+            existingItemDraftId ||
+            (userProfile?.id
+              ? await ensureDesignDraftForOrderItem({
+                  userProfileId: userProfile.id,
+                  projectName: projectNameForItem,
+                  orderNumber,
+                  panelId: item.panel_id,
+                  itemLabel: item.name || item.panel_id,
+                  draftDeliveryMethod: itemDraftDeliveryMethod,
+                })
+              : null);
+
+          designDraftIdsByItem[item.id] = designDraftIdForItem;
+
+          // 2. order_details 생성
+          const orderDetail = {
+            order_id: order.id,
+            panel_id: item.panel_id,
+            panel_slot_usage_id: panelSlotUsageId,
+            slot_order_quantity: item.quantity,
+            display_start_date: displayStartDate,
+            display_end_date: displayEndDate,
+            design_draft_id: designDraftIdForItem,
+            // half_period 컬럼이 없으므로 제거
+          } satisfies OrderDetailInsert;
+
+          return orderDetail;
+        })
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : '슬롯 확보 중 오류가 발생했습니다.';
+      return NextResponse.json({ error: message }, { status: 500 });
+    }
 
     orderDetails.push(...resolvedOrderDetails);
 

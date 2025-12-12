@@ -342,14 +342,14 @@ const OrderItemList: React.FC<ItemTableProps> = ({
                     >
                       {item.status}
                     </td>
-                    <td className="text-center text-1.125 font-500">
+                    <td className="text-center text-1 font-500">
                       {item.paymentStatus || '-'}
                     </td>
                     <td className="text-center">
                       <Button
                         size="xs"
                         variant="outlinedGray"
-                        className={` px-4 py-1 rounded-full text-gray-700 font-200`}
+                        className={` px-1 py-1 rounded-full text-gray-700 font-200 text-1`}
                         // 테스트 중이므로 모든 상태에서 취소 가능
                         // TODO: 실제 운영 시에는 아래 주석을 해제
                         // disabled={

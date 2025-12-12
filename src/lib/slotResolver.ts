@@ -21,16 +21,23 @@ export interface SlotResolutionResult {
 export interface SlotResolverCache {
   panelInfoAndPeriod?: Map<
     string,
-    { panelInfo: { display_type_id: string; region_gu_id: string } | null; periodId: string | null }
+    {
+      panelInfo: { display_type_id: string; region_gu_id: string } | null;
+      periodId: string | null;
+    }
   >;
   bannerSlotsByPanel?: Map<
     string,
-    { bannerSlots: { id: string; slot_number: number }[]; slotMap: Map<string, number> }
+    {
+      bannerSlots: { id: string; slot_number: number }[];
+      slotMap: Map<string, number>;
+    }
   >;
   inventoryByPeriodPanel?: Map<
     string,
     Map<string, { is_closed: boolean; is_available: boolean }>
   >;
+  slotUsageByPanelDate?: Map<string, Set<string>>;
 }
 
 const LED_TRIGGERS = ['led', 'electronic', 'edp', 'lcd', 'display'];
@@ -56,8 +63,7 @@ function detectSlotCategory(item: SlotResolverItem): 'banner' | 'led' {
 async function getPanelInfoAndPeriod(
   panelId: string,
   displayStartDate: string,
-  displayEndDate: string
-  ,
+  displayEndDate: string,
   cache?: SlotResolverCache
 ) {
   const cacheKey = `${panelId}|${displayStartDate}|${displayEndDate}`;
@@ -77,7 +83,8 @@ async function getPanelInfoAndPeriod(
       panelError?.message
     );
     const result = { panelInfo: null, periodId: null };
-    if (cache?.panelInfoAndPeriod) cache.panelInfoAndPeriod.set(cacheKey, result);
+    if (cache?.panelInfoAndPeriod)
+      cache.panelInfoAndPeriod.set(cacheKey, result);
     return result;
   }
 
@@ -99,7 +106,8 @@ async function getPanelInfoAndPeriod(
       periodError.message
     );
     const result = { panelInfo, periodId: null };
-    if (cache?.panelInfoAndPeriod) cache.panelInfoAndPeriod.set(cacheKey, result);
+    if (cache?.panelInfoAndPeriod)
+      cache.panelInfoAndPeriod.set(cacheKey, result);
     return result;
   }
 
@@ -120,6 +128,7 @@ async function getPanelInfoAndPeriod(
 async function findAvailableBannerSlot(
   panelId: string,
   periodId: string | null,
+  displayStartDate: string,
   preferredSlotNumber?: number,
   currentBannerSlotId?: string,
   cache?: SlotResolverCache
@@ -154,11 +163,15 @@ async function findAvailableBannerSlot(
   }
 
   const slotIds = bannerSlots.map((slot) => slot.id);
-  let inventoryMap = new Map<string, { is_closed: boolean; is_available: boolean }>();
+  let inventoryMap = new Map<
+    string,
+    { is_closed: boolean; is_available: boolean }
+  >();
 
   if (periodId) {
     const inventoryCacheKey = `${periodId}|${panelId}`;
-    const cachedInventory = cache?.inventoryByPeriodPanel?.get(inventoryCacheKey);
+    const cachedInventory =
+      cache?.inventoryByPeriodPanel?.get(inventoryCacheKey);
     if (cachedInventory) {
       inventoryMap = cachedInventory;
     } else {
@@ -189,6 +202,40 @@ async function findAvailableBannerSlot(
     return true;
   };
 
+  const usageCacheKey = `${panelId}|${displayStartDate}`;
+  let occupiedSlotIds: Set<string> | undefined =
+    cache?.slotUsageByPanelDate?.get(usageCacheKey);
+
+  if (!occupiedSlotIds) {
+    const { data: usageRows, error: usageError } = await supabase
+      .from('panel_slot_usage')
+      .select('banner_slot_id')
+      .eq('panel_id', panelId)
+      .eq('attach_date_from', displayStartDate)
+      .eq('is_active', true)
+      .in('banner_slot_id', slotIds);
+
+    if (usageError) {
+      console.warn(
+        '[slot resolver] panel_slot_usage 점유 슬롯 조회 실패:',
+        panelId,
+        displayStartDate,
+        usageError.message
+      );
+      occupiedSlotIds = new Set<string>();
+    } else {
+      occupiedSlotIds = new Set(
+        (usageRows || [])
+          .map((row: { banner_slot_id?: string | null }) => row.banner_slot_id)
+          .filter((id): id is string => Boolean(id))
+      );
+    }
+
+    if (cache?.slotUsageByPanelDate) {
+      cache.slotUsageByPanelDate.set(usageCacheKey, occupiedSlotIds);
+    }
+  }
+
   const preferredSlot = preferredSlotNumber
     ? bannerSlots.find((slot) => slot.slot_number === preferredSlotNumber)
     : undefined;
@@ -213,6 +260,8 @@ async function findAvailableBannerSlot(
   }
 
   for (const slot of orderedSlots) {
+    // 이미 점유된 슬롯은 제외 (동일 시작일 기준)
+    if (occupiedSlotIds?.has(slot.id)) continue;
     if (isSlotOpen(slot.id)) {
       return {
         bannerSlotId: slot.id,
@@ -250,8 +299,7 @@ export async function ensurePanelSlotUsageForItem({
   const { panelInfo, periodId } = await getPanelInfoAndPeriod(
     panelId,
     displayStartDate,
-    displayEndDate
-    ,
+    displayEndDate,
     cache
   );
 
@@ -286,9 +334,9 @@ export async function ensurePanelSlotUsageForItem({
   const availableSlot = await findAvailableBannerSlot(
     panelId,
     periodId,
+    displayStartDate,
     preferredSlotNumber,
-    preferredBannerSlotId
-    ,
+    preferredBannerSlotId,
     cache
   );
 
@@ -351,17 +399,43 @@ export async function ensurePanelSlotUsageForItem({
 
   if (newUsageError || !newUsage) {
     console.error('[slot resolver] panel_slot_usage 생성 실패:', newUsageError);
+    // 동시성 경쟁으로 insert가 실패한 경우, 실제로 생성된 레코드를 재조회하여 복구
+    const { data: racedUsage, error: racedUsageError } = await supabase
+      .from('panel_slot_usage')
+      .select('id, slot_number')
+      .eq('panel_id', panelId)
+      .eq('slot_number', availableSlot.slotNumber)
+      .eq('banner_slot_id', availableSlot.bannerSlotId)
+      .eq('attach_date_from', displayStartDate)
+      .maybeSingle();
+
+    if (!racedUsageError && racedUsage?.id) {
+      console.warn(
+        '[slot resolver] insert 경쟁상황으로 판단되어 기존 레코드 재사용:',
+        {
+          panelId,
+          slotNumber: availableSlot.slotNumber,
+          usageId: racedUsage.id,
+        }
+      );
+      return {
+        panelSlotUsageId: racedUsage.id,
+        slotNumber: racedUsage.slot_number ?? availableSlot.slotNumber,
+        slotCategory,
+      };
+    }
+
     const errorText = [
       newUsageError?.message,
-      // @ts-expect-error supabase error shape may include details/hint depending on client version
       newUsageError?.details,
-      // @ts-expect-error supabase error shape may include details/hint depending on client version
       newUsageError?.hint,
     ]
       .filter(Boolean)
       .join(' | ');
 
-    const conflictMatch = errorText.match(/conflicting_usage_id:\s*([0-9a-f-]+)/i);
+    const conflictMatch = errorText.match(
+      /conflicting_usage_id:\s*([0-9a-f-]+)/i
+    );
 
     if (conflictMatch) {
       const conflictingUsageId = conflictMatch[1];

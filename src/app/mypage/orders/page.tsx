@@ -5,7 +5,7 @@ import Nav from '../../../components/layouts/nav';
 import MypageContainer from '@/src/components/mypageContainer';
 import { useAuth } from '@/src/contexts/authContext';
 import OrderItemList from '@/src/components/orderItemList';
-import OrderItemCard from '@/src/components/orderItemCard';
+import OrderApplicationForm from '@/src/components/OrderApplicationForm';
 import { Button } from '@/src/components/button/button';
 import TableSkeleton from '@/src/components/skeleton/TableSkeleton';
 
@@ -77,6 +77,7 @@ interface OrderDetail {
   slot_order_quantity: number;
   display_start_date?: string;
   display_end_date?: string;
+  price?: number;
   panels?: PanelInfo;
   panel_slot_usage?: PanelSlotUsage;
   design_draft_id?: string;
@@ -328,7 +329,6 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedItemId, setExpandedItemId] = useState<number | null>(null);
-  const [detailPage, setDetailPage] = useState(1);
   const [selectedOrderDetail, setSelectedOrderDetail] =
     useState<OrderDetailResponse | null>(null);
   const [loadingOrderDetail, setLoadingOrderDetail] = useState<string | null>(
@@ -566,13 +566,10 @@ export default function OrdersPage() {
   }, [user?.id]);
 
   useEffect(() => {
-    if (!selectedOrderDetail) return;
-    const detailCount = selectedOrderDetail.orderDetails?.length ?? 0;
-    const maxPage = Math.max(1, detailCount);
-    if (detailPage > maxPage) {
-      setDetailPage(maxPage);
-    }
-  }, [selectedOrderDetail, detailPage]);
+    // 주문 상세 데이터가 바뀌면 자동으로 화면이 갱신됩니다.
+    // (기존 상세 페이지네이션 제거)
+    void selectedOrderDetail;
+  }, [selectedOrderDetail]);
 
   // 마감여부 판단 함수
   const getClosureStatus = (item: OrderDetail, order: Order): string => {
@@ -826,7 +823,6 @@ export default function OrdersPage() {
   const handleOrderClick = (orderId: string, itemId: number) => {
     const isExpanding = expandedItemId !== itemId;
     setExpandedItemId(isExpanding ? itemId : null);
-    setDetailPage(1);
 
     if (isExpanding) {
       setSelectedOrderDetail(null);
@@ -1264,7 +1260,6 @@ export default function OrdersPage() {
               ? (() => {
                   const item = items.find((i) => i.id === expandedItemId);
                   const currentOrder = item?.order;
-                  const paymentStatus = item?.paymentStatus || '대기';
                   const isLoading = loadingOrderDetail === item?.orderId;
 
                   // 로딩 중이거나 데이터가 없으면 로딩 표시
@@ -1281,95 +1276,53 @@ export default function OrdersPage() {
                     );
                   }
 
-                  return (() => {
-                    const orderDetails =
-                      selectedOrderDetail?.orderDetails || [];
-                    const detailCount = orderDetails.length;
-                    const totalDetailPages = Math.max(1, detailCount);
-                    const currentDetail = orderDetails[detailPage - 1];
-                    const currentCardData =
-                      currentDetail && selectedOrderDetail
-                        ? mapOrderDetailToCard(
+                  return (
+                    <div className="flex flex-col gap-4 bg-white px-4 py-6 border border-t-0 border-gray-200">
+                      <OrderApplicationForm
+                        data={selectedOrderDetail}
+                        onClose={() => setExpandedItemId(null)}
+                        onCancelDetail={(orderDetailId) => {
+                          if (selectedOrderDetail?.order) {
+                            handleCancelClick(
+                              selectedOrderDetail.order,
+                              orderDetailId
+                            );
+                          }
+                        }}
+                        onResendFile={() => {
+                          const orderNumber =
+                            selectedOrderDetail?.order?.order_number || '';
+                          if (orderNumber) {
+                            window.location.href = `/mypage/design?orderNumber=${encodeURIComponent(
+                              orderNumber
+                            )}&tab=upload`;
+                          } else {
+                            window.location.href = `/mypage/design?tab=upload`;
+                          }
+                        }}
+                        onReceiptClick={() => {
+                          const firstDetailId =
+                            selectedOrderDetail?.orderDetails?.[0]?.id;
+                          if (!firstDetailId) return;
+                          const cardData = mapOrderDetailToCard(
                             selectedOrderDetail,
-                            currentDetail.id
-                          )
-                        : null;
-
-                    return (
-                      <div className="flex flex-col gap-6 bg-white px-4 py-6 border border-t-0 border-gray-200">
-                        {currentCardData ? (
-                          <OrderItemCard
-                            orderDetail={currentCardData}
-                            paymentStatus={paymentStatus}
-                            onClose={() => setExpandedItemId(null)}
-                            onCancel={() => {
-                              if (
-                                selectedOrderDetail?.order &&
-                                currentDetail?.id
-                              ) {
-                                handleCancelClick(
-                                  selectedOrderDetail.order,
-                                  currentDetail.id
-                                );
-                              }
-                            }}
-                            onPaymentClick={() => {
-                              if (currentOrder) {
-                                handlePaymentClick(currentOrder);
-                              }
-                            }}
-                            onResendFile={() => {
-                              if (currentCardData.order_number) {
-                                window.location.href = `/mypage/design?orderNumber=${encodeURIComponent(
-                                  currentCardData.order_number
-                                )}&tab=upload`;
-                              } else {
-                                window.location.href = `/mypage/design?tab=upload`;
-                              }
-                            }}
-                            onReceiptClick={() => {
-                              setReceiptData(currentCardData);
-                              setReceiptModalOpen(true);
-                            }}
-                          />
-                        ) : (
-                          <div className="text-center py-10 text-gray-500">
-                            주문 상세 정보를 불러올 수 없습니다.
-                          </div>
+                            firstDetailId
+                          );
+                          setReceiptData(cardData);
+                          setReceiptModalOpen(true);
+                        }}
+                        showPaymentButton={Boolean(
+                          item?.paymentStatus === '대기' &&
+                            item?.requiresManualPayment
                         )}
-
-                        {detailCount > 0 && (
-                          <div className="flex items-center justify-between gap-4 pt-2 border-t border-gray-200">
-                            <Button
-                              size="xs"
-                              variant="outlinedGray"
-                              disabled={detailPage <= 1}
-                              onClick={() =>
-                                setDetailPage((prev) => Math.max(1, prev - 1))
-                              }
-                            >
-                              이전 상세
-                            </Button>
-                            <div className="text-sm font-medium text-gray-600">
-                              {detailPage} / {totalDetailPages}
-                            </div>
-                            <Button
-                              size="xs"
-                              variant="outlinedGray"
-                              disabled={detailPage >= totalDetailPages}
-                              onClick={() =>
-                                setDetailPage((prev) =>
-                                  Math.min(totalDetailPages, prev + 1)
-                                )
-                              }
-                            >
-                              다음 상세
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })();
+                        onPayment={() => {
+                          if (currentOrder) {
+                            handlePaymentClick(currentOrder);
+                          }
+                        }}
+                      />
+                    </div>
+                  );
                 })()
               : null
           }

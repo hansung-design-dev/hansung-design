@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, useRef } from 'react';
 import { Button } from '@/src/components/button/button';
 import Nav from '@/src/components/layouts/nav';
 import { useAuth } from '@/src/contexts/authContext';
@@ -160,6 +160,13 @@ function PaymentPageContent() {
       emailAddress: string | null;
     };
   }>({});
+
+  const [draftUploadCache, setDraftUploadCache] = useState<{
+    group: Record<string, { sig: string; draftId: string }>;
+    item: Record<string, { sig: string; draftId: string }>;
+  }>({ group: {}, item: {} });
+
+  const draftUploadInFlightRef = useRef<Set<string>>(new Set());
 
   const [bankModalOpen, setBankModalOpen] = useState(false);
   const [bankModalGroup, setBankModalGroup] = useState<GroupedCartItem | null>(
@@ -1544,6 +1551,116 @@ function PaymentPageContent() {
     setBankModalLoading(false);
   };
 
+  const buildFileSignature = (file: File) =>
+    `${file.name}|${file.size}|${file.lastModified}`;
+
+  const warmupBankTransferDraftUploads = useCallback(
+    async (group: GroupedCartItem) => {
+      try {
+        if (!user?.id) return;
+        if (!group.user_profile_id) return;
+
+        const groupState = groupStates[group.id];
+        const projectName =
+          groupState?.projectName?.trim() ||
+          group.name ||
+          group.district ||
+          '광고주';
+
+        const draftDeliveryMethod =
+          groupState?.sendByEmail === true ? 'email' : 'upload';
+
+        const requiresGroupFileUpload =
+          draftDeliveryMethod === 'upload' &&
+          (group.items.length === 1 || bulkApply.fileUpload);
+
+        if (requiresGroupFileUpload && groupState?.selectedFile) {
+          const sig = buildFileSignature(groupState.selectedFile);
+          const cacheHit = draftUploadCache.group[group.id];
+          const inFlightKey = `group:${group.id}:${sig}`;
+          if (!cacheHit || cacheHit.sig !== sig) {
+            if (!draftUploadInFlightRef.current.has(inFlightKey)) {
+              draftUploadInFlightRef.current.add(inFlightKey);
+              uploadDraftToDesigns(
+                groupState.selectedFile,
+                projectName,
+                group.user_profile_id
+              )
+                .then((draftId) => {
+                  if (!draftId) return;
+                  const resolvedDraftId = draftId;
+                  setDraftUploadCache((prev) => ({
+                    ...prev,
+                    group: {
+                      ...prev.group,
+                      [group.id]: { sig, draftId: resolvedDraftId },
+                    },
+                  }));
+                })
+                .finally(() => {
+                  draftUploadInFlightRef.current.delete(inFlightKey);
+                });
+            }
+          }
+        }
+
+        if (group.items.length >= 2) {
+          type UploadTarget = {
+            item: CartItem;
+            itemState: (typeof itemStates)[string];
+            itemProjectName: string;
+          };
+
+          const uploadTargets = group.items
+            .map((item): UploadTarget | null => {
+              const itemState = itemStates[item.id];
+              if (!itemState || !itemState.selectedFile || itemState.sendByEmail) {
+                return null;
+              }
+              const itemProjectName =
+                itemState.projectName?.trim() ||
+                item.name ||
+                projectName ||
+                '작업';
+              return { item, itemState, itemProjectName };
+            })
+            .filter((target): target is UploadTarget => target !== null);
+
+          uploadTargets.forEach(({ item, itemState, itemProjectName }) => {
+            const file: File | null = itemState?.selectedFile || null;
+            if (!file) return;
+            const sig = buildFileSignature(file);
+            const cacheHit = draftUploadCache.item[item.id];
+            const inFlightKey = `item:${item.id}:${sig}`;
+            if (!cacheHit || cacheHit.sig !== sig) {
+              if (!draftUploadInFlightRef.current.has(inFlightKey)) {
+                draftUploadInFlightRef.current.add(inFlightKey);
+                uploadDraftToDesigns(file, itemProjectName, group.user_profile_id)
+                  .then((draftId) => {
+                    if (!draftId) return;
+                    const resolvedDraftId = draftId;
+                    setDraftUploadCache((prev) => ({
+                      ...prev,
+                      item: {
+                        ...prev.item,
+                        [item.id]: { sig, draftId: resolvedDraftId },
+                      },
+                    }));
+                  })
+                  .finally(() => {
+                    draftUploadInFlightRef.current.delete(inFlightKey);
+                  });
+              }
+            }
+          });
+        }
+      } catch (error) {
+        console.warn('🔍 [계좌이체] warmup draft upload failed', error);
+      }
+    },
+    [user?.id, groupStates, itemStates, bulkApply.fileUpload, draftUploadCache]
+  );
+
   const openBankTransferModal = async (group: GroupedCartItem) => {
     setBankModalError(null);
     setBankModalGroup(group);
@@ -1555,6 +1672,10 @@ function PaymentPageContent() {
       totalPrice: group.totalPrice,
       itemsCount: group.items.length,
     });
+
+    // 모달이 열려있는 동안 사용자 대기 시간을 줄이기 위해 시안 업로드를 미리 시작
+    void warmupBankTransferDraftUploads(group);
+
     const displayType = getDisplayTypeForBankAccount(group);
     if (!displayType) {
       setBankModalError('현재 상품은 계좌이체를 지원하지 않습니다.');
@@ -1689,18 +1810,39 @@ function PaymentPageContent() {
           alert('시안 파일을 선택해주세요.');
           return;
         }
-        draftId = await uploadDraftToDesigns(
-          groupState.selectedFile,
-          projectName,
-          group.user_profile_id
-        );
+        const sig = buildFileSignature(groupState.selectedFile);
+        const cacheHit = draftUploadCache.group[group.id];
+        if (cacheHit && cacheHit.sig === sig) {
+          draftId = cacheHit.draftId;
+        } else {
+          draftId = await uploadDraftToDesigns(
+            groupState.selectedFile,
+            projectName,
+            group.user_profile_id
+          );
+          if (draftId) {
+            const resolvedDraftId = draftId;
+            setDraftUploadCache((prev) => ({
+              ...prev,
+              group: { ...prev.group, [group.id]: { sig, draftId: resolvedDraftId } },
+            }));
+          }
+        }
       }
 
       if (group.items.length >= 2) {
+        type UploadTarget = {
+          item: CartItem;
+          itemState: (typeof itemStates)[string];
+          itemProjectName: string;
+        };
+
         const uploadTargets = group.items
-          .map((item) => {
+          .map((item): UploadTarget | null => {
             const itemState = itemStates[item.id];
-            if (!itemState?.selectedFile || itemState?.sendByEmail) return null;
+            if (!itemState || !itemState.selectedFile || itemState.sendByEmail) {
+              return null;
+            }
             const itemProjectName =
               itemState.projectName?.trim() || item.name || '작업';
             return {
@@ -1709,11 +1851,7 @@ function PaymentPageContent() {
               itemProjectName,
             };
           })
-          .filter(Boolean) as Array<{
-          item: any;
-          itemState: any;
-          itemProjectName: string;
-        }>;
+          .filter((target): target is UploadTarget => target !== null);
 
         // 병목 최적화: 아이템별 파일 업로드 병렬 처리
         const uploaded = await Promise.all(
@@ -1723,11 +1861,27 @@ function PaymentPageContent() {
                 `"${item?.name || '아이템'}"의 작업이름을 입력해주세요.`
               );
             }
-            const itemDraftId = await uploadDraftToDesigns(
-              itemState.selectedFile,
-              itemProjectName,
-              group.user_profile_id
-            );
+            const file: File | null = itemState?.selectedFile || null;
+            if (!file) {
+              throw new Error('시안 파일을 선택해주세요.');
+            }
+            const sig = buildFileSignature(file);
+            const cacheHit = draftUploadCache.item[item.id];
+            const itemDraftId =
+              cacheHit && cacheHit.sig === sig
+                ? cacheHit.draftId
+                : await uploadDraftToDesigns(
+                    file,
+                    itemProjectName,
+                    group.user_profile_id
+                  );
+            if (itemDraftId) {
+              const resolvedDraftId = itemDraftId;
+              setDraftUploadCache((prev) => ({
+                ...prev,
+                item: { ...prev.item, [item.id]: { sig, draftId: resolvedDraftId } },
+              }));
+            }
             return { itemId: item.id, draftId: itemDraftId };
           })
         );
@@ -3425,9 +3579,15 @@ function PaymentPageContent() {
                         <Button
                           onClick={() => openTossWidget(group)}
                           disabled={!isButtonEnabled}
-                          className={`w-full py-2 rounded-lg border border-blue-600 ${
+                          className={`w-full py-2 rounded-lg border ${
+                            group.name?.includes('남은구')
+                              ? 'border-pink-600'
+                              : 'border-blue-600'
+                          } ${
                             isButtonEnabled
-                              ? 'bg-blue-600 text-white hover:bg-blue-700'
+                              ? group.name?.includes('남은구')
+                                ? 'bg-pink-600 text-white hover:bg-pink-700'
+                                : 'bg-blue-600 text-white hover:bg-blue-700'
                               : 'bg-gray-400 text-gray-600 cursor-not-allowed'
                           }`}
                         >
