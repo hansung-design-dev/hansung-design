@@ -206,6 +206,7 @@ interface DisplayItem {
   endDate?: string;
   isClosed?: boolean; // 마감 여부
   panelCode?: string; // 게시대번호 (현수막게시대용)
+  slotNumber?: number; // 배정 면 번호
   category?: string; // 품명 (현수막게시대, 전자게시대 등)
   productType: string;
   orderDetailId?: string; // 연결된 order_detail ID
@@ -239,6 +240,7 @@ interface OrderCardData {
   projectName?: string; // 파일이름 (design_draft.project_name)
   panelDisplayName?: string; // 게시대 명 (주소 + 별칭)
   panelCode?: string; // 게시대번호 (현수막게시대용)
+  slotNumber?: number; // 배정 면 번호
   displayStartDate?: string; // 송출 시작일
   displayEndDate?: string; // 송출 종료일
   // 주문 프로필 정보
@@ -672,12 +674,15 @@ export default function OrdersPage() {
       rowNumber: number,
       panelCode?: string | number,
       panelName?: string,
-      panelAddress?: string
+      panelAddress?: string,
+      slotNumber?: number | null
     ): string => {
       const codeLabel = safeTrim(panelCode) || '-';
       const addressLabel = safeTrim(panelAddress) || '-';
       const nameLabel = safeTrim(panelName) || addressLabel || '-';
-      return `${rowNumber}. ${codeLabel} / ${nameLabel} / ${addressLabel}`;
+      const slotLabel =
+        typeof slotNumber === 'number' ? ` / ${slotNumber}번면` : '';
+      return `${rowNumber}. ${codeLabel} / ${nameLabel} / ${addressLabel}${slotLabel}`;
     };
 
     orders.forEach((order) => {
@@ -714,11 +719,13 @@ export default function OrdersPage() {
         const panelAddress = item.panels?.address;
         const panelName = item.panels?.nickname;
         const panelCode = item.panels?.panel_code || item.panel_id;
+        const slotNumber = item.panel_slot_usage?.slot_number ?? null;
         const boardLabel = buildBoardLabel(
           rowNumber,
           panelCode,
           panelName,
-          panelAddress
+          panelAddress,
+          slotNumber
         );
 
         displayItems.push({
@@ -735,6 +742,7 @@ export default function OrdersPage() {
           endDate: item.display_end_date,
           isClosed: item.panel_slot_usage?.is_closed === true,
           panelCode: item.panels?.panel_code,
+          slotNumber: typeof slotNumber === 'number' ? slotNumber : undefined,
           category: category,
           productType,
           order: order,
@@ -1080,6 +1088,8 @@ export default function OrdersPage() {
       orderDetails[0] ||
       ({} as OrderDetail);
     const panelInfo = orderDetail.panels || ({} as PanelInfo);
+    const slotNumber = orderDetail.panel_slot_usage?.slot_number;
+
     const userProfile = order.user_profiles || ({} as UserProfile);
     const customerInfo = detail.customerInfo || {};
     const payments = detail.payments || [];
@@ -1202,6 +1212,7 @@ export default function OrdersPage() {
       projectName: finalProjectName,
       panelDisplayName: panelDisplayName,
       panelCode: panelCode,
+      slotNumber: typeof slotNumber === 'number' ? slotNumber : undefined,
       displayStartDate: formatDisplayPeriod(displayStartDate, displayEndDate),
       displayEndDate: displayEndDate,
       // 주문 프로필 정보 (없으면 '-'로 표시)

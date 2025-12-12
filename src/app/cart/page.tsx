@@ -949,9 +949,7 @@ function CartContent() {
         // fallback: 타입 + ID 조합으로 기본 키 생성
         `${productType}:${productId}`
     );
-    setSelectedCartItem(
-      cart.find((item) => item.id === productId) || null
-    );
+    setSelectedCartItem(cart.find((item) => item.id === productId) || null);
     setIsConsultationModalOpen(true);
   };
 
@@ -1510,7 +1508,7 @@ function CartContent() {
                                   htmlFor={`bulk-profile-${district}`}
                                   className="text-xs text-gray-700 select-none cursor-pointer"
                                 >
-                                  유저정보 일괄적용
+                                  사용자정보 일괄적용
                                 </label>
                                 {bulkProfile[district] && (
                                   <>

@@ -1697,23 +1697,44 @@ function PaymentPageContent() {
       }
 
       if (group.items.length >= 2) {
-        for (const item of group.items) {
-          const itemState = itemStates[item.id];
-          if (itemState?.selectedFile && !itemState?.sendByEmail) {
+        const uploadTargets = group.items
+          .map((item) => {
+            const itemState = itemStates[item.id];
+            if (!itemState?.selectedFile || itemState?.sendByEmail) return null;
             const itemProjectName =
               itemState.projectName?.trim() || item.name || '작업';
+            return {
+              item,
+              itemState,
+              itemProjectName,
+            };
+          })
+          .filter(Boolean) as Array<{
+          item: any;
+          itemState: any;
+          itemProjectName: string;
+        }>;
+
+        // 병목 최적화: 아이템별 파일 업로드 병렬 처리
+        const uploaded = await Promise.all(
+          uploadTargets.map(async ({ item, itemState, itemProjectName }) => {
             if (!itemProjectName) {
-              alert(`"${item.name || '아이템'}"의 작업이름을 입력해주세요.`);
-              return;
+              throw new Error(
+                `"${item?.name || '아이템'}"의 작업이름을 입력해주세요.`
+              );
             }
             const itemDraftId = await uploadDraftToDesigns(
               itemState.selectedFile,
               itemProjectName,
               group.user_profile_id
             );
-            itemDraftIds[item.id] = itemDraftId;
-          }
-        }
+            return { itemId: item.id, draftId: itemDraftId };
+          })
+        );
+
+        uploaded.forEach(({ itemId, draftId }) => {
+          itemDraftIds[itemId] = draftId;
+        });
       }
 
       itemsForOrder.forEach((orderItem) => {
@@ -3686,7 +3707,7 @@ function PaymentPageContent() {
                   }
                 }}
               >
-                입금정보 확인 후 주문
+                {isBankTransferProcessing ? '처리중...' : '입금정보 확인 후 주문'}
               </Button>
             </div>
           </div>

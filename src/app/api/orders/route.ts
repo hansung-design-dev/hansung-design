@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/src/lib/supabase';
 import { ensureDesignDraftForOrderItem } from '@/src/lib/designDrafts';
-import { ensurePanelSlotUsageForItem } from '@/src/lib/slotResolver';
+import {
+  ensurePanelSlotUsageForItem,
+  type SlotResolverCache,
+} from '@/src/lib/slotResolver';
 
 // Type definitions for the orders API
 interface Panel {
@@ -145,6 +148,11 @@ export async function GET(request: NextRequest) {
         *,
         order_details (
           *,
+          panel_slot_usage!order_details_panel_slot_usage_id_fkey (
+            slot_number,
+            banner_type,
+            usage_type
+          ),
           panels (
             *,
             region_gu (
@@ -597,7 +605,15 @@ export async function POST(request: NextRequest) {
     const orderDetails = [];
     const designDraftIdsByItem: Record<string, string | null> = {};
 
-    for (const item of items) {
+    const slotResolverCache: SlotResolverCache = {
+      panelInfoAndPeriod: new Map(),
+      bannerSlotsByPanel: new Map(),
+      inventoryByPeriodPanel: new Map(),
+    };
+
+    // 병목 최적화: 아이템별 슬롯 확보/시안 생성은 병렬 수행 (네트워크 왕복 시간 절감)
+    const resolvedOrderDetails = await Promise.all(
+      items.map(async (item: any) => {
       console.log('🔍 [주문 생성 API] order_detail 처리 중:', {
         itemId: item.id,
         panelId: item.panel_id,
@@ -663,6 +679,7 @@ export async function POST(request: NextRequest) {
           existingPanelSlotUsageId: item.panel_slot_usage_id,
           displayStartDate,
           displayEndDate,
+          cache: slotResolverCache,
         });
         panelSlotUsageId = slotResult.panelSlotUsageId;
         if (slotResult.slotNumber) {
@@ -723,8 +740,11 @@ export async function POST(request: NextRequest) {
         // half_period 컬럼이 없으므로 제거
       };
 
-      orderDetails.push(orderDetail);
-    }
+        return orderDetail;
+      })
+    );
+
+    orderDetails.push(...resolvedOrderDetails);
 
     console.log('🔍 [주문 생성 API] 생성할 order_details:', {
       count: orderDetails.length,

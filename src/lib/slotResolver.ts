@@ -18,6 +18,21 @@ export interface SlotResolutionResult {
   slotCategory: 'banner' | 'led';
 }
 
+export interface SlotResolverCache {
+  panelInfoAndPeriod?: Map<
+    string,
+    { panelInfo: { display_type_id: string; region_gu_id: string } | null; periodId: string | null }
+  >;
+  bannerSlotsByPanel?: Map<
+    string,
+    { bannerSlots: { id: string; slot_number: number }[]; slotMap: Map<string, number> }
+  >;
+  inventoryByPeriodPanel?: Map<
+    string,
+    Map<string, { is_closed: boolean; is_available: boolean }>
+  >;
+}
+
 const LED_TRIGGERS = ['led', 'electronic', 'edp', 'lcd', 'display'];
 
 function detectSlotCategory(item: SlotResolverItem): 'banner' | 'led' {
@@ -42,7 +57,13 @@ async function getPanelInfoAndPeriod(
   panelId: string,
   displayStartDate: string,
   displayEndDate: string
+  ,
+  cache?: SlotResolverCache
 ) {
+  const cacheKey = `${panelId}|${displayStartDate}|${displayEndDate}`;
+  const cached = cache?.panelInfoAndPeriod?.get(cacheKey);
+  if (cached) return cached;
+
   const { data: panelInfo, error: panelError } = await supabase
     .from('panels')
     .select('display_type_id, region_gu_id')
@@ -55,7 +76,9 @@ async function getPanelInfoAndPeriod(
       panelId,
       panelError?.message
     );
-    return { panelInfo: null, periodId: null };
+    const result = { panelInfo: null, periodId: null };
+    if (cache?.panelInfoAndPeriod) cache.panelInfoAndPeriod.set(cacheKey, result);
+    return result;
   }
 
   const orFilter = `and(period_from.lte.${displayStartDate},period_to.gte.${displayEndDate}),and(period_to.gte.${displayStartDate},period_from.lte.${displayEndDate})`;
@@ -75,7 +98,9 @@ async function getPanelInfoAndPeriod(
       panelId,
       periodError.message
     );
-    return { panelInfo, periodId: null };
+    const result = { panelInfo, periodId: null };
+    if (cache?.panelInfoAndPeriod) cache.panelInfoAndPeriod.set(cacheKey, result);
+    return result;
   }
 
   if (!periodRow) {
@@ -87,49 +112,73 @@ async function getPanelInfoAndPeriod(
     );
   }
 
-  return { panelInfo, periodId: periodRow?.id ?? null };
+  const result = { panelInfo, periodId: periodRow?.id ?? null };
+  if (cache?.panelInfoAndPeriod) cache.panelInfoAndPeriod.set(cacheKey, result);
+  return result;
 }
 
 async function findAvailableBannerSlot(
   panelId: string,
   periodId: string | null,
   preferredSlotNumber?: number,
-  currentBannerSlotId?: string
+  currentBannerSlotId?: string,
+  cache?: SlotResolverCache
 ) {
-  const { data: bannerSlots, error: slotsError } = await supabase
-    .from('banner_slots')
-    .select('id, slot_number')
-    .eq('panel_id', panelId)
-    .order('slot_number', { ascending: true });
+  let bannerSlots: { id: string; slot_number: number }[] | null | undefined =
+    cache?.bannerSlotsByPanel?.get(panelId)?.bannerSlots;
+  let slotMap: Map<string, number> | undefined =
+    cache?.bannerSlotsByPanel?.get(panelId)?.slotMap;
 
-  if (slotsError || !bannerSlots || bannerSlots.length === 0) {
-    console.warn(
-      '[slot resolver] banner_slots 조회 실패:',
-      panelId,
-      slotsError?.message
-    );
-    return null;
+  if (!bannerSlots || !slotMap) {
+    const { data, error: slotsError } = await supabase
+      .from('banner_slots')
+      .select('id, slot_number')
+      .eq('panel_id', panelId)
+      .order('slot_number', { ascending: true });
+
+    bannerSlots = data;
+
+    if (slotsError || !bannerSlots || bannerSlots.length === 0) {
+      console.warn(
+        '[slot resolver] banner_slots 조회 실패:',
+        panelId,
+        slotsError?.message
+      );
+      return null;
+    }
+
+    slotMap = new Map(bannerSlots.map((slot) => [slot.id, slot.slot_number]));
+    if (cache?.bannerSlotsByPanel) {
+      cache.bannerSlotsByPanel.set(panelId, { bannerSlots, slotMap });
+    }
   }
 
   const slotIds = bannerSlots.map((slot) => slot.id);
-  const inventoryMap = new Map<
-    string,
-    { is_closed: boolean; is_available: boolean }
-  >();
+  let inventoryMap = new Map<string, { is_closed: boolean; is_available: boolean }>();
 
   if (periodId) {
-    const { data: inventoryRows } = await supabase
-      .from('banner_slot_inventory')
-      .select('banner_slot_id, is_closed, is_available')
-      .eq('region_gu_display_period_id', periodId)
-      .in('banner_slot_id', slotIds);
+    const inventoryCacheKey = `${periodId}|${panelId}`;
+    const cachedInventory = cache?.inventoryByPeriodPanel?.get(inventoryCacheKey);
+    if (cachedInventory) {
+      inventoryMap = cachedInventory;
+    } else {
+      const { data: inventoryRows } = await supabase
+        .from('banner_slot_inventory')
+        .select('banner_slot_id, is_closed, is_available')
+        .eq('region_gu_display_period_id', periodId)
+        .in('banner_slot_id', slotIds);
 
-    inventoryRows?.forEach((row) => {
-      inventoryMap.set(row.banner_slot_id, {
-        is_closed: row.is_closed,
-        is_available: row.is_available,
+      inventoryRows?.forEach((row) => {
+        inventoryMap.set(row.banner_slot_id, {
+          is_closed: row.is_closed,
+          is_available: row.is_available,
+        });
       });
-    });
+
+      if (cache?.inventoryByPeriodPanel) {
+        cache.inventoryByPeriodPanel.set(inventoryCacheKey, inventoryMap);
+      }
+    }
   }
 
   const isSlotOpen = (slotId: string) => {
@@ -156,10 +205,6 @@ async function findAvailableBannerSlot(
     }
   });
 
-  const slotMap = new Map(
-    bannerSlots.map((slot) => [slot.id, slot.slot_number])
-  );
-
   if (currentBannerSlotId && isSlotOpen(currentBannerSlotId)) {
     return {
       bannerSlotId: currentBannerSlotId,
@@ -184,11 +229,13 @@ export async function ensurePanelSlotUsageForItem({
   existingPanelSlotUsageId,
   displayStartDate,
   displayEndDate,
+  cache,
 }: {
   item: SlotResolverItem;
   existingPanelSlotUsageId?: string | null;
   displayStartDate: string;
   displayEndDate: string;
+  cache?: SlotResolverCache;
 }): Promise<SlotResolutionResult> {
   const slotCategory = detectSlotCategory(item);
   const panelId = item.panel_id;
@@ -204,6 +251,8 @@ export async function ensurePanelSlotUsageForItem({
     panelId,
     displayStartDate,
     displayEndDate
+    ,
+    cache
   );
 
   let existingUsage: {
@@ -239,6 +288,8 @@ export async function ensurePanelSlotUsageForItem({
     periodId,
     preferredSlotNumber,
     preferredBannerSlotId
+    ,
+    cache
   );
 
   if (!availableSlot) {
@@ -258,10 +309,11 @@ export async function ensurePanelSlotUsageForItem({
 
   const { data: existingSlotUsage } = await supabase
     .from('panel_slot_usage')
-    .select('id, slot_number')
+    .select('id, slot_number, attach_date_from')
     .eq('panel_id', panelId)
     .eq('slot_number', availableSlot.slotNumber)
     .eq('banner_slot_id', availableSlot.bannerSlotId)
+    .eq('attach_date_from', displayStartDate)
     .maybeSingle();
 
   if (existingSlotUsage && existingSlotUsage.id) {
@@ -299,9 +351,17 @@ export async function ensurePanelSlotUsageForItem({
 
   if (newUsageError || !newUsage) {
     console.error('[slot resolver] panel_slot_usage 생성 실패:', newUsageError);
-    const conflictMatch = newUsageError?.message?.match(
-      /conflicting_usage_id:\s*([0-9a-f-]+)/i
-    );
+    const errorText = [
+      newUsageError?.message,
+      // @ts-expect-error supabase error shape may include details/hint depending on client version
+      newUsageError?.details,
+      // @ts-expect-error supabase error shape may include details/hint depending on client version
+      newUsageError?.hint,
+    ]
+      .filter(Boolean)
+      .join(' | ');
+
+    const conflictMatch = errorText.match(/conflicting_usage_id:\s*([0-9a-f-]+)/i);
 
     if (conflictMatch) {
       const conflictingUsageId = conflictMatch[1];
@@ -320,7 +380,8 @@ export async function ensurePanelSlotUsageForItem({
       };
     }
 
-    throw new Error('슬롯 할당에 실패했습니다.');
+    // 원인 파악을 위해 가능한 한 원본 메시지를 노출 (UI에서 그대로 표시됨)
+    throw new Error(newUsageError?.message || '슬롯 할당에 실패했습니다.');
   }
 
   return {

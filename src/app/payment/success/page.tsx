@@ -568,7 +568,7 @@ function PaymentSuccessContent() {
               {shouldShowContinuePaymentButton && (
                 <button
                   onClick={handleContinuePayment}
-                  className="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg hover:bg-indigo-700 transition-colors"
+                  className="w-full bg-pink-600 text-white py-3 px-4 rounded-lg hover:bg-pink-700 transition-colors"
                 >
                   남은 결제 하기
                 </button>

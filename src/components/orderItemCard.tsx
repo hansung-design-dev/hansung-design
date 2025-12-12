@@ -26,6 +26,7 @@ interface OrderDetail {
   projectName?: string; // 파일이름 (design_draft.project_name)
   panelDisplayName?: string; // 게시대 명 (주소 + 별칭)
   panelCode?: string; // 게시대번호 (현수막게시대용)
+  slotNumber?: number; // 배정 면 번호
   displayStartDate?: string; // 송출 시작일
   displayEndDate?: string; // 송출 종료일
   // 주문 프로필 정보
@@ -160,6 +161,16 @@ export default function OrderItemCard({
                       </div>
                     </>
                   )}
+
+                {/* 배정 면 번호 표시 */}
+                {typeof orderDetail.slotNumber === 'number' && (
+                  <>
+                    <div className="text-gray-600 mb-2">배정 면</div>
+                    <div className="font-700 text-1.25 sm:text-1">
+                      {orderDetail.slotNumber}번면
+                    </div>
+                  </>
+                )}
 
                 <div className="text-gray-600 mb-2">위치</div>
                 <div className="font-700 text-1.25 sm:text-1">
