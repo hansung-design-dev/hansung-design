@@ -12,7 +12,15 @@ const COOKIE_PREFIX = 'nice_reset_pw_key_';
 async function handle(request: NextRequest) {
   try {
     const clientId = process.env.NICE_CLIENT_ID;
-    const accessToken = await getNiceAccessToken().catch(() => null);
+    const clientSecret = process.env.NICE_CLIENT_SECRET;
+    let accessToken: string | null = null;
+    let accessTokenError: string | null = null;
+    try {
+      accessToken = await getNiceAccessToken();
+    } catch (e) {
+      accessTokenError = e instanceof Error ? e.message : String(e);
+      accessToken = null;
+    }
     const productId = process.env.NICE_PRODUCT_ID;
     const registeredReturnUrl = process.env.NICE_CONSOLE_RETURN_URL;
 
@@ -24,9 +32,13 @@ async function handle(request: NextRequest) {
       searchParams.get('returnUrl') ??
       (body as Record<string, string>).returnUrl;
 
-    if (!clientId || !productId) {
+    if (!clientId || !productId || !accessToken) {
+      const missing: string[] = [];
+      if (!clientId) missing.push('NICE_CLIENT_ID');
+      if (!productId) missing.push('NICE_PRODUCT_ID');
+      if (!accessToken) missing.push('NICE_ACCESS_TOKEN or NICE_CLIENT_SECRET');
       return NextResponse.json(
-        { error: 'NICE 환경변수가 부족합니다.' },
+        { error: 'NICE 환경변수가 부족합니다.', missing },
         { status: 500 }
       );
     }
@@ -42,8 +54,10 @@ async function handle(request: NextRequest) {
     logNiceEnvDebug({
       scope: 'api/auth/reset-password/nice/token',
       clientId,
+      clientSecret,
       productId,
       accessToken,
+      accessTokenError,
       returnUrl,
       registeredReturnUrl,
     });

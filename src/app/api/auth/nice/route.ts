@@ -11,7 +11,14 @@ export async function GET(request: NextRequest) {
   try {
     const clientId = process.env.NICE_CLIENT_ID;
     const clientSecret = process.env.NICE_CLIENT_SECRET;
-    const accessToken = await getNiceAccessToken().catch(() => null);
+    let accessToken: string | null = null;
+    let accessTokenError: string | null = null;
+    try {
+      accessToken = await getNiceAccessToken();
+    } catch (e) {
+      accessTokenError = e instanceof Error ? e.message : String(e);
+      accessToken = null;
+    }
     const productId = process.env.NICE_PRODUCT_ID;
     const returnUrl = process.env.NICE_RETURN_URL;
     const registeredReturnUrl = process.env.NICE_CONSOLE_RETURN_URL;
@@ -25,21 +32,25 @@ export async function GET(request: NextRequest) {
     logNiceEnvDebug({
       scope: 'api/auth/nice',
       clientId,
+      clientSecret,
       productId,
       accessToken,
+      accessTokenError,
       returnUrl: absoluteReturnUrl,
       registeredReturnUrl,
     });
 
-    if (
-      !clientId ||
-      !clientSecret ||
-      !accessToken ||
-      !productId ||
-      !absoluteReturnUrl
-    ) {
+    if (!clientId || !accessToken || !productId || !absoluteReturnUrl) {
+      const missing: string[] = [];
+      if (!clientId) missing.push('NICE_CLIENT_ID');
+      if (!productId) missing.push('NICE_PRODUCT_ID');
+      if (!absoluteReturnUrl) missing.push('NICE_RETURN_URL');
+      if (!accessToken) {
+        // accessToken은 (1) NICE_CLIENT_ID+NICE_CLIENT_SECRET 또는 (2) NICE_ACCESS_TOKEN 으로 확보 가능
+        missing.push('NICE_ACCESS_TOKEN or NICE_CLIENT_SECRET');
+      }
       return NextResponse.json(
-        { error: 'NICE 환경변수가 부족합니다.' },
+        { error: 'NICE 환경변수가 부족합니다.', missing },
         { status: 500 }
       );
     }

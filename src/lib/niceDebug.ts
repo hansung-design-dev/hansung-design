@@ -1,7 +1,10 @@
 type NiceEnvDebugInput = {
   clientId?: string | null;
+  clientSecret?: string | null;
   productId?: string | null;
   accessToken?: string | null;
+  /** Optional: reason why accessToken could not be resolved/issued. */
+  accessTokenError?: string | null;
   /** The returnUrl you are about to send to NICE (computed final value). */
   returnUrl?: string | null;
   /** The exact returnUrl registered in NICE console, if you keep it in env for verification. */
@@ -66,8 +69,10 @@ export function logNiceEnvDebug(input: NiceEnvDebugInput) {
   const scope = input.scope?.trim() ? input.scope.trim() : 'unknown-scope';
 
   const clientId = input.clientId ?? null;
+  const clientSecret = input.clientSecret ?? null;
   const productId = input.productId ?? null;
   const accessToken = input.accessToken ?? null;
+  const accessTokenError = input.accessTokenError ?? null;
   const returnUrl = input.returnUrl ?? null;
   const registeredReturnUrl = input.registeredReturnUrl ?? null;
 
@@ -78,6 +83,10 @@ export function logNiceEnvDebug(input: NiceEnvDebugInput) {
       exists: Boolean(clientId && String(clientId).trim()),
       length: safeLen(clientId ? String(clientId) : ''),
     },
+    clientSecret: {
+      exists: Boolean(clientSecret && String(clientSecret).trim()),
+      length: safeLen(clientSecret ? String(clientSecret) : ''),
+    },
     productId: {
       exists: Boolean(productId && String(productId).trim()),
     },
@@ -86,6 +95,7 @@ export function logNiceEnvDebug(input: NiceEnvDebugInput) {
       prefix6: tokenInfo.prefix,
       length: tokenInfo.length,
     },
+    accessTokenError: accessTokenError ? String(accessTokenError).slice(0, 300) : null,
   });
 
   if (returnUrl != null) {

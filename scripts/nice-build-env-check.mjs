@@ -61,7 +61,25 @@ function resolveBaseUrl() {
 function resolveAbsoluteReturnUrl(returnUrl, baseUrl) {
   const ru = safeTrim(returnUrl);
   if (!ru) return '';
-  if (ru.startsWith('http://') || ru.startsWith('https://')) return ru;
+  // If env already provides an absolute URL, still normalize its origin to Vercel/baseUrl
+  // when they mismatch (common misconfig: leaving localhost in production env).
+  if (ru.startsWith('http://') || ru.startsWith('https://')) {
+    if (!baseUrl) return ru;
+    try {
+      const envUrl = new URL(ru);
+      const base = new URL(baseUrl);
+      if (envUrl.origin !== base.origin) {
+        const rebuilt = new URL(
+          envUrl.pathname + envUrl.search + envUrl.hash,
+          base.origin
+        );
+        return rebuilt.toString();
+      }
+      return envUrl.toString();
+    } catch {
+      return ru;
+    }
+  }
   if (ru.startsWith('/')) {
     if (!baseUrl) return ru; // cannot absolutize without base
     try {
@@ -75,6 +93,7 @@ function resolveAbsoluteReturnUrl(returnUrl, baseUrl) {
 
 const scope = 'build';
 const clientId = process.env.NICE_CLIENT_ID;
+const clientSecret = process.env.NICE_CLIENT_SECRET;
 const productId = process.env.NICE_PRODUCT_ID;
 const accessToken = process.env.NICE_ACCESS_TOKEN;
 const returnUrl = process.env.NICE_RETURN_URL;
@@ -82,6 +101,9 @@ const registeredReturnUrl = process.env.NICE_CONSOLE_RETURN_URL;
 
 const baseUrl = resolveBaseUrl();
 const absoluteReturnUrl = resolveAbsoluteReturnUrl(returnUrl, baseUrl);
+const rawReturnUrl = safeTrim(returnUrl);
+const isLikelyLocalhost =
+  rawReturnUrl.includes('localhost') || rawReturnUrl.includes('127.0.0.1');
 
 console.log(`[NICE env-check:${scope}] env summary`, {
   vercelEnv: safeTrim(process.env.VERCEL_ENV) || null,
@@ -91,6 +113,10 @@ console.log(`[NICE env-check:${scope}] env summary`, {
     exists: Boolean(safeTrim(clientId)),
     length: safeTrim(clientId).length,
   },
+  clientSecret: {
+    exists: Boolean(safeTrim(clientSecret)),
+    length: safeTrim(clientSecret).length,
+  },
   productId: {
     exists: Boolean(safeTrim(productId)),
   },
@@ -98,11 +124,21 @@ console.log(`[NICE env-check:${scope}] env summary`, {
 });
 
 console.log(`[NICE env-check:${scope}] returnUrl to NICE (build-time)`, {
-  returnUrlRaw: safeTrim(returnUrl) || null,
+  returnUrlRaw: rawReturnUrl || null,
   returnUrlAbsolute: absoluteReturnUrl || null,
   jsonRaw: returnUrl != null ? JSON.stringify(returnUrl) : null,
   jsonAbsolute: absoluteReturnUrl ? JSON.stringify(absoluteReturnUrl) : null,
 });
+
+// Helpful warning: localhost in production/preview env is almost always wrong.
+if (safeTrim(process.env.VERCEL_URL) && isLikelyLocalhost) {
+  console.warn(`[NICE env-check:${scope}] WARNING`, {
+    message:
+      'VERCEL_URL is set but NICE_RETURN_URL looks like localhost. Check Vercel env vars.',
+    suggestion:
+      "Prefer setting NICE_RETURN_URL to a relative path like '/api/auth/nice/callback' so it works in both local and Vercel.",
+  });
+}
 
 if (registeredReturnUrl != null && absoluteReturnUrl) {
   const reg = safeTrim(registeredReturnUrl);
@@ -115,12 +151,12 @@ if (registeredReturnUrl != null && absoluteReturnUrl) {
     diffs: diff.diffs,
   });
 } else {
-  console.log(`[NICE env-check:${scope}] returnUrl comparison skipped (build-time)`, {
-    hasReturnUrlAbsolute: Boolean(absoluteReturnUrl),
-    hasRegisteredReturnUrl: Boolean(safeTrim(registeredReturnUrl)),
-    hint:
-      'Set NICE_CONSOLE_RETURN_URL to enable exact-match comparison in build logs.',
-  });
+  console.log(
+    `[NICE env-check:${scope}] returnUrl comparison skipped (build-time)`,
+    {
+      hasReturnUrlAbsolute: Boolean(absoluteReturnUrl),
+      hasRegisteredReturnUrl: Boolean(safeTrim(registeredReturnUrl)),
+      hint: 'Set NICE_CONSOLE_RETURN_URL to enable exact-match comparison in build logs.',
+    }
+  );
 }
-
-
