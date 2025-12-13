@@ -57,7 +57,7 @@ export class NiceAuthHandler {
         url: 'https://svc.niceapi.co.kr:22001/digital/niceid/api/v1.0/common/crypto/token',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `bearer ${authorization}`,
+          Authorization: `Bearer ${authorization}`,
           client_id: this.clientId,
           productID: this.productId,
         },
@@ -73,16 +73,18 @@ export class NiceAuthHandler {
         },
       });
       const resData = response.data;
-      console.log(
-        '[NiceAuthHandler] crypto token response',
-        JSON.stringify(resData)
-      );
+      // NOTE: 민감정보(token_val 등) 포함 가능성 때문에 운영에서는 전체 응답 로깅 지양
+      console.log('[NiceAuthHandler] crypto token response summary', {
+        gwResult: resData?.dataHeader?.GW_RSLT_CD,
+        rspCd: resData?.dataBody?.rsp_cd,
+        hasTokenVersionId: Boolean(resData?.dataBody?.token_version_id),
+      });
       if (
-        resData.dataHeader.GW_RSLT_CD !== '1200' &&
-        resData.dataBody.rsp_cd !== 'P000'
+        resData?.dataHeader?.GW_RSLT_CD !== '1200' ||
+        resData?.dataBody?.rsp_cd !== 'P000'
       ) {
         throw new Error(
-          `Failed to request crypto token: ${resData.dataBody.rsp_cd}`
+          `Failed to request crypto token: GW_RSLT_CD=${resData?.dataHeader?.GW_RSLT_CD ?? 'null'} rsp_cd=${resData?.dataBody?.rsp_cd ?? 'null'}`
         );
       }
       return {
@@ -91,8 +93,28 @@ export class NiceAuthHandler {
         tokenVersionId: resData.dataBody.token_version_id as string,
       };
     } catch (error) {
-      console.error(error);
-      throw new Error('Failed to get encryption token');
+      const err = error as unknown;
+      if (typeof err === 'object' && err && 'response' in err) {
+        const e = err as {
+          response?: { status?: number; statusText?: string; data?: unknown };
+          message?: string;
+        };
+        const status = e.response?.status;
+        const statusText = e.response?.statusText;
+        const data = e.response?.data;
+        console.error('[NiceAuthHandler] crypto token axios error', {
+          status,
+          statusText,
+          data,
+        });
+        throw new Error(
+          `Failed to get encryption token (axios): ${status ?? ''} ${statusText ?? ''} ${data ? JSON.stringify(data) : ''}`.trim()
+        );
+      }
+      console.error('[NiceAuthHandler] crypto token error', error);
+      throw new Error(
+        error instanceof Error ? error.message : 'Failed to get encryption token'
+      );
     }
   }
 

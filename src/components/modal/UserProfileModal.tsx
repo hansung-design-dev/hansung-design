@@ -564,7 +564,12 @@ export default function UserProfileModal({
     try {
       const res = await fetch('/api/auth/nice?purpose=add_profile');
       if (!res.ok) {
-        throw new Error('NICE 본인인증 준비에 실패했습니다.');
+        const body = await res.json().catch(() => ({}));
+        const msg =
+          typeof body?.error === 'string' && body.error.trim()
+            ? body.error.trim()
+            : 'NICE 본인인증 준비에 실패했습니다.';
+        throw new Error(msg);
       }
       const data = await res.json();
       if (!data?.tokenVersionId || !data?.encData || !data?.integrityValue) {

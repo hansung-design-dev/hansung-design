@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { NiceAuthHandler } from '@/src/lib/NiceAuthHandler';
 import { saveNiceKey } from '@/src/lib/niceAuthKeyStore';
 import { v4 as uuidv4 } from 'uuid';
+import { getNiceAccessToken } from '@/src/lib/niceAccessToken';
+import { logNiceEnvDebug } from '@/src/lib/niceDebug';
 
 export const runtime = 'nodejs';
 
@@ -10,17 +12,19 @@ const COOKIE_PREFIX = 'nice_reset_pw_key_';
 async function handle(request: NextRequest) {
   try {
     const clientId = process.env.NICE_CLIENT_ID;
-    const accessToken = process.env.NICE_ACCESS_TOKEN;
+    const accessToken = await getNiceAccessToken().catch(() => null);
     const productId = process.env.NICE_PRODUCT_ID;
+    const registeredReturnUrl = process.env.NICE_CONSOLE_RETURN_URL;
 
     const { searchParams } = new URL(request.url);
     const body =
       request.method === 'POST' ? await request.json().catch(() => ({})) : {};
 
     const returnUrl =
-      searchParams.get('returnUrl') ?? (body as Record<string, string>).returnUrl;
+      searchParams.get('returnUrl') ??
+      (body as Record<string, string>).returnUrl;
 
-    if (!clientId || !accessToken || !productId) {
+    if (!clientId || !productId) {
       return NextResponse.json(
         { error: 'NICE 환경변수가 부족합니다.' },
         { status: 500 }
@@ -34,14 +38,32 @@ async function handle(request: NextRequest) {
       );
     }
 
-    const niceAuthHandler = new NiceAuthHandler(clientId, accessToken, productId);
+    // 배포 환경에서 env/returnUrl이 실제로 어떻게 읽히는지 확인용(민감정보 마스킹)
+    logNiceEnvDebug({
+      scope: 'api/auth/reset-password/nice/token',
+      clientId,
+      productId,
+      accessToken,
+      returnUrl,
+      registeredReturnUrl,
+    });
+
+    const niceAuthHandler = new NiceAuthHandler(
+      clientId,
+      accessToken ?? '',
+      productId
+    );
     const nowDate = new Date();
     const reqDtim = niceAuthHandler.formatDate(nowDate);
     const currentTimestamp = Math.floor(nowDate.getTime() / 1000);
     const reqNo = uuidv4().replace(/-/g, '').substring(0, 30);
 
     const { siteCode, tokenVal, tokenVersionId } =
-      await niceAuthHandler.getEncryptionToken(reqDtim, currentTimestamp, reqNo);
+      await niceAuthHandler.getEncryptionToken(
+        reqDtim,
+        currentTimestamp,
+        reqNo
+      );
 
     const { key, iv, hmacKey } = niceAuthHandler.generateSymmetricKey(
       reqDtim,
@@ -106,5 +128,3 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   return handle(request);
 }
-
-

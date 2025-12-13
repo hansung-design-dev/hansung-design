@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { NiceAuthHandler } from '@/src/lib/NiceAuthHandler';
 import { saveNiceKey } from '@/src/lib/niceAuthKeyStore';
 import { v4 as uuidv4 } from 'uuid';
+import { getNiceAccessToken } from '@/src/lib/niceAccessToken';
+import { logNiceEnvDebug } from '@/src/lib/niceDebug';
 
 export const runtime = 'nodejs';
 
@@ -18,8 +20,9 @@ export async function POST(request: NextRequest) {
 const handleRequest = async (request: NextRequest) => {
   try {
     const clientId = process.env.NICE_CLIENT_ID;
-    const accessToken = process.env.NICE_ACCESS_TOKEN;
+    const accessToken = await getNiceAccessToken().catch(() => null);
     const productId = process.env.NICE_PRODUCT_ID;
+    const registeredReturnUrl = process.env.NICE_CONSOLE_RETURN_URL;
 
     const { searchParams } = new URL(request.url);
     const body =
@@ -39,7 +42,17 @@ const handleRequest = async (request: NextRequest) => {
       );
     }
 
-    if (!clientId || !accessToken || !productId) {
+    // 배포 환경에서 env/returnUrl이 실제로 어떻게 읽히는지 확인용(민감정보 마스킹)
+    logNiceEnvDebug({
+      scope: 'api/nice/crypto-token',
+      clientId,
+      productId,
+      accessToken,
+      returnUrl,
+      registeredReturnUrl,
+    });
+
+    if (!clientId || !productId) {
       return NextResponse.json(
         { success: false, error: 'NICE 환경변수가 부족합니다.' },
         { status: 500 }
@@ -50,7 +63,7 @@ const handleRequest = async (request: NextRequest) => {
     // NiceAuthHandler 기반으로 enc_data/token_version_id/integrity_value 를 직접 생성한다.
     const niceAuthHandler = new NiceAuthHandler(
       clientId,
-      accessToken,
+      accessToken ?? '',
       productId
     );
     const nowDate = new Date();

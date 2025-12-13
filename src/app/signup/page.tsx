@@ -348,7 +348,12 @@ export default function Signup() {
       });
 
       if (!response.ok) {
-        throw new Error('Nice 본인인증 준비에 실패했습니다.');
+        const body = await response.json().catch(() => ({}));
+        const msg =
+          typeof body?.error === 'string' && body.error.trim()
+            ? body.error.trim()
+            : 'Nice 본인인증 준비에 실패했습니다.';
+        throw new Error(msg);
       }
 
       const data = await response.json();

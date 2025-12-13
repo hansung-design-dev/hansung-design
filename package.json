@@ -6,6 +6,7 @@
     "dev": "next dev",
     "dev:https": "next dev --experimental-https",
     "dev:https:cert": "next dev --experimental-https --experimental-https-key ./certs/localhost-key.pem --experimental-https-cert ./certs/localhost.pem",
+    "prebuild": "node scripts/nice-build-env-check.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

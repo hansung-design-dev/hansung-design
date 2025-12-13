@@ -25,10 +25,10 @@ function isValidUrl(url: string | undefined): boolean {
   }
 }
 
-// 디버깅을 위한 로그
-console.log('🔍 Supabase URL:', supabaseUrl ? 'Set' : 'Not set');
-console.log('🔍 Supabase Key:', supabaseAnonKey ? 'Set' : 'Not set');
-console.log('🔍 Supabase Service Key:', supabaseServiceKey ? 'Set' : 'Not set');
+// // 디버깅을 위한 로그
+// console.log('🔍 Supabase URL:', supabaseUrl ? 'Set' : 'Not set');
+// console.log('🔍 Supabase Key:', supabaseAnonKey ? 'Set' : 'Not set');
+// console.log('🔍 Supabase Service Key:', supabaseServiceKey ? 'Set' : 'Not set');
 
 // 환경변수 검증
 if (!supabaseUrl || !isValidUrl(supabaseUrl)) {
