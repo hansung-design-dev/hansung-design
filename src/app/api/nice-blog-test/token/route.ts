@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { NiceAuthHandler } from '@/src/lib/NiceAuthHandler';
 import { saveNiceKey } from '@/src/lib/niceAuthKeyStore';
 import { v4 as uuidv4 } from 'uuid';
+import { getNiceAccessToken } from '@/src/lib/niceAccessToken';
+import { logNiceEnvDebug } from '@/src/lib/niceDebug';
 
 export const runtime = 'nodejs';
 
@@ -10,8 +12,17 @@ const COOKIE_PREFIX = 'nice_blog_test_key_';
 async function handle(request: NextRequest) {
   try {
     const clientId = process.env.NICE_CLIENT_ID;
-    const accessToken = process.env.NICE_ACCESS_TOKEN;
+    const clientSecret = process.env.NICE_CLIENT_SECRET;
+    let accessToken: string | null = null;
+    let accessTokenError: string | null = null;
+    try {
+      accessToken = await getNiceAccessToken();
+    } catch (e) {
+      accessTokenError = e instanceof Error ? e.message : String(e);
+      accessToken = null;
+    }
     const productId = process.env.NICE_PRODUCT_ID;
+    const registeredReturnUrl = process.env.NICE_CONSOLE_RETURN_URL;
 
     const { searchParams } = new URL(request.url);
     const body =
@@ -20,9 +31,24 @@ async function handle(request: NextRequest) {
     const returnUrl =
       searchParams.get('returnUrl') ?? (body as Record<string, string>).returnUrl;
 
-    if (!clientId || !accessToken || !productId) {
+    logNiceEnvDebug({
+      scope: 'api/nice-blog-test/token',
+      clientId,
+      clientSecret,
+      productId,
+      accessToken,
+      accessTokenError,
+      returnUrl,
+      registeredReturnUrl,
+    });
+
+    if (!clientId || !productId || !accessToken) {
+      const missing: string[] = [];
+      if (!clientId) missing.push('NICE_CLIENT_ID');
+      if (!productId) missing.push('NICE_PRODUCT_ID');
+      if (!accessToken) missing.push('NICE_ACCESS_TOKEN or NICE_CLIENT_SECRET');
       return NextResponse.json(
-        { error: 'NICE 환경변수가 부족합니다.' },
+        { error: 'NICE 환경변수가 부족합니다.', missing },
         { status: 500 }
       );
     }

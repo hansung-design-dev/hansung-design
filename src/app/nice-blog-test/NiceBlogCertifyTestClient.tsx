@@ -23,8 +23,15 @@ const api = {
   get: async <T,>(url: string, params: Record<string, string>) => {
     const sp = new URLSearchParams(params);
     const res = await fetch(`${url}?${sp.toString()}`, { method: 'GET' });
-    const data = (await res.json()) as T;
-    return { data };
+    const data = (await res.json()) as unknown;
+    if (!res.ok) {
+      const msg =
+        data && typeof data === 'object' && 'error' in data
+          ? String((data as Record<string, unknown>).error ?? '요청 실패')
+          : '요청 실패';
+      throw new Error(msg);
+    }
+    return { data: data as T };
   },
 };
 
@@ -56,6 +63,11 @@ export default function NiceBlogCertifyTestClient() {
 
       if (form && res.data) {
         const { enc_data, integrity_value, token_version_id } = res.data;
+        if (!enc_data || !integrity_value || !token_version_id) {
+          throw new Error(
+            'NICE token API 응답에 필요한 값이 누락되었습니다. (enc_data/token_version_id/integrity_value)'
+          );
+        }
 
         window.open('', 'nicePopup', option);
         form.target = 'nicePopup';

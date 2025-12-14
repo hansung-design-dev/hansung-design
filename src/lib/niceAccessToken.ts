@@ -7,6 +7,25 @@ type CachedToken = {
 
 let cached: CachedToken | null = null;
 
+function getNested(obj: unknown, path: string[]): unknown {
+  let cur: unknown = obj;
+  for (const key of path) {
+    if (!cur || typeof cur !== 'object') return undefined;
+    cur = (cur as Record<string, unknown>)[key];
+  }
+  return cur;
+}
+
+function asNonEmptyString(v: unknown): string | null {
+  if (typeof v !== 'string') return null;
+  const t = v.trim();
+  return t ? t : null;
+}
+
+function asFiniteNumber(v: unknown): number | null {
+  return typeof v === 'number' && Number.isFinite(v) ? v : null;
+}
+
 async function issueNiceAccessToken(params: {
   clientId: string;
   clientSecret: string;
@@ -30,10 +49,45 @@ async function issueNiceAccessToken(params: {
     data: dataBody,
   });
 
-  const token = response.data?.dataBody?.access_token as string | undefined;
-  const expiresIn = response.data?.dataBody?.expires_in as number | undefined;
+  // NICE 응답 포맷이 환경/계정/버전에 따라 달라질 수 있어, 가능한 위치를 모두 탐색한다.
+  // (민감정보 보호: 토큰 전체는 절대 로깅하지 않는다)
+  const data = response.data as unknown;
+  const tokenCandidates: Array<unknown> = [
+    getNested(data, ['dataBody', 'access_token']),
+    getNested(data, ['data_body', 'access_token']),
+    getNested(data, ['access_token']),
+    getNested(data, ['data', 'access_token']),
+    getNested(data, ['result', 'access_token']),
+  ];
+  const token =
+    tokenCandidates.map(asNonEmptyString).find(Boolean) ?? undefined;
+
+  const expiresCandidates: Array<unknown> = [
+    getNested(data, ['dataBody', 'expires_in']),
+    getNested(data, ['data_body', 'expires_in']),
+    getNested(data, ['expires_in']),
+    getNested(data, ['data', 'expires_in']),
+  ];
+  const expiresIn =
+    expiresCandidates.map(asFiniteNumber).find((v) => v != null) ?? undefined;
   if (!token) {
-    throw new Error('NICE access token 발급 응답에서 access_token을 찾을 수 없습니다.');
+    const keys =
+      data && typeof data === 'object' ? Object.keys(data as object) : [];
+    const header = getNested(data, ['dataHeader']);
+    const gwResult = asNonEmptyString(getNested(header, ['GW_RSLT_CD']));
+    const gwMessage = asNonEmptyString(getNested(header, ['GW_RSLT_MSG']));
+    console.error('[niceAccessToken] unexpected token response shape', {
+      topLevelKeys: keys,
+      hasDataBody: Boolean(getNested(data, ['dataBody'])),
+      hasAccessTokenSomewhere: tokenCandidates
+        .map(asNonEmptyString)
+        .some(Boolean),
+      gwResult: gwResult ?? null,
+      gwMessage: gwMessage ?? null,
+    });
+    throw new Error(
+      'NICE access token 발급 응답에서 access_token을 찾을 수 없습니다.'
+    );
   }
 
   // expires_in 이 없으면 보수적으로 50분 정도로 캐싱
@@ -48,8 +102,12 @@ async function issueNiceAccessToken(params: {
 export async function getNiceAccessToken(options?: { force?: boolean }) {
   const force = options?.force ?? false;
 
-  // env로 고정 토큰을 넣은 경우에도, 만료가 잦아 배포에서 깨질 수 있어
-  // 이 함수는 "자동 발급"을 우선으로 사용한다.
+  // 1) 운영에서 고정 토큰을 환경변수로 제공했다면(만료가 매우 길거나, 운영 정책상 고정)
+  //    그 값을 우선 사용한다. (단, force=true면 무시하고 재발급 시도)
+  const envToken = process.env.NICE_ACCESS_TOKEN?.trim();
+  if (!force && envToken) return envToken;
+
+  // 2) 그 외에는 캐시(자동 발급)를 사용한다.
   if (!force && cached && cached.expiresAt > Date.now()) {
     return cached.token;
   }
@@ -57,14 +115,11 @@ export async function getNiceAccessToken(options?: { force?: boolean }) {
   const clientId = process.env.NICE_CLIENT_ID?.trim();
   const clientSecret = process.env.NICE_CLIENT_SECRET?.trim();
   if (!clientId || !clientSecret) {
-    // fallback: 예전 방식(고정 토큰)이 있다면 그걸 반환
-    const envToken = process.env.NICE_ACCESS_TOKEN?.trim();
-    if (envToken) return envToken;
-    throw new Error('NICE_CLIENT_ID / NICE_CLIENT_SECRET 환경변수가 필요합니다.');
+    throw new Error(
+      'NICE_CLIENT_ID / NICE_CLIENT_SECRET 환경변수가 필요합니다.'
+    );
   }
 
   cached = await issueNiceAccessToken({ clientId, clientSecret });
   return cached.token;
 }
-
-
