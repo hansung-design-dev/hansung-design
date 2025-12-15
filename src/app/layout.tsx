@@ -7,6 +7,7 @@ import { CartProvider } from '../contexts/cartContext';
 import { AuthProvider } from '../contexts/authContext';
 import { ProfileProvider } from '../contexts/profileContext';
 import LiveCartConditional from '../components/livecart/LiveCartConditional';
+import EgressIpConsoleDebug from '../components/EgressIpConsoleDebug';
 
 // export const API = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_KEY}&autoload=false`;
 
@@ -30,6 +31,7 @@ export default function RootLayout({
             <CartProvider>
               <Nav />
               {children}
+              <EgressIpConsoleDebug />
               <LiveCartConditional />
               <ScrollToTopButton />
               <Footer />

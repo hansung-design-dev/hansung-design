@@ -2,6 +2,14 @@ interface PublicDesignDesktopSkeletonProps {
   variant?: 'list' | 'detail';
 }
 
+function ShimmerBlock({ className }: { className: string }) {
+  return (
+    <div className={`bg-gray-300 relative overflow-hidden ${className}`}>
+      <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
+    </div>
+  );
+}
+
 export default function PublicDesignDesktopSkeleton({
   variant = 'list',
 }: PublicDesignDesktopSkeletonProps) {
@@ -12,13 +20,9 @@ export default function PublicDesignDesktopSkeleton({
         <div className="relative overflow-hidden">
           <div className="grid grid-cols-3 gap-6 lg:h-[32rem] sm:h-[23rem]">
             {/* 큰 카드 스켈레톤 */}
-            <div className="col-span-2 lg:h-[32rem] sm:h-[23rem] bg-gray-300 rounded-[1rem] relative overflow-hidden">
-              <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
-            </div>
+            <ShimmerBlock className="col-span-2 lg:h-[32rem] sm:h-[23rem] rounded-[1rem]" />
             {/* 작은 카드 스켈레톤 */}
-            <div className="col-span-1 lg:h-[32rem] sm:h-[23rem] bg-gray-300 rounded-[1rem] relative overflow-hidden">
-              <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
-            </div>
+            <ShimmerBlock className="col-span-1 lg:h-[32rem] sm:h-[23rem] rounded-[1rem]" />
           </div>
         </div>
 
@@ -28,9 +32,7 @@ export default function PublicDesignDesktopSkeleton({
             key={index}
             className="relative w-full h-auto min-h-[200px] overflow-hidden"
           >
-            <div className="w-full h-[400px] bg-gray-300 rounded-2xl relative overflow-hidden">
-              <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
-            </div>
+            <ShimmerBlock className="w-full h-[400px] rounded-2xl" />
           </div>
         ))}
       </div>
@@ -39,72 +41,16 @@ export default function PublicDesignDesktopSkeleton({
 
   // 기본 리스트 페이지 스켈레톤
   return (
-    <div className="flex flex-col lg:gap-[12rem] md:gap-[12rem] sm:gap-[1rem]">
-      {/* 첫 번째 행: 큰 카드 + 작은 카드 */}
-      <div className="h-[400px]">
-        <div className="grid grid-cols-3 gap-6 lg:h-[32rem] sm:h-[23rem]">
-          {/* 큰 카드 스켈레톤 */}
-          <div className="col-span-2 lg:h-[32rem] sm:h-[23rem] bg-gray-300 rounded-[1rem] relative overflow-hidden">
-            <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
-          </div>
-          {/* 작은 카드 스켈레톤 */}
-          <div className="col-span-1 lg:h-[32rem] sm:h-[23rem] bg-gray-300 rounded-[1rem] relative overflow-hidden">
-            <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
+    <div className="grid lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-1 gap-8 justify-items-center">
+      {Array.from({ length: 9 }).map((_, idx) => (
+        <div key={idx} className="w-full max-w-[23rem]">
+          <ShimmerBlock className="w-full aspect-square rounded-2xl" />
+          <div className="pt-4 space-y-2">
+            <ShimmerBlock className="h-6 rounded w-2/3" />
+            <ShimmerBlock className="h-4 rounded w-1/3 bg-gray-200" />
           </div>
         </div>
-      </div>
-
-      {/* 두 번째 행: 작은 카드 2개 + 큰 카드 */}
-      <div className="h-[400px]">
-        <div className="grid grid-cols-3 gap-6 lg:h-[32rem] sm:h-[23rem]">
-          {/* 작은 카드들 스켈레톤 */}
-          <div className="col-span-1 grid grid-rows-2 gap-6 lg:h-[32rem] sm:h-[23rem]">
-            <div className="bg-gray-300 rounded-[1rem] relative overflow-hidden">
-              <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
-            </div>
-            <div className="bg-gray-300 rounded-[1rem] relative overflow-hidden">
-              <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
-            </div>
-          </div>
-          {/* 큰 카드 스켈레톤 */}
-          <div className="col-span-2 lg:h-[32rem] sm:h-[23rem] bg-gray-300 rounded-[1rem] relative overflow-hidden">
-            <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
-          </div>
-        </div>
-      </div>
-
-      {/* 세 번째 행: 큰 카드 + 작은 카드 */}
-      <div className="h-[400px]">
-        <div className="grid grid-cols-3 gap-6 lg:h-[32rem] sm:h-[23rem]">
-          {/* 큰 카드 스켈레톤 */}
-          <div className="col-span-2 lg:h-[32rem] sm:h-[23rem] bg-gray-300 rounded-[1rem] relative overflow-hidden">
-            <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
-          </div>
-          {/* 작은 카드 스켈레톤 */}
-          <div className="col-span-1 lg:h-[32rem] sm:h-[23rem] bg-gray-300 rounded-[1rem] relative overflow-hidden">
-            <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
-          </div>
-        </div>
-      </div>
-
-      {/* 네 번째 행: 작은 카드 2개 + 큰 카드 */}
-      <div className="h-[400px]">
-        <div className="grid grid-cols-3 gap-6 lg:h-[32rem] sm:h-[23rem]">
-          {/* 작은 카드들 스켈레톤 */}
-          <div className="col-span-1 grid grid-rows-2 gap-6 lg:h-[32rem] sm:h-[23rem]">
-            <div className="bg-gray-300 rounded-[1rem] relative overflow-hidden">
-              <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
-            </div>
-            <div className="bg-gray-300 rounded-[1rem] relative overflow-hidden">
-              <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
-            </div>
-          </div>
-          {/* 큰 카드 스켈레톤 */}
-          <div className="col-span-2 lg:h-[32rem] sm:h-[23rem] bg-gray-300 rounded-[1rem] relative overflow-hidden">
-            <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
-          </div>
-        </div>
-      </div>
+      ))}
     </div>
   );
 }

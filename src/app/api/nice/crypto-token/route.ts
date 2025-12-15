@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
 
 const handleRequest = async (request: NextRequest) => {
   try {
+    const wantsDebug = request.nextUrl.searchParams.get('debug') === '1';
     const clientId = process.env.NICE_CLIENT_ID;
     const clientSecret = process.env.NICE_CLIENT_SECRET;
     let accessToken: string | null = null;
@@ -169,6 +170,27 @@ const handleRequest = async (request: NextRequest) => {
       path: '/',
       maxAge: 15 * 60,
     });
+
+    if (isNiceDebugEnabled() && wantsDebug) {
+      const egress = await resolveEgressIpForDebug();
+      const debug = {
+        egress,
+        env: getNiceEnvSnapshot({
+          scope: 'api/nice/crypto-token:success',
+          clientId,
+          clientSecret,
+          productId,
+          accessToken,
+          accessTokenError,
+          returnUrl,
+          registeredReturnUrl,
+        }),
+      };
+      return NextResponse.json(
+        { success: true, data: tokenPayload, debug },
+        { status: 200 }
+      );
+    }
 
     return response;
   } catch (error) {

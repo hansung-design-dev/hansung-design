@@ -17,6 +17,7 @@ const COOKIE_PREFIX = 'nice_reset_pw_key_';
 async function handle(request: NextRequest) {
   // Used in debug output across try/catch scopes (build was failing when this was defined only inside try)
   const registeredReturnUrl = process.env.NICE_CONSOLE_RETURN_URL ?? null;
+  const wantsDebug = request.nextUrl.searchParams.get('debug') === '1';
 
   try {
     const clientId = process.env.NICE_CLIENT_ID;
@@ -149,6 +150,32 @@ async function handle(request: NextRequest) {
       path: '/',
       maxAge: 15 * 60,
     });
+
+    if (isNiceDebugEnabled() && wantsDebug) {
+      const egress = await resolveEgressIpForDebug();
+      const debug = {
+        egress,
+        env: getNiceEnvSnapshot({
+          scope: 'api/auth/reset-password/nice/token:success',
+          clientId,
+          clientSecret,
+          productId,
+          accessToken,
+          accessTokenError,
+          returnUrl,
+          registeredReturnUrl,
+        }),
+      };
+      return NextResponse.json(
+        {
+          enc_data: encData,
+          token_version_id: tokenVersionId,
+          integrity_value: integrityValue,
+          debug,
+        },
+        { status: 200 }
+      );
+    }
 
     return response;
   } catch (error: unknown) {

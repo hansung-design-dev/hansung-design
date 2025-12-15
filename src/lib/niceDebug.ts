@@ -37,7 +37,11 @@ export function isNiceDebugEnabled() {
   const flag = String(process.env.NICE_DEBUG ?? '')
     .trim()
     .toLowerCase();
-  return flag === '1' || flag === 'true' || flag === 'yes' || flag === 'on';
+  if (flag === '1' || flag === 'true' || flag === 'yes' || flag === 'on') {
+    return true;
+  }
+  // Local/dev convenience: allow debug toggles without env wiring.
+  return process.env.NODE_ENV === 'development';
 }
 
 /**

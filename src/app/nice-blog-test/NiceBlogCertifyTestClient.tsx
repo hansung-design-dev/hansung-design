@@ -40,6 +40,7 @@ export default function NiceBlogCertifyTestClient() {
   const route = useSearchParams();
   const reqNo = useMemo(() => route.get('reqNo') ?? '', [route]);
   const isCompleted = Boolean(reqNo);
+  const wantsDebug = useMemo(() => route.get('debug') === '1', [route]);
 
   // 휴대폰 인증 버튼 클릭시 실행되는 함수, NICE 표준창 호출
   const onClickCertify = useCallback(async () => {
@@ -59,6 +60,7 @@ export default function NiceBlogCertifyTestClient() {
       // token api가 요청 데이터를 암호화한 후 표준창 호출에 필요한 데이터를 응답해준다.
       const res = await api.get<NiceEncodeType>('/api/nice-blog-test/token', {
         returnUrl,
+        ...(wantsDebug ? { debug: '1' } : {}),
       });
 
       if (form && res.data) {
@@ -90,7 +92,7 @@ export default function NiceBlogCertifyTestClient() {
       const msg = e instanceof Error ? e.message : '알 수 없는 오류';
       setDebug(msg);
     }
-  }, []);
+  }, [wantsDebug]);
 
   return (
     <div className="mx-auto max-w-xl px-4 py-10">

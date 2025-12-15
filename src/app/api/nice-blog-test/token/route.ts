@@ -16,6 +16,7 @@ const COOKIE_PREFIX = 'nice_blog_test_key_';
 
 async function handle(request: NextRequest) {
   try {
+    const wantsDebug = request.nextUrl.searchParams.get('debug') === '1';
     const clientId = process.env.NICE_CLIENT_ID;
     const clientSecret = process.env.NICE_CLIENT_SECRET;
     let accessToken: string | null = null;
@@ -150,6 +151,33 @@ async function handle(request: NextRequest) {
       path: '/',
       maxAge: 15 * 60,
     });
+
+    if (isNiceDebugEnabled() && wantsDebug) {
+      const egress = await resolveEgressIpForDebug();
+      const debug = {
+        egress,
+        env: getNiceEnvSnapshot({
+          scope: 'api/nice-blog-test/token:success',
+          clientId,
+          clientSecret,
+          productId,
+          accessToken,
+          accessTokenError,
+          returnUrl,
+          registeredReturnUrl,
+        }),
+      };
+      // 기존 응답 스키마 유지 + debug만 추가
+      return NextResponse.json(
+        {
+          enc_data: encData,
+          token_version_id: tokenVersionId,
+          integrity_value: integrityValue,
+          debug,
+        },
+        { status: 200 }
+      );
+    }
 
     return response;
   } catch (error: unknown) {

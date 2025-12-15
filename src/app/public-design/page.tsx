@@ -1,14 +1,9 @@
 'use client';
 
-import ProjectRow, {
-  ProjectItem as BaseProjectItem,
-} from '@/src/components/projectRow';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import PublicDesignDesktopSkeleton from '@/src/components/skeleton/PublicDesignDesktopSkeleton';
-import PublicDesignSkeleton from '@/src/components/skeleton/PublicDesignSkeleton';
 import { useAdvancedNoticePopup } from '@/src/components/hooks/useAdvancedNoticePopup';
 import { HomepageContent } from '@/src/types/homepage-content';
 
@@ -23,8 +18,64 @@ interface ProjectItem {
   uniqueId: string;
 }
 
+function PublicDesignGridCard({
+  project,
+  index,
+}: {
+  project: ProjectItem;
+  index: number;
+}) {
+  const fallbackSrc = '/images/public-design/landing.png';
+  const [imgSrc, setImgSrc] = useState<string>(
+    project.listImages?.[0] || fallbackSrc
+  );
+
+  return (
+    <Link
+      data-project-index={index}
+      href={`/public-design/${project.categoryId}/${
+        project.displayOrder || 1
+      }?data=${encodeURIComponent(
+        JSON.stringify({
+          name: project.name,
+          description: project.description,
+          location: project.location,
+          images: project.listImages,
+          // 상세 상단 레이아웃은 기존 로직 유지 (리스트는 단조롭게)
+          layout: index % 2 === 0 ? 'largeFirst' : 'smallFirst',
+          imageCount: project.listImages.length,
+          listIndex: index,
+        })
+      )}`}
+      className="w-full max-w-[23rem] group"
+    >
+      <div className="relative w-full aspect-square overflow-hidden rounded-2xl bg-gray-100">
+        <Image
+          src={imgSrc}
+          alt={project.name}
+          fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 33vw, 33vw"
+          className="object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+          quality={85}
+          onError={() => setImgSrc(fallbackSrc)}
+        />
+      </div>
+
+      <div className="pt-4">
+        <div className="text-1.25 font-[700] text-black font-gmarket line-clamp-1">
+          {project.name}
+        </div>
+        {project.location && (
+          <div className="mt-1 text-0.875 text-gray-600 line-clamp-1">
+            {project.location}
+          </div>
+        )}
+      </div>
+    </Link>
+  );
+}
+
 export default function PublicDesignPage() {
-  const router = useRouter();
   const [projects, setProjects] = useState<ProjectItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [homepageContent, setHomepageContent] =
@@ -192,17 +243,6 @@ export default function PublicDesignPage() {
     fetchProjects();
   }, []);
 
-  // ProjectRow용 데이터로 변환하는 함수
-  const convertToProjectRowData = (project: ProjectItem): BaseProjectItem[] => {
-    return project.listImages.map((imageSrc) => ({
-      id: parseInt(project.id) || 0,
-      imageSrc: imageSrc,
-      title: project.name,
-      subtitle: project.location, // location을 subtitle로 전달
-      description: project.description,
-    }));
-  };
-
   // 표시할 프로젝트들 (무한스크롤용)
   const visibleProjects = projects.slice(0, visibleCount);
   console.log('Current state:', {
@@ -278,86 +318,13 @@ export default function PublicDesignPage() {
         {loading ? (
           <PublicDesignDesktopSkeleton />
         ) : (
-          <div className="flex flex-col lg:gap-[12rem] md:gap-[12rem] sm:gap-[1rem] ">
+          <div className="grid lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-1 gap-8 justify-items-center">
             {visibleProjects.map((project, idx) => (
-              <div
+              <PublicDesignGridCard
                 key={project.id}
-                className="h-[400px] cursor-pointer relative"
-                data-project-index={idx}
-              >
-                <Link
-                  href={`/public-design/${project.categoryId}/${
-                    project.displayOrder || 1
-                  }?data=${encodeURIComponent(
-                    JSON.stringify({
-                      name: project.name,
-                      description: project.description,
-                      location: project.location,
-                      images: project.listImages,
-                      layout: idx % 2 === 0 ? 'largeFirst' : 'smallFirst',
-                      imageCount: project.listImages.length,
-                      listIndex: idx,
-                    })
-                  )}`}
-                >
-                  <ProjectRow
-                    projects={convertToProjectRowData(project)}
-                    splitSmallSection={project.listImages.length >= 3}
-                    showTitleOnLargeOnly={true}
-                    rowIndex={idx}
-                  />
-                </Link>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-      {/* Mobile Version */}
-      <section className="px-4 pb-[12rem] lg:hidden md:hidden sm:hidden">
-        {loading ? (
-          <PublicDesignSkeleton />
-        ) : (
-          <div className="flex flex-col gap-8">
-            {visibleProjects.map((project, idx) => (
-              <div
-                className="w-full h-[400px] cursor-pointer"
-                key={project.id}
-                data-project-index={idx}
-                onClick={() =>
-                  router.push(
-                    `/public-design/${project.categoryId}/${
-                      project.displayOrder || 1
-                    }?data=${encodeURIComponent(
-                      JSON.stringify({
-                        name: project.name,
-                        description: project.description,
-                        location: project.location,
-                        images: project.listImages,
-                        layout: idx % 2 === 0 ? 'largeFirst' : 'smallFirst',
-                        imageCount: project.listImages.length,
-                        listIndex: idx,
-                      })
-                    )}`
-                  )
-                }
-              >
-                <div className="relative w-full h-full">
-                  <Image
-                    src={project.listImages[0]}
-                    alt={project.name}
-                    fill
-                    sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    className="object-cover rounded-[1rem]"
-                    quality={85}
-                  />
-                  <div className="absolute bottom-8 left-8 text-white">
-                    <div className="text-1.5 font-500 pb-2">{project.name}</div>
-                    <p className="text-1 font-normal mt-1">
-                      {project.description}
-                    </p>
-                  </div>
-                </div>
-              </div>
+                project={project}
+                index={idx}
+              />
             ))}
           </div>
         )}

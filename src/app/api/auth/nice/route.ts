@@ -134,6 +134,32 @@ export async function GET(request: NextRequest) {
       encDataSample: encData.slice(0, 20),
     });
 
+    // Optional debug: 성공 응답에 egress ip 포함 (기본 응답 형태는 유지)
+    const wantsDebug = request.nextUrl.searchParams.get('debug') === '1';
+    if (isNiceDebugEnabled() && wantsDebug) {
+      const egress = await resolveEgressIpForDebug();
+      const debug = {
+        egress,
+        env: getNiceEnvSnapshot({
+          scope: 'api/auth/nice:success',
+          clientId,
+          clientSecret,
+          productId,
+          accessToken,
+          accessTokenError,
+          returnUrl: absoluteReturnUrl,
+          registeredReturnUrl,
+        }),
+      };
+      return NextResponse.json({
+        tokenVersionId: tokenVersionId,
+        encData,
+        integrityValue,
+        requestno,
+        debug,
+      });
+    }
+
     return NextResponse.json({
       tokenVersionId: tokenVersionId,
       encData,
