@@ -1820,33 +1820,38 @@ export default function DisplayDetailPage({
         {/* 마포구 전용 filter */}
         {isMapoDistrict && (
           <div className="mb-8">
-            <div className="flex items-center gap-4 border-b border-gray-200 pb-4">
+            <div className="flex items-center gap-2 border-b border-gray-200/50 pb-4">
               <button
                 onClick={() => setMapoFilter('yeollip')}
-                className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-6 font-medium cursor-pointer ${
+                aria-pressed={mapoFilter === 'yeollip'}
+                className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-1 font-medium cursor-pointer ${
                   mapoFilter === 'yeollip'
-                    ? 'text-white bg-pink-500 rounded-full '
-                    : 'text-gray-600 hover:text-gray-800'
+                    ? 'text-black font-semibold underline underline-offset-4'
+                    : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
                 연립형
               </button>
+              <span className="text-gray-300 select-none">|</span>
               <button
                 onClick={() => setMapoFilter('jeodan')}
-                className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-6 font-medium cursor-pointer ${
+                aria-pressed={mapoFilter === 'jeodan'}
+                className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-1 font-medium cursor-pointer ${
                   mapoFilter === 'jeodan'
-                    ? 'text-white bg-pink-500 rounded-full '
-                    : 'text-gray-600 hover:text-gray-800'
+                    ? 'text-black font-semibold underline underline-offset-4'
+                    : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
                 저단형
               </button>
+              <span className="text-gray-300 select-none">|</span>
               <button
                 onClick={() => setMapoFilter('simin')}
-                className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-6 font-medium cursor-pointer ${
+                aria-pressed={mapoFilter === 'simin'}
+                className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-1 font-medium cursor-pointer ${
                   mapoFilter === 'simin'
-                    ? 'text-white bg-pink-500 rounded-full '
-                    : 'text-gray-600 hover:text-gray-800'
+                    ? 'text-black font-semibold underline underline-offset-4'
+                    : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
                 시민게시대
@@ -1873,7 +1878,7 @@ export default function DisplayDetailPage({
         {/* 송파구, 용산구 전용 filter */}
         {isSongpaOrYongsan && (
           <div className="mb-8">
-            <div className="flex items-center gap-4 border-b border-gray-200 pb-4">
+            <div className="flex items-center gap-2 border-b border-gray-200/50 pb-4">
               <button
                 onClick={() => {
                   console.log(
@@ -1884,14 +1889,16 @@ export default function DisplayDetailPage({
                   currentSetPanelTypeFilter('panel');
                   console.log('🔍 현수막게시대 탭 클릭 - 변경 후 요청됨');
                 }}
-                className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-6 font-medium cursor-pointer ${
+                aria-pressed={currentPanelTypeFilter === 'panel'}
+                className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-1 font-medium cursor-pointer ${
                   currentPanelTypeFilter === 'panel'
-                    ? 'text-white bg-black rounded-full '
-                    : 'text-gray-600 hover:text-gray-800'
+                    ? 'text-black font-semibold underline underline-offset-4'
+                    : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
                 현수막게시대
               </button>
+              <span className="text-gray-300 select-none">|</span>
               <button
                 onClick={() => {
                   console.log(
@@ -1902,10 +1909,11 @@ export default function DisplayDetailPage({
                   currentSetPanelTypeFilter('top_fixed');
                   console.log('🔍 상단광고 탭 클릭 - 변경 후 요청됨');
                 }}
-                className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-6 font-medium cursor-pointer ${
+                aria-pressed={currentPanelTypeFilter === 'top_fixed'}
+                className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-1 font-medium cursor-pointer ${
                   currentPanelTypeFilter === 'top_fixed'
-                    ? 'text-white bg-black rounded-full '
-                    : 'text-gray-600 hover:text-gray-800'
+                    ? 'text-black font-semibold underline underline-offset-4'
+                    : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
                 상단광고
@@ -1919,27 +1927,29 @@ export default function DisplayDetailPage({
         {showHalfPeriodTabs &&
           !(isMapoDistrict && mapoFilter === 'simin') &&
           !(isSongpaOrYongsan && currentPanelTypeFilter === 'top_fixed') && (
-            <HalfPeriodTabs
-              selectedPeriod={selectedHalfPeriod}
-              onPeriodChange={(newPeriod, year, month) => {
-                setSelectedHalfPeriod(newPeriod);
-                if (year !== undefined) setSelectedPeriodYear(year);
-                if (month !== undefined) setSelectedPeriodMonth(month);
-                // 선택된 기간이 변경되면 선택 상태 초기화
-                setSelectedIdsFirstHalf([]);
-                setSelectedIdsSecondHalf([]);
-              }}
-              districtName={districtObj?.name}
-              periodData={selectedDistrictPeriod || period}
-            />
+            <div className="mb-8 border-b border-gray-200/50 pb-4">
+              <HalfPeriodTabs
+                selectedPeriod={selectedHalfPeriod}
+                onPeriodChange={(newPeriod, year, month) => {
+                  setSelectedHalfPeriod(newPeriod);
+                  if (year !== undefined) setSelectedPeriodYear(year);
+                  if (month !== undefined) setSelectedPeriodMonth(month);
+                  // 선택된 기간이 변경되면 선택 상태 초기화
+                  setSelectedIdsFirstHalf([]);
+                  setSelectedIdsSecondHalf([]);
+                }}
+                districtName={districtObj?.name}
+                periodData={selectedDistrictPeriod || period}
+              />
+            </div>
           )}
         {/* View Type Selector */}
-        <div className="flex items-center gap-4 mb-8 border-b border-gray-200 pb-4">
+        <div className="flex items-center gap-4 mb-8 border-b border-gray-200/50 pb-4">
           <ViewTypeButton
-            Icon={MapPinIcon}
-            label="지도로 보기"
-            isActive={viewType === 'location'}
-            onClick={() => setViewType('location')}
+            Icon={ListIcon}
+            label="목록으로 보기"
+            isActive={viewType === 'list'}
+            onClick={() => setViewType('list')}
           />
           <ViewTypeButton
             Icon={GalleryIcon}
@@ -1948,10 +1958,10 @@ export default function DisplayDetailPage({
             onClick={() => setViewType('gallery')}
           />
           <ViewTypeButton
-            Icon={ListIcon}
-            label="목록으로 보기"
-            isActive={viewType === 'list'}
-            onClick={() => setViewType('list')}
+            Icon={MapPinIcon}
+            label="지도로 보기"
+            isActive={viewType === 'location'}
+            onClick={() => setViewType('location')}
           />
           {/* 시민게시대 탭에서는 가이드라인보기와 AI파일다운로드 버튼 숨김 */}
           {!(isMapoDistrict && mapoFilter === 'simin') && (
@@ -2005,7 +2015,12 @@ export default function DisplayDetailPage({
         </div>
 
         {/* Content Section */}
-        <motion.div initial="initial" animate="animate" variants={fadeInUp}>
+        <motion.div
+          initial="initial"
+          animate="animate"
+          variants={fadeInUp}
+          className="border-t border-gray-100 pt-6"
+        >
           {billboards.length === 0 ? (
             // 준비 중인 경우 메시지 표시
             <div className="flex flex-col items-center justify-center py-20">

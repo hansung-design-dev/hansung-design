@@ -27,6 +27,107 @@ function safeLen(value: string | null | undefined) {
   return typeof value === 'string' ? value.length : 0;
 }
 
+function asNonEmptyString(v: unknown): string | null {
+  if (typeof v !== 'string') return null;
+  const t = v.trim();
+  return t ? t : null;
+}
+
+export function isNiceDebugEnabled() {
+  const flag = String(process.env.NICE_DEBUG ?? '')
+    .trim()
+    .toLowerCase();
+  return flag === '1' || flag === 'true' || flag === 'yes' || flag === 'on';
+}
+
+/**
+ * Best-effort: resolve the server's outbound (egress) IP.
+ * NOTE: On serverless, this can change between invocations/regions.
+ */
+export async function resolveEgressIpForDebug() {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), 4000);
+  try {
+    const res = await fetch('https://api.ipify.org?format=json', {
+      method: 'GET',
+      signal: controller.signal,
+      cache: 'no-store',
+    });
+    const data = (await res.json().catch(() => null)) as {
+      ip?: unknown;
+    } | null;
+    const ip = asNonEmptyString(data?.ip) ?? null;
+    return {
+      ok: res.ok && Boolean(ip),
+      status: res.status,
+      ip,
+    };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return {
+      ok: false,
+      status: null as number | null,
+      ip: null as string | null,
+      error: msg,
+    };
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+export function getNiceEnvSnapshot(input: NiceEnvDebugInput) {
+  const scope = input.scope?.trim() ? input.scope.trim() : 'unknown-scope';
+  const clientId = input.clientId ?? null;
+  const clientSecret = input.clientSecret ?? null;
+  const productId = input.productId ?? null;
+  const accessToken = input.accessToken ?? null;
+  const accessTokenError = input.accessTokenError ?? null;
+  const returnUrl = input.returnUrl ?? null;
+  const registeredReturnUrl = input.registeredReturnUrl ?? null;
+  const tokenInfo = maskTokenPrefix(accessToken, 6);
+
+  return {
+    scope,
+    nodeEnv: process.env.NODE_ENV ?? null,
+    vercel: Boolean(process.env.VERCEL),
+    vercelRegion: process.env.VERCEL_REGION ?? null,
+    runtime: 'nodejs',
+    clientId: {
+      exists: Boolean(clientId && String(clientId).trim()),
+      prefix4: clientId ? String(clientId).trim().slice(0, 4) : null,
+      length: safeLen(clientId ? String(clientId) : ''),
+    },
+    clientSecret: {
+      exists: Boolean(clientSecret && String(clientSecret).trim()),
+      length: safeLen(clientSecret ? String(clientSecret) : ''),
+    },
+    productId: {
+      exists: Boolean(productId && String(productId).trim()),
+      prefix4: productId ? String(productId).trim().slice(0, 4) : null,
+      length: safeLen(productId ? String(productId) : ''),
+    },
+    accessToken: {
+      exists: tokenInfo.exists,
+      prefix6: tokenInfo.prefix,
+      length: tokenInfo.length,
+    },
+    accessTokenError: accessTokenError
+      ? String(accessTokenError).slice(0, 300)
+      : null,
+    returnUrl:
+      returnUrl != null
+        ? {
+            length: returnUrl.length,
+            startsWithHttps: returnUrl.startsWith('https://'),
+          }
+        : null,
+    registeredReturnUrl:
+      registeredReturnUrl != null
+        ? { length: registeredReturnUrl.length }
+        : null,
+  };
+}
+
 function diffStringsLiteral(a: string, b: string, limit = 12) {
   const diffs: Array<{
     index: number;
@@ -95,7 +196,9 @@ export function logNiceEnvDebug(input: NiceEnvDebugInput) {
       prefix6: tokenInfo.prefix,
       length: tokenInfo.length,
     },
-    accessTokenError: accessTokenError ? String(accessTokenError).slice(0, 300) : null,
+    accessTokenError: accessTokenError
+      ? String(accessTokenError).slice(0, 300)
+      : null,
   });
 
   if (returnUrl != null) {
@@ -108,11 +211,14 @@ export function logNiceEnvDebug(input: NiceEnvDebugInput) {
   }
 
   if (registeredReturnUrl != null) {
-    console.log(`[NICE env-check:${scope}] registeredReturnUrl (NICE console)`, {
-      registeredReturnUrl,
-      length: registeredReturnUrl.length,
-      json: JSON.stringify(registeredReturnUrl),
-    });
+    console.log(
+      `[NICE env-check:${scope}] registeredReturnUrl (NICE console)`,
+      {
+        registeredReturnUrl,
+        length: registeredReturnUrl.length,
+        json: JSON.stringify(registeredReturnUrl),
+      }
+    );
   }
 
   if (returnUrl != null && registeredReturnUrl != null) {
@@ -128,10 +234,7 @@ export function logNiceEnvDebug(input: NiceEnvDebugInput) {
     console.log(`[NICE env-check:${scope}] returnUrl comparison skipped`, {
       hasReturnUrl: returnUrl != null,
       hasRegisteredReturnUrl: registeredReturnUrl != null,
-      hint:
-        'Set NICE_CONSOLE_RETURN_URL env to enable exact-match comparison (recommended for debugging).',
+      hint: 'Set NICE_CONSOLE_RETURN_URL env to enable exact-match comparison (recommended for debugging).',
     });
   }
 }
-
-

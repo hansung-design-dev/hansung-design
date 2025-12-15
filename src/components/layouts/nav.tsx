@@ -32,11 +32,11 @@ interface NavProps {
 }
 
 const menuItems: MenuItem[] = [
-  { name: '회사소개', href: '/about' },
-  { name: '공공디자인', href: '/public-design' },
-  { name: '디지털미디어', href: '/digital-media' },
   { name: 'LED전자게시대', href: '/led-display' },
   { name: '현수막게시대', href: '/banner-display' },
+  { name: '공공디자인', href: '/public-design' },
+  { name: '디지털미디어', href: '/digital-media' },
+  { name: '회사소개', href: '/about' },
 ];
 
 const IconButton = ({
@@ -384,13 +384,6 @@ const Nav = ({ className = 'sm:px-[1.5rem]', isbg, TextInvert }: NavProps) => {
                     {item.name}
                   </Link>
                 ))}
-                <Link
-                  href="/about"
-                  className="text-1.25 text-gray-600"
-                  onClick={() => setIsOpen(false)}
-                >
-                  회사소개
-                </Link>
               </nav>
             </div>
             {/* 오른쪽 1/3 오버레이 + X버튼 */}

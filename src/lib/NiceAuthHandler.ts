@@ -1,6 +1,7 @@
 import axios from 'axios';
 import crypto from 'crypto';
 import iconv from 'iconv-lite';
+import { isNiceDebugEnabled, resolveEgressIpForDebug } from './niceDebug';
 
 export class NiceAuthHandler {
   private clientId: string;
@@ -49,6 +50,61 @@ export class NiceAuthHandler {
     reqNo: string
   ) {
     try {
+      const debugEnabled = isNiceDebugEnabled();
+      // #region agent log (hypothesis A/B/C)
+      fetch(
+        'http://127.0.0.1:7242/ingest/de0826ba-4e91-43eb-b001-5614ace69b75',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'src/lib/NiceAuthHandler.ts:getEncryptionToken:entry',
+            message: 'getEncryptionToken entry',
+            data: {
+              debugEnabled,
+              clientIdPrefix4: String(this.clientId || '').slice(0, 4),
+              clientIdLen: String(this.clientId || '').length,
+              productIdPrefix4: String(this.productId || '').slice(0, 4),
+              productIdLen: String(this.productId || '').length,
+              reqNoLen: String(reqNo || '').length,
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'pre-fix',
+            hypothesisId: 'A/B/C',
+          }),
+        }
+      ).catch(() => {});
+      // #endregion
+
+      if (debugEnabled) {
+        const ip = await resolveEgressIpForDebug();
+        // #region agent log (hypothesis A/C)
+        fetch(
+          'http://127.0.0.1:7242/ingest/de0826ba-4e91-43eb-b001-5614ace69b75',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              location:
+                'src/lib/NiceAuthHandler.ts:getEncryptionToken:egress-ip',
+              message: 'resolved egress ip (best-effort)',
+              data: {
+                ok: ip.ok,
+                status: ip.status,
+                ip: ip.ip,
+                hasError: 'error' in ip,
+              },
+              timestamp: Date.now(),
+              sessionId: 'debug-session',
+              runId: 'pre-fix',
+              hypothesisId: 'A/C',
+            }),
+          }
+        ).catch(() => {});
+        // #endregion
+      }
+
       const authorization = Buffer.from(
         `${this.accessToken}:${currentTimestamp}:${this.clientId}`
       ).toString('base64');
@@ -79,6 +135,28 @@ export class NiceAuthHandler {
         rspCd: resData?.dataBody?.rsp_cd,
         hasTokenVersionId: Boolean(resData?.dataBody?.token_version_id),
       });
+      // #region agent log (hypothesis A/B)
+      fetch(
+        'http://127.0.0.1:7242/ingest/de0826ba-4e91-43eb-b001-5614ace69b75',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'src/lib/NiceAuthHandler.ts:getEncryptionToken:response',
+            message: 'crypto token response summary',
+            data: {
+              gwResult: resData?.dataHeader?.GW_RSLT_CD ?? null,
+              rspCd: resData?.dataBody?.rsp_cd ?? null,
+              hasTokenVersionId: Boolean(resData?.dataBody?.token_version_id),
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'pre-fix',
+            hypothesisId: 'A/B',
+          }),
+        }
+      ).catch(() => {});
+      // #endregion
       if (
         resData?.dataHeader?.GW_RSLT_CD !== '1200' ||
         resData?.dataBody?.rsp_cd !== 'P000'
@@ -109,6 +187,29 @@ export class NiceAuthHandler {
           statusText,
           data,
         });
+        // #region agent log (hypothesis A/B/C)
+        fetch(
+          'http://127.0.0.1:7242/ingest/de0826ba-4e91-43eb-b001-5614ace69b75',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              location:
+                'src/lib/NiceAuthHandler.ts:getEncryptionToken:axios-error',
+              message: 'axios error from NICE crypto token',
+              data: {
+                status: status ?? null,
+                statusText: statusText ?? null,
+                hasData: Boolean(data),
+              },
+              timestamp: Date.now(),
+              sessionId: 'debug-session',
+              runId: 'pre-fix',
+              hypothesisId: 'A/B/C',
+            }),
+          }
+        ).catch(() => {});
+        // #endregion
         throw new Error(
           `Failed to get encryption token (axios): ${status ?? ''} ${
             statusText ?? ''
@@ -116,6 +217,32 @@ export class NiceAuthHandler {
         );
       }
       console.error('[NiceAuthHandler] crypto token error', error);
+      // #region agent log (hypothesis A/B/C)
+      fetch(
+        'http://127.0.0.1:7242/ingest/de0826ba-4e91-43eb-b001-5614ace69b75',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location:
+              'src/lib/NiceAuthHandler.ts:getEncryptionToken:unknown-error',
+            message: 'non-axios error in getEncryptionToken',
+            data: {
+              isError: error instanceof Error,
+              name: error instanceof Error ? error.name : null,
+              message:
+                error instanceof Error
+                  ? String(error.message).slice(0, 240)
+                  : null,
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'pre-fix',
+            hypothesisId: 'A/B/C',
+          }),
+        }
+      ).catch(() => {});
+      // #endregion
       throw new Error(
         error instanceof Error
           ? error.message

@@ -64,6 +64,10 @@ export default function DistrictCard({
 }: DistrictCardProps) {
   const isGangbuk = district.code === 'gangbuk';
   const isMaintenance = district.panel_status === 'maintenance';
+  const cardMinHeightClass = isLEDDisplay
+    ? 'lg:min-h-[32rem] md:min-h-[28rem]'
+    : 'lg:min-h-[28rem] md:min-h-[24rem]';
+  const imageHeightClass = isLEDDisplay ? 'h-[12rem]' : '';
   // 기간 데이터를 URL 파라미터로 전달 - 디버깅 로그 추가
   const periodParams = district.period
     ? `?period=${encodeURIComponent(JSON.stringify(district.period))}`
@@ -109,8 +113,10 @@ export default function DistrictCard({
   if (isMaintenance) {
     return (
       <div className="flex items-center justify-center lg:pb-4">
-        <div className="w-full lg:h-[40rem] md:h-[32rem] bg-gray-4 rounded-[1.25rem] flex flex-col overflow-hidden opacity-60 cursor-not-allowed">
-          <div className="flex-1 flex flex-col lg:gap-[0.75rem] md:gap-[1.5rem] p-6 lg:py-8">
+        <div
+          className={`w-full ${cardMinHeightClass} bg-gray-4 rounded-[1.25rem] flex flex-col overflow-hidden opacity-60 cursor-not-allowed`}
+        >
+          <div className="flex flex-col lg:gap-[0.75rem] md:gap-[1.5rem] p-6 lg:py-6">
             <div className="flex flex-col lg:gap-[1.5rem] md:gap-[1.5rem] sm:gap-4">
               <div className="flex gap-[1rem]">
                 <Image
@@ -148,7 +154,7 @@ export default function DistrictCard({
           </div>
           {/* LED 전자게시대에서만 하단 이미지 표시 */}
           {isLEDDisplay && (
-            <div className="relative w-full h-[14rem]">
+            <div className={`relative w-full ${imageHeightClass}`}>
               <Image
                 src={district.src}
                 alt={district.name}
@@ -168,11 +174,11 @@ export default function DistrictCard({
     <div className="flex items-center justify-center lg:pb-4">
       <Link
         href={href}
-        className="w-full lg:h-[40rem] md:h-[32rem] bg-gray-4 rounded-[1.25rem] flex flex-col overflow-hidden"
+        className={`w-full ${cardMinHeightClass} bg-gray-4 rounded-[1.25rem] flex flex-col overflow-hidden`}
         {...(isGangbuk &&
           !isLEDDisplay && { target: '_blank', rel: 'noopener noreferrer' })}
       >
-        <div className="flex-1 flex flex-col lg:gap-[0.75rem] md:gap-[1.5rem] p-6 lg:py-8">
+        <div className="flex flex-col lg:gap-[0.75rem] md:gap-[1.5rem] p-6 lg:py-6">
           <div className="flex flex-col lg:gap-[1.5rem] md:gap-[1.5rem] sm:gap-4">
             <div className="flex gap-[1rem]">
               <Image
@@ -187,7 +193,7 @@ export default function DistrictCard({
                 {district.name}
               </div>
             </div>
-            <div className="flex flex-col sm:gap-4 lg:gap-6 md:gap-4 sm:gap-2 pt-4">
+            <div className="flex flex-col sm:gap-4 lg:gap-5 md:gap-4 sm:gap-2 pt-3">
               <div className="text-gray-14">
                 <DistrictInfo
                   period={district.period}
@@ -205,7 +211,7 @@ export default function DistrictCard({
         </div>
         {/* LED 전자게시대에서만 하단 이미지 표시 */}
         {isLEDDisplay && (
-          <div className="relative w-full h-[14rem]">
+          <div className={`relative w-full ${imageHeightClass}`}>
             <Image
               src={district.src}
               alt={district.name}

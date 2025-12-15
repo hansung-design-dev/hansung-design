@@ -54,6 +54,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         ip,
+        vercel: Boolean(process.env.VERCEL),
+        vercelRegion: process.env.VERCEL_REGION ?? null,
         note: 'This is the server egress IP at call time (may change on serverless).',
       },
       { status: 200 }

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Nav from '../../../components/layouts/nav';
 import { useAuth } from '@/src/contexts/authContext';
-import { useProfile } from '@/src/contexts/profileContext';
+import { useProfile, type UserProfile } from '@/src/contexts/profileContext';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/src/components/button/button';
 import Image from 'next/image';
@@ -11,24 +11,6 @@ import MypageContainer from '@/src/components/mypageContainer';
 import UserProfileModal from '@/src/components/modal/UserProfileModal';
 import UserInfoSkeleton from '@/src/components/skeleton/UserInfoSkeleton';
 import { normalizePhone } from '@/src/lib/utils';
-
-interface UserProfile {
-  id: string;
-  profile_title: string;
-  company_name?: string;
-  business_registration_file?: string;
-  phone: string;
-  email: string;
-  contact_person_name: string;
-  fax_number?: string;
-  is_default: boolean;
-  is_public_institution?: boolean;
-  is_company?: boolean;
-  is_approved?: boolean;
-  is_phone_verified?: boolean;
-  phone_verified_at?: string | null;
-  created_at: string;
-}
 
 // 알림 모달 컴포넌트
 function AlertModal({

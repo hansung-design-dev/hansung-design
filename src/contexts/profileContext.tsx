@@ -9,7 +9,7 @@ import React, {
 } from 'react';
 import { useAuth } from './authContext';
 
-interface UserProfile {
+export interface UserProfile {
   id: string;
   user_auth_id: string;
   profile_title: string;

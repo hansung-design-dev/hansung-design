@@ -937,10 +937,10 @@ export default function LEDDisplayDetailPage({
         {/* View Type Selector */}
         <div className="flex items-center gap-4 mb-8 border-b border-gray-200 pb-4">
           <ViewTypeButton
-            Icon={MapPinIcon}
-            label="지도로 보기"
-            isActive={viewType === 'location'}
-            onClick={() => setViewType('location')}
+            Icon={ListIcon}
+            label="목록으로 보기"
+            isActive={viewType === 'list'}
+            onClick={() => setViewType('list')}
           />
           <ViewTypeButton
             Icon={GalleryIcon}
@@ -949,10 +949,10 @@ export default function LEDDisplayDetailPage({
             onClick={() => setViewType('gallery')}
           />
           <ViewTypeButton
-            Icon={ListIcon}
-            label="목록으로 보기"
-            isActive={viewType === 'list'}
-            onClick={() => setViewType('list')}
+            Icon={MapPinIcon}
+            label="지도로 보기"
+            isActive={viewType === 'location'}
+            onClick={() => setViewType('location')}
           />
           <div className="ml-auto">
             <DropdownMenu

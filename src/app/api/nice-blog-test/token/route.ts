@@ -3,7 +3,12 @@ import { NiceAuthHandler } from '@/src/lib/NiceAuthHandler';
 import { saveNiceKey } from '@/src/lib/niceAuthKeyStore';
 import { v4 as uuidv4 } from 'uuid';
 import { getNiceAccessToken } from '@/src/lib/niceAccessToken';
-import { logNiceEnvDebug } from '@/src/lib/niceDebug';
+import {
+  getNiceEnvSnapshot,
+  isNiceDebugEnabled,
+  logNiceEnvDebug,
+  resolveEgressIpForDebug,
+} from '@/src/lib/niceDebug';
 
 export const runtime = 'nodejs';
 
@@ -29,7 +34,8 @@ async function handle(request: NextRequest) {
       request.method === 'POST' ? await request.json().catch(() => ({})) : {};
 
     const returnUrl =
-      searchParams.get('returnUrl') ?? (body as Record<string, string>).returnUrl;
+      searchParams.get('returnUrl') ??
+      (body as Record<string, string>).returnUrl;
 
     logNiceEnvDebug({
       scope: 'api/nice-blog-test/token',
@@ -60,14 +66,22 @@ async function handle(request: NextRequest) {
       );
     }
 
-    const niceAuthHandler = new NiceAuthHandler(clientId, accessToken, productId);
+    const niceAuthHandler = new NiceAuthHandler(
+      clientId,
+      accessToken,
+      productId
+    );
     const nowDate = new Date();
     const reqDtim = niceAuthHandler.formatDate(nowDate);
     const currentTimestamp = Math.floor(nowDate.getTime() / 1000);
     const reqNo = uuidv4().replace(/-/g, '').substring(0, 30);
 
     const { siteCode, tokenVal, tokenVersionId } =
-      await niceAuthHandler.getEncryptionToken(reqDtim, currentTimestamp, reqNo);
+      await niceAuthHandler.getEncryptionToken(
+        reqDtim,
+        currentTimestamp,
+        reqNo
+      );
 
     const { key, iv, hmacKey } = niceAuthHandler.generateSymmetricKey(
       reqDtim,
@@ -120,6 +134,73 @@ async function handle(request: NextRequest) {
     return response;
   } catch (error: unknown) {
     console.error('[nice-blog-test token] error', error);
+    // 배포 디버깅용: NICE_DEBUG=1일 때만 egress ip + env snapshot을 응답에 포함(민감정보 제외)
+    if (isNiceDebugEnabled()) {
+      const egress = await resolveEgressIpForDebug();
+      const clientId = process.env.NICE_CLIENT_ID ?? null;
+      const clientSecret = process.env.NICE_CLIENT_SECRET ?? null;
+      const productId = process.env.NICE_PRODUCT_ID ?? null;
+      let accessToken: string | null = null;
+      let accessTokenError: string | null = null;
+      try {
+        accessToken = await getNiceAccessToken();
+      } catch (e) {
+        accessTokenError = e instanceof Error ? e.message : String(e);
+        accessToken = null;
+      }
+      const { searchParams } = new URL(request.url);
+      const returnUrl = searchParams.get('returnUrl');
+      const registeredReturnUrl = process.env.NICE_CONSOLE_RETURN_URL ?? null;
+
+      const debug = {
+        egress,
+        env: getNiceEnvSnapshot({
+          scope: 'api/nice-blog-test/token:error',
+          clientId,
+          clientSecret,
+          productId,
+          accessToken,
+          accessTokenError,
+          returnUrl,
+          registeredReturnUrl,
+        }),
+      };
+
+      // #region agent log (hypothesis A/B/C)
+      fetch(
+        'http://127.0.0.1:7242/ingest/de0826ba-4e91-43eb-b001-5614ace69b75',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'src/app/api/nice-blog-test/token/route.ts:catch',
+            message: 'token route failed (with debug snapshot)',
+            data: {
+              egressOk: debug.egress.ok,
+              egressIp: debug.egress.ip,
+              gwErrorMsg:
+                error instanceof Error
+                  ? String(error.message).slice(0, 180)
+                  : null,
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'pre-fix',
+            hypothesisId: 'A/B/C',
+          }),
+        }
+      ).catch(() => {});
+      // #endregion
+
+      return NextResponse.json(
+        {
+          error:
+            error instanceof Error ? error.message : 'Internal Server Error',
+          debug,
+        },
+        { status: 500 }
+      );
+    }
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : 'Internal Server Error',
@@ -136,5 +217,3 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   return handle(request);
 }
-
-
