@@ -60,6 +60,26 @@ async function handle(request: NextRequest) {
     }
 
     if (!returnUrl) {
+      if (isNiceDebugEnabled()) {
+        const egress = await resolveEgressIpForDebug();
+        const debug = {
+          egress,
+          env: getNiceEnvSnapshot({
+            scope: 'api/nice-blog-test/token:missing-returnUrl',
+            clientId,
+            clientSecret,
+            productId,
+            accessToken,
+            accessTokenError,
+            returnUrl: null,
+            registeredReturnUrl,
+          }),
+        };
+        return NextResponse.json(
+          { error: 'returnUrl이 누락되었습니다.', debug },
+          { status: 400 }
+        );
+      }
       return NextResponse.json(
         { error: 'returnUrl이 누락되었습니다.' },
         { status: 400 }
