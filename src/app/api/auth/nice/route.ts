@@ -3,7 +3,12 @@ import { NiceAuthHandler } from '@/src/lib/NiceAuthHandler';
 import { v4 as uuidv4 } from 'uuid';
 import { saveNiceKey } from '@/src/lib/niceAuthKeyStore';
 import { getNiceAccessToken } from '@/src/lib/niceAccessToken';
-import { logNiceEnvDebug } from '@/src/lib/niceDebug';
+import {
+  getNiceEnvSnapshot,
+  isNiceDebugEnabled,
+  logNiceEnvDebug,
+  resolveEgressIpForDebug,
+} from '@/src/lib/niceDebug';
 
 export const runtime = 'nodejs';
 
@@ -48,6 +53,26 @@ export async function GET(request: NextRequest) {
       if (!accessToken) {
         // accessToken은 (1) NICE_CLIENT_ID+NICE_CLIENT_SECRET 또는 (2) NICE_ACCESS_TOKEN 으로 확보 가능
         missing.push('NICE_ACCESS_TOKEN or NICE_CLIENT_SECRET');
+      }
+      if (isNiceDebugEnabled()) {
+        const egress = await resolveEgressIpForDebug();
+        const debug = {
+          egress,
+          env: getNiceEnvSnapshot({
+            scope: 'api/auth/nice:missing-env',
+            clientId,
+            clientSecret,
+            productId,
+            accessToken,
+            accessTokenError,
+            returnUrl: absoluteReturnUrl || null,
+            registeredReturnUrl,
+          }),
+        };
+        return NextResponse.json(
+          { error: 'NICE 환경변수가 부족합니다.', missing, debug },
+          { status: 500 }
+        );
       }
       return NextResponse.json(
         { error: 'NICE 환경변수가 부족합니다.', missing },
@@ -117,6 +142,43 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: unknown) {
     console.error('[Nice auth] error', error);
+    if (isNiceDebugEnabled()) {
+      const egress = await resolveEgressIpForDebug();
+      const clientId = process.env.NICE_CLIENT_ID ?? null;
+      const clientSecret = process.env.NICE_CLIENT_SECRET ?? null;
+      const productId = process.env.NICE_PRODUCT_ID ?? null;
+      let accessToken: string | null = null;
+      let accessTokenError: string | null = null;
+      try {
+        accessToken = await getNiceAccessToken();
+      } catch (e) {
+        accessTokenError = e instanceof Error ? e.message : String(e);
+        accessToken = null;
+      }
+      const returnUrl = process.env.NICE_RETURN_URL ?? null;
+      const registeredReturnUrl = process.env.NICE_CONSOLE_RETURN_URL ?? null;
+      const debug = {
+        egress,
+        env: getNiceEnvSnapshot({
+          scope: 'api/auth/nice:error',
+          clientId,
+          clientSecret,
+          productId,
+          accessToken,
+          accessTokenError,
+          returnUrl,
+          registeredReturnUrl,
+        }),
+      };
+      return NextResponse.json(
+        {
+          error:
+            error instanceof Error ? error.message : 'Internal Server Error',
+          debug,
+        },
+        { status: 500 }
+      );
+    }
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : 'Internal Server Error',

@@ -1632,10 +1632,10 @@ export default function DisplayDetailPage({
       <div className="flex flex-col" style={{ height: '700px' }}>
         <div className="flex justify-end mb-4">
           <button
-            className={`px-4 py-2 rounded-lg text-0.875 font-medium border ${
+            className={`px-4 py-2 rounded-lg text-0.875 font-medium border border-solid ${
               showAllPins
                 ? 'bg-black text-white border-black'
-                : 'bg-gray-100 text-gray-700 border-gray-300'
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
             }`}
             onClick={handleToggleAllPins}
           >
@@ -1820,14 +1820,14 @@ export default function DisplayDetailPage({
         {/* 마포구 전용 filter */}
         {isMapoDistrict && (
           <div className="mb-8">
-            <div className="flex items-center gap-2 border-b border-gray-200/50 pb-4">
+            <div className="flex items-center gap-3 border-b border-gray-200/50 pb-4">
               <button
                 onClick={() => setMapoFilter('yeollip')}
                 aria-pressed={mapoFilter === 'yeollip'}
-                className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-1 font-medium cursor-pointer ${
+                className={`lg:text-1 md:text-0.875 transition-colors duration-100 py-2.5 px-6 font-medium cursor-pointer rounded-full border-solid border-2 ${
                   mapoFilter === 'yeollip'
-                    ? 'text-black font-semibold underline underline-offset-4'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-pink-500 text-white border-pink-500'
+                    : 'bg-transparent text-pink-500 border-pink-500 hover:bg-pink-50'
                 }`}
               >
                 연립형
@@ -1836,10 +1836,10 @@ export default function DisplayDetailPage({
               <button
                 onClick={() => setMapoFilter('jeodan')}
                 aria-pressed={mapoFilter === 'jeodan'}
-                className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-1 font-medium cursor-pointer ${
+                className={`lg:text-1 md:text-0.875 transition-colors duration-100 py-2.5 px-6 font-medium cursor-pointer rounded-full border-solid border-2 ${
                   mapoFilter === 'jeodan'
-                    ? 'text-black font-semibold underline underline-offset-4'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-pink-500 text-white border-pink-500 border-solid border-2'
+                    : 'bg-transparent text-pink-500 border-pink-500 hover:bg-pink-50  border-solid border-2'
                 }`}
               >
                 저단형
@@ -1848,15 +1848,16 @@ export default function DisplayDetailPage({
               <button
                 onClick={() => setMapoFilter('simin')}
                 aria-pressed={mapoFilter === 'simin'}
-                className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-1 font-medium cursor-pointer ${
+                className={`lg:text-1 md:text-0.875 transition-colors duration-100 py-2.5 px-6 font-medium cursor-pointer rounded-full border-solid border-2 ${
                   mapoFilter === 'simin'
-                    ? 'text-black font-semibold underline underline-offset-4'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-pink-500 text-white border-pink-500 border-solid border-2'
+                    : 'bg-transparent text-pink-500 border-pink-500 hover:bg-pink-50  border-solid border-2'
                 }`}
               >
                 시민게시대
               </button>
             </div>
+            <div className="h-[1.5px] w-full bg-gray-200/90" />
           </div>
         )}
         {mapoFilter === 'simin' && (
@@ -1890,10 +1891,10 @@ export default function DisplayDetailPage({
                   console.log('🔍 현수막게시대 탭 클릭 - 변경 후 요청됨');
                 }}
                 aria-pressed={currentPanelTypeFilter === 'panel'}
-                className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-1 font-medium cursor-pointer ${
+                className={`lg:text-1 md:text-0.875 transition-colors duration-100 py-2.5 px-6 font-medium cursor-pointer rounded-full border-solid border-2 ${
                   currentPanelTypeFilter === 'panel'
-                    ? 'text-black font-semibold underline underline-offset-4'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-black text-white border-black'
+                    : 'bg-transparent text-gray-800 border-gray-300 hover:bg-gray-100'
                 }`}
               >
                 현수막게시대
@@ -1910,15 +1911,16 @@ export default function DisplayDetailPage({
                   console.log('🔍 상단광고 탭 클릭 - 변경 후 요청됨');
                 }}
                 aria-pressed={currentPanelTypeFilter === 'top_fixed'}
-                className={`lg:text-1 md:text-0.75 transition-colors duration-100 py-2 px-1 font-medium cursor-pointer ${
+                className={`lg:text-1 md:text-0.875 transition-colors duration-100 py-2.5 px-6 font-medium cursor-pointer rounded-full border-solid border-2 ${
                   currentPanelTypeFilter === 'top_fixed'
-                    ? 'text-black font-semibold underline underline-offset-4'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-black text-white border-black'
+                    : 'bg-transparent text-gray-800 border-gray-300 hover:bg-gray-100'
                 }`}
               >
                 상단광고
               </button>
             </div>
+            <div className="h-[1.5px] w-full bg-gray-200/90" />
           </div>
         )}
         {/* 상하반기 탭 - 개별 구 페이지에서만 표시하거나, 전체보기에서 특정 구를 선택했을 때만 표시 */}
@@ -1944,76 +1946,78 @@ export default function DisplayDetailPage({
             </div>
           )}
         {/* View Type Selector */}
-        <div className="flex items-center gap-4 mb-8 border-b border-gray-200/50 pb-4">
-          <ViewTypeButton
-            Icon={ListIcon}
-            label="목록으로 보기"
-            isActive={viewType === 'list'}
-            onClick={() => setViewType('list')}
-          />
-          <ViewTypeButton
-            Icon={GalleryIcon}
-            label="갤러리로 보기"
-            isActive={viewType === 'gallery'}
-            onClick={() => setViewType('gallery')}
-          />
-          <ViewTypeButton
-            Icon={MapPinIcon}
-            label="지도로 보기"
-            isActive={viewType === 'location'}
-            onClick={() => setViewType('location')}
-          />
-          {/* 시민게시대 탭에서는 가이드라인보기와 AI파일다운로드 버튼 숨김 */}
-          {!(isMapoDistrict && mapoFilter === 'simin') && (
-            <>
-              <GuidelineButton
-                district={district}
-                guidelineType="banner"
-                className="flex items-center gap-2 px-4 py-2 hover:cursor-pointer text-gray-800 hover:text-black border-b-2 border-transparent "
-              >
-                <DocumentIcon className="w-7 h-6 text-gray-600" />
-                <span className="hidden md:inline text-0.875 text-gray-600 font-500">
-                  가이드라인 보기
-                </span>
-              </GuidelineButton>
-              <button
-                onClick={handleAIFileDownload}
-                disabled={aiDownloadLoading}
-                className="flex items-center gap-2 px-4 py-2 hover:cursor-pointer text-gray-800 hover:text-black border-b-2 border-transparent hover:border-black disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {aiDownloadLoading ? (
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-600"></div>
-                ) : (
-                  <svg
-                    className="w-7 h-6 text-gray-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
-                )}
-                <span className="hidden md:inline text-0.875">
-                  {aiDownloadLoading ? '다운로드 중...' : 'ai파일 다운로드'}
-                </span>
-              </button>
-            </>
-          )}
-          <div className="ml-auto">
-            <DropdownMenu
-              data={dropdownOptions}
-              onChange={handleDropdownChange}
-              title={selectedOption?.option || districtObj?.name || ''}
+        <div>
+          <div className="flex items-center gap-4 mb-8 border-b border-gray-200/50 ">
+            <ViewTypeButton
+              Icon={ListIcon}
+              label="목록으로 보기"
+              isActive={viewType === 'list'}
+              onClick={() => setViewType('list')}
             />
+            <ViewTypeButton
+              Icon={GalleryIcon}
+              label="갤러리로 보기"
+              isActive={viewType === 'gallery'}
+              onClick={() => setViewType('gallery')}
+            />
+            <ViewTypeButton
+              Icon={MapPinIcon}
+              label="지도로 보기"
+              isActive={viewType === 'location'}
+              onClick={() => setViewType('location')}
+            />
+            {/* 시민게시대 탭에서는 가이드라인보기와 AI파일다운로드 버튼 숨김 */}
+            {!(isMapoDistrict && mapoFilter === 'simin') && (
+              <>
+                <GuidelineButton
+                  district={district}
+                  guidelineType="banner"
+                  className="flex items-center gap-2 px-4 py-2 hover:cursor-pointer text-gray-800 hover:text-black border-b-2 border-transparent "
+                >
+                  <DocumentIcon className="w-7 h-6 text-gray-600" />
+                  <span className="hidden md:inline text-0.875 text-gray-600 font-500">
+                    가이드라인 보기
+                  </span>
+                </GuidelineButton>
+                <button
+                  onClick={handleAIFileDownload}
+                  disabled={aiDownloadLoading}
+                  className="flex items-center gap-2 px-4 py-2 hover:cursor-pointer text-gray-800 hover:text-black border-b-2 border-transparent hover:border-black disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {aiDownloadLoading ? (
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-600"></div>
+                  ) : (
+                    <svg
+                      className="w-7 h-6 text-gray-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                  )}
+                  <span className="hidden md:inline text-0.875">
+                    {aiDownloadLoading ? '다운로드 중...' : 'ai파일 다운로드'}
+                  </span>
+                </button>
+              </>
+            )}
+            <div className="ml-auto">
+              <DropdownMenu
+                data={dropdownOptions}
+                onChange={handleDropdownChange}
+                title={selectedOption?.option || districtObj?.name || ''}
+              />
+            </div>
           </div>
+          <div className="h-[2px] w-full bg-gray-200/90" />
         </div>
-
         {/* Content Section */}
         <motion.div
           initial="initial"

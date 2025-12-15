@@ -67,7 +67,10 @@ export default function DistrictCard({
   const cardMinHeightClass = isLEDDisplay
     ? 'lg:min-h-[32rem] md:min-h-[28rem]'
     : 'lg:min-h-[28rem] md:min-h-[24rem]';
-  const imageHeightClass = isLEDDisplay ? 'h-[12rem]' : '';
+  // LED 구별카드는 하단 이미지를 남는 높이만큼 채워서 '빈 공백'이 안 생기게 처리
+  const imageContainerClass = isLEDDisplay
+    ? 'flex-1 min-h-[12rem] lg:min-h-[14rem]'
+    : '';
   // 기간 데이터를 URL 파라미터로 전달 - 디버깅 로그 추가
   const periodParams = district.period
     ? `?period=${encodeURIComponent(JSON.stringify(district.period))}`
@@ -154,7 +157,7 @@ export default function DistrictCard({
           </div>
           {/* LED 전자게시대에서만 하단 이미지 표시 */}
           {isLEDDisplay && (
-            <div className={`relative w-full ${imageHeightClass}`}>
+            <div className={`relative w-full ${imageContainerClass}`}>
               <Image
                 src={district.src}
                 alt={district.name}
@@ -211,7 +214,7 @@ export default function DistrictCard({
         </div>
         {/* LED 전자게시대에서만 하단 이미지 표시 */}
         {isLEDDisplay && (
-          <div className={`relative w-full ${imageHeightClass}`}>
+          <div className={`relative w-full ${imageContainerClass}`}>
             <Image
               src={district.src}
               alt={district.name}

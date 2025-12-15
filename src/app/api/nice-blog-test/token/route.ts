@@ -186,32 +186,6 @@ async function handle(request: NextRequest) {
         }),
       };
 
-      // #region agent log (hypothesis A/B/C)
-      fetch(
-        'http://127.0.0.1:7242/ingest/de0826ba-4e91-43eb-b001-5614ace69b75',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            location: 'src/app/api/nice-blog-test/token/route.ts:catch',
-            message: 'token route failed (with debug snapshot)',
-            data: {
-              egressOk: debug.egress.ok,
-              egressIp: debug.egress.ip,
-              gwErrorMsg:
-                error instanceof Error
-                  ? String(error.message).slice(0, 180)
-                  : null,
-            },
-            timestamp: Date.now(),
-            sessionId: 'debug-session',
-            runId: 'pre-fix',
-            hypothesisId: 'A/B/C',
-          }),
-        }
-      ).catch(() => {});
-      // #endregion
-
       return NextResponse.json(
         {
           error:

@@ -728,10 +728,10 @@ export default function LEDDisplayDetailPage({
       <div className="flex flex-col" style={{ height: '700px' }}>
         <div className="flex justify-end mb-4">
           <button
-            className={`px-4 py-2 rounded-lg text-0.875 font-medium border ${
+            className={`px-4 py-2 rounded-lg text-0.875 font-medium border border-solid ${
               showAllPins
                 ? 'bg-black text-white border-black'
-                : 'bg-white text-gray-700 border-gray-300'
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
             }`}
             onClick={() =>
               setShowAllPins((prev) => {
@@ -935,7 +935,7 @@ export default function LEDDisplayDetailPage({
           />
         )} */}
         {/* View Type Selector */}
-        <div className="flex items-center gap-4 mb-8 border-b border-gray-200 pb-4">
+        <div className="flex items-center gap-4 mb-8 border-b border-gray-200">
           <ViewTypeButton
             Icon={ListIcon}
             label="목록으로 보기"
@@ -965,6 +965,7 @@ export default function LEDDisplayDetailPage({
             />
           </div>
         </div>
+        <div className="h-[1.5px] w-full bg-gray-200/90 mb-4" />
         {/* Content Section */}
         <motion.div initial="initial" animate="animate" variants={fadeInUp}>
           {billboards.length === 0 ? (

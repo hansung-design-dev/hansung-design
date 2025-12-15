@@ -79,102 +79,104 @@ const LEDItemList: React.FC<LEDItemTableProps> = ({
   return (
     <>
       {/* ✅ 데스크탑/tablet 이상: table로 표시 */}
-      <div className="overflow-x-auto hidden lg:block">
-        <table className="w-full  border-collapse border-t border-gray-200 text-0.875">
-          {showHeader && (
-            <thead>
-              <tr className="border-b border-gray-200 h-[3rem] text-gray-500 font-medium">
-                {showCheckbox && <th className="w-10"></th>}
-                <th className="text-center pl-4">No</th>
-                <th className="text-left pl-4">게시대 명</th>
-                <th className="text-center pl-4">규격(px)</th>
-                <th className="text-center pl-4">최대배너수</th>
-                <th className="text-center pl-4">기간</th>
-                <th className="text-center pl-4">가격</th>
-                <th className="text-center pl-4">상태</th>
-                {renderAction && <th className="text-center">작업</th>}
-              </tr>
-            </thead>
-          )}
-          <tbody>
-            {paginatedItems.map((item, index) => {
-              const displayStatus =
-                statusDisplayMap[item.status] || item.status;
-              // const categoryDisplay = getLEDPanelTypeLabel(item.panel_type);
-              const uniqueKey = item.id || `led-${index}`; // fallback key
-              return (
-                <tr
-                  key={uniqueKey}
-                  className={`border-b border-gray-200 h-[3.5rem] hover:bg-gray-50 ${
-                    enableRowClick ? 'cursor-pointer' : ''
-                  }`}
-                  onClick={(e) => handleRowClick(e, item.id)}
-                >
-                  {showCheckbox && (
-                    <td
-                      className="text-center px-4"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(item.id)}
-                        onChange={(e) =>
-                          onItemSelect?.(item.id, e.target.checked)
-                        }
-                      />
-                    </td>
-                  )}
-                  <td className="text-center pl-4">
-                    {item.panel_code || item.id}
-                  </td>
-                  <td className="pl-4">
-                    <div
-                      className="font-medium text-black cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleItemClick(item.id);
-                      }}
-                    >
-                      {item.nickname && <span> {item.nickname} - </span>}
-                      {item.address ? <span>{item.address}</span> : <></>}
-                      {item.maintenance_notes && (
-                        <span className="text-pink-500 text-sm ml-2">
-                          ({item.maintenance_notes})
-                        </span>
-                      )}
-                      {item.neighborhood && (
-                        <span className="ml-1 text-gray-500">
-                          {item.neighborhood}
-                        </span>
-                      )}
-                    </div>
-                  </td>
-
-                  <td className="text-center pl-4">
-                    {item.slot_width_px} x {item.slot_height_px}
-                  </td>
-                  <td className="text-center pl-4">{item.max_banners}</td>
-                  <td className="text-center pl-4">1달</td>
-                  <td className="text-center pl-4">
-                    {item.total_price
-                      ? `${item.total_price.toLocaleString()}원`
-                      : '-'}
-                  </td>
-                  <td
-                    className={`text-center pl-4 ${getStatusClass(
-                      displayStatus
-                    )}`}
-                  >
-                    {displayStatus}
-                  </td>
-                  {renderAction && (
-                    <td className="text-center">{renderAction(item)}</td>
-                  )}
+      <div className="hidden lg:block overflow-x-auto">
+        <div className="min-w-full border border-gray-200/70 rounded-xl overflow-hidden bg-white [&_th]:border-l [&_td]:border-l [&_th]:border-gray-200/50 [&_td]:border-gray-200/50 [&_th:first-child]:border-l-0 [&_td:first-child]:border-l-0">
+          <table className="w-full border-collapse text-0.875">
+            {showHeader && (
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200/70 h-[3rem] text-gray-600 font-medium">
+                  {showCheckbox && <th className="w-10"></th>}
+                  <th className="text-center pl-4">No</th>
+                  <th className="text-left pl-4">게시대 명</th>
+                  <th className="text-center pl-4">규격(px)</th>
+                  <th className="text-center pl-4">최대배너수</th>
+                  <th className="text-center pl-4">기간</th>
+                  <th className="text-center pl-4">가격</th>
+                  <th className="text-center pl-4">상태</th>
+                  {renderAction && <th className="text-center">작업</th>}
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              </thead>
+            )}
+            <tbody>
+              {paginatedItems.map((item, index) => {
+                const displayStatus =
+                  statusDisplayMap[item.status] || item.status;
+                // const categoryDisplay = getLEDPanelTypeLabel(item.panel_type);
+                const uniqueKey = item.id || `led-${index}`; // fallback key
+                return (
+                  <tr
+                    key={uniqueKey}
+                    className={`border-b border-gray-200/70 h-[3.5rem] hover:bg-gray-50 ${
+                      enableRowClick ? 'cursor-pointer' : ''
+                    }`}
+                    onClick={(e) => handleRowClick(e, item.id)}
+                  >
+                    {showCheckbox && (
+                      <td
+                        className="text-center px-4"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(item.id)}
+                          onChange={(e) =>
+                            onItemSelect?.(item.id, e.target.checked)
+                          }
+                        />
+                      </td>
+                    )}
+                    <td className="text-center pl-4">
+                      {item.panel_code || item.id}
+                    </td>
+                    <td className="pl-4">
+                      <div
+                        className="font-medium text-black cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleItemClick(item.id);
+                        }}
+                      >
+                        {item.nickname && <span> {item.nickname} - </span>}
+                        {item.address ? <span>{item.address}</span> : <></>}
+                        {item.maintenance_notes && (
+                          <span className="text-pink-500 text-sm ml-2">
+                            ({item.maintenance_notes})
+                          </span>
+                        )}
+                        {item.neighborhood && (
+                          <span className="ml-1 text-gray-500">
+                            {item.neighborhood}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+
+                    <td className="text-center pl-4">
+                      {item.slot_width_px} x {item.slot_height_px}
+                    </td>
+                    <td className="text-center pl-4">{item.max_banners}</td>
+                    <td className="text-center pl-4">1달</td>
+                    <td className="text-center pl-4">
+                      {item.total_price
+                        ? `${item.total_price.toLocaleString()}원`
+                        : '-'}
+                    </td>
+                    <td
+                      className={`text-center pl-4 ${getStatusClass(
+                        displayStatus
+                      )}`}
+                    >
+                      {displayStatus}
+                    </td>
+                    {renderAction && (
+                      <td className="text-center">{renderAction(item)}</td>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* ✅ 모바일: 카드 형태로 표시 */}

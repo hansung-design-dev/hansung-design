@@ -3,13 +3,21 @@ import { NiceAuthHandler } from '@/src/lib/NiceAuthHandler';
 import { saveNiceKey } from '@/src/lib/niceAuthKeyStore';
 import { v4 as uuidv4 } from 'uuid';
 import { getNiceAccessToken } from '@/src/lib/niceAccessToken';
-import { logNiceEnvDebug } from '@/src/lib/niceDebug';
+import {
+  getNiceEnvSnapshot,
+  isNiceDebugEnabled,
+  logNiceEnvDebug,
+  resolveEgressIpForDebug,
+} from '@/src/lib/niceDebug';
 
 export const runtime = 'nodejs';
 
 const COOKIE_PREFIX = 'nice_reset_pw_key_';
 
 async function handle(request: NextRequest) {
+  // Used in debug output across try/catch scopes (build was failing when this was defined only inside try)
+  const registeredReturnUrl = process.env.NICE_CONSOLE_RETURN_URL ?? null;
+
   try {
     const clientId = process.env.NICE_CLIENT_ID;
     const clientSecret = process.env.NICE_CLIENT_SECRET;
@@ -22,7 +30,6 @@ async function handle(request: NextRequest) {
       accessToken = null;
     }
     const productId = process.env.NICE_PRODUCT_ID;
-    const registeredReturnUrl = process.env.NICE_CONSOLE_RETURN_URL;
 
     const { searchParams } = new URL(request.url);
     const body =
@@ -44,6 +51,26 @@ async function handle(request: NextRequest) {
     }
 
     if (!returnUrl) {
+      if (isNiceDebugEnabled()) {
+        const egress = await resolveEgressIpForDebug();
+        const debug = {
+          egress,
+          env: getNiceEnvSnapshot({
+            scope: 'api/auth/reset-password/nice/token:missing-returnUrl',
+            clientId,
+            clientSecret,
+            productId,
+            accessToken,
+            accessTokenError,
+            returnUrl: null,
+            registeredReturnUrl,
+          }),
+        };
+        return NextResponse.json(
+          { error: 'returnUrl이 누락되었습니다.', debug },
+          { status: 400 }
+        );
+      }
       return NextResponse.json(
         { error: 'returnUrl이 누락되었습니다.' },
         { status: 400 }
@@ -126,6 +153,40 @@ async function handle(request: NextRequest) {
     return response;
   } catch (error: unknown) {
     console.error('[reset-password nice token] error', error);
+    if (isNiceDebugEnabled()) {
+      const egress = await resolveEgressIpForDebug();
+      const clientId = process.env.NICE_CLIENT_ID ?? null;
+      const clientSecret = process.env.NICE_CLIENT_SECRET ?? null;
+      const productId = process.env.NICE_PRODUCT_ID ?? null;
+      let accessToken: string | null = null;
+      let accessTokenError: string | null = null;
+      try {
+        accessToken = await getNiceAccessToken();
+      } catch (e) {
+        accessTokenError = e instanceof Error ? e.message : String(e);
+        accessToken = null;
+      }
+      const debug = {
+        egress,
+        env: getNiceEnvSnapshot({
+          scope: 'api/auth/reset-password/nice/token:error',
+          clientId,
+          clientSecret,
+          productId,
+          accessToken,
+          accessTokenError,
+          registeredReturnUrl,
+        }),
+      };
+      return NextResponse.json(
+        {
+          error:
+            error instanceof Error ? error.message : 'Internal Server Error',
+          debug,
+        },
+        { status: 500 }
+      );
+    }
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : 'Internal Server Error',

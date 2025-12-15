@@ -3,7 +3,12 @@ import { NiceAuthHandler } from '@/src/lib/NiceAuthHandler';
 import { saveNiceKey } from '@/src/lib/niceAuthKeyStore';
 import { v4 as uuidv4 } from 'uuid';
 import { getNiceAccessToken } from '@/src/lib/niceAccessToken';
-import { logNiceEnvDebug } from '@/src/lib/niceDebug';
+import {
+  getNiceEnvSnapshot,
+  isNiceDebugEnabled,
+  logNiceEnvDebug,
+  resolveEgressIpForDebug,
+} from '@/src/lib/niceDebug';
 
 export const runtime = 'nodejs';
 
@@ -44,6 +49,30 @@ const handleRequest = async (request: NextRequest) => {
     void cancelUrl;
 
     if (!returnUrl) {
+      if (isNiceDebugEnabled()) {
+        const egress = await resolveEgressIpForDebug();
+        const debug = {
+          egress,
+          env: getNiceEnvSnapshot({
+            scope: 'api/nice/crypto-token:missing-returnUrl',
+            clientId,
+            clientSecret,
+            productId,
+            accessToken,
+            accessTokenError,
+            returnUrl: null,
+            registeredReturnUrl,
+          }),
+        };
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'returnUrl을 포함하여 호출해주세요.',
+            debug,
+          },
+          { status: 400 }
+        );
+      }
       return NextResponse.json(
         { success: false, error: 'returnUrl을 포함하여 호출해주세요.' },
         { status: 400 }
@@ -146,6 +175,35 @@ const handleRequest = async (request: NextRequest) => {
     console.error('Nice crypto token API error:', error);
     const message =
       error instanceof Error ? error.message : '토큰 발급에 실패했습니다.';
+    if (isNiceDebugEnabled()) {
+      const egress = await resolveEgressIpForDebug();
+      const clientId = process.env.NICE_CLIENT_ID ?? null;
+      const clientSecret = process.env.NICE_CLIENT_SECRET ?? null;
+      const productId = process.env.NICE_PRODUCT_ID ?? null;
+      let accessToken: string | null = null;
+      let accessTokenError: string | null = null;
+      try {
+        accessToken = await getNiceAccessToken();
+      } catch (e) {
+        accessTokenError = e instanceof Error ? e.message : String(e);
+        accessToken = null;
+      }
+      const debug = {
+        egress,
+        env: getNiceEnvSnapshot({
+          scope: 'api/nice/crypto-token:error',
+          clientId,
+          clientSecret,
+          productId,
+          accessToken,
+          accessTokenError,
+        }),
+      };
+      return NextResponse.json(
+        { success: false, error: message, debug },
+        { status: 500 }
+      );
+    }
     return NextResponse.json(
       { success: false, error: message },
       { status: 500 }
