@@ -84,7 +84,9 @@ export class NiceAuthHandler {
         resData?.dataBody?.rsp_cd !== 'P000'
       ) {
         throw new Error(
-          `Failed to request crypto token: GW_RSLT_CD=${resData?.dataHeader?.GW_RSLT_CD ?? 'null'} rsp_cd=${resData?.dataBody?.rsp_cd ?? 'null'}`
+          `Failed to request crypto token: GW_RSLT_CD=${
+            resData?.dataHeader?.GW_RSLT_CD ?? 'null'
+          } rsp_cd=${resData?.dataBody?.rsp_cd ?? 'null'}`
         );
       }
       return {
@@ -108,12 +110,16 @@ export class NiceAuthHandler {
           data,
         });
         throw new Error(
-          `Failed to get encryption token (axios): ${status ?? ''} ${statusText ?? ''} ${data ? JSON.stringify(data) : ''}`.trim()
+          `Failed to get encryption token (axios): ${status ?? ''} ${
+            statusText ?? ''
+          } ${data ? JSON.stringify(data) : ''}`.trim()
         );
       }
       console.error('[NiceAuthHandler] crypto token error', error);
       throw new Error(
-        error instanceof Error ? error.message : 'Failed to get encryption token'
+        error instanceof Error
+          ? error.message
+          : 'Failed to get encryption token'
       );
     }
   }

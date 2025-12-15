@@ -3,7 +3,12 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 
 function isEnabled() {
-  return String(process.env.DEBUG_EGRESS_IP ?? '').trim().toLowerCase() === 'true';
+  const flag = String(process.env.DEBUG_EGRESS_IP ?? '')
+    .trim()
+    .toLowerCase();
+  if (flag === 'true') return true;
+  // Convenience: allow in local dev without exposing in prod by default.
+  return process.env.NODE_ENV === 'development';
 }
 
 function isAuthorized(request: NextRequest) {
@@ -29,12 +34,14 @@ export async function GET(request: NextRequest) {
       signal: controller.signal,
       cache: 'no-store',
     });
-    const data = (await res.json().catch(() => null)) as
-      | { ip?: string }
-      | null;
+    const data = (await res.json().catch(() => null)) as { ip?: string } | null;
 
     const ip = typeof data?.ip === 'string' ? data.ip : null;
-    console.log('[debug/egress-ip] resolved', { ip, ok: res.ok, status: res.status });
+    console.log('[debug/egress-ip] resolved', {
+      ip,
+      ok: res.ok,
+      status: res.status,
+    });
 
     if (!res.ok || !ip) {
       return NextResponse.json(
@@ -59,5 +66,3 @@ export async function GET(request: NextRequest) {
     clearTimeout(t);
   }
 }
-
-

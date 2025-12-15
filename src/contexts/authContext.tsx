@@ -164,18 +164,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const data = await response.json();
 
       if (data.success) {
-        setUser(data.user);
-        sessionStorage.setItem('user', JSON.stringify(data.user));
-        // 사용자 ID를 쿠키에 저장 (API에서 사용)
-        document.cookie = `user_id=${data.user.id}; path=/; max-age=86400`; // 24시간
-        // user_auth_id를 localStorage에 저장 (장바구니/결제 페이지에서 사용)
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(USER_AUTH_ID_KEY, data.user.id);
-          console.log(
-            '🔍 [AuthContext] 회원가입 시 user_auth_id를 localStorage에 저장:',
-            data.user.id
-          );
-        }
+        // NOTE: 회원가입 성공 후 자동 로그인하지 않는다.
+        // UX: "회원가입 완료" 안내 후 사용자가 로그인 페이지에서 로그인하도록 유도.
         return { success: true };
       } else {
         return { success: false, error: data.error };

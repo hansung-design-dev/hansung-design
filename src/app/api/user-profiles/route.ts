@@ -28,20 +28,103 @@ export async function GET(request: NextRequest) {
     });
 
     // 전체 프로필 조회
-    const { data: profiles, error } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('user_auth_id', userId)
-      .order('is_default', { ascending: false })
-      .order('created_at', { ascending: false });
+    // NOTE: 소프트 삭제(archived_at) 지원. 아직 DB 마이그레이션이 적용되지 않은 환경에서는
+    // archived_at 컬럼이 없어도 동작하도록 fallback 처리한다.
+    const runProfilesQuery = async (useArchivedFilter: boolean) => {
+      let q = supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('user_auth_id', userId)
+        .order('is_default', { ascending: false })
+        .order('created_at', { ascending: false });
+      if (useArchivedFilter) q = q.is('archived_at', null);
+      return await q;
+    };
+
+    let profilesQuery = await runProfilesQuery(true);
+    if (
+      profilesQuery.error &&
+      profilesQuery.error.message?.includes('archived_at')
+    ) {
+      // column missing -> rerun without filter
+      profilesQuery = await runProfilesQuery(false);
+    }
+    const profiles = profilesQuery.data;
+    const error = profilesQuery.error;
 
     // is_default = true인 프로필만 별도로 조회 (확인용)
-    const { data: defaultProfile, error: defaultProfileError } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('user_auth_id', userId)
-      .eq('is_default', true)
-      .maybeSingle();
+    const runDefaultProfileQuery = async (useArchivedFilter: boolean) => {
+      let q = supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('user_auth_id', userId)
+        .eq('is_default', true);
+      if (useArchivedFilter) q = q.is('archived_at', null);
+      return await q.maybeSingle();
+    };
+
+    let defaultProfileQuery = await runDefaultProfileQuery(true);
+    if (
+      defaultProfileQuery.error &&
+      defaultProfileQuery.error.message?.includes('archived_at')
+    ) {
+      defaultProfileQuery = await runDefaultProfileQuery(false);
+    }
+    const defaultProfile = defaultProfileQuery.data;
+    const defaultProfileError = defaultProfileQuery.error;
+
+    // 기본프로필 인증완료 처리:
+    // - 회원가입 인증은 user_auth.is_verified에 기록되지만, 기본프로필(user_profiles)의 is_phone_verified와는 별개다.
+    // - UX 일관성을 위해: 기본프로필이고, user_auth.is_verified=true이며, 휴대폰 번호가 같으면
+    //   응답에서 해당 프로필을 "인증완료"로 보정한다. (DB backfill은 별도 배치/마이그레이션으로 처리 가능)
+    let userAuthPhone: string | null = null;
+    let userAuthIsVerified = false;
+    let userAuthVerifiedAt: string | null = null;
+    try {
+      const userAuthQuery = await supabase
+        .from('user_auth')
+        .select('phone,is_verified,updated_at')
+        .eq('id', userId)
+        .maybeSingle();
+      if (userAuthQuery.data) {
+        userAuthPhone =
+          typeof userAuthQuery.data.phone === 'string'
+            ? userAuthQuery.data.phone
+            : null;
+        userAuthIsVerified = Boolean(userAuthQuery.data.is_verified);
+        userAuthVerifiedAt =
+          typeof userAuthQuery.data.updated_at === 'string'
+            ? userAuthQuery.data.updated_at
+            : null;
+      }
+    } catch {
+      // ignore: if user_auth read is restricted by RLS, we just skip this enrichment
+    }
+
+    const normalizedUserAuthPhone = userAuthPhone
+      ? normalizePhone(userAuthPhone)
+      : '';
+    const enrichedProfiles = (profiles || []).map((p) => {
+      const isDefault = Boolean((p as { is_default?: boolean })?.is_default);
+      const profilePhone = normalizePhone(String((p as { phone?: string })?.phone ?? ''));
+      const inheritedVerified =
+        isDefault &&
+        userAuthIsVerified &&
+        Boolean(normalizedUserAuthPhone) &&
+        profilePhone === normalizedUserAuthPhone;
+
+      if (!inheritedVerified) return p;
+
+      // Only enrich fields if they exist in DB schema; otherwise keep original object.
+      return {
+        ...p,
+        is_phone_verified: true,
+        phone_verified_at:
+          (p as { phone_verified_at?: string | null })?.phone_verified_at ??
+          userAuthVerifiedAt ??
+          null,
+      };
+    });
 
     console.log('🔍 [API] user-profiles 쿼리 결과:', {
       profilesCount: profiles?.length || 0,
@@ -105,7 +188,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: profiles || [],
+      data: enrichedProfiles,
     });
   } catch (error) {
     console.error('프로필 조회 API 에러:', error);
@@ -172,6 +255,7 @@ export async function POST(request: NextRequest) {
     }
 
     const normalizedPhone = normalizePhone(phone);
+    const nowIso = new Date().toISOString();
 
     // 기본 프로필로 설정하는 경우, 기존 기본 프로필 해제
     if (is_default) {
@@ -197,6 +281,9 @@ export async function POST(request: NextRequest) {
         is_default,
         is_public_institution,
         is_company,
+        // per-profile verified badge state
+        is_phone_verified: true,
+        phone_verified_at: nowIso,
       })
       .select()
       .single();
@@ -207,6 +294,20 @@ export async function POST(request: NextRequest) {
         { success: false, error: '프로필 생성에 실패했습니다.' },
         { status: 500 }
       );
+    }
+
+    // 인증 reference를 해당 프로필에 연결(추적/감사 목적)
+    // NOTE: phone_verifications 테이블에 user_profile_id 컬럼이 없거나 권한이 제한된 환경에서는 실패할 수 있어 무시한다.
+    try {
+      await supabase
+        .from('phone_verifications')
+        .update({
+          user_auth_id,
+          user_profile_id: profile.id,
+        })
+        .eq('id', phoneVerificationReference);
+    } catch {
+      // ignore
     }
 
     return NextResponse.json({

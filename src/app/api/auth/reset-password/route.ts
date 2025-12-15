@@ -74,6 +74,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // phone_verifications 레코드에 user_auth_id 연결 (테이블 확인/추적용)
+    try {
+      await supabaseAdmin
+        .from('phone_verifications')
+        .update({ user_auth_id: user.id })
+        .eq('id', phoneVerificationReference);
+    } catch (e) {
+      console.warn(
+        '[reset-password] failed to link phone_verification to user_auth',
+        e
+      );
+    }
+
     return NextResponse.json({
       success: true,
       message: '비밀번호가 성공적으로 변경되었습니다.',

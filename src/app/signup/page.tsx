@@ -49,6 +49,7 @@ export default function Signup() {
   const [error, setError] = useState('');
   const [usernameChecked, setUsernameChecked] = useState(false);
   const [usernameCheckLoading, setUsernameCheckLoading] = useState(false);
+  const [signupSuccessOpen, setSignupSuccessOpen] = useState(false);
 
   // 비밀번호 보기/숨기기 상태
   const [showPassword, setShowPassword] = useState(false);
@@ -502,7 +503,7 @@ export default function Signup() {
       console.log('🔍 signUp 결과:', result);
 
       if (result.success) {
-        router.push('/signin'); // 회원가입 성공 시 로그인 페이지로 이동
+        setSignupSuccessOpen(true);
       } else {
         setError(result.error || '회원가입에 실패했습니다.');
       }
@@ -955,6 +956,34 @@ export default function Signup() {
           <input type="hidden" name="integrity_value" defaultValue="" />
         </form>
       </div>
+
+      {/* 회원가입 완료 모달 */}
+      {signupSuccessOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
+          <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+            <div className="text-center">
+              <div className="text-green-500 text-4xl mb-4">✓</div>
+              <h3 className="text-xl font-bold mb-4">회원가입 완료</h3>
+              <p className="text-gray-600 mb-6">
+                회원가입이 완료되었습니다.
+                <br />
+                로그인 페이지로 이동합니다.
+              </p>
+              <Button
+                size="md"
+                variant="filledBlack"
+                onClick={() => {
+                  setSignupSuccessOpen(false);
+                  router.push('/signin');
+                }}
+                className="w-full"
+              >
+                확인
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 약관 모달 */}
       {modalOpen && (

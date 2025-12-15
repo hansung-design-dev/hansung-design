@@ -86,9 +86,12 @@ export async function POST(request: NextRequest) {
 
     const normalizedPhone = normalizePhone(phone);
 
-    // 1) Supabase Auth 기준으로 이메일/비밀번호 가입
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp(
-      {
+    // 1) (선택) Supabase Auth 가입 시도
+    // NOTE: 현재 서비스는 user_auth 테이블 기반으로 로그인/권한을 처리하고 있어
+    // Supabase Auth signUp 실패가 전체 회원가입을 막지 않도록 "best-effort"로 처리한다.
+    // (배포 환경에서 email_address_invalid 등으로 자주 실패하는 케이스 대응)
+    try {
+      const { error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -98,36 +101,17 @@ export async function POST(request: NextRequest) {
             phone: normalizedPhone,
           },
         },
+      });
+
+      if (signUpError) {
+        console.warn('[signup] Supabase Auth signUp failed (ignored)', {
+          message: signUpError.message,
+          code: (signUpError as { code?: string } | null)?.code,
+          status: (signUpError as { status?: number } | null)?.status,
+        });
       }
-    );
-
-    if (signUpError) {
-      console.error('Supabase Auth signUp 에러:', signUpError);
-
-      // 이미 가입된 이메일일 때
-      if (
-        signUpError.message?.includes('registered') ||
-        signUpError.message?.includes('already') ||
-        signUpError.code === 'user_already_exists'
-      ) {
-        return NextResponse.json(
-          { success: false, error: '이미 사용 중인 이메일입니다.' },
-          { status: 400 }
-        );
-      }
-
-      return NextResponse.json(
-        { success: false, error: '회원가입에 실패했습니다.' },
-        { status: 500 }
-      );
-    }
-
-    const authUser = signUpData.user;
-    if (!authUser) {
-      return NextResponse.json(
-        { success: false, error: '회원가입 처리 중 오류가 발생했습니다.' },
-        { status: 500 }
-      );
+    } catch (e) {
+      console.warn('[signup] Supabase Auth signUp threw (ignored)', e);
     }
 
     // 2) 기존처럼 user_auth 테이블에 프로필/약관 정보 저장
@@ -174,6 +158,101 @@ export async function POST(request: NextRequest) {
         { success: false, error: '회원가입에 실패했습니다.' },
         { status: 500 }
       );
+    }
+
+    // phone_verifications 레코드에 user_auth_id 연결 (테이블 확인/추적용)
+    // NOTE: NICE 콜백 시점엔 user_auth_id를 모르기 때문에 여기서 backfill 한다.
+    try {
+      await supabaseAdmin
+        .from('phone_verifications')
+        .update({ user_auth_id: user.id })
+        .eq('id', phoneVerificationReference);
+    } catch (e) {
+      console.warn(
+        '[signup] failed to link phone_verification to user_auth',
+        e
+      );
+    }
+
+    // 기본프로필 자동 생성 + 인증완료 상태 저장
+    // - 회원가입 시 휴대폰 인증(purpose=signup)이 필수이므로, 기본프로필은 인증완료로 시작해야 UX가 맞다.
+    // - 주문/시안 등에서 user_profile_id를 참조하므로, 기본프로필은 가능한 한 일관되게 존재하도록 한다.
+    const nowIso = new Date().toISOString();
+    try {
+      const { data: existingDefault } = await supabaseAdmin
+        .from('user_profiles')
+        .select('id')
+        .eq('user_auth_id', user.id)
+        .eq('is_default', true)
+        .maybeSingle();
+
+      if (!existingDefault?.id) {
+        // 최신 스키마(is_phone_verified, phone_verified_at) 우선 시도
+        const insertPayload = {
+          user_auth_id: user.id,
+          profile_title: '기본 프로필',
+          company_name: null,
+          business_registration_file: null,
+          phone: normalizedPhone,
+          email,
+          contact_person_name: name,
+          fax_number: null,
+          is_default: true,
+          is_public_institution: false,
+          is_company: false,
+          is_approved: false,
+          created_at: nowIso,
+          updated_at: nowIso,
+          is_phone_verified: true,
+          phone_verified_at: nowIso,
+        };
+
+        let createdProfile = await supabaseAdmin
+          .from('user_profiles')
+          .insert(insertPayload)
+          .select('id')
+          .single();
+
+        // 컬럼이 아직 없는 DB(마이그레이션 미적용) 대비 fallback
+        if (
+          createdProfile.error &&
+          createdProfile.error.message?.includes('is_phone_verified')
+        ) {
+          const fallbackPayload = {
+            ...(insertPayload as Record<string, unknown>),
+          };
+          delete fallbackPayload.is_phone_verified;
+          delete fallbackPayload.phone_verified_at;
+          createdProfile = await supabaseAdmin
+            .from('user_profiles')
+            .insert(fallbackPayload)
+            .select('id')
+            .single();
+        }
+
+        const createdProfileId = createdProfile.data?.id;
+        if (createdProfileId) {
+          // phone_verifications 레코드에도 user_profile_id까지 연결(추적용)
+          try {
+            await supabaseAdmin
+              .from('phone_verifications')
+              .update({ user_profile_id: createdProfileId })
+              .eq('id', phoneVerificationReference);
+          } catch (e) {
+            console.warn(
+              '[signup] failed to link phone_verification to user_profile',
+              e
+            );
+          }
+        } else if (createdProfile.error) {
+          console.warn('[signup] failed to create default user_profile', {
+            message: createdProfile.error.message,
+            code: createdProfile.error.code,
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('[signup] default profile ensure failed', e);
     }
 
     return NextResponse.json({

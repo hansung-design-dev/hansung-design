@@ -23,6 +23,8 @@ interface UserProfile {
   is_public_institution?: boolean;
   is_company?: boolean;
   is_approved?: boolean;
+  is_phone_verified?: boolean;
+  phone_verified_at?: string | null;
   created_at: string;
 }
 

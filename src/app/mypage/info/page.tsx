@@ -10,6 +10,7 @@ import Image from 'next/image';
 import MypageContainer from '@/src/components/mypageContainer';
 import UserProfileModal from '@/src/components/modal/UserProfileModal';
 import UserInfoSkeleton from '@/src/components/skeleton/UserInfoSkeleton';
+import { normalizePhone } from '@/src/lib/utils';
 
 interface UserProfile {
   id: string;
@@ -24,6 +25,8 @@ interface UserProfile {
   is_public_institution?: boolean;
   is_company?: boolean;
   is_approved?: boolean;
+  is_phone_verified?: boolean;
+  phone_verified_at?: string | null;
   created_at: string;
 }
 
@@ -174,6 +177,18 @@ export default function UserInfoPage() {
             is_public_institution: profile.is_public_institution ?? false,
             is_company: profile.is_company ?? false,
             is_approved: profile.is_approved ?? false,
+            // 회원가입 인증(user_auth.is_verified)은 "기본정보" 인증완료를 의미하므로,
+            // 기본프로필(카드/모달)에 한해서는 user.is_verified(+폰번호 일치)면 인증완료로 표시한다.
+            // NOTE: 이는 UX 보정이며, 실제 서버 검증(프로필 생성/번호변경)은 phone_verifications reference로 수행됨.
+            is_phone_verified:
+              profile.is_phone_verified ??
+              (profile.is_default &&
+              Boolean(user?.is_verified) &&
+              normalizePhone(String(profile.phone ?? '')) ===
+                normalizePhone(String(user?.phone ?? ''))
+                ? true
+                : false),
+            phone_verified_at: profile.phone_verified_at ?? undefined,
           })
         );
 
@@ -364,6 +379,11 @@ export default function UserInfoPage() {
                                       기본
                                     </span>
                                   )}
+                                  {profile.is_phone_verified && (
+                                    <span className="border border-green-200 bg-green-50 text-green-700 px-2 py-0.5 rounded-full">
+                                      인증완료
+                                    </span>
+                                  )}
                                   {profile.is_public_institution && (
                                     <span className="border border-green-200 bg-green-50 text-green-700 px-2 py-0.5 rounded-full">
                                       행정용
@@ -551,6 +571,8 @@ export default function UserInfoPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         profileToEdit={profileToEdit}
+        // NOTE: UserProfileModal에서 mode='edit'는 장바구니(선택) 모드로 사용 중.
+        // 마이페이지(생성/수정 폼)는 mode='create'로 유지하고, profileToEdit 유무로 수정/생성을 구분한다.
         mode="create"
       />
 

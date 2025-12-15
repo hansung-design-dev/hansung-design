@@ -21,6 +21,8 @@ export interface UserProfile {
   is_public_institution?: boolean;
   is_company?: boolean;
   created_at: string;
+  is_phone_verified?: boolean;
+  phone_verified_at?: string | null;
 }
 
 interface UserProfileModalProps {
@@ -221,10 +223,25 @@ export default function UserProfileModal({
   const [phoneVerificationError, setPhoneVerificationError] = useState('');
   const [isPhoneVerificationRequesting, setIsPhoneVerificationRequesting] =
     useState(false);
+  const [initialPhone, setInitialPhone] = useState<string>('');
+  const [isPhoneEditUnlocked, setIsPhoneEditUnlocked] = useState(false);
 
   const isPhoneVerified =
     Boolean(phoneVerificationReference) && lastVerifiedPhone === formData.phone;
-  const canSubmitProfile = isPhoneVerified;
+  const isEditingExistingProfile = Boolean(profileToEdit);
+  const isPhoneChangedInEdit =
+    isEditingExistingProfile &&
+    Boolean(initialPhone) &&
+    formData.phone !== initialPhone;
+  // DB에 저장된(프로필별) 인증 상태: "이 번호는 과거에 인증을 통과한 적이 있음"
+  const isPersistedPhoneVerified = Boolean(profileToEdit?.is_phone_verified);
+  const isPhoneVerifiedForUi = isEditingExistingProfile
+    ? (!isPhoneChangedInEdit && isPersistedPhoneVerified) || isPhoneVerified
+    : isPhoneVerified;
+  const isPhoneLocked = isPhoneVerifiedForUi && !isPhoneEditUnlocked;
+  const canSubmitProfile = isEditingExistingProfile
+    ? !isPhoneChangedInEdit || isPhoneVerified
+    : isPhoneVerified;
 
   const niceStandardPopupAction =
     process.env.NEXT_PUBLIC_NICE_STANDARD_POPUP_ACTION ??
@@ -238,6 +255,7 @@ export default function UserProfileModal({
       setPhoneVerificationReference('');
       setPhoneVerificationMessage('');
       setPhoneVerificationError('');
+      setIsPhoneEditUnlocked(false);
     }
   }, [formData.phone, lastVerifiedPhone, phoneVerificationReference]);
 
@@ -248,6 +266,7 @@ export default function UserProfileModal({
       setPhoneVerificationMessage('');
       setPhoneVerificationError('');
       setIsPhoneVerificationRequesting(false);
+      setIsPhoneEditUnlocked(false);
     }
   }, [isOpen]);
 
@@ -328,6 +347,8 @@ export default function UserProfileModal({
     setPhoneVerificationReference('');
     setPhoneVerificationMessage('');
     setPhoneVerificationError('');
+    setInitialPhone('');
+    setIsPhoneEditUnlocked(false);
 
     if (profileToEdit) {
       setFormData({
@@ -343,6 +364,7 @@ export default function UserProfileModal({
         is_public_institution: profileToEdit.is_public_institution || false,
         is_company: profileToEdit.is_company || false,
       });
+      setInitialPhone(profileToEdit.phone || '');
       setSelectedProfileId(profileToEdit.id);
       // 기존 파일명 설정
       if (profileToEdit.business_registration_file) {
@@ -362,10 +384,20 @@ export default function UserProfileModal({
         is_public_institution: false,
         is_company: false,
       });
+      setInitialPhone(user?.phone || '');
       setSelectedProfileId(null);
       setFileName('');
     }
   }, [profileToEdit, user]);
+
+  const unlockPhoneEditing = () => {
+    // 인증 완료 후에는 input/button이 잠기므로, 번호를 바꾸고 싶은 경우 명시적으로 해제한다.
+    setLastVerifiedPhone('');
+    setPhoneVerificationReference('');
+    setPhoneVerificationMessage('');
+    setPhoneVerificationError('');
+    setIsPhoneEditUnlocked(true);
+  };
 
   // 모달이 열릴 때 프로필 목록 가져오기
   useEffect(() => {
@@ -625,7 +657,9 @@ export default function UserProfileModal({
         setAlertModal({
           isOpen: true,
           title: '휴대폰 인증 필요',
-          message: '먼저 휴대폰 인증을 완료한 뒤 프로필을 저장해주세요.',
+          message: isEditingExistingProfile
+            ? '휴대폰 번호 변경을 위해 먼저 휴대폰 인증을 완료해주세요.'
+            : '먼저 휴대폰 인증을 완료한 뒤 프로필을 저장해주세요.',
           type: 'warning',
           onConfirm: () => {},
         });
@@ -635,7 +669,11 @@ export default function UserProfileModal({
       const requestData = {
         user_auth_id: user.id,
         ...formData,
-        phoneVerificationReference: phoneVerificationReference || undefined,
+        // 편집 시 phone을 변경하지 않았다면 서버에서도 인증 스킵하도록 undefined로 보낸다.
+        phoneVerificationReference:
+          isPhoneChangedInEdit && phoneVerificationReference
+            ? phoneVerificationReference
+            : undefined,
       };
 
       let response;
@@ -873,7 +911,19 @@ export default function UserProfileModal({
                   maxLength={13}
                   inputMode="numeric"
                   autoComplete="tel"
+                  disabled={isPhoneLocked}
                 />
+                {isPhoneLocked && (
+                  <Button
+                    type="button"
+                    onClick={unlockPhoneEditing}
+                    size="sm"
+                    variant="outlinedGray"
+                    className="rounded-lg"
+                  >
+                    번호 변경
+                  </Button>
+                )}
                 <Button
                   onClick={handlePhoneVerification}
                   size="sm"
@@ -882,10 +932,10 @@ export default function UserProfileModal({
                   disabled={
                     isPhoneVerificationRequesting ||
                     !formData.phone ||
-                    isPhoneVerified
+                    isPhoneVerifiedForUi
                   }
                 >
-                  {isPhoneVerified
+                  {isPhoneVerifiedForUi
                     ? '인증완료'
                     : isPhoneVerificationRequesting
                     ? '요청 중...'
@@ -902,9 +952,19 @@ export default function UserProfileModal({
                   {phoneVerificationError}
                 </p>
               )}
-              {isPhoneVerified ? (
+              {isPhoneVerifiedForUi ? (
                 <p className="text-green-600 text-xs leading-snug">
-                  휴대폰 인증이 완료되었습니다.
+                  {isEditingExistingProfile &&
+                  !isPhoneChangedInEdit &&
+                  isPersistedPhoneVerified
+                    ? `인증완료(저장됨)${
+                        profileToEdit?.phone_verified_at
+                          ? ` • ${new Date(
+                              profileToEdit.phone_verified_at
+                            ).toLocaleString()}`
+                          : ''
+                      }`
+                    : '휴대폰 인증이 완료되었습니다.'}
                 </p>
               ) : (
                 <p className="text-gray-500 text-xs leading-snug">인증필요</p>

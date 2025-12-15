@@ -37,50 +37,76 @@ export async function PUT(
       );
     }
 
-    if (!phoneVerificationReference) {
+    // 기존 프로필 로드 (phone 변경 여부, 승인 리셋 여부 판단)
+    const { data: existing, error: existingError } = await supabase
+      .from('user_profiles')
+      .select(
+        'id,user_auth_id,phone,is_default,is_public_institution,is_company,is_approved,business_registration_file'
+      )
+      .eq('id', id)
+      .maybeSingle();
+
+    if (existingError || !existing) {
       return NextResponse.json(
-        {
-          success: false,
-          error: '휴대폰 인증을 완료한 후 프로필을 저장해주세요.',
-        },
-        { status: 400 }
+        { success: false, error: '프로필 정보를 찾을 수 없습니다.' },
+        { status: 404 }
       );
     }
 
-    // 휴대폰 인증 reference 검증 (유효기간/번호/목적)
-    try {
-      await assertValidPhoneVerificationReference({
-        reference: phoneVerificationReference,
-        phone,
-        purpose: 'add_profile',
-      });
-    } catch (e) {
-      const msg =
-        e instanceof Error ? e.message : '휴대폰 인증 검증에 실패했습니다.';
-      return NextResponse.json({ success: false, error: msg }, { status: 400 });
-    }
-
     const normalizedPhone = normalizePhone(phone);
+    const existingPhone = normalizePhone(String(existing.phone ?? ''));
+    const isPhoneChanged =
+      Boolean(existingPhone) && normalizedPhone !== existingPhone;
 
-    // 기본 프로필로 설정하는 경우, 기존 기본 프로필 해제
-    if (is_default) {
-      const { data: currentProfile } = await supabase
-        .from('user_profiles')
-        .select('user_auth_id')
-        .eq('id', id)
-        .single();
+    const nowIso = new Date().toISOString();
 
-      if (currentProfile) {
-        await supabase
-          .from('user_profiles')
-          .update({ is_default: false })
-          .eq('user_auth_id', currentProfile.user_auth_id)
-          .eq('is_default', true);
+    // phone이 변경되는 경우에만 인증 reference 필수
+    if (isPhoneChanged) {
+      if (!phoneVerificationReference) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: '휴대폰 번호 변경을 위해 휴대폰 인증을 완료해주세요.',
+          },
+          { status: 400 }
+        );
+      }
+      try {
+        await assertValidPhoneVerificationReference({
+          reference: phoneVerificationReference,
+          phone: normalizedPhone,
+          purpose: 'add_profile',
+        });
+      } catch (e) {
+        const msg =
+          e instanceof Error ? e.message : '휴대폰 인증 검증에 실패했습니다.';
+        return NextResponse.json({ success: false, error: msg }, { status: 400 });
       }
     }
 
+    // 기본 프로필로 설정하는 경우, 기존 기본 프로필 해제
+    if (is_default) {
+      await supabase
+        .from('user_profiles')
+        .update({ is_default: false })
+        .eq('user_auth_id', existing.user_auth_id)
+        .eq('is_default', true);
+    }
+
+    // 승인 리셋 정책(보수적으로):
+    // - 행정용/기업용인 경우, 유형 변경 또는 사업자등록증 변경이 있으면 다시 승인받도록 is_approved=false로 리셋
+    const shouldResetApproval =
+      (Boolean(is_public_institution) || Boolean(is_company)) &&
+      (Boolean(existing.is_public_institution) !== Boolean(is_public_institution) ||
+        Boolean(existing.is_company) !== Boolean(is_company) ||
+        String(existing.business_registration_file ?? '') !==
+          String(business_registration_file ?? ''));
+
+    const nextApproved =
+      shouldResetApproval ? false : Boolean(existing.is_approved);
+
     // 프로필 수정
-    const { data: profile, error } = await supabase
+    const { data: updated, error } = await supabase
       .from('user_profiles')
       .update({
         profile_title,
@@ -93,7 +119,14 @@ export async function PUT(
         is_default,
         is_public_institution,
         is_company,
-        updated_at: new Date().toISOString(),
+        is_approved: nextApproved,
+        // per-profile verified badge state:
+        // - phone unchanged: keep existing values
+        // - phone changed (and verified): mark verified now
+        ...(isPhoneChanged
+          ? { is_phone_verified: true, phone_verified_at: nowIso }
+          : {}),
+        updated_at: nowIso,
       })
       .eq('id', id)
       .select()
@@ -107,9 +140,24 @@ export async function PUT(
       );
     }
 
+    // 인증 reference를 해당 프로필에 연결(추적/감사 목적)
+    if (isPhoneChanged && phoneVerificationReference) {
+      try {
+        await supabase
+          .from('phone_verifications')
+          .update({
+            user_auth_id: existing.user_auth_id,
+            user_profile_id: id,
+          })
+          .eq('id', phoneVerificationReference);
+      } catch {
+        // ignore
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      data: profile,
+      data: updated,
     });
   } catch (error) {
     console.error('프로필 수정 API 에러:', error);
@@ -142,10 +190,24 @@ export async function DELETE(
       );
     }
 
-    const { error } = await supabase
+    // 소프트 삭제(아카이브): FK(orders/design_drafts) 보존을 위해 row는 유지
+    // NOTE: archived_at 컬럼이 아직 없는 환경에서는 fallback으로 hard delete를 시도한다.
+    const archivedAt = new Date().toISOString();
+    const softDeleteAttempt = await supabase
       .from('user_profiles')
-      .delete()
+      .update({ archived_at: archivedAt, updated_at: archivedAt })
       .eq('id', id);
+
+    let error = softDeleteAttempt.error;
+
+    if (error && error.message?.includes('archived_at')) {
+      // archived_at column missing -> fallback to hard delete
+      const hardDeleteAttempt = await supabase
+        .from('user_profiles')
+        .delete()
+        .eq('id', id);
+      error = hardDeleteAttempt.error;
+    }
 
     if (error) {
       console.error('프로필 삭제 에러:', error);
