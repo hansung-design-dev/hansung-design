@@ -22,6 +22,14 @@ export async function POST(request: NextRequest) {
   return handleRequest(request);
 }
 
+function safeHost(url: string) {
+  try {
+    return new URL(url).host;
+  } catch {
+    return 'invalid-url';
+  }
+}
+
 const handleRequest = async (request: NextRequest) => {
   try {
     const wantsDebug = request.nextUrl.searchParams.get('debug') === '1';
@@ -48,6 +56,31 @@ const handleRequest = async (request: NextRequest) => {
       searchParams.get('cancelUrl') ??
       (body as Record<string, string>).cancelUrl;
     void cancelUrl;
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/de0826ba-4e91-43eb-b001-5614ace69b75', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'src/app/api/nice/crypto-token/route.ts:handleRequest:entry',
+        message: '/api/nice/crypto-token invoked',
+        data: {
+          method: request.method,
+          wantsDebug,
+          hasReturnUrl: Boolean(returnUrl),
+          returnUrlHost: returnUrl ? safeHost(returnUrl) : null,
+          hasCryptoOverride: Boolean(process.env.NICE_CRYPTO_TOKEN_URL?.trim()),
+          hasOauthOverride: Boolean(process.env.NICE_OAUTH_TOKEN_URL?.trim()),
+          nodeEnv: process.env.NODE_ENV ?? null,
+          vercel: Boolean(process.env.VERCEL),
+        },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'pre-fix',
+        hypothesisId: 'H5',
+      }),
+    }).catch(() => {});
+    // #endregion agent log
 
     if (!returnUrl) {
       if (isNiceDebugEnabled()) {
@@ -121,6 +154,28 @@ const handleRequest = async (request: NextRequest) => {
         currentTimestamp,
         reqNo
       );
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/de0826ba-4e91-43eb-b001-5614ace69b75', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location:
+          'src/app/api/nice/crypto-token/route.ts:handleRequest:afterCryptoToken',
+        message: '/api/nice/crypto-token got crypto token',
+        data: {
+          tokenVersionIdPrefix:
+            typeof tokenVersionId === 'string'
+              ? tokenVersionId.slice(0, 8)
+              : null,
+          reqNoLen: reqNo.length,
+        },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'pre-fix',
+        hypothesisId: 'H5',
+      }),
+    }).catch(() => {});
+    // #endregion agent log
 
     const { key, iv, hmacKey } = niceAuthHandler.generateSymmetricKey(
       reqDtim,

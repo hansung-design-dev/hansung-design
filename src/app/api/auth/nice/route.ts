@@ -14,6 +14,30 @@ export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
   try {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/de0826ba-4e91-43eb-b001-5614ace69b75', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'src/app/api/auth/nice/route.ts:GET:entry',
+        message: '/api/auth/nice invoked',
+        data: {
+          nodeEnv: process.env.NODE_ENV ?? null,
+          vercel: Boolean(process.env.VERCEL),
+          vercelRegion: process.env.VERCEL_REGION ?? null,
+          hasOauthOverride: Boolean(process.env.NICE_OAUTH_TOKEN_URL?.trim()),
+          hasCryptoOverride: Boolean(process.env.NICE_CRYPTO_TOKEN_URL?.trim()),
+          purpose: request.nextUrl.searchParams.get('purpose') ?? null,
+          origin: request.nextUrl.origin,
+        },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'pre-fix',
+        hypothesisId: 'H3',
+      }),
+    }).catch(() => {});
+    // #endregion agent log
+
     const clientId = process.env.NICE_CLIENT_ID;
     const clientSecret = process.env.NICE_CLIENT_SECRET;
     let accessToken: string | null = null;
@@ -97,6 +121,27 @@ export async function GET(request: NextRequest) {
         currentTimestamp,
         reqNo
       );
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/de0826ba-4e91-43eb-b001-5614ace69b75', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'src/app/api/auth/nice/route.ts:GET:afterCryptoToken',
+        message: '/api/auth/nice got crypto token',
+        data: {
+          tokenVersionIdPrefix:
+            typeof tokenVersionId === 'string'
+              ? tokenVersionId.slice(0, 8)
+              : null,
+          reqNoLen: reqNo.length,
+        },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'pre-fix',
+        hypothesisId: 'H3',
+      }),
+    }).catch(() => {});
+    // #endregion agent log
 
     const { key, iv, hmacKey } = niceAuthHandler.generateSymmetricKey(
       reqDtim,

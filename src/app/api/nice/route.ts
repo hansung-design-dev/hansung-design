@@ -25,6 +25,7 @@ export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const NICE_PROXY_URL = process.env.NICE_PROXY_URL;
+  const NICE_PROXY_KEY = process.env.NICE_PROXY_KEY;
 
   if (!NICE_PROXY_URL) {
     return NextResponse.json<NiceProxyError>(
@@ -48,6 +49,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      ...(NICE_PROXY_KEY ? { 'x-internal-key': NICE_PROXY_KEY } : {}),
+      // Forward client IP hints for logging/forensics on proxy side (not for auth).
+      ...(req.headers.get('x-forwarded-for')
+        ? { 'x-forwarded-for': req.headers.get('x-forwarded-for') as string }
+        : {}),
+      ...(req.headers.get('x-real-ip')
+        ? { 'x-real-ip': req.headers.get('x-real-ip') as string }
+        : {}),
       // 필요하면 추적용 헤더를 추가할 수 있습니다.
       // "X-Request-Id": req.headers.get("x-request-id") ?? crypto.randomUUID(),
     },

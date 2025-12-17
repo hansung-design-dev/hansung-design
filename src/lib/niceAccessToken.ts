@@ -7,6 +7,37 @@ type CachedToken = {
 
 let cached: CachedToken | null = null;
 
+function getNiceOauthTokenUrl() {
+  const override = process.env.NICE_OAUTH_TOKEN_URL?.trim();
+  if (override) return override;
+
+  const proxyBase = process.env.NICE_PROXY_URL?.trim();
+  if (proxyBase) {
+    // Convention: AWS proxy should expose this endpoint.
+    // Example: http(s)://nice.yourdomain.com/nice/oauth/token
+    return `${proxyBase.replace(/\/+$/, '')}/nice/oauth/token`;
+  }
+
+  return 'https://svc.niceapi.co.kr:22001/digital/niceid/oauth/oauth/token';
+}
+
+function safeHost(url: string) {
+  try {
+    return new URL(url).host;
+  } catch {
+    return 'invalid-url';
+  }
+}
+
+function getProxyKeyHeaderFor(url: string) {
+  const proxyBase = process.env.NICE_PROXY_URL?.trim();
+  const proxyKey = process.env.NICE_PROXY_KEY?.trim();
+  if (!proxyBase || !proxyKey) return {};
+  // Only attach to the proxy host, never to NICE directly.
+  if (safeHost(url) !== safeHost(proxyBase)) return {};
+  return { 'x-internal-key': proxyKey };
+}
+
 function getNested(obj: unknown, path: string[]): unknown {
   let cur: unknown = obj;
   for (const key of path) {
@@ -30,6 +61,32 @@ async function issueNiceAccessToken(params: {
   clientId: string;
   clientSecret: string;
 }) {
+  // #region agent log
+  const tokenUrl = getNiceOauthTokenUrl();
+  fetch('http://127.0.0.1:7242/ingest/de0826ba-4e91-43eb-b001-5614ace69b75', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      location: 'src/lib/niceAccessToken.ts:issueNiceAccessToken:entry',
+      message: 'Issuing NICE access token',
+      data: {
+        urlHost: safeHost(tokenUrl),
+        hasOverride: Boolean(process.env.NICE_OAUTH_TOKEN_URL?.trim()),
+        hasProxyUrl: Boolean(process.env.NICE_PROXY_URL?.trim()),
+        sendsProxyKey: Boolean(
+          Object.keys(getProxyKeyHeaderFor(tokenUrl)).length
+        ),
+        nodeEnv: process.env.NODE_ENV ?? null,
+        vercel: Boolean(process.env.VERCEL),
+      },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'pre-fix',
+      hypothesisId: 'H1',
+    }),
+  }).catch(() => {});
+  // #endregion agent log
+
   const authorization = Buffer.from(
     `${params.clientId}:${params.clientSecret}`
   ).toString('base64');
@@ -41,13 +98,34 @@ async function issueNiceAccessToken(params: {
 
   const response = await axios({
     method: 'POST',
-    url: 'https://svc.niceapi.co.kr:22001/digital/niceid/oauth/oauth/token',
+    // NOTE: If you must egress from a fixed AWS Elastic IP, point this to your AWS proxy endpoint.
+    //       Example: https://your-aws-proxy.example.com/nice/oauth/token
+    url: tokenUrl,
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
       Authorization: `Basic ${authorization}`,
+      ...getProxyKeyHeaderFor(tokenUrl),
     },
     data: dataBody,
   });
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/de0826ba-4e91-43eb-b001-5614ace69b75', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      location: 'src/lib/niceAccessToken.ts:issueNiceAccessToken:response',
+      message: 'NICE access token response received',
+      data: {
+        status: response.status,
+        urlHost: safeHost(tokenUrl),
+      },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'pre-fix',
+      hypothesisId: 'H1',
+    }),
+  }).catch(() => {});
+  // #endregion agent log
 
   // NICE 응답 포맷이 환경/계정/버전에 따라 달라질 수 있어, 가능한 위치를 모두 탐색한다.
   // (민감정보 보호: 토큰 전체는 절대 로깅하지 않는다)

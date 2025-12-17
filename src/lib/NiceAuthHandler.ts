@@ -23,6 +23,53 @@ export class NiceAuthHandler {
     return `${year}${month}${day}${hours}${minutes}${seconds}`;
   }
 
+  private static getNiceOauthTokenUrl() {
+    const override = process.env.NICE_OAUTH_TOKEN_URL?.trim();
+    if (override) return override;
+
+    const proxyBase = process.env.NICE_PROXY_URL?.trim();
+    if (proxyBase) {
+      // Convention: AWS proxy should expose this endpoint.
+      // Example: http(s)://nice.yourdomain.com/nice/oauth/token
+      return `${proxyBase.replace(/\/+$/, '')}/nice/oauth/token`;
+    }
+
+    return 'https://svc.niceapi.co.kr:22001/digital/niceid/oauth/oauth/token';
+  }
+
+  private getNiceCryptoTokenUrl() {
+    const override = process.env.NICE_CRYPTO_TOKEN_URL?.trim();
+    if (override) return override;
+
+    const proxyBase = process.env.NICE_PROXY_URL?.trim();
+    if (proxyBase) {
+      // Convention: AWS proxy should expose this endpoint.
+      // Example: http(s)://nice.yourdomain.com/nice/crypto/token
+      return `${proxyBase.replace(/\/+$/, '')}/nice/crypto/token`;
+    }
+
+    return 'https://svc.niceapi.co.kr:22001/digital/niceid/api/v1.0/common/crypto/token';
+  }
+
+  private static safeHost(url: string) {
+    try {
+      return new URL(url).host;
+    } catch {
+      return 'invalid-url';
+    }
+  }
+
+  private static getProxyKeyHeaderFor(url: string) {
+    const proxyBase = process.env.NICE_PROXY_URL?.trim();
+    const proxyKey = process.env.NICE_PROXY_KEY?.trim();
+    if (!proxyBase || !proxyKey) return {};
+    // Only attach to the proxy host, never to NICE directly.
+    if (NiceAuthHandler.safeHost(url) !== NiceAuthHandler.safeHost(proxyBase)) {
+      return {};
+    }
+    return { 'x-internal-key': proxyKey };
+  }
+
   static async getAccessToken(clientId: string, clientSecret: string) {
     const authorization = Buffer.from(`${clientId}:${clientSecret}`).toString(
       'base64'
@@ -31,12 +78,16 @@ export class NiceAuthHandler {
       scope: 'default',
       grant_type: 'client_credentials',
     }).toString();
+    const tokenUrl = NiceAuthHandler.getNiceOauthTokenUrl();
     const response = await axios({
       method: 'POST',
-      url: 'https://svc.niceapi.co.kr:22001/digital/niceid/oauth/oauth/token',
+      // NOTE: If you must egress from a fixed AWS Elastic IP, point this to your AWS proxy endpoint.
+      //       Example: https://your-aws-proxy.example.com/nice/oauth/token
+      url: tokenUrl,
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         Authorization: `Basic ${authorization}`,
+        ...NiceAuthHandler.getProxyKeyHeaderFor(tokenUrl),
       },
       data: dataBody,
     });
@@ -49,17 +100,53 @@ export class NiceAuthHandler {
     reqNo: string
   ) {
     try {
+      // #region agent log
+      const cryptoUrl = this.getNiceCryptoTokenUrl();
+      fetch(
+        'http://127.0.0.1:7242/ingest/de0826ba-4e91-43eb-b001-5614ace69b75',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'src/lib/NiceAuthHandler.ts:getEncryptionToken:entry',
+            message: 'Requesting NICE crypto token',
+            data: {
+              urlHost: NiceAuthHandler.safeHost(cryptoUrl),
+              hasOverride: Boolean(process.env.NICE_CRYPTO_TOKEN_URL?.trim()),
+              hasProxyUrl: Boolean(process.env.NICE_PROXY_URL?.trim()),
+              sendsProxyKey: Boolean(
+                Object.keys(NiceAuthHandler.getProxyKeyHeaderFor(cryptoUrl))
+                  .length
+              ),
+              nodeEnv: process.env.NODE_ENV ?? null,
+              vercel: Boolean(process.env.VERCEL),
+              vercelRegion: process.env.VERCEL_REGION ?? null,
+              reqNoLen: reqNo?.length ?? 0,
+              reqDtimLen: reqDtim?.length ?? 0,
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'pre-fix',
+            hypothesisId: 'H2',
+          }),
+        }
+      ).catch(() => {});
+      // #endregion agent log
+
       const authorization = Buffer.from(
         `${this.accessToken}:${currentTimestamp}:${this.clientId}`
       ).toString('base64');
       const response = await axios({
         method: 'POST',
-        url: 'https://svc.niceapi.co.kr:22001/digital/niceid/api/v1.0/common/crypto/token',
+        // NOTE: If you must egress from a fixed AWS Elastic IP, point this to your AWS proxy endpoint.
+        //       Example: https://your-aws-proxy.example.com/nice/crypto/token
+        url: cryptoUrl,
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${authorization}`,
           client_id: this.clientId,
           productID: this.productId,
+          ...NiceAuthHandler.getProxyKeyHeaderFor(cryptoUrl),
         },
         data: {
           dataHeader: {
@@ -89,6 +176,29 @@ export class NiceAuthHandler {
           } rsp_cd=${resData?.dataBody?.rsp_cd ?? 'null'}`
         );
       }
+      // #region agent log
+      fetch(
+        'http://127.0.0.1:7242/ingest/de0826ba-4e91-43eb-b001-5614ace69b75',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'src/lib/NiceAuthHandler.ts:getEncryptionToken:ok',
+            message: 'NICE crypto token ok',
+            data: {
+              urlHost: NiceAuthHandler.safeHost(cryptoUrl),
+              gwResult: resData?.dataHeader?.GW_RSLT_CD ?? null,
+              rspCd: resData?.dataBody?.rsp_cd ?? null,
+              hasTokenVersionId: Boolean(resData?.dataBody?.token_version_id),
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'pre-fix',
+            hypothesisId: 'H2',
+          }),
+        }
+      ).catch(() => {});
+      // #endregion agent log
       return {
         siteCode: resData.dataBody.site_code as string,
         tokenVal: resData.dataBody.token_val as string,
@@ -109,6 +219,29 @@ export class NiceAuthHandler {
           statusText,
           data,
         });
+        // #region agent log
+        fetch(
+          'http://127.0.0.1:7242/ingest/de0826ba-4e91-43eb-b001-5614ace69b75',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              location:
+                'src/lib/NiceAuthHandler.ts:getEncryptionToken:axios-error',
+              message: 'NICE crypto token axios error',
+              data: {
+                urlHost: NiceAuthHandler.safeHost(this.getNiceCryptoTokenUrl()),
+                status: status ?? null,
+                statusText: statusText ?? null,
+              },
+              timestamp: Date.now(),
+              sessionId: 'debug-session',
+              runId: 'pre-fix',
+              hypothesisId: 'H2',
+            }),
+          }
+        ).catch(() => {});
+        // #endregion agent log
         throw new Error(
           `Failed to get encryption token (axios): ${status ?? ''} ${
             statusText ?? ''
@@ -116,6 +249,27 @@ export class NiceAuthHandler {
         );
       }
       console.error('[NiceAuthHandler] crypto token error', error);
+      // #region agent log
+      fetch(
+        'http://127.0.0.1:7242/ingest/de0826ba-4e91-43eb-b001-5614ace69b75',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'src/lib/NiceAuthHandler.ts:getEncryptionToken:error',
+            message: 'NICE crypto token error',
+            data: {
+              urlHost: NiceAuthHandler.safeHost(this.getNiceCryptoTokenUrl()),
+              errType: error instanceof Error ? 'Error' : typeof error,
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'pre-fix',
+            hypothesisId: 'H2',
+          }),
+        }
+      ).catch(() => {});
+      // #endregion agent log
       throw new Error(
         error instanceof Error
           ? error.message
