@@ -33,6 +33,32 @@ function asNonEmptyString(v: unknown): string | null {
   return t ? t : null;
 }
 
+function safeHost(url: string | null | undefined) {
+  const u = typeof url === 'string' ? url.trim() : '';
+  if (!u) return null;
+  try {
+    return new URL(u).host;
+  } catch {
+    return 'invalid-url';
+  }
+}
+
+function getNiceOauthTokenUrlForDebug() {
+  const override = process.env.NICE_OAUTH_TOKEN_URL?.trim();
+  if (override) return override;
+  const proxyBase = process.env.NICE_PROXY_URL?.trim();
+  if (proxyBase) return `${proxyBase.replace(/\/+$/, '')}/nice/oauth/token`;
+  return 'https://svc.niceapi.co.kr:22001/digital/niceid/oauth/oauth/token';
+}
+
+function getNiceCryptoTokenUrlForDebug() {
+  const override = process.env.NICE_CRYPTO_TOKEN_URL?.trim();
+  if (override) return override;
+  const proxyBase = process.env.NICE_PROXY_URL?.trim();
+  if (proxyBase) return `${proxyBase.replace(/\/+$/, '')}/nice/crypto/token`;
+  return 'https://svc.niceapi.co.kr:22001/digital/niceid/api/v1.0/common/crypto/token';
+}
+
 export function isNiceDebugEnabled() {
   const flag = String(process.env.NICE_DEBUG ?? '')
     .trim()
@@ -89,6 +115,10 @@ export function getNiceEnvSnapshot(input: NiceEnvDebugInput) {
   const returnUrl = input.returnUrl ?? null;
   const registeredReturnUrl = input.registeredReturnUrl ?? null;
   const tokenInfo = maskTokenPrefix(accessToken, 6);
+  const proxyBase = process.env.NICE_PROXY_URL?.trim() || null;
+  const proxyKeyConfigured = Boolean(process.env.NICE_PROXY_KEY?.trim());
+  const oauthUrl = getNiceOauthTokenUrlForDebug();
+  const cryptoUrl = getNiceCryptoTokenUrlForDebug();
 
   return {
     scope,
@@ -96,6 +126,20 @@ export function getNiceEnvSnapshot(input: NiceEnvDebugInput) {
     vercel: Boolean(process.env.VERCEL),
     vercelRegion: process.env.VERCEL_REGION ?? null,
     runtime: 'nodejs',
+    niceProxy: {
+      configured: Boolean(proxyBase),
+      proxyHost: safeHost(proxyBase),
+      hasProxyKey: proxyKeyConfigured,
+    },
+    niceEndpoints: {
+      oauthTokenHost: safeHost(oauthUrl),
+      cryptoTokenHost: safeHost(cryptoUrl),
+      viaProxy:
+        Boolean(proxyBase) &&
+        safeHost(proxyBase) != null &&
+        safeHost(proxyBase) === safeHost(oauthUrl) &&
+        safeHost(proxyBase) === safeHost(cryptoUrl),
+    },
     clientId: {
       exists: Boolean(clientId && String(clientId).trim()),
       prefix4: clientId ? String(clientId).trim().slice(0, 4) : null,

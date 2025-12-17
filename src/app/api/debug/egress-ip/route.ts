@@ -26,6 +26,26 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/de0826ba-4e91-43eb-b001-5614ace69b75', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      location: 'src/app/api/debug/egress-ip/route.ts:GET:entry',
+      message: 'debug egress-ip invoked',
+      data: {
+        nodeEnv: process.env.NODE_ENV ?? null,
+        vercel: Boolean(process.env.VERCEL),
+        vercelRegion: process.env.VERCEL_REGION ?? null,
+      },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'pre-fix',
+      hypothesisId: 'H6',
+    }),
+  }).catch(() => {});
+  // #endregion agent log
+
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), 5000);
   try {
@@ -44,11 +64,50 @@ export async function GET(request: NextRequest) {
     });
 
     if (!res.ok || !ip) {
+      // #region agent log
+      fetch(
+        'http://127.0.0.1:7242/ingest/de0826ba-4e91-43eb-b001-5614ace69b75',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'src/app/api/debug/egress-ip/route.ts:GET:bad-response',
+            message: 'Failed to resolve egress ip',
+            data: { ok: res.ok, status: res.status, hasIp: Boolean(ip) },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'pre-fix',
+            hypothesisId: 'H6',
+          }),
+        }
+      ).catch(() => {});
+      // #endregion agent log
       return NextResponse.json(
         { error: 'Failed to resolve egress ip', status: res.status },
         { status: 502 }
       );
     }
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/de0826ba-4e91-43eb-b001-5614ace69b75', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'src/app/api/debug/egress-ip/route.ts:GET:ok',
+        message: 'Resolved server egress IP',
+        data: {
+          ip,
+          status: res.status,
+          vercel: Boolean(process.env.VERCEL),
+          vercelRegion: process.env.VERCEL_REGION ?? null,
+        },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'pre-fix',
+        hypothesisId: 'H6',
+      }),
+    }).catch(() => {});
+    // #endregion agent log
 
     // Note: this is the server's outbound (egress) IP at call time.
     return NextResponse.json(
@@ -63,6 +122,21 @@ export async function GET(request: NextRequest) {
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error('[debug/egress-ip] error', msg);
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/de0826ba-4e91-43eb-b001-5614ace69b75', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'src/app/api/debug/egress-ip/route.ts:GET:error',
+        message: 'debug egress-ip errored',
+        data: { msg },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'pre-fix',
+        hypothesisId: 'H6',
+      }),
+    }).catch(() => {});
+    // #endregion agent log
     return NextResponse.json({ error: msg }, { status: 502 });
   } finally {
     clearTimeout(t);
