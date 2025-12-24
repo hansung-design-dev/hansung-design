@@ -314,7 +314,7 @@ export default function PublicDesignPage() {
         </div>
       </section>
       {/* Projects Grid Section for lg/md */}
-      <section className="mx-auto lg:px-10 md:px-10 sm:px-4 lg:pb-[12rem] md:pb-[12rem] sm:pb-[1rem]">
+      <section className="lg:container lg:mx-auto lg:px-[8rem] sm:px-[1.5rem] lg:pb-[12rem] md:pb-[12rem] sm:pb-[1rem]">
         {loading ? (
           <PublicDesignDesktopSkeleton />
         ) : (
