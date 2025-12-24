@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   title: '한성디자인',
   description: 'Handung-design admin',
   icons: {
-    icon: '/images/hansung-logo.png',
+    icon: '/svg/hansung-logo-b.svg',
   },
 };
 export default function RootLayout({
