@@ -84,11 +84,11 @@ export default function Home() {
             height={10000}
             className="w-full h-full object-cover  sm:min-h-[48rem] sm:object-left-bottom"
           />
-          <div className="absolute lg:bottom-[0rem]  md:bottom-[1rem] lg:left-[6rem] sm:left-[1rem] text-white sm:bottom-[3rem] ">
-            <h1 className="lg:text-2 sm:text-2 font-weight-700  font-gmarket">
+          <div className="absolute lg:top-[6rem] md:top-[4rem] sm:top-[3rem] lg:right-[6rem] md:right-[2rem] sm:right-[1rem] text-white text-right bg-gray-400/50 backdrop-blur-sm px-6 py-4 [text-shadow:1px_1px_2px_rgba(0,0,0,0.3)]">
+            <h1 className="text-[clamp(1.5rem,4vw,2.5rem)] font-weight-700 font-gmarket">
               {mainSection?.title || 'Moving Smart City'}
             </h1>
-            <h2 className="lg:text-1.25 lg:line-height-6 sm:text-1 md:text-1.125 md:line-height-6 lg:font-weight-600 md:font-weight-600 sm:font-weight-400 sm:line-height-6">
+            <h2 className="text-[clamp(1rem,2.5vw,1.5rem)] leading-relaxed font-weight-600">
               {mainSection?.subtitle ? (
                 <span
                   dangerouslySetInnerHTML={{ __html: mainSection.subtitle }}
@@ -102,7 +102,7 @@ export default function Home() {
                 </>
               )}
             </h2>
-            <p className="lg:text-0.875 md:text-0.875 lg:font-400 md:font-200 lg:line-height-6 md:line-height-5 sm:text-0.75 sm:font-300 sm:line-height-5 sm:hidden lg:block md:block">
+            <p className="text-[clamp(0.75rem,1.5vw,1rem)] leading-relaxed font-weight-400 sm:hidden lg:block md:block">
               {mainSection?.description ? (
                 // DB에서 불러온 description을 <br> 기준으로 split하여 줄바꿈 처리
                 (() => {
