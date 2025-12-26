@@ -61,6 +61,7 @@ const ItemList: React.FC<ItemTableProps> = ({
   enableRowClick = true,
   hideQuantityColumns = false,
   hideStatusColumn = false,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   district,
   isCitizenBoardTab = false,
 }) => {
