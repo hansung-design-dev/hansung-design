@@ -51,7 +51,7 @@ const Section = ({
   list,
 }: SectionProps) => {
   return (
-    <section className="min-h-screen scroll-container sm:pb-[4rem]">
+    <section className="min-h-[50vh] scroll-container sm:pb-[2rem]">
       <motion.div
         variants={staggerContainer}
         initial="initial"
