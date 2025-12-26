@@ -454,28 +454,6 @@ const ItemList: React.FC<ItemTableProps> = ({
                   </tr>
                 );
               })}
-              {/* 빈 row로 높이 맞추기 */}
-              {Array.from({ length: itemsPerPage - paginatedItems.length }).map(
-                (_, i) => {
-                  const baseCols = showCheckbox ? 1 : 0; // checkbox
-                  let dataCols;
-                  if (isCitizenBoardTab) {
-                    dataCols = 6; // No, 게시대명, 시민게시대 규격, 시민게시대 기간, 중앙광고 규격, 중앙광고 기간, 중앙광고 신청현황
-                  } else {
-                    dataCols = hideStatusColumn ? 8 : 9; // No, 게시대명, 아이콘, 규격, 가격, 기간, 구분, 상태 (상태 컬럼 숨김 시 8개)
-                  }
-                  const quantityCols = hideQuantityColumns ? 0 : 2; // 면수, 수량
-                  const actionCols = renderAction ? 1 : 0; // 작업
-                  const totalCols =
-                    baseCols + dataCols + quantityCols + actionCols;
-
-                  return (
-                    <tr key={`empty-${i}`} className="h-[3.5rem]">
-                      <td colSpan={totalCols} />
-                    </tr>
-                  );
-                }
-              )}
             </tbody>
           </table>
         </div>
