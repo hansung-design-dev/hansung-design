@@ -49,7 +49,7 @@ interface ItemTableProps {
   isCitizenBoardTab?: boolean; // 시민게시대 탭 여부
 }
 
-const ITEMS_PER_PAGE = 20;
+const ITEMS_PER_PAGE = 40;
 
 const ItemList: React.FC<ItemTableProps> = ({
   items,
@@ -70,8 +70,7 @@ const ItemList: React.FC<ItemTableProps> = ({
   // const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   // const [currentItemIndex, setCurrentItemIndex] = useState(0);
 
-  // 서대문구일 때는 24개, 그 외에는 20개
-  const itemsPerPage = district === '서대문구' ? 24 : ITEMS_PER_PAGE;
+  const itemsPerPage = ITEMS_PER_PAGE;
 
   const totalPages = Math.ceil(items.length / itemsPerPage);
   const paginatedItems = items.slice(
