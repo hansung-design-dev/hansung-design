@@ -1,9 +1,9 @@
 'use client';
 
 import Image from 'next/image';
+import Link from 'next/link';
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import ItemCard from '../../components/itemCard';
 import DraggableNoticePopup from '@/src/components/DraggableNoticePopup';
 import { useAdvancedNoticePopup } from '@/src/components/hooks/useAdvancedNoticePopup';
 import { HomepageContent } from '@/src/types/homepage-content';
@@ -17,6 +17,125 @@ interface DigitalMediaItem {
   src: string;
   images?: string[];
   productUuid?: string;
+}
+
+// 공공디자인 스타일 그리드 카드 컴포넌트
+function DigitalMediaGridCard({
+  item,
+  currentTab,
+  showCheckbox = false,
+}: {
+  item: DigitalMediaItem;
+  currentTab: string;
+  showCheckbox?: boolean;
+}) {
+  const fallbackSrc = '/images/digital-media/landing.png';
+  const [imgSrc, setImgSrc] = useState<string>(item.src || fallbackSrc);
+
+  // 쇼핑몰 탭용 체크박스 기능
+  const { cart, dispatch } = showCheckbox
+    ? // eslint-disable-next-line react-hooks/rules-of-hooks
+      require('@/src/contexts/cartContext').useCart()
+    : { cart: [], dispatch: () => {} };
+  const { user } = showCheckbox
+    ? // eslint-disable-next-line react-hooks/rules-of-hooks
+      require('@/src/contexts/authContext').useAuth()
+    : { user: null };
+  const { profiles } = showCheckbox
+    ? // eslint-disable-next-line react-hooks/rules-of-hooks
+      require('@/src/contexts/profileContext').useProfile()
+    : { profiles: [] };
+
+  const isSelected = cart.some(
+    (cartItem: { id: string }) => cartItem.id === item.id
+  );
+
+  const handleCheckboxClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (isSelected) {
+      dispatch({ type: 'REMOVE_ITEM', id: item.id });
+    } else {
+      const defaultProfile = profiles.find(
+        (profile: { is_default: boolean }) => profile.is_default
+      );
+
+      const cartItem = {
+        id: item.id,
+        type: 'digital-product' as const,
+        name: item.title,
+        district: '',
+        price: 0,
+        consultationKey: `digital_product:${item.id}`,
+        contact_person_name: defaultProfile?.contact_person_name,
+        phone: defaultProfile?.phone,
+        company_name: defaultProfile?.company_name,
+        email: defaultProfile?.email,
+        user_profile_id: defaultProfile?.id,
+        user_auth_id: defaultProfile?.user_auth_id || user?.id,
+        digitalProductUuid: item.productUuid,
+      };
+
+      dispatch({ type: 'ADD_ITEM', item: cartItem });
+    }
+  };
+
+  return (
+    <Link
+      href={`/digital-media/${item.id}?tab=${currentTab}`}
+      className="w-full max-w-[23rem] group"
+    >
+      <div
+        className={`relative w-full aspect-square overflow-hidden rounded-2xl bg-gray-100 ${
+          isSelected && showCheckbox ? 'ring-[3px] ring-[#238CFA]' : ''
+        }`}
+      >
+        <Image
+          src={imgSrc}
+          alt={item.title}
+          fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 33vw, 33vw"
+          className="object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+          quality={85}
+          onError={() => setImgSrc(fallbackSrc)}
+        />
+        {/* 체크박스 (쇼핑몰 탭일 때만 표시) */}
+        {showCheckbox && (
+          <div
+            className="absolute top-3 right-3 z-10 cursor-pointer"
+            onClick={handleCheckboxClick}
+          >
+            <div
+              className={`flex items-center justify-center w-7 h-7 rounded-md border transition-colors duration-150 shadow-md backdrop-blur-md ${
+                isSelected
+                  ? 'border-[#238CFA] bg-[rgba(35,140,250,0.08)]'
+                  : 'border-gray-600 border-[0.1rem]'
+              }`}
+            >
+              {isSelected ? (
+                <Image
+                  src="/images/blue-check.png"
+                  alt="선택됨"
+                  width={16}
+                  height={16}
+                  className="w-4 h-4"
+                />
+              ) : (
+                <div className="w-3.5 h-3.5 rounded-[0.25rem] border border-gray-300 bg-white"></div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="pt-4">
+        <div className="text-1.25 font-[700] text-black font-gmarket line-clamp-1">
+          {item.title}
+        </div>
+      </div>
+    </Link>
+  );
 }
 
 // API 응답 타입
@@ -250,7 +369,7 @@ function DigitalSignagePageContent() {
         </p>
       </section>
 
-      <section className=" mx-auto mb-12">
+      {/* <section className=" mx-auto mb-12">
         <div className="relative w-full h-[320px] md:h-[400px] overflow-hidden">
           <Image
             src={
@@ -263,7 +382,7 @@ function DigitalSignagePageContent() {
             priority
           />
         </div>
-      </section>
+      </section> */}
 
       {/* Tab Navigation */}
       <section className="lg:container lg:mx-auto lg:px-[8rem] sm:px-[1.5rem] mb-8">
@@ -328,7 +447,12 @@ function DigitalSignagePageContent() {
         ) : (
           <div className="grid lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-1 gap-8 justify-items-center">
             {getCurrentItems().map((item) => (
-              <ItemCard item={item} key={item.id} />
+              <DigitalMediaGridCard
+                item={item}
+                currentTab={activeTab}
+                showCheckbox={activeTab === 'digital_products'}
+                key={item.id}
+              />
             ))}
           </div>
         )}

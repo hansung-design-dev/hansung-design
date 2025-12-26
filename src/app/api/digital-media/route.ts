@@ -196,13 +196,25 @@ async function getProductByCode(productType: string, productCode: string) {
     // productType을 테이블 이름 기반으로 처리
     // digital_media_billboards, digital_media_signages, digital_products
     if (productType === 'digital_media_billboards') {
-      // digital_media_billboards 테이블에서 project_code로 조회
-      const { data, error } = await supabase
+      // digital_media_billboards 테이블에서 project_code 또는 district_code로 조회
+      let { data, error } = await supabase
         .from('digital_media_billboards')
         .select('*')
         .eq('project_code', productCode)
         .eq('is_active', true)
         .maybeSingle();
+
+      // project_code로 못 찾으면 district_code로 재시도
+      if (!data && !error) {
+        const retryResult = await supabase
+          .from('digital_media_billboards')
+          .select('*')
+          .eq('district_code', productCode)
+          .eq('is_active', true)
+          .maybeSingle();
+        data = retryResult.data;
+        error = retryResult.error;
+      }
 
       if (error) {
         console.error(`Error fetching ${productType}:`, error);
@@ -211,7 +223,7 @@ async function getProductByCode(productType: string, productCode: string) {
 
       if (!data) {
         console.log(
-          `No data found for ${productType} with project_code:`,
+          `No data found for ${productType} with project_code or district_code:`,
           productCode
         );
       }

@@ -226,17 +226,29 @@ export default async function DigitalSignageDetailPage({
   const isDigitalBillboard = digitalBillboardIds.includes(district_id);
   const isDigitalMediaSignage = digitalMediaSignageIds.includes(district_id);
   const isDigitalProduct = digitalProductsIds.includes(district_id);
+  // tab 파라미터도 고려하여 isMediaDisplay 결정
   const isMediaDisplay =
-    !isDigitalBillboard && !isDigitalMediaSignage && !isDigitalProduct;
+    !isDigitalBillboard &&
+    !isDigitalMediaSignage &&
+    !isDigitalProduct &&
+    tab !== 'digital_media_billboards' &&
+    tab !== 'digital_media_signages' &&
+    tab !== 'digital_products';
+
+  // baseUrl 결정 (서버 사이드에서 절대 URL 필요)
+  // Vercel 환경에서는 VERCEL_URL 사용, 로컬에서는 환경변수 또는 기본값
+  const baseUrl = process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : process.env.NEXT_PUBLIC_BASE_URL ||
+      process.env.NEXT_PUBLIC_APP_URL ||
+      'http://localhost:3005';
 
   // 우선순위: district_id 기반 판단 > tab 파라미터
   // 1. digital_media_billboards 테이블 아이템 처리
-  if (isDigitalBillboard) {
+  if (isDigitalBillboard || tab === 'digital_media_billboards') {
     // digital_media_billboards 처리
     const productType = 'digital_media_billboards';
     try {
-      const baseUrl =
-        process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
       const apiUrl = `${baseUrl}/api/digital-media?action=getProductDetail&productType=${productType}&productCode=${district_id}`;
       console.log('🔍 Fetching product detail (digital_media_billboards):', {
         productType,
@@ -245,7 +257,14 @@ export default async function DigitalSignageDetailPage({
       });
       const response = await fetch(apiUrl, { cache: 'no-store' });
 
-      if (response.ok) {
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ API response not OK:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText,
+        });
+      } else {
         const responseData = await response.json();
 
         // API 응답이 배열인 경우 첫 번째 요소 사용, 단일 객체인 경우 그대로 사용
@@ -258,63 +277,63 @@ export default async function DigitalSignageDetailPage({
             productType,
             district_id,
           });
-          return;
-        }
+          // productData가 null인 상태로 계속 진행
+        } else {
+          console.log('✅ API response received (digital_media_billboards):', {
+            title: dbData.title,
+            main_image_url: dbData.main_image_url,
+            image_urls_type: typeof dbData.image_urls,
+            image_urls: dbData.image_urls,
+          });
 
-        console.log('✅ API response received (digital_media_billboards):', {
-          title: dbData.title,
-          main_image_url: dbData.main_image_url,
-          image_urls_type: typeof dbData.image_urls,
-          image_urls: dbData.image_urls,
-        });
-
-        // image_urls 파싱 처리 (JSON 문자열 또는 배열)
-        let imageUrls: string[] = [];
-        if (Array.isArray(dbData.image_urls)) {
-          imageUrls = dbData.image_urls;
-        } else if (typeof dbData.image_urls === 'string') {
-          try {
-            const parsed = JSON.parse(dbData.image_urls);
-            imageUrls = Array.isArray(parsed) ? parsed : [parsed];
-          } catch {
-            // JSON 파싱 실패 시 단일 문자열로 처리
-            if (dbData.image_urls) {
-              imageUrls = [dbData.image_urls];
+          // image_urls 파싱 처리 (JSON 문자열 또는 배열)
+          let imageUrls: string[] = [];
+          if (Array.isArray(dbData.image_urls)) {
+            imageUrls = dbData.image_urls;
+          } else if (typeof dbData.image_urls === 'string') {
+            try {
+              const parsed = JSON.parse(dbData.image_urls);
+              imageUrls = Array.isArray(parsed) ? parsed : [parsed];
+            } catch {
+              // JSON 파싱 실패 시 단일 문자열로 처리
+              if (dbData.image_urls) {
+                imageUrls = [dbData.image_urls];
+              }
             }
           }
+
+          // main_image_url과 image_urls 배열을 합쳐서 images 배열 생성 (중복 제거)
+          const allImages = [dbData.main_image_url, ...imageUrls].filter(
+            (url): url is string => Boolean(url) && typeof url === 'string'
+          );
+          const uniqueImages = Array.from(new Set(allImages));
+
+          // DB 데이터를 productData 형식으로 변환
+          productData = {
+            id:
+              dbData.district_code ||
+              dbData.project_code ||
+              dbData.product_code ||
+              district_id,
+            title: dbData.title || '',
+            image: dbData.main_image_url || '',
+            images:
+              uniqueImages.length > 0
+                ? uniqueImages
+                : [dbData.main_image_url || ''],
+            specifications: {
+              operatingLineup: dbData.operating_lineup || '',
+              modelName: dbData.model_name || '',
+              productSize: dbData.product_size || '',
+              resolutionBrightness: dbData.resolution_brightness || '',
+              keyFeatures: dbData.key_features || '',
+              usage: dbData.usage || '',
+              installationMethod: dbData.installation_method || '',
+              inquiry: dbData.inquiry_phone || '',
+            },
+            description: dbData.description || '',
+          };
         }
-
-        // main_image_url과 image_urls 배열을 합쳐서 images 배열 생성 (중복 제거)
-        const allImages = [dbData.main_image_url, ...imageUrls].filter(
-          (url): url is string => Boolean(url) && typeof url === 'string'
-        );
-        const uniqueImages = Array.from(new Set(allImages));
-
-        // DB 데이터를 productData 형식으로 변환
-        productData = {
-          id:
-            dbData.district_code ||
-            dbData.project_code ||
-            dbData.product_code ||
-            district_id,
-          title: dbData.title || '',
-          image: dbData.main_image_url || '',
-          images:
-            uniqueImages.length > 0
-              ? uniqueImages
-              : [dbData.main_image_url || ''],
-          specifications: {
-            operatingLineup: dbData.operating_lineup || '',
-            modelName: dbData.model_name || '',
-            productSize: dbData.product_size || '',
-            resolutionBrightness: dbData.resolution_brightness || '',
-            keyFeatures: dbData.key_features || '',
-            usage: dbData.usage || '',
-            installationMethod: dbData.installation_method || '',
-            inquiry: dbData.inquiry_phone || '',
-          },
-          description: dbData.description || '',
-        };
       }
     } catch (error) {
       console.error(
@@ -331,8 +350,6 @@ export default async function DigitalSignageDetailPage({
   } else if (isDigitalMediaSignage || tab === 'digital_media_signages') {
     // digital_media_signages 테이블 처리
     try {
-      const baseUrl =
-        process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
       const apiUrl = `${baseUrl}/api/digital-media?action=getProductDetail&productType=digital_media_signages&productCode=${district_id}`;
       console.log('🔍 Fetching digital_media_signages detail:', {
         district_id,
@@ -560,8 +577,6 @@ export default async function DigitalSignageDetailPage({
   } else if (isDigitalProduct || tab === 'digital_products') {
     // digital_products 테이블 처리 (쇼핑몰)
     try {
-      const baseUrl =
-        process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
       const apiUrl = `${baseUrl}/api/digital-media?action=getProductDetail&productType=digital_products&productCode=${district_id}`;
       console.log('🔍 Fetching digital_products detail:', {
         district_id,
@@ -779,8 +794,6 @@ export default async function DigitalSignageDetailPage({
 
     if (productType) {
       try {
-        const baseUrl =
-          process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
         const apiUrl = `${baseUrl}/api/digital-media?action=getProductDetail&productType=${productType}&productCode=${district_id}`;
         console.log('🔍 Fetching product detail:', {
           productType,
@@ -878,8 +891,6 @@ export default async function DigitalSignageDetailPage({
 
     if (productType) {
       try {
-        const baseUrl =
-          process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
         const apiUrl = `${baseUrl}/api/digital-media?action=getProductDetail&productType=${productType}&productCode=${district_id}`;
         console.log('🔍 Fetching product detail:', {
           productType,
