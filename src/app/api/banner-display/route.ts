@@ -463,6 +463,8 @@ async function getBannerDisplaysByDistrict(districtName: string) {
 
     if (panelIds.length > 0) {
       try {
+        // 일반 구에서는 현수막 슬롯(slot_number > 0)만 조회 (상단광고 제외)
+        // slot_number가 1, 2, 3... 등 여러 개일 수 있으므로 합산 필요
         const { data: halfData, error: halfError } = await supabase
           .from('half_period_inventory_status')
           .select(
@@ -471,6 +473,7 @@ async function getBannerDisplaysByDistrict(districtName: string) {
             district,
             year_month,
             half_period,
+            slot_number,
             total_slots,
             available_slots,
             closed_slots
@@ -478,7 +481,8 @@ async function getBannerDisplaysByDistrict(districtName: string) {
           )
           .eq('district', districtName)
           .in('panel_id', panelIds)
-          .in('year_month', targetMonths);
+          .in('year_month', targetMonths)
+          .gt('slot_number', 0);
 
         if (halfError) {
           console.error(
@@ -486,6 +490,7 @@ async function getBannerDisplaysByDistrict(districtName: string) {
             halfError
           );
         } else if (halfData) {
+          // slot_number > 0인 슬롯들을 panel_id + half_period별로 합산
           for (const row of halfData) {
             const panelId = row.panel_id as string;
             if (!halfPeriodInventoryByPanel[panelId]) {
@@ -503,9 +508,23 @@ async function getBannerDisplaysByDistrict(districtName: string) {
             };
 
             if (row.half_period === 'first_half') {
-              halfPeriodInventoryByPanel[panelId].first_half = info;
+              if (halfPeriodInventoryByPanel[panelId].first_half) {
+                // 기존 값에 합산
+                halfPeriodInventoryByPanel[panelId].first_half!.total_slots += info.total_slots;
+                halfPeriodInventoryByPanel[panelId].first_half!.available_slots += info.available_slots;
+                halfPeriodInventoryByPanel[panelId].first_half!.closed_slots += info.closed_slots;
+              } else {
+                halfPeriodInventoryByPanel[panelId].first_half = info;
+              }
             } else if (row.half_period === 'second_half') {
-              halfPeriodInventoryByPanel[panelId].second_half = info;
+              if (halfPeriodInventoryByPanel[panelId].second_half) {
+                // 기존 값에 합산
+                halfPeriodInventoryByPanel[panelId].second_half!.total_slots += info.total_slots;
+                halfPeriodInventoryByPanel[panelId].second_half!.available_slots += info.available_slots;
+                halfPeriodInventoryByPanel[panelId].second_half!.closed_slots += info.closed_slots;
+              } else {
+                halfPeriodInventoryByPanel[panelId].second_half = info;
+              }
             }
           }
         }
@@ -2134,7 +2153,10 @@ async function getBannerDisplaysByDistrictWithSlotType(
 
     if (panelIds.length > 0) {
       try {
-        const { data: halfData, error: halfError } = await supabase
+        // slotType에 따라 slot_number 필터 적용
+        // - 상단광고: slot_number = 0만
+        // - 현수막게시대: slot_number > 0 (1, 2, 3... 모두 합산)
+        let inventoryQuery = supabase
           .from('half_period_inventory_status')
           .select(
             `
@@ -2142,6 +2164,7 @@ async function getBannerDisplaysByDistrictWithSlotType(
             district,
             year_month,
             half_period,
+            slot_number,
             total_slots,
             available_slots,
             closed_slots
@@ -2151,12 +2174,21 @@ async function getBannerDisplaysByDistrictWithSlotType(
           .in('panel_id', panelIds)
           .in('year_month', targetMonths);
 
+        if (slotType === 'top_ad') {
+          inventoryQuery = inventoryQuery.eq('slot_number', 0);
+        } else {
+          inventoryQuery = inventoryQuery.gt('slot_number', 0);
+        }
+
+        const { data: halfData, error: halfError } = await inventoryQuery;
+
         if (halfError) {
           console.error(
             '❌ half_period_inventory_status 조회 오류:',
             halfError
           );
         } else if (halfData) {
+          // slot_number > 0인 경우 같은 panel_id + half_period 조합의 슬롯들을 합산
           for (const row of halfData) {
             const panelId = row.panel_id as string;
             if (!halfPeriodInventoryByPanel[panelId]) {
@@ -2174,9 +2206,23 @@ async function getBannerDisplaysByDistrictWithSlotType(
             };
 
             if (row.half_period === 'first_half') {
-              halfPeriodInventoryByPanel[panelId].first_half = info;
+              if (halfPeriodInventoryByPanel[panelId].first_half) {
+                // 기존 값에 합산
+                halfPeriodInventoryByPanel[panelId].first_half!.total_slots += info.total_slots;
+                halfPeriodInventoryByPanel[panelId].first_half!.available_slots += info.available_slots;
+                halfPeriodInventoryByPanel[panelId].first_half!.closed_slots += info.closed_slots;
+              } else {
+                halfPeriodInventoryByPanel[panelId].first_half = info;
+              }
             } else if (row.half_period === 'second_half') {
-              halfPeriodInventoryByPanel[panelId].second_half = info;
+              if (halfPeriodInventoryByPanel[panelId].second_half) {
+                // 기존 값에 합산
+                halfPeriodInventoryByPanel[panelId].second_half!.total_slots += info.total_slots;
+                halfPeriodInventoryByPanel[panelId].second_half!.available_slots += info.available_slots;
+                halfPeriodInventoryByPanel[panelId].second_half!.closed_slots += info.closed_slots;
+              } else {
+                halfPeriodInventoryByPanel[panelId].second_half = info;
+              }
             }
           }
         }

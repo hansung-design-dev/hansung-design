@@ -7,7 +7,7 @@ export async function POST() {
   try {
     console.log('🔧 Fixing half-period inventory views...');
 
-    // 1. 패널별 상/하반기 재고 현황 뷰
+    // 1. 패널별 상/하반기 재고 현황 뷰 (slot_number별로 분리)
     await supabase.rpc('exec_sql', {
       sql: `
         CREATE OR REPLACE VIEW half_period_inventory_status AS
@@ -16,6 +16,7 @@ export async function POST() {
           rgu.name AS district,
           rgdp.year_month,
           rgdp.period AS half_period,
+          bs.slot_number,
           COUNT(DISTINCT bs.id) AS total_slots,
           COALESCE(
             COUNT(DISTINCT CASE WHEN bsi.is_closed = true THEN bs.id END),
@@ -44,7 +45,8 @@ export async function POST() {
           p.id,
           rgu.name,
           rgdp.year_month,
-          rgdp.period;
+          rgdp.period,
+          bs.slot_number;
       `,
     });
 
