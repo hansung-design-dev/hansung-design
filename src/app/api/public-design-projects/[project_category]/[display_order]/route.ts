@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/src/app/api/supabase';
+import { transformImageUrl } from '@/src/lib/storage-utils';
 
 export async function GET(
   request: NextRequest,
@@ -123,14 +124,7 @@ export async function GET(
           projectDataList[0]?.image_urls || [
             '/images/public-design-image2.jpeg',
           ]
-        ).map((url: string) => {
-          // 상대 경로를 Supabase Storage URL로 변환
-          if (url.startsWith('/images/')) {
-            const storagePath = url.replace('/images/', '');
-            return `https://eklijrstdcgsxtbjxjra.supabase.co/storage/v1/object/public/public-design-items/${storagePath}`;
-          }
-          return url;
-        }),
+        ).map((url: string) => transformImageUrl(url, 'public-design-items')),
         categoryId: projectDataList[0]?.project_category || '',
         displayOrder: projectDataList[0]?.display_order || 1,
       },

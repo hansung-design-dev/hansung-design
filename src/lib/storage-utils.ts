@@ -9,11 +9,52 @@ export interface StorageImage {
 }
 
 /**
+ * Storage 버킷 이름 타입
+ */
+export type StorageBucketName =
+  | 'banner-installed'
+  | 'public-design-items'
+  | 'design-drafts';
+
+/**
+ * Supabase Storage Public URL 생성
+ */
+export function getStoragePublicUrl(
+  bucket: StorageBucketName,
+  path: string,
+  options?: { encodeUri?: boolean }
+): string {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!supabaseUrl) {
+    throw new Error('NEXT_PUBLIC_SUPABASE_URL 환경변수가 설정되지 않았습니다.');
+  }
+  const shouldEncode = options?.encodeUri ?? true;
+  const encodedPath = shouldEncode ? encodeURIComponent(path) : path;
+
+  return `${supabaseUrl}/storage/v1/object/public/${bucket}/${encodedPath}`;
+}
+
+/**
+ * 상대 경로를 Storage URL로 변환
+ */
+export function transformImageUrl(
+  url: string,
+  bucket: StorageBucketName,
+  pathPrefix: string = '/images/'
+): string {
+  if (url.startsWith(pathPrefix)) {
+    const storagePath = url.replace(pathPrefix, '');
+    return getStoragePublicUrl(bucket, storagePath, { encodeUri: false });
+  }
+  return url;
+}
+
+/**
  * Supabase Storage 폴더에서 이미지 파일들을 가져오는 함수
  */
 export async function getImagesFromFolder(
   folderPath: string,
-  bucketName: string = 'banner-installed'
+  bucketName: StorageBucketName = 'banner-installed'
 ): Promise<StorageImage[]> {
   try {
     const { data: files, error } = await supabase.storage
@@ -54,9 +95,7 @@ export async function getImagesFromFolder(
       return {
         name: file.name,
         displayName: displayName, // 표시용 이름 (확장자 제거)
-        url: `https://eklijrstdcgsxtbjxjra.supabase.co/storage/v1/object/public/${bucketName}/${encodeURIComponent(
-          filePath
-        )}`,
+        url: getStoragePublicUrl(bucketName, filePath),
         size: file.metadata?.size || 0,
         lastModified: file.updated_at,
       };

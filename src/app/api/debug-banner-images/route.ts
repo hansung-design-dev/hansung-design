@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/src/lib/supabase';
+import { getStoragePublicUrl } from '@/src/lib/storage-utils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -35,9 +36,7 @@ export async function GET(request: NextRequest) {
       const filePath = `${folderPath}/${file.name}`;
       return {
         name: file.name,
-        url: `https://eklijrstdcgsxtbjxjra.supabase.co/storage/v1/object/public/${bucketName}/${encodeURIComponent(
-          filePath
-        )}`,
+        url: getStoragePublicUrl('banner-installed', filePath),
         size: file.metadata?.size || 0,
       };
     });

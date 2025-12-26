@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/src/lib/supabase';
+import { getStoragePublicUrl } from '@/src/lib/storage-utils';
 
 export async function GET() {
   try {
@@ -49,9 +50,7 @@ export async function GET() {
     // 5. 실제 URL 생성 테스트 (첫 번째 이미지 파일)
     const testUrls = imageFiles.slice(0, 5).map((file) => ({
       name: file.name,
-      url: `https://eklijrstdcgsxtbjxjra.supabase.co/storage/v1/object/public/${bucketName}/${encodeURIComponent(
-        file.name
-      )}`,
+      url: getStoragePublicUrl('banner-installed', file.name),
       size: file.metadata?.size || 0,
     }));
 
