@@ -4,6 +4,10 @@ import { useEffect, useState } from 'react';
 import Nav from '../components/layouts/nav';
 import Section from '../components/section';
 import FAQ from '../components/layouts/faq';
+import MovingSmartCity from '../components/about/MovingSmartCity';
+import Statistics from '../components/about/Statistics';
+import Greetings from '../components/about/Greetings';
+import Strengths from '../components/about/Strengths';
 import Image from 'next/image';
 import React from 'react';
 
@@ -140,6 +144,10 @@ export default function Home() {
           </div>
         </div>
       </div>
+      <MovingSmartCity />
+      <Statistics />
+      <Greetings />
+      <Strengths />
       <div className="sm:pt-12 md:pt-16 pb-[4rem]">
         <Section
           title={
