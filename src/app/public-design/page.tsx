@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import PublicDesignDesktopSkeleton from '@/src/components/skeleton/PublicDesignDesktopSkeleton';
 import { useAdvancedNoticePopup } from '@/src/components/hooks/useAdvancedNoticePopup';
-import { HomepageContent } from '@/src/types/homepage-content';
 
 interface ProjectItem {
   id: string;
@@ -78,8 +77,6 @@ function PublicDesignGridCard({
 export default function PublicDesignPage() {
   const [projects, setProjects] = useState<ProjectItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [homepageContent, setHomepageContent] =
-    useState<HomepageContent | null>(null);
   const [visibleCount, setVisibleCount] = useState(5); // 초기 5개만 보여주기
   const [hasMore, setHasMore] = useState(true);
   const [scrollToIndex, setScrollToIndex] = useState<number | null>(null);
@@ -155,17 +152,6 @@ export default function PublicDesignPage() {
 
     const fetchProjects = async () => {
       try {
-        // 홈페이지 컨텐츠 가져오기
-        const homepageResponse = await fetch(
-          '/api/homepage-contents?page=public_design&section=public_design'
-        );
-        if (homepageResponse.ok) {
-          const homepageData = await homepageResponse.json();
-          if (homepageData && homepageData.length > 0) {
-            setHomepageContent(homepageData[0]);
-          }
-        }
-
         // DB에서 공공디자인 프로젝트 가져오기
         const projectsResponse = await fetch('/api/public-design-projects');
         if (projectsResponse.ok) {

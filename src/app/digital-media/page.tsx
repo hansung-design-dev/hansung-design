@@ -7,6 +7,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import DraggableNoticePopup from '@/src/components/DraggableNoticePopup';
 import { useAdvancedNoticePopup } from '@/src/components/hooks/useAdvancedNoticePopup';
 import { HomepageContent } from '@/src/types/homepage-content';
+import { useCart } from '@/src/contexts/cartContext';
+import { useAuth } from '@/src/contexts/authContext';
+import { useProfile } from '@/src/contexts/profileContext';
 // 로컬 데이터는 fallback으로만 사용 (필요시)
 // import { digitalSignageData } from './[district_id]/data/digitalSignageData';
 
@@ -33,18 +36,9 @@ function DigitalMediaGridCard({
   const [imgSrc, setImgSrc] = useState<string>(item.src || fallbackSrc);
 
   // 쇼핑몰 탭용 체크박스 기능
-  const { cart, dispatch } = showCheckbox
-    ? // eslint-disable-next-line react-hooks/rules-of-hooks
-      require('@/src/contexts/cartContext').useCart()
-    : { cart: [], dispatch: () => {} };
-  const { user } = showCheckbox
-    ? // eslint-disable-next-line react-hooks/rules-of-hooks
-      require('@/src/contexts/authContext').useAuth()
-    : { user: null };
-  const { profiles } = showCheckbox
-    ? // eslint-disable-next-line react-hooks/rules-of-hooks
-      require('@/src/contexts/profileContext').useProfile()
-    : { profiles: [] };
+  const { cart, dispatch } = useCart();
+  const { user } = useAuth();
+  const { profiles } = useProfile();
 
   const isSelected = cart.some(
     (cartItem: { id: string }) => cartItem.id === item.id
