@@ -38,7 +38,7 @@ export default function Competence() {
             />
             <div className="text-center">
               <div className="text-[1.5rem] md:text-[2.5rem] lg:text-[4.625rem] font-700 text-black">
-                100
+                230
               </div>
               <div className="text-[#5C91FF] text-[2rem] md:text-[3.5rem] lg:text-[6rem] font-700">
                 +
@@ -60,7 +60,7 @@ export default function Competence() {
             />
             <div className="text-center">
               <div className="text-[1.5rem] md:text-[2.5rem] lg:text-[4.625rem] font-700 text-black">
-                2000개
+                10,600개
               </div>
               <div className="text-[#5C91FF] text-[2rem] md:text-[3.5rem] lg:text-[6rem] font-700">
                 +
