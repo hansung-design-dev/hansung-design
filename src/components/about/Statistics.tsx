@@ -45,7 +45,7 @@ export default function Statistics() {
           {/* 두 번째 행 */}
           <div className="text-start pl-4 md:pl-6 lg:pl-10 flex flex-col bg-white">
             <div className="text-black font-bold sm:text-[1.8rem] md:text-[3rem] lg:text-[4.625rem]">
-              100
+              230
               <span className="text-[#5C91FF] sm:text-[2.2rem] md:text-[4.5rem] lg:text-[6rem]">
                 +
               </span>
@@ -69,7 +69,7 @@ export default function Statistics() {
 
           <div className="text-start pl-4 md:pl-6 lg:pl-10 flex flex-col bg-white">
             <div className="text-black font-bold sm:text-[1.8rem] md:text-[3rem] lg:text-[4.625rem] mb-2">
-              2000개
+              10,600개
               <span className="text-[#5C91FF] sm:text-[2.2rem] md:text-[4.5rem] lg:text-[6rem]">
                 +
               </span>
