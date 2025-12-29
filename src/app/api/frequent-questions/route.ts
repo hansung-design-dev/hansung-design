@@ -3,7 +3,7 @@ import { supabase } from '@/src/lib/supabase';
 
 export async function GET() {
   try {
-    console.log('=== FAQ API 호출 ===');
+    // console.log('=== FAQ API 호출 ===');
 
     // 모든 FAQ 데이터 조회 (카테고리 필터링 없이)
     const query = supabase
@@ -28,9 +28,9 @@ export async function GET() {
 
     const { data: faqs, error } = await query;
 
-    console.log('FAQ 쿼리 결과:', faqs);
-    console.log('FAQ 개수:', faqs?.length || 0);
-    console.log('쿼리 에러:', error);
+    // console.log('FAQ 쿼리 결과:', faqs);
+    // console.log('FAQ 개수:', faqs?.length || 0);
+    // console.log('쿼리 에러:', error);
 
     if (error) {
       console.error('FAQ 조회 오류:', error);
