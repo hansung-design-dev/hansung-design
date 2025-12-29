@@ -298,7 +298,7 @@ export default function PublicDesignPage() {
         </p>
       </section>
       {/* Main Visual Image */}
-      <section className=" mx-auto  mb-12">
+      {/* <section className=" mx-auto  mb-12">
         <div className="relative w-full h-[320px] md:h-[400px]  overflow-hidden">
           <Image
             src={
@@ -312,7 +312,7 @@ export default function PublicDesignPage() {
             priority
           />
         </div>
-      </section>
+      </section> */}
       {/* Projects Grid Section for lg/md */}
       <section className="lg:container lg:mx-auto lg:px-[8rem] sm:px-[1.5rem] lg:pb-[12rem] md:pb-[12rem] sm:pb-[1rem]">
         {loading ? (
