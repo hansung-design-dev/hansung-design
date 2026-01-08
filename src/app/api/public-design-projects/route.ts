@@ -11,7 +11,7 @@ export async function GET() {
       .eq('design_contents_type', 'list')
       .eq('is_active', true)
       .in('project_category', ['banner_improvement', 'env_improvement'])
-      .order('display_order', { ascending: true });
+      .order('year', { ascending: false });
 
     if (error) {
       console.error('Error fetching public design projects:', error);
