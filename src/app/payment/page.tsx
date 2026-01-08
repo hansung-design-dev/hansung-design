@@ -2307,7 +2307,7 @@ function PaymentPageContent() {
 
           // 결제 요청 버튼 이벤트 리스너
           const paymentButton = document.createElement('button');
-          paymentButton.textContent = '결제하기';
+          paymentButton.textContent = '카드/간편결제';
           paymentButton.className =
             'w-full py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700';
 
@@ -2332,7 +2332,7 @@ function PaymentPageContent() {
                     '행정용/기업용 프로필은 관리자 승인 후에만 할인된 가격으로 결제할 수 있습니다.\n프로필 승인 상태를 확인하시거나 기본 프로필로 다시 주문해주세요.'
                   );
                   paymentButton.disabled = false;
-                  paymentButton.textContent = '결제하기';
+                  paymentButton.textContent = '카드/간편결제';
                   return;
                 }
               }
@@ -2404,7 +2404,7 @@ function PaymentPageContent() {
                     '시안 파일을 업로드하거나 "이메일로 파일 보낼게요"를 선택해주세요.'
                   );
                   paymentButton.disabled = false;
-                  paymentButton.textContent = '결제하기';
+                  paymentButton.textContent = '카드/간편결제';
                   return;
                 }
               } else {
@@ -2422,7 +2422,7 @@ function PaymentPageContent() {
                       }"의 시안 파일을 업로드하거나 "이메일로 파일 보낼게요"를 선택해주세요.`
                     );
                     paymentButton.disabled = false;
-                    paymentButton.textContent = '결제하기';
+                    paymentButton.textContent = '카드/간편결제';
                     return;
                   }
                 }
@@ -2460,7 +2460,7 @@ function PaymentPageContent() {
                   );
                   alert('시안 파일을 선택해주세요.');
                   paymentButton.disabled = false;
-                  paymentButton.textContent = '결제하기';
+                  paymentButton.textContent = '카드/간편결제';
                   return;
                 }
 
@@ -2469,7 +2469,7 @@ function PaymentPageContent() {
                     '주문에 사용할 프로필을 찾을 수 없습니다. 마이페이지에서 프로필을 확인해주세요.'
                   );
                   paymentButton.disabled = false;
-                  paymentButton.textContent = '결제하기';
+                  paymentButton.textContent = '카드/간편결제';
                   return;
                 }
 
@@ -2513,7 +2513,7 @@ function PaymentPageContent() {
                         '시안 파일 업로드 중 오류가 발생했습니다.'
                     );
                     paymentButton.disabled = false;
-                    paymentButton.textContent = '결제하기';
+                    paymentButton.textContent = '카드/간편결제';
                     return;
                   }
 
@@ -2533,7 +2533,7 @@ function PaymentPageContent() {
                     '시안 파일 업로드 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
                   );
                   paymentButton.disabled = false;
-                  paymentButton.textContent = '결제하기';
+                  paymentButton.textContent = '카드/간편결제';
                   return;
                 }
               }
@@ -2545,7 +2545,7 @@ function PaymentPageContent() {
                     '주문에 사용할 프로필을 찾을 수 없습니다. 마이페이지에서 프로필을 확인해주세요.'
                   );
                   paymentButton.disabled = false;
-                  paymentButton.textContent = '결제하기';
+                  paymentButton.textContent = '카드/간편결제';
                   return;
                 }
 
@@ -2565,7 +2565,7 @@ function PaymentPageContent() {
                         }"의 작업이름을 입력해주세요.`
                       );
                       paymentButton.disabled = false;
-                      paymentButton.textContent = '결제하기';
+                      paymentButton.textContent = '카드/간편결제';
                       return;
                     }
                     try {
@@ -2610,7 +2610,7 @@ function PaymentPageContent() {
                           }"의 시안 파일 업로드 중 오류가 발생했습니다.`
                         );
                         paymentButton.disabled = false;
-                        paymentButton.textContent = '결제하기';
+                        paymentButton.textContent = '카드/간편결제';
                         return;
                       }
 
@@ -2641,7 +2641,7 @@ function PaymentPageContent() {
                         }"의 시안 파일 업로드 중 오류가 발생했습니다.`
                       );
                       paymentButton.disabled = false;
-                      paymentButton.textContent = '결제하기';
+                      paymentButton.textContent = '카드/간편결제';
                       return;
                     }
                   }
@@ -2717,7 +2717,7 @@ function PaymentPageContent() {
                 console.error('🔍 [결제 페이지] ❌ userAuthId가 없음');
                 alert('로그인이 필요합니다.');
                 paymentButton.disabled = false;
-                paymentButton.textContent = '결제하기';
+                paymentButton.textContent = '카드/간편결제';
                 return;
               }
 
@@ -2844,7 +2844,7 @@ function PaymentPageContent() {
                   '프로필이 없습니다. 마이페이지에서 프로필을 먼저 생성해주세요.'
                 );
                 paymentButton.disabled = false;
-                paymentButton.textContent = '결제하기';
+                paymentButton.textContent = '카드/간편결제';
 
                 // 마이페이지로 리다이렉트 제안
                 if (confirm('프로필 생성 페이지로 이동하시겠습니까?')) {
@@ -2872,7 +2872,7 @@ function PaymentPageContent() {
                 if (!projectName || projectName.trim() === '') {
                   alert('작업이름을 입력해주세요.');
                   paymentButton.disabled = false;
-                  paymentButton.textContent = '결제하기';
+                  paymentButton.textContent = '카드/간편결제';
                   return;
                 }
               } else {
@@ -2887,7 +2887,7 @@ function PaymentPageContent() {
                       }"의 작업이름을 입력해주세요.`
                     );
                     paymentButton.disabled = false;
-                    paymentButton.textContent = '결제하기';
+                    paymentButton.textContent = '카드/간편결제';
                     return;
                   }
                 }
@@ -2942,7 +2942,7 @@ function PaymentPageContent() {
                 console.error('🔍 [결제 페이지] ❌ orderId가 없음');
                 alert('주문 ID를 생성할 수 없습니다. 다시 시도해주세요.');
                 paymentButton.disabled = false;
-                paymentButton.textContent = '결제하기';
+                paymentButton.textContent = '카드/간편결제';
                 return;
               }
 
@@ -2955,7 +2955,7 @@ function PaymentPageContent() {
                 );
                 alert('주문 ID 형식이 올바르지 않습니다. 다시 시도해주세요.');
                 paymentButton.disabled = false;
-                paymentButton.textContent = '결제하기';
+                paymentButton.textContent = '카드/간편결제';
                 return;
               }
 
@@ -3041,7 +3041,7 @@ function PaymentPageContent() {
                 );
                 alert('전화번호 형식이 올바르지 않습니다.');
                 paymentButton.disabled = false;
-                paymentButton.textContent = '결제하기';
+                paymentButton.textContent = '카드/간편결제';
                 return;
               }
 
@@ -3052,7 +3052,7 @@ function PaymentPageContent() {
                   '결제 SDK가 아직 준비되지 않았습니다. 잠시 후 다시 시도해주세요.'
                 );
                 paymentButton.disabled = false;
-                paymentButton.textContent = '결제하기';
+                paymentButton.textContent = '카드/간편결제';
                 return;
               }
 
@@ -3123,7 +3123,7 @@ function PaymentPageContent() {
                 });
                 alert('결제 정보가 불완전합니다. 다시 시도해주세요.');
                 paymentButton.disabled = false;
-                paymentButton.textContent = '결제하기';
+                paymentButton.textContent = '카드/간편결제';
                 return;
               }
 
@@ -3189,7 +3189,7 @@ function PaymentPageContent() {
                       confirmResult.error || '주문 생성 중 오류가 발생했습니다.'
                     );
                     paymentButton.disabled = false;
-                    paymentButton.textContent = '결제하기';
+                    paymentButton.textContent = '카드/간편결제';
                     return;
                   }
 
@@ -3214,7 +3214,7 @@ function PaymentPageContent() {
                   console.error('🔍 [결제 페이지] ❌ 테스트 결제 예외:', error);
                   alert('주문 생성 중 오류가 발생했습니다.');
                   paymentButton.disabled = false;
-                  paymentButton.textContent = '결제하기';
+                  paymentButton.textContent = '카드/간편결제';
                   return;
                 }
               }
@@ -3272,7 +3272,7 @@ function PaymentPageContent() {
               console.error('🔍 [결제 페이지] ❌ 결제 요청 실패:', err);
               alert('결제 요청 중 오류가 발생했습니다.');
               paymentButton.disabled = false;
-              paymentButton.textContent = '결제하기';
+              paymentButton.textContent = '카드/간편결제';
             }
           });
 

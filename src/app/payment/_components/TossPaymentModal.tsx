@@ -126,7 +126,7 @@ export default function TossPaymentModal({
                 }}
                 disabled={isBankTransferProcessing}
               >
-                {isBankTransferProcessing ? '처리중...' : '계좌이체하기'}
+                {isBankTransferProcessing ? '처리중...' : '계좌이체'}
               </Button>
             </div>
           </div>
