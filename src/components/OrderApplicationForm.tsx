@@ -170,9 +170,10 @@ export default function OrderApplicationForm({
     0
   );
 
-  const totalAmount =
-    Number(data.priceInfo?.finalPrice ?? 0) ||
-    details.reduce((sum, d) => sum + Number(d.price || 0), 0);
+  const totalAmount = details.reduce(
+    (sum, d) => sum + Number(d.price || 0),
+    0
+  );
 
   const districtDisplayKeys = useMemo(() => {
     const keys = new Set<string>();
