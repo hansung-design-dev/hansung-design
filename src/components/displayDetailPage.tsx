@@ -1372,16 +1372,8 @@ export default function DisplayDetailPage({
 
       // user_auth_id가 없으면 장바구니에 추가하지 않음
       if (!cartItem.user_auth_id) {
-        console.error(
-          '🔍 [장바구니 추가] ❌ user_auth_id가 없어서 장바구니 추가 중단',
-          {
-            itemId: cartItem.id,
-            itemName: cartItem.name,
-            hasUser: !!user,
-            userId: user?.id,
-            hasProfileToUse: !!profileToUse,
-            profileUserAuthId: profileToUse?.user_auth_id,
-          }
+        console.log(
+          '🔍 [장바구니 추가] 로그인이 필요합니다. 로그인 모달 표시'
         );
         setShowLoginModal(true);
         return;

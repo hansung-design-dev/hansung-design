@@ -328,6 +328,27 @@ export default function LEDDisplayDetailPage({
         // 기본 프로필 정보 가져오기
         const defaultProfile = profiles.find((profile) => profile.is_default);
 
+        // user_auth_id 가져오기 (localStorage 또는 user 객체에서)
+        const userAuthId = (() => {
+          if (typeof window !== 'undefined') {
+            const storedAuthId = localStorage.getItem('hansung_user_auth_id');
+            if (storedAuthId) {
+              return storedAuthId;
+            }
+          }
+          return user?.id || defaultProfile?.user_auth_id;
+        })();
+
+        // user_auth_id가 없으면 로그인 모달 표시
+        if (!userAuthId) {
+          console.log(
+            '🔍 [LED 장바구니 추가] 로그인이 필요합니다. 로그인 모달 표시'
+          );
+          setShowLoginModal(true);
+          setSelectedIds(selectedIds); // 선택 상태 원복
+          return;
+        }
+
         const cartItem = {
           id: item.id, // 복합 ID (gwanak-03-uuid)
           type: 'led-display' as const,
@@ -351,7 +372,7 @@ export default function LEDDisplayDetailPage({
           company_name: defaultProfile?.company_name,
           email: defaultProfile?.email,
           user_profile_id: defaultProfile?.id,
-          user_auth_id: defaultProfile?.user_auth_id || user?.id,
+          user_auth_id: userAuthId,
         };
 
         console.log('🔍 Adding LED item to cart:', cartItem);
