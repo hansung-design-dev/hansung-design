@@ -2358,31 +2358,78 @@ async function getDistrictDataFromCache(districtName: string) {
           .filter(Boolean)
       : [];
 
-    // 기간 정보는 캐시에서 가져오지 않고 API에서 실시간으로 가져오기
+    // 기간 정보는 캐시에서 가져오지 않고 직접 Supabase에서 실시간으로 가져오기
     let periodData = null;
     try {
-      const { getBaseUrl } = await import('@/src/lib/getBaseUrl');
-      const baseUrl = getBaseUrl();
-      const periodResponse = await fetch(
-        `${baseUrl}/api/display-period?district=${encodeURIComponent(
-          districtName
-        )}&display_type=banner_display`
-      );
-      const periodResult = await periodResponse.json();
-      if (periodResult.success) {
-        periodData = periodResult.data;
-        console.log(
-          '🔍 Period data from API (in getDistrictDataFromCache):',
-          periodData
-        );
-      } else {
-        console.warn(
-          '🔍 Failed to fetch period data from API:',
-          periodResult.error
-        );
+      // display_type_id 찾기
+      const { data: typeData } = await supabase
+        .from('display_types')
+        .select('id')
+        .eq('name', 'banner_display')
+        .single();
+
+      if (typeData) {
+        // 현재 날짜 기준으로 신청 가능한 기간 조회
+        const now = new Date();
+        const koreaTime = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+        const currentYear = koreaTime.getFullYear();
+        const currentMonth = koreaTime.getMonth() + 1;
+
+        const formatDate = (date: Date) => {
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        };
+
+        const targetMonths = [
+          `${currentYear}-${String(currentMonth).padStart(2, '0')}`,
+          `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`,
+        ];
+
+        const { data: allPeriods } = await supabase
+          .from('region_gu_display_periods')
+          .select('period_from, period_to, period, year_month')
+          .eq('region_gu_id', cacheData.region_id)
+          .eq('display_type_id', typeData.id)
+          .in('year_month', targetMonths)
+          .gte('period_from', formatDate(koreaTime))
+          .order('period_from', { ascending: true });
+
+        if (allPeriods && allPeriods.length > 0) {
+          // 7일 전 마감 로직
+          const availablePeriods = allPeriods.filter((period) => {
+            const periodStart = new Date(period.period_from);
+            const daysUntilPeriod = Math.ceil(
+              (periodStart.getTime() - koreaTime.getTime()) / (1000 * 60 * 60 * 24)
+            );
+            return daysUntilPeriod >= 7;
+          });
+
+          const selectedPeriods = availablePeriods.slice(0, 2);
+
+          if (selectedPeriods.length > 0) {
+            periodData = {
+              first_half_from: selectedPeriods[0]?.period_from || '',
+              first_half_to: selectedPeriods[0]?.period_to || '',
+              second_half_from: selectedPeriods[1]?.period_from || '',
+              second_half_to: selectedPeriods[1]?.period_to || '',
+              available_periods: selectedPeriods.map((period) => ({
+                period_from: period.period_from,
+                period_to: period.period_to,
+                period: period.period,
+                year_month: period.year_month,
+              })),
+            };
+            console.log(
+              '🔍 Period data from Supabase (in getDistrictDataFromCache):',
+              periodData
+            );
+          }
+        }
       }
     } catch (err) {
-      console.warn('🔍 Error fetching period data from API:', err);
+      console.warn('🔍 Error fetching period data from Supabase:', err);
     }
 
     // 은행 정보

@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // region_gu_id 찾기 (display_type_id와 함께)
+    // region_gu_id 찾기 (display_type_id 조건 제거 - region_gu 테이블에는 display_type_id가 없음)
     console.log(
       '🔍 Looking for district:',
       district,
@@ -48,7 +48,6 @@ export async function GET(request: NextRequest) {
       .from('region_gu')
       .select('id')
       .eq('name', district)
-      .eq('display_type_id', typeData.id)
       .single();
 
     console.log('🔍 District result:', { guData, guError });
