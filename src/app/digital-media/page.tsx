@@ -124,7 +124,7 @@ function DigitalMediaGridCard({
       </div>
 
       <div className="pt-4">
-        <div className="text-1.25 font-[700] text-black font-gmarket line-clamp-1">
+        <div className="text-1.25 font-[700] text-black font-gmarket line-clamp-1 leading-normal">
           {item.title}
         </div>
       </div>
