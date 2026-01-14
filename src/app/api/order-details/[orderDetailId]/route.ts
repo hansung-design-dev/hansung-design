@@ -1,6 +1,85 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/src/app/api/supabase';
 
+interface BannerSlotPricePolicy {
+  price_usage_type?: string;
+  total_price?: number;
+}
+
+interface OrderDetailWithPrice {
+  id: string;
+  slot_order_quantity?: number;
+  panel_slot_usage?: {
+    unit_price?: number;
+    banner_slots?: {
+      banner_slot_price_policy?: BannerSlotPricePolicy[];
+    };
+  };
+}
+
+/**
+ * 남은 order_details를 기반으로 총 금액을 재계산
+ */
+async function recalculateOrderAmount(
+  orderId: string,
+  isPublicInstitution: boolean
+): Promise<number> {
+  // 남은 order_details 조회 (가격 정책 포함)
+  const { data: remainingDetails, error } = await supabase
+    .from('order_details')
+    .select(`
+      id,
+      slot_order_quantity,
+      panel_slot_usage:panel_slot_usage_id (
+        unit_price,
+        banner_slots:banner_slot_id (
+          banner_slot_price_policy (
+            price_usage_type,
+            total_price
+          )
+        )
+      )
+    `)
+    .eq('order_id', orderId);
+
+  if (error || !remainingDetails) {
+    console.error('[recalculateOrderAmount] order_details 조회 실패:', error);
+    return 0;
+  }
+
+  let totalAmount = 0;
+  const preferredPriceUsageType = isPublicInstitution
+    ? 'public_institution'
+    : 'default';
+
+  for (const detail of remainingDetails as OrderDetailWithPrice[]) {
+    const quantity = detail.slot_order_quantity || 1;
+    const policies =
+      detail.panel_slot_usage?.banner_slots?.banner_slot_price_policy || [];
+
+    // 우선순위: 사용자 타입에 맞는 정책 > default > 첫 번째 정책
+    let selectedPolicy = policies.find(
+      (p) => p.price_usage_type === preferredPriceUsageType
+    );
+
+    if (!selectedPolicy) {
+      selectedPolicy = policies.find((p) => p.price_usage_type === 'default');
+    }
+
+    if (!selectedPolicy && policies.length > 0) {
+      selectedPolicy = policies[0];
+    }
+
+    if (selectedPolicy) {
+      totalAmount += Number(selectedPolicy.total_price || 0) * quantity;
+    } else if (detail.panel_slot_usage?.unit_price) {
+      totalAmount += Number(detail.panel_slot_usage.unit_price) * quantity;
+    }
+  }
+
+  return totalAmount;
+}
+
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ orderDetailId: string }> }
@@ -32,9 +111,17 @@ export async function DELETE(
       );
     }
 
+    // 주문 및 user_profile 정보 조회 (공공기관 여부 확인용)
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select('id, order_number, created_at')
+      .select(`
+        id,
+        order_number,
+        created_at,
+        user_profiles:user_profile_id (
+          is_public_institution
+        )
+      `)
       .eq('id', detail.order_id)
       .single();
 
@@ -90,9 +177,35 @@ export async function DELETE(
       orderDetailId
     );
 
+    // 결제 금액 재계산 및 업데이트
+    const userProfile = order.user_profiles as { is_public_institution?: boolean } | null;
+    const isPublicInstitution = userProfile?.is_public_institution || false;
+    const newAmount = await recalculateOrderAmount(order.id, isPublicInstitution);
+
+    // payments 테이블 업데이트
+    const { error: paymentUpdateError } = await supabase
+      .from('payments')
+      .update({ amount: newAmount, updated_at: new Date().toISOString() })
+      .eq('order_id', order.id);
+
+    if (paymentUpdateError) {
+      console.error(
+        '[order-details DELETE] payments 업데이트 실패:',
+        paymentUpdateError
+      );
+      // 삭제는 성공했으므로 경고만 로깅
+    } else {
+      console.log(
+        '[order-details DELETE] payments.amount 업데이트 완료:',
+        order.order_number,
+        newAmount
+      );
+    }
+
     return NextResponse.json({
       success: true,
       message: '주문 항목이 취소되었습니다.',
+      newAmount,
     });
   } catch (error) {
     console.error('[order-details DELETE] 내부 오류:', error);
