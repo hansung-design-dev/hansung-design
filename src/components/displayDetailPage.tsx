@@ -531,7 +531,7 @@ export default function DisplayDetailPage({
   const filteredBySeodaemun = isSeodaemunDistrict
     ? filteredByMapo.filter((item) => {
         if (seodaemunFilter === 'yeollip') {
-          return item.panel_type === 'panel';
+          return item.panel_type === 'panel' || item.panel_type === 'semi_auto';
         } else if (seodaemunFilter === 'jeodan') {
           return item.panel_type === 'lower_panel';
         }
