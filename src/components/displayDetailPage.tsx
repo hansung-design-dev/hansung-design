@@ -99,6 +99,9 @@ export default function DisplayDetailPage({
   const [mapoFilter, setMapoFilter] = useState<'yeollip' | 'jeodan' | 'simin'>(
     'yeollip'
   );
+  const [seodaemunFilter, setSeodaemunFilter] = useState<'yeollip' | 'jeodan'>(
+    'yeollip'
+  );
   // 초기 기간 계산 함수 (HalfPeriodTabs와 동일한 로직)
   const getInitialPeriod = (districtName?: string) => {
     // 한국 시간대(KST, UTC+9) 기준으로 현재 시간 가져오기
@@ -501,6 +504,8 @@ export default function DisplayDetailPage({
 
   // 마포구인지 확인
   const isMapoDistrict = districtObj?.code === 'mapo';
+  // 서대문구인지 확인
+  const isSeodaemunDistrict = districtObj?.code === 'seodaemun';
   // 송파구, 용산구인지 확인 (서대문구 제외)
   const isSongpaOrYongsan =
     districtObj?.code === 'songpa' || districtObj?.code === 'yongsan';
@@ -522,9 +527,21 @@ export default function DisplayDetailPage({
       })
     : billboards;
 
+  // 서대문구 필터에 따른 데이터 필터링
+  const filteredBySeodaemun = isSeodaemunDistrict
+    ? filteredByMapo.filter((item) => {
+        if (seodaemunFilter === 'yeollip') {
+          return item.panel_type === 'panel';
+        } else if (seodaemunFilter === 'jeodan') {
+          return item.panel_type === 'lower_panel';
+        }
+        return true;
+      })
+    : filteredByMapo;
+
   // 송파구, 용산구 필터에 따른 데이터 필터링 (banner_slots의 banner_type 사용)
   const filteredByPanelType = isSongpaOrYongsan
-    ? filteredByMapo.filter((item) => {
+    ? filteredBySeodaemun.filter((item) => {
         // banner_slots에서 slot_number 확인
         if (item.type === 'banner' && item.banner_slots) {
           if (currentPanelTypeFilter === 'top_fixed') {
@@ -555,7 +572,7 @@ export default function DisplayDetailPage({
         }
         return true;
       })
-    : filteredByMapo;
+    : filteredBySeodaemun;
 
   if (currentPanelTypeFilter === 'top_fixed') {
     console.log(`🔍 ${district} 상단광고 탭 결과:`, {
@@ -1865,6 +1882,37 @@ export default function DisplayDetailPage({
               <br /> 중앙광고: 별도 상담문의 <br />
               중앙광고 사이즈 : 840mm x 1650mm
             </div>
+          </div>
+        )}
+        {/* 서대문구 전용 filter */}
+        {isSeodaemunDistrict && (
+          <div className="mb-8">
+            <div className="flex items-center gap-3 border-b border-gray-200/50 pb-4">
+              <button
+                onClick={() => setSeodaemunFilter('yeollip')}
+                aria-pressed={seodaemunFilter === 'yeollip'}
+                className={`lg:text-1 md:text-0.875 transition-colors duration-100 py-2.5 px-6 font-medium cursor-pointer rounded-full border-solid border-2 ${
+                  seodaemunFilter === 'yeollip'
+                    ? 'bg-pink-500 text-white border-pink-500'
+                    : 'bg-transparent text-pink-500 border-pink-500 hover:bg-pink-50'
+                }`}
+              >
+                연립형
+              </button>
+              <span className="text-gray-300 select-none">|</span>
+              <button
+                onClick={() => setSeodaemunFilter('jeodan')}
+                aria-pressed={seodaemunFilter === 'jeodan'}
+                className={`lg:text-1 md:text-0.875 transition-colors duration-100 py-2.5 px-6 font-medium cursor-pointer rounded-full border-solid border-2 ${
+                  seodaemunFilter === 'jeodan'
+                    ? 'bg-pink-500 text-white border-pink-500'
+                    : 'bg-transparent text-pink-500 border-pink-500 hover:bg-pink-50'
+                }`}
+              >
+                저단형
+              </button>
+            </div>
+            <div className="h-[1.5px] w-full bg-gray-200/90" />
           </div>
         )}
 

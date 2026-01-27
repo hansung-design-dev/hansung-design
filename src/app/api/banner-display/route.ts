@@ -1451,40 +1451,36 @@ async function getPricePoliciesByPanelType(
           break;
 
         case '서대문구':
-          // 서대문구: panel_code = 1-5, panel_type = panel 행정용(패널형) / panel_code = 6-16, panel_type = semi_auto 행정용(현수막) / panel_code = 1-5,17-24 상업용
+          // 서대문구: panel_type = panel (연립형), panel_type = lower_panel (저단형)
           panelData.forEach((panel) => {
             panel.banner_slots?.forEach((slot) => {
               slot.banner_slot_price_policy?.forEach((policy) => {
-                if (
-                  [1, 2, 3, 4, 5].includes(panel.panel_code) &&
-                  panel.panel_type === 'panel' &&
-                  policy.price_usage_type === 'public_institution'
-                ) {
-                  pricePolicies.push({
-                    ...policy,
-                    displayName: '행정용(패널형)',
-                  });
-                } else if (
-                  [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16].includes(
-                    panel.panel_code
-                  ) &&
-                  panel.panel_type === 'semi_auto' &&
-                  policy.price_usage_type === 'public_institution'
-                ) {
-                  pricePolicies.push({
-                    ...policy,
-                    displayName: '행정용(현수막)',
-                  });
-                } else if (
-                  [1, 2, 3, 4, 5, 17, 18, 19, 20, 21, 22, 23, 24].includes(
-                    panel.panel_code
-                  ) &&
-                  policy.price_usage_type === 'default'
-                ) {
-                  pricePolicies.push({
-                    ...policy,
-                    displayName: '상업용',
-                  });
+                if (panel.panel_type === 'panel') {
+                  // 연립형 (패널형)
+                  if (policy.price_usage_type === 'public_institution') {
+                    pricePolicies.push({
+                      ...policy,
+                      displayName: '행정용',
+                    });
+                  } else if (policy.price_usage_type === 'default') {
+                    pricePolicies.push({
+                      ...policy,
+                      displayName: '상업용',
+                    });
+                  }
+                } else if (panel.panel_type === 'lower_panel') {
+                  // 저단형
+                  if (policy.price_usage_type === 'default') {
+                    pricePolicies.push({
+                      ...policy,
+                      displayName: '저단형상업용',
+                    });
+                  } else if (policy.price_usage_type === 'public_institution') {
+                    pricePolicies.push({
+                      ...policy,
+                      displayName: '저단형행정용',
+                    });
+                  }
                 }
               });
             });
