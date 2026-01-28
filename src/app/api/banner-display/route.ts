@@ -1451,34 +1451,38 @@ async function getPricePoliciesByPanelType(
           break;
 
         case '서대문구':
-          // 서대문구: panel_type = panel (연립형), panel_type = lower_panel (저단형)
+          // 서대문구: panel/semi_auto (패널형/반자동), lower_panel (저단형)
+          // - 상업용(패널형): panel + default
+          // - 상업용(저단형): lower_panel + default
+          // - 행정용(패널형): panel + public_institution
+          // - 행정용(현수막): semi_auto + public_institution
           panelData.forEach((panel) => {
             panel.banner_slots?.forEach((slot) => {
               slot.banner_slot_price_policy?.forEach((policy) => {
                 if (panel.panel_type === 'panel') {
-                  // 연립형 (패널형)
-                  if (policy.price_usage_type === 'public_institution') {
-                    pricePolicies.push({
-                      ...policy,
-                      displayName: '행정용',
-                    });
-                  } else if (policy.price_usage_type === 'default') {
-                    pricePolicies.push({
-                      ...policy,
-                      displayName: '상업용',
-                    });
-                  }
-                } else if (panel.panel_type === 'lower_panel') {
-                  // 저단형
                   if (policy.price_usage_type === 'default') {
                     pricePolicies.push({
                       ...policy,
-                      displayName: '저단형상업용',
+                      displayName: '상업용(패널형)',
                     });
                   } else if (policy.price_usage_type === 'public_institution') {
                     pricePolicies.push({
                       ...policy,
-                      displayName: '저단형행정용',
+                      displayName: '행정용(패널형)',
+                    });
+                  }
+                } else if (panel.panel_type === 'lower_panel') {
+                  if (policy.price_usage_type === 'default') {
+                    pricePolicies.push({
+                      ...policy,
+                      displayName: '상업용(저단형)',
+                    });
+                  }
+                } else if (panel.panel_type === 'semi_auto') {
+                  if (policy.price_usage_type === 'public_institution') {
+                    pricePolicies.push({
+                      ...policy,
+                      displayName: '행정용(현수막)',
                     });
                   }
                 }
@@ -1672,6 +1676,9 @@ async function getOptimizedDistrictsData() {
 }
 
 // 초고속 구별 데이터 조회 (캐시 테이블 사용)
+// TODO: 어드민에서 가격 변경 시 banner_display_cache 테이블의 price_summary도 자동 업데이트 필요
+// - 방법 1: 어드민 가격 수정 API에서 캐시 테이블 업데이트 로직 추가
+// - 방법 2: DB 트리거로 banner_slot_price_policy 변경 시 캐시 자동 갱신
 async function getUltraFastDistrictsData() {
   try {
     console.log('🚀 Fetching ultra-fast districts data using cache table...');

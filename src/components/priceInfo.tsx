@@ -159,26 +159,6 @@ export default function PriceInfo({
           </div>
         );
 
-      case '서대문구':
-        return (
-          <div className="text-sm text-gray-600 space-y-1">
-            <div>
-              상업용:
-              {groupedPolicies.default?.[0]?.total_price?.toLocaleString()}원
-            </div>
-            <div>
-              행정용(패널형):{' '}
-              {groupedPolicies.public_institution?.[0]?.total_price?.toLocaleString()}
-              원
-            </div>
-            <div>
-              행정용(현수막):{' '}
-              {groupedPolicies.public_institution?.[1]?.total_price?.toLocaleString()}
-              원
-            </div>
-          </div>
-        );
-
       case '송파구':
         return (
           <div className="text-sm text-gray-600 space-y-1">
