@@ -66,7 +66,7 @@ export default function DistrictCard({
   const isMaintenance = district.panel_status === 'maintenance';
   const cardMinHeightClass = isLEDDisplay
     ? 'lg:min-h-[32rem] md:min-h-[28rem]'
-    : 'lg:min-h-[28rem] md:min-h-[24rem]';
+    : 'lg:h-[28rem] md:h-[24rem] sm:min-h-[20rem]';
   // LED 구별카드는 하단 이미지를 남는 높이만큼 채워서 '빈 공백'이 안 생기게 처리
   const imageContainerClass = isLEDDisplay
     ? 'flex-1 min-h-[12rem] lg:min-h-[14rem]'
