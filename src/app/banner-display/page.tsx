@@ -239,7 +239,7 @@ export default function BannerDisplayPage() {
   if (error) {
     return (
       <main className="min-h-screen bg-white">
-        <section className="lg:container lg:mx-auto lg:px-[8rem] sm:px-[1.5rem] pt-[6rem] pb-[3rem]">
+        <section className="lg:container lg:mx-auto lg:px-[4rem] xl:px-[6rem] 2xl:px-[8rem] sm:px-[1.5rem] pt-[6rem] pb-[3rem]">
           <h1 className="text-3.75 sm:text-2.5 font-[700] mb-4 font-gmarket">
             현수막게시대
           </h1>
@@ -267,7 +267,7 @@ export default function BannerDisplayPage() {
   return (
     <main className="min-h-screen bg-white">
       {/* Fixed Header - Always visible */}
-      <section className="lg:container lg:mx-auto lg:px-[8rem] sm:px-[1.5rem] pt-[6rem] pb-[3rem]">
+      <section className="lg:container lg:mx-auto lg:px-[4rem] xl:px-[6rem] 2xl:px-[8rem] sm:px-[1.5rem] pt-[6rem] pb-[3rem]">
         <div className="flex items-start gap-4">
           <div>
             <h1 className="text-3.75 sm:text-2.5 font-[700] mb-4 font-gmarket">
@@ -302,7 +302,7 @@ export default function BannerDisplayPage() {
         </div>
       </section>
 
-      <div className="flex flex-col items-center justify-center mx-[4rem] px-4 py-8 sm:mx-[0.5rem] md:mx-[2rem]">
+      <div className="flex flex-col items-center justify-center mx-[1rem] px-4 py-8 sm:mx-[0.5rem] md:mx-[2rem] lg:mx-[3rem] xl:mx-[4rem] 2xl:mx-[6rem]">
         <div className="container grid lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-1 lg:gap-4 md:gap-[2rem] sm:gap-[2rem]">
           {loading
             ? // 로딩 중일 때 LED와 동일한 스켈레톤 로더 표시

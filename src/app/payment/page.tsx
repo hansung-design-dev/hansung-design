@@ -3370,7 +3370,7 @@ function PaymentPageContent() {
   }, [visibleGroups, groupedItems]);
 
   return (
-    <main className="min-h-screen bg-white pt-[5.5rem] bg-gray-100 lg:px-[10rem]">
+    <main className="min-h-screen bg-white pt-[5.5rem] bg-gray-100 lg:px-[4rem] xl:px-[6rem] 2xl:px-[10rem]">
       <Nav variant="default" className="bg-white" />
 
       <div className="container mx-auto px-4 sm:px-1 py-8 grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-8">
