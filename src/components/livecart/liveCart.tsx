@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 
 export default function LiveCart() {
-  const { cart, dispatch } = useCart();
+  const { cart, dispatch, isLoaded } = useCart();
   const { user } = useAuth();
   const router = useRouter();
   const [timeLeft, setTimeLeft] = useState<string>('');
@@ -101,7 +101,8 @@ export default function LiveCart() {
     return () => clearInterval(interval);
   }, [cart.length, hasRegularItems]);
 
-  if (cart.length === 0) return null;
+  // 장바구니가 로딩되지 않았거나 비어있으면 표시하지 않음
+  if (!isLoaded || cart.length === 0) return null;
 
   const handleCartClick = () => {
     // 로그인하지 않은 경우 로그인 페이지로 이동

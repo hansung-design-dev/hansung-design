@@ -1922,6 +1922,66 @@ CREATE TRIGGER trigger_led_display_cache_update_period
 SELECT update_led_display_cache();
 
 
+-- ================================================================
+-- BANNER 캐시 테이블 자동 업데이트 트리거 함수 및 트리거
+-- ================================================================
+
+-- Banner 캐시 테이블 자동 업데이트 트리거 함수
+CREATE OR REPLACE FUNCTION trigger_update_banner_display_cache()
+RETURNS trigger AS $$
+BEGIN
+  -- Banner 관련 테이블이 변경될 때 캐시 업데이트
+  PERFORM update_banner_display_cache();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Banner 관련 테이블에 트리거 추가
+
+-- 1) panels 테이블 변경 시 (패널 추가/수정/삭제)
+-- INSERT/UPDATE용 트리거
+DROP TRIGGER IF EXISTS trigger_banner_display_cache_update_insert ON panels;
+CREATE TRIGGER trigger_banner_display_cache_update_insert
+  AFTER INSERT OR UPDATE ON panels
+  FOR EACH ROW
+  WHEN (NEW.display_type_id = '8178084e-1f13-40bc-8b90-7b8ddc58bf64')
+  EXECUTE FUNCTION trigger_update_banner_display_cache();
+
+-- DELETE용 트리거
+DROP TRIGGER IF EXISTS trigger_banner_display_cache_update_delete ON panels;
+CREATE TRIGGER trigger_banner_display_cache_update_delete
+  AFTER DELETE ON panels
+  FOR EACH ROW
+  WHEN (OLD.display_type_id = '8178084e-1f13-40bc-8b90-7b8ddc58bf64')
+  EXECUTE FUNCTION trigger_update_banner_display_cache();
+
+-- 2) region_gu_display_periods 테이블 변경 시 (기간 추가/수정/삭제)
+-- INSERT/UPDATE용 트리거
+DROP TRIGGER IF EXISTS trigger_banner_display_cache_update_period_insert ON region_gu_display_periods;
+CREATE TRIGGER trigger_banner_display_cache_update_period_insert
+  AFTER INSERT OR UPDATE ON region_gu_display_periods
+  FOR EACH ROW
+  WHEN (NEW.display_type_id = '8178084e-1f13-40bc-8b90-7b8ddc58bf64')
+  EXECUTE FUNCTION trigger_update_banner_display_cache();
+
+-- DELETE용 트리거
+DROP TRIGGER IF EXISTS trigger_banner_display_cache_update_period_delete ON region_gu_display_periods;
+CREATE TRIGGER trigger_banner_display_cache_update_period_delete
+  AFTER DELETE ON region_gu_display_periods
+  FOR EACH ROW
+  WHEN (OLD.display_type_id = '8178084e-1f13-40bc-8b90-7b8ddc58bf64')
+  EXECUTE FUNCTION trigger_update_banner_display_cache();
+
+-- 3) banner_slot_price_policy 테이블 변경 시 (가격 정책 변경)
+DROP TRIGGER IF EXISTS trigger_banner_display_cache_update_price ON banner_slot_price_policy;
+CREATE TRIGGER trigger_banner_display_cache_update_price
+  AFTER INSERT OR UPDATE OR DELETE ON banner_slot_price_policy
+  FOR EACH ROW
+  EXECUTE FUNCTION trigger_update_banner_display_cache();
+
+-- 초기 Banner 캐시 데이터 생성
+SELECT update_banner_display_cache();
+
 
 update_banner_display_cache
 
@@ -2043,12 +2103,13 @@ BEGIN
     JOIN region_gu rg ON rgdp.region_gu_id = rg.id
     WHERE rgdp.display_type_id = '8178084e-1f13-40bc-8b90-7b8ddc58bf64'
       AND rgdp.year_month = (
-        -- 모든 구 동일하게 다음 달 데이터 사용
-        CASE 
+        -- 다음 달 데이터 사용 (형식: '2026-02')
+        CASE
           WHEN EXTRACT(MONTH FROM NOW() AT TIME ZONE 'Asia/Seoul') = 12 THEN
-            (EXTRACT(YEAR FROM NOW() AT TIME ZONE 'Asia/Seoul') + 1) || '년 1월'
+            (EXTRACT(YEAR FROM NOW() AT TIME ZONE 'Asia/Seoul') + 1)::text || '-01'
           ELSE
-            EXTRACT(YEAR FROM NOW() AT TIME ZONE 'Asia/Seoul') || '년 ' || (EXTRACT(MONTH FROM NOW() AT TIME ZONE 'Asia/Seoul') + 1) || '월'
+            EXTRACT(YEAR FROM NOW() AT TIME ZONE 'Asia/Seoul')::text || '-' ||
+            LPAD((EXTRACT(MONTH FROM NOW() AT TIME ZONE 'Asia/Seoul') + 1)::text, 2, '0')
         END
       )
     GROUP BY rgdp.region_gu_id

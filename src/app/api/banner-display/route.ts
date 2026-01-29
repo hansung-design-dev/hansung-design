@@ -452,24 +452,50 @@ async function getBannerDisplaysByDistrict(districtName: string) {
       try {
         // 일반 구에서는 현수막 슬롯(slot_number > 0)만 조회 (상단광고 제외)
         // slot_number가 1, 2, 3... 등 여러 개일 수 있으므로 합산 필요
-        const { data: halfData, error: halfError } = await supabase
-          .from('half_period_inventory_status')
-          .select(
+        // Supabase 기본 1000행 제한을 우회하기 위해 여러 번 조회 후 합침
+        let allHalfData: typeof halfData = [];
+        let halfError = null;
+        const pageSize = 1000;
+        let offset = 0;
+        let hasMore = true;
+
+        while (hasMore) {
+          const { data: pageData, error: pageError } = await supabase
+            .from('half_period_inventory_status')
+            .select(
+              `
+              panel_id,
+              district,
+              year_month,
+              half_period,
+              slot_number,
+              total_slots,
+              available_slots,
+              closed_slots
             `
-            panel_id,
-            district,
-            year_month,
-            half_period,
-            slot_number,
-            total_slots,
-            available_slots,
-            closed_slots
-          `
-          )
-          .eq('district', districtName)
-          .in('panel_id', panelIds)
-          .in('year_month', targetMonths)
-          .gt('slot_number', 0);
+            )
+            .eq('district', districtName)
+            .in('panel_id', panelIds)
+            .in('year_month', targetMonths)
+            .gt('slot_number', 0)
+            .range(offset, offset + pageSize - 1);
+
+          if (pageError) {
+            halfError = pageError;
+            break;
+          }
+
+          if (pageData && pageData.length > 0) {
+            allHalfData = [...allHalfData, ...pageData];
+            offset += pageSize;
+            hasMore = pageData.length === pageSize;
+          } else {
+            hasMore = false;
+          }
+        }
+
+        const halfData = allHalfData;
+        console.log(`🔍 half_period_inventory_status 조회 결과: ${halfData?.length || 0}행, panelIds: ${panelIds.length}개`);
 
         if (halfError) {
           console.error(
@@ -1195,12 +1221,13 @@ async function getAllDistrictsData() {
           }));
 
           if (periods.length >= 1) {
+            const firstHalf = periods.find(p => p.period === 'first_half');
+            const secondHalf = periods.find(p => p.period === 'second_half');
             currentPeriodData = {
-              first_half_from: periods[0].period_from,
-              first_half_to: periods[0].period_to,
-              second_half_from:
-                periods.length >= 2 ? periods[1].period_from : null,
-              second_half_to: periods.length >= 2 ? periods[1].period_to : null,
+              first_half_from: firstHalf?.period_from || '',
+              first_half_to: firstHalf?.period_to || '',
+              second_half_from: secondHalf?.period_from || null,
+              second_half_to: secondHalf?.period_to || null,
             };
           }
         }
@@ -1678,6 +1705,45 @@ async function getUltraFastDistrictsData() {
 
     console.log('🚀 캐시 데이터:', cacheData?.length || 0);
 
+    // 실시간 기간 데이터 조회를 위한 현재 시간 계산 (한국 시간)
+    const koreaTime = new Date(
+      new Date().toLocaleString('en-US', { timeZone: 'Asia/Seoul' })
+    );
+    const currentYear = koreaTime.getFullYear();
+    const currentMonth = koreaTime.getMonth() + 1;
+    const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+    const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+    const targetMonths = [
+      `${currentYear}-${String(currentMonth).padStart(2, '0')}`,
+      `${nextYear}-${String(nextMonth).padStart(2, '0')}`,
+    ];
+
+    // 배너 디스플레이 타입 ID 가져오기
+    const { data: typeData } = await supabase
+      .from('display_types')
+      .select('id')
+      .eq('name', 'banner_display')
+      .single();
+
+    // 모든 region의 실시간 기간 데이터 조회
+    const regionIds = (cacheData || []).map(item => item.region_id);
+    const { data: allPeriods } = await supabase
+      .from('region_gu_display_periods')
+      .select('region_gu_id, period_from, period_to, period, year_month')
+      .eq('display_type_id', typeData?.id || '8178084e-1f13-40bc-8b90-7b8ddc58bf64')
+      .in('region_gu_id', regionIds)
+      .in('year_month', targetMonths)
+      .order('period_from', { ascending: true });
+
+    // region_id별 기간 데이터 맵 생성
+    const periodsByRegion: Record<string, typeof allPeriods> = {};
+    (allPeriods || []).forEach(p => {
+      if (!periodsByRegion[p.region_gu_id]) {
+        periodsByRegion[p.region_gu_id] = [];
+      }
+      periodsByRegion[p.region_gu_id].push(p);
+    });
+
     // 캐시 데이터를 프론트엔드 형식으로 변환
     const processedDistricts = (cacheData || []).map((item) => {
       // 가격 정책 파싱 (한글로 받아서 프론트엔드에서 표시)
@@ -1708,19 +1774,34 @@ async function getUltraFastDistrictsData() {
       // 다른 구들은 기존 가격정책 그대로 사용
       const pricePolicies = basePricePolicies;
 
-      // 기간 정보 파싱
+      // 기간 정보 - 실시간 데이터 사용 (period 필드 기준으로 매핑)
       let periodData = null;
-      if (item.period_summary) {
-        const periods = item.period_summary.split(', ');
-        if (periods.length >= 1) {
-          const [firstFrom, firstTo] = periods[0].split('~');
+      const regionPeriods = periodsByRegion[item.region_id] || [];
+      if (regionPeriods.length > 0) {
+        // 7일 전 마감 로직 적용
+        const availablePeriods = regionPeriods.filter((period) => {
+          const periodStart = new Date(period.period_from);
+          const daysUntilPeriod = Math.ceil(
+            (periodStart.getTime() - koreaTime.getTime()) / (1000 * 60 * 60 * 24)
+          );
+          return daysUntilPeriod >= 7;
+        });
+
+        const selectedPeriods = availablePeriods.slice(0, 2);
+        if (selectedPeriods.length > 0) {
+          const firstHalf = selectedPeriods.find(p => p.period === 'first_half');
+          const secondHalf = selectedPeriods.find(p => p.period === 'second_half');
           periodData = {
-            first_half_from: firstFrom,
-            first_half_to: firstTo,
-            second_half_from:
-              periods.length >= 2 ? periods[1].split('~')[0] : null,
-            second_half_to:
-              periods.length >= 2 ? periods[1].split('~')[1] : null,
+            first_half_from: firstHalf?.period_from || '',
+            first_half_to: firstHalf?.period_to || '',
+            second_half_from: secondHalf?.period_from || null,
+            second_half_to: secondHalf?.period_to || null,
+            available_periods: selectedPeriods.map((period) => ({
+              period_from: period.period_from,
+              period_to: period.period_to,
+              period: period.period,
+              year_month: period.year_month,
+            })),
           };
         }
       }
@@ -2138,38 +2219,71 @@ async function getBannerDisplaysByDistrictWithSlotType(
         // slotType에 따라 slot_number 필터 적용
         // - 상단광고: slot_number = 0만
         // - 현수막게시대: slot_number > 0 (1, 2, 3... 모두 합산)
-        let inventoryQuery = supabase
-          .from('half_period_inventory_status')
-          .select(
-            `
-            panel_id,
-            district,
-            year_month,
-            half_period,
-            slot_number,
-            total_slots,
-            available_slots,
-            closed_slots
-          `
-          )
-          .eq('district', districtName)
-          .in('panel_id', panelIds)
-          .in('year_month', targetMonths);
+        // Supabase 기본 1000행 제한을 우회하기 위해 여러 번 조회 후 합침
+        let allHalfData: {
+          panel_id: unknown;
+          district: unknown;
+          year_month: unknown;
+          half_period: unknown;
+          slot_number: unknown;
+          total_slots: unknown;
+          available_slots: unknown;
+          closed_slots: unknown;
+        }[] = [];
+        let halfError = null;
+        const pageSize = 1000;
+        let offset = 0;
+        let hasMore = true;
 
-        if (slotType === 'top_ad') {
-          inventoryQuery = inventoryQuery.eq('slot_number', 0);
-        } else {
-          inventoryQuery = inventoryQuery.gt('slot_number', 0);
+        while (hasMore) {
+          let inventoryQuery = supabase
+            .from('half_period_inventory_status')
+            .select(
+              `
+              panel_id,
+              district,
+              year_month,
+              half_period,
+              slot_number,
+              total_slots,
+              available_slots,
+              closed_slots
+            `
+            )
+            .eq('district', districtName)
+            .in('panel_id', panelIds)
+            .in('year_month', targetMonths);
+
+          if (slotType === 'top_ad') {
+            inventoryQuery = inventoryQuery.eq('slot_number', 0);
+          } else {
+            inventoryQuery = inventoryQuery.gt('slot_number', 0);
+          }
+
+          const { data: pageData, error: pageError } = await inventoryQuery.range(offset, offset + pageSize - 1);
+
+          if (pageError) {
+            halfError = pageError;
+            break;
+          }
+
+          if (pageData && pageData.length > 0) {
+            allHalfData = [...allHalfData, ...pageData];
+            offset += pageSize;
+            hasMore = pageData.length === pageSize;
+          } else {
+            hasMore = false;
+          }
         }
 
-        const { data: halfData, error: halfError } = await inventoryQuery;
+        const halfData = allHalfData;
 
         if (halfError) {
           console.error(
             '❌ half_period_inventory_status 조회 오류:',
             halfError
           );
-        } else if (halfData) {
+        } else if (halfData && halfData.length > 0) {
           // slot_number > 0인 경우 같은 panel_id + year_month + half_period 조합의 슬롯들을 합산
           for (const row of halfData) {
             const panelId = row.panel_id as string;
@@ -2386,11 +2500,13 @@ async function getDistrictDataFromCache(districtName: string) {
           const selectedPeriods = availablePeriods.slice(0, 2);
 
           if (selectedPeriods.length > 0) {
+            const firstHalf = selectedPeriods.find(p => p.period === 'first_half');
+            const secondHalf = selectedPeriods.find(p => p.period === 'second_half');
             periodData = {
-              first_half_from: selectedPeriods[0]?.period_from || '',
-              first_half_to: selectedPeriods[0]?.period_to || '',
-              second_half_from: selectedPeriods[1]?.period_from || '',
-              second_half_to: selectedPeriods[1]?.period_to || '',
+              first_half_from: firstHalf?.period_from || '',
+              first_half_to: firstHalf?.period_to || '',
+              second_half_from: secondHalf?.period_from || '',
+              second_half_to: secondHalf?.period_to || '',
               available_periods: selectedPeriods.map((period) => ({
                 period_from: period.period_from,
                 period_to: period.period_to,

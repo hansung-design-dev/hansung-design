@@ -61,6 +61,12 @@ export default function DisplayDetailPage({
     first_half_to: string;
     second_half_from: string;
     second_half_to: string;
+    available_periods?: Array<{
+      period_from: string;
+      period_to: string;
+      period: string;
+      year_month: string;
+    }>;
   } | null;
   bankInfo?: {
     id: string;
@@ -220,14 +226,32 @@ export default function DisplayDetailPage({
   );
 
   // districtObj가 변경될 때 초기 기간 재계산
+  // period prop의 available_periods가 있으면 그것을 우선 사용
   useEffect(() => {
-    if (districtObj?.name) {
+    if (period?.available_periods && period.available_periods.length > 0) {
+      // 서버에서 받은 available_periods 기반으로 초기 기간 설정
+      const firstAvailable = period.available_periods[0];
+      const [year, month] = firstAvailable.year_month.split('-').map(Number);
+      const periodType = firstAvailable.period as 'first_half' | 'second_half';
+
+      console.log('🔍 Setting initial period from server available_periods:', {
+        periodType,
+        year,
+        month,
+        available_periods: period.available_periods,
+      });
+
+      setSelectedHalfPeriod(periodType);
+      setSelectedPeriodYear(year);
+      setSelectedPeriodMonth(month);
+    } else if (districtObj?.name) {
+      // 서버 데이터가 없으면 클라이언트 계산 사용
       const newInitialPeriod = getInitialPeriod(districtObj.name);
       setSelectedHalfPeriod(newInitialPeriod.period);
       setSelectedPeriodYear(newInitialPeriod.year);
       setSelectedPeriodMonth(newInitialPeriod.month);
     }
-  }, [districtObj?.name]);
+  }, [districtObj?.name, period?.available_periods]);
 
   // 상반기/하반기 탭별로 선택 상태 분리
   const [selectedIdsFirstHalf, setSelectedIdsFirstHalf] = useState<string[]>(
@@ -251,6 +275,12 @@ export default function DisplayDetailPage({
     first_half_to: string;
     second_half_from: string;
     second_half_to: string;
+    available_periods?: Array<{
+      period_from: string;
+      period_to: string;
+      period: string;
+      year_month: string;
+    }>;
   } | null>(null);
   const [showAllPins, setShowAllPins] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -469,17 +499,8 @@ export default function DisplayDetailPage({
       }
     }
 
-    if (typeof item.available_faces === 'number') {
-      return item.available_faces;
-    }
-
-    if (typeof item.faces === 'number') {
-      const closedCount =
-        selectedHalfPeriod === 'first_half'
-          ? item.first_half_closure_quantity || 0
-          : item.second_half_closure_quantity || 0;
-      return Math.max(item.faces - closedCount, 0);
-    }
+    // inventory_info가 없으면 0 반환 (재고 생성 전 또는 기간 마감)
+    return 0;
 
     return null;
   };
@@ -650,8 +671,8 @@ export default function DisplayDetailPage({
     isMapoDistrict && mapoFilter === 'simin'
       ? filteredByDistrict // 시민게시대는 기간/재고 필터링 없이 전체 출력
       : filteredByDistrict.map((item) => {
-          // 실시간 재고 정보 기반 남은 수량 계산 (faces는 총 면수 그대로 유지)
-          let remainingFaces = item.available_faces ?? item.faces;
+          // 실시간 재고 정보 기반 남은 수량 계산 (재고 없으면 0으로 표시)
+          let remainingFaces = item.available_faces ?? 0;
 
           if (item.inventory_info && selectedYearMonth) {
             const monthInventory = item.inventory_info[selectedYearMonth];
@@ -669,13 +690,8 @@ export default function DisplayDetailPage({
               }
             }
           } else {
-            // 기존 방식: 선택된 상하반기에 따른 남은 수량 추정
-            const totalFaces = item.faces || 1;
-            const closed =
-              selectedHalfPeriod === 'first_half'
-                ? item.first_half_closure_quantity || 0
-                : item.second_half_closure_quantity || 0;
-            remainingFaces = Math.max(totalFaces - closed, 0);
+            // inventory_info가 없으면 0으로 표시 (재고 생성 전 또는 기간 마감)
+            remainingFaces = 0;
           }
 
           return {

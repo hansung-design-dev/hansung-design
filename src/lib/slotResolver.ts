@@ -196,7 +196,8 @@ async function findAvailableBannerSlot(
 
   const isSlotOpen = (slotId: string) => {
     const inventory = inventoryMap.get(slotId);
-    if (!inventory) return true;
+    // 재고 레코드가 없으면 닫힘 처리 (재고 생성 전에는 신청 불가)
+    if (!inventory) return false;
     if (inventory.is_closed) return false;
     if (inventory.is_available === false) return false;
     return true;

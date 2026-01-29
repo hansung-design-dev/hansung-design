@@ -310,7 +310,58 @@ const HalfPeriodTabs: React.FC<HalfPeriodTabsProps> = ({
     return { firstPeriod, secondPeriod };
   };
 
-  const { firstPeriod, secondPeriod } = getCurrentPeriods();
+  // 서버에서 받은 available_periods가 있으면 그것을 우선 사용
+  const getPeriodsFromServer = (): { firstPeriod: PeriodInfo | null; secondPeriod: PeriodInfo | null } => {
+    if (!periodData?.available_periods || periodData.available_periods.length === 0) {
+      return { firstPeriod: null, secondPeriod: null };
+    }
+
+    let firstPeriod: PeriodInfo | null = null;
+    let secondPeriod: PeriodInfo | null = null;
+
+    for (const ap of periodData.available_periods) {
+      const [year, month] = ap.year_month.split('-').map(Number);
+      const startDay = parseInt(ap.period_from.split('-')[2]);
+      const endDay = parseInt(ap.period_to.split('-')[2]);
+
+      const periodInfo: PeriodInfo = {
+        year,
+        month,
+        startDay,
+        endDay,
+        from: ap.period_from,
+        to: ap.period_to,
+        label: `${year}년 ${month}월 ${ap.period === 'first_half' ? '상반기' : '하반기'}`,
+        period: ap.period as 'first_half' | 'second_half',
+      };
+
+      if (ap.period === 'first_half' && !firstPeriod) {
+        firstPeriod = periodInfo;
+      } else if (ap.period === 'second_half' && !secondPeriod) {
+        secondPeriod = periodInfo;
+      }
+    }
+
+    return { firstPeriod, secondPeriod };
+  };
+
+  // 서버 데이터 우선, 없으면 클라이언트 계산 사용
+  const serverPeriods = getPeriodsFromServer();
+  const clientPeriods = getCurrentPeriods();
+
+  const { firstPeriod, secondPeriod } = serverPeriods.firstPeriod || serverPeriods.secondPeriod
+    ? serverPeriods
+    : clientPeriods;
+
+  console.log('🔍 Period source:', {
+    hasServerPeriods: !!(serverPeriods.firstPeriod || serverPeriods.secondPeriod),
+    serverFirstPeriod: serverPeriods.firstPeriod?.label,
+    serverSecondPeriod: serverPeriods.secondPeriod?.label,
+    clientFirstPeriod: clientPeriods.firstPeriod?.label,
+    clientSecondPeriod: clientPeriods.secondPeriod?.label,
+    usingFirst: firstPeriod?.label,
+    usingSecond: secondPeriod?.label,
+  });
 
   // 기간 시작일 2일 전까지 신청 가능 여부 확인
   const isPeriodAvailable = (periodStartDate: string) => {

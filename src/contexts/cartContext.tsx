@@ -93,7 +93,8 @@ type CartAction =
 const CartContext = createContext<{
   cart: CartItem[];
   dispatch: React.Dispatch<CartAction>;
-}>({ cart: [], dispatch: () => {} });
+  isLoaded: boolean;
+}>({ cart: [], dispatch: () => {}, isLoaded: false });
 
 // localStorage 키
 const CART_STORAGE_KEY = 'hansung_cart';
@@ -358,6 +359,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     items: [],
     lastUpdated: Date.now(),
   });
+  const [isLoaded, setIsLoaded] = React.useState(false);
 
   //   // 컴포넌트 마운트 시 localStorage에서 장바구니 로드
   useEffect(() => {
@@ -365,6 +367,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     const savedCart = loadCartFromStorage();
     console.log('🔄 CartContext: Saved cart loaded:', savedCart);
     dispatch({ type: 'LOAD_CART', state: savedCart });
+    setIsLoaded(true);
   }, []);
 
   // 1분마다 장바구니 만료 체크 (각 아이템별로 20분이 지났는지 확인)
@@ -409,7 +412,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   }, [state]); // state를 의존성에 추가하여 최신 상태 확인
 
   return (
-    <CartContext.Provider value={{ cart: state.items, dispatch }}>
+    <CartContext.Provider value={{ cart: state.items, dispatch, isLoaded }}>
       {children}
     </CartContext.Provider>
   );
@@ -435,7 +438,9 @@ export const useCart = () => {
   };
 
   return {
-    ...context,
+    cart: context.cart,
+    dispatch: context.dispatch,
+    isLoaded: context.isLoaded,
     addToCart,
   };
 };

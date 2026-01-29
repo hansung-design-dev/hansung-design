@@ -142,12 +142,14 @@ export async function GET(request: NextRequest) {
     }
 
     // 기존 형식과 호환되도록 데이터 변환
-    // 첫 번째 기간을 first_half로, 두 번째 기간을 second_half로 매핑
+    // period 필드 값을 기준으로 first_half/second_half 매핑
+    const firstHalf = selectedPeriods.find(p => p.period === 'first_half');
+    const secondHalf = selectedPeriods.find(p => p.period === 'second_half');
     const currentPeriodData = {
-      first_half_from: selectedPeriods[0]?.period_from || '',
-      first_half_to: selectedPeriods[0]?.period_to || '',
-      second_half_from: selectedPeriods[1]?.period_from || '',
-      second_half_to: selectedPeriods[1]?.period_to || '',
+      first_half_from: firstHalf?.period_from || '',
+      first_half_to: firstHalf?.period_to || '',
+      second_half_from: secondHalf?.period_from || '',
+      second_half_to: secondHalf?.period_to || '',
       // 추가 정보
       available_periods: selectedPeriods.map((period) => ({
         period_from: period.period_from,

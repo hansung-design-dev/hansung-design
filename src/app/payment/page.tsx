@@ -2867,7 +2867,8 @@ function PaymentPageContent() {
               // 작업이름 검증
               // 그룹 단위인 경우: 그룹 projectName 확인
               // 아이템별인 경우: 각 아이템의 projectName 확인 (각각 필수 입력)
-              if (itemCount === 1 || isBulkFileUpload) {
+              const isBulkProjectName = currentBulkApply.projectName;
+              if (itemCount === 1 || isBulkProjectName) {
                 // 그룹 단위 검증
                 if (!projectName || projectName.trim() === '') {
                   alert('작업이름을 입력해주세요.');

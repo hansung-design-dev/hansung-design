@@ -17,6 +17,12 @@ interface District {
     first_half_to: string;
     second_half_from: string;
     second_half_to: string;
+    available_periods?: Array<{
+      period_from: string;
+      period_to: string;
+      period: string;
+      year_month: string;
+    }>;
   } | null;
   bankInfo?: {
     id: string;
