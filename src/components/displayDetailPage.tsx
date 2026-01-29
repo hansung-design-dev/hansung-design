@@ -444,23 +444,28 @@ export default function DisplayDetailPage({
     return isAvailable;
   };
 
+  // 선택된 year_month 키 계산
+  const selectedYearMonth = selectedPeriodYear && selectedPeriodMonth
+    ? `${selectedPeriodYear}-${String(selectedPeriodMonth).padStart(2, '0')}`
+    : null;
+
   // 아이템이 선택 가능한지 확인하는 함수
   const getAvailableFacesForSelectedHalf = (item: DisplayBillboard) => {
-    if (item.inventory_info) {
-      if (
-        selectedHalfPeriod === 'first_half' &&
-        item.inventory_info.first_half
-      ) {
-        return item.inventory_info.first_half.available_slots;
-      }
-      if (
-        selectedHalfPeriod === 'second_half' &&
-        item.inventory_info.second_half
-      ) {
-        return item.inventory_info.second_half.available_slots;
-      }
-      if (item.inventory_info.current_period) {
-        return item.inventory_info.current_period.available_slots;
+    if (item.inventory_info && selectedYearMonth) {
+      const monthInventory = item.inventory_info[selectedYearMonth];
+      if (monthInventory) {
+        if (
+          selectedHalfPeriod === 'first_half' &&
+          monthInventory.first_half
+        ) {
+          return monthInventory.first_half.available_slots;
+        }
+        if (
+          selectedHalfPeriod === 'second_half' &&
+          monthInventory.second_half
+        ) {
+          return monthInventory.second_half.available_slots;
+        }
       }
     }
 
@@ -648,17 +653,20 @@ export default function DisplayDetailPage({
           // 실시간 재고 정보 기반 남은 수량 계산 (faces는 총 면수 그대로 유지)
           let remainingFaces = item.available_faces ?? item.faces;
 
-          if (item.inventory_info) {
-            if (
-              selectedHalfPeriod === 'first_half' &&
-              item.inventory_info.first_half
-            ) {
-              remainingFaces = item.inventory_info.first_half.available_slots;
-            } else if (
-              selectedHalfPeriod === 'second_half' &&
-              item.inventory_info.second_half
-            ) {
-              remainingFaces = item.inventory_info.second_half.available_slots;
+          if (item.inventory_info && selectedYearMonth) {
+            const monthInventory = item.inventory_info[selectedYearMonth];
+            if (monthInventory) {
+              if (
+                selectedHalfPeriod === 'first_half' &&
+                monthInventory.first_half
+              ) {
+                remainingFaces = monthInventory.first_half.available_slots;
+              } else if (
+                selectedHalfPeriod === 'second_half' &&
+                monthInventory.second_half
+              ) {
+                remainingFaces = monthInventory.second_half.available_slots;
+              }
             }
           } else {
             // 기존 방식: 선택된 상하반기에 따른 남은 수량 추정

@@ -84,23 +84,18 @@ interface BannerDisplayData {
   first_half_closure_quantity?: number;
   second_half_closure_quantity?: number;
   inventory_info?: {
-    current_period: {
-      total_slots: number;
-      available_slots: number;
-      closed_slots: number;
-      period?: string;
-      year_month?: string;
-    } | null;
-    first_half: {
-      total_slots: number;
-      available_slots: number;
-      closed_slots: number;
-    } | null;
-    second_half: {
-      total_slots: number;
-      available_slots: number;
-      closed_slots: number;
-    } | null;
+    [yearMonth: string]: {
+      first_half: {
+        total_slots: number;
+        available_slots: number;
+        closed_slots: number;
+      } | null;
+      second_half: {
+        total_slots: number;
+        available_slots: number;
+        closed_slots: number;
+      } | null;
+    };
   };
 }
 
@@ -660,21 +655,19 @@ export default function BannerDisplayPage({
               let availableFaces = maxBanners;
 
               if (item.inventory_info) {
-                // 현재 기간의 총/가용 재고가 있으면 사용
-                if (item.inventory_info.current_period) {
-                  totalFaces = item.inventory_info.current_period.total_slots;
-                  availableFaces =
-                    item.inventory_info.current_period.available_slots;
-                } else if (item.inventory_info.first_half) {
-                  // 첫 번째 반기가 있으면 사용
-                  totalFaces = item.inventory_info.first_half.total_slots;
-                  availableFaces =
-                    item.inventory_info.first_half.available_slots;
-                } else if (item.inventory_info.second_half) {
-                  // 두 번째 반기가 있으면 사용
-                  totalFaces = item.inventory_info.second_half.total_slots;
-                  availableFaces =
-                    item.inventory_info.second_half.available_slots;
+                // year_month별 구조에서 첫 번째 가용 기간의 재고 사용
+                const yearMonths = Object.keys(item.inventory_info).sort();
+                for (const ym of yearMonths) {
+                  const monthData = item.inventory_info[ym];
+                  if (monthData?.first_half) {
+                    totalFaces = monthData.first_half.total_slots;
+                    availableFaces = monthData.first_half.available_slots;
+                    break;
+                  } else if (monthData?.second_half) {
+                    totalFaces = monthData.second_half.total_slots;
+                    availableFaces = monthData.second_half.available_slots;
+                    break;
+                  }
                 }
               }
 

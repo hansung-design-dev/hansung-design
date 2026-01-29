@@ -426,12 +426,16 @@ const ItemList: React.FC<ItemTableProps> = ({
                             {/* 남은수량: available_faces가 있으면 사용, 없으면 faces */}
                             {typeof item.available_faces === 'number'
                               ? `${item.available_faces}`
-                              : item.inventory_info?.current_period
-                              ? `${item.inventory_info.current_period.available_slots}`
-                              : item.inventory_info?.first_half
-                              ? `${item.inventory_info.first_half.available_slots}`
-                              : item.inventory_info?.second_half
-                              ? `${item.inventory_info.second_half.available_slots}`
+                              : item.inventory_info
+                              ? (() => {
+                                  const yearMonths = Object.keys(item.inventory_info).sort();
+                                  for (const ym of yearMonths) {
+                                    const monthData = item.inventory_info[ym];
+                                    if (monthData?.first_half) return `${monthData.first_half.available_slots}`;
+                                    if (monthData?.second_half) return `${monthData.second_half.available_slots}`;
+                                  }
+                                  return item.faces ? `${item.faces}` : '-';
+                                })()
                               : item.faces
                               ? `${item.faces}`
                               : '-'}
@@ -655,12 +659,16 @@ const ItemList: React.FC<ItemTableProps> = ({
                       남은수량:{' '}
                       {typeof item.available_faces === 'number'
                         ? item.available_faces
-                        : item.inventory_info?.current_period
-                        ? item.inventory_info.current_period.available_slots
-                        : item.inventory_info?.first_half
-                        ? item.inventory_info.first_half.available_slots
-                        : item.inventory_info?.second_half
-                        ? item.inventory_info.second_half.available_slots
+                        : item.inventory_info
+                        ? (() => {
+                            const yearMonths = Object.keys(item.inventory_info).sort();
+                            for (const ym of yearMonths) {
+                              const monthData = item.inventory_info[ym];
+                              if (monthData?.first_half) return monthData.first_half.available_slots;
+                              if (monthData?.second_half) return monthData.second_half.available_slots;
+                            }
+                            return item.faces ?? '-';
+                          })()
                         : item.faces ?? '-'}
                     </div>
                   )}

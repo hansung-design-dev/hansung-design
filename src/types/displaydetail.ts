@@ -49,23 +49,18 @@ export interface BaseBillboard {
   is_closed?: boolean; // 게시대 마감 여부
   maintenance_notes?: string; // 유지보수 노트 추가
   inventory_info?: {
-    current_period: {
-      total_slots: number;
-      available_slots: number;
-      closed_slots: number;
-      period?: string;
-      year_month?: string;
-    } | null;
-    first_half: {
-      total_slots: number;
-      available_slots: number;
-      closed_slots: number;
-    } | null;
-    second_half: {
-      total_slots: number;
-      available_slots: number;
-      closed_slots: number;
-    } | null;
+    [yearMonth: string]: {
+      first_half: {
+        total_slots: number;
+        available_slots: number;
+        closed_slots: number;
+      } | null;
+      second_half: {
+        total_slots: number;
+        available_slots: number;
+        closed_slots: number;
+      } | null;
+    };
   };
   effectiveIsClosed?: boolean;
   effectiveStatus?: string;
