@@ -59,21 +59,21 @@ export default function Home() {
 
   // 메인 섹션 데이터 찾기
   const mainSection = contents.find(
-    (content) => content.homepage_menu_types?.name === 'landing'
+    (content) => content.homepage_menu_types?.name === 'landing',
   );
 
   // 섹션별 데이터 찾기
   const ledSection = contents.find(
-    (content) => content.homepage_menu_types?.name === 'led_display'
+    (content) => content.homepage_menu_types?.name === 'led_display',
   );
   const bannerSection = contents.find(
-    (content) => content.homepage_menu_types?.name === 'banner_display'
+    (content) => content.homepage_menu_types?.name === 'banner_display',
   );
   const publicSection = contents.find(
-    (content) => content.homepage_menu_types?.name === 'public_design'
+    (content) => content.homepage_menu_types?.name === 'public_design',
   );
   const digitalSection = contents.find(
-    (content) => content.homepage_menu_types?.name === 'digital_signage'
+    (content) => content.homepage_menu_types?.name === 'digital_signage',
   );
 
   return (
@@ -82,7 +82,9 @@ export default function Home() {
       <div className="pt-[2rem] sm:pt-[3rem] pb-[2rem]">
         <div className="relative pt-[2rem] ">
           <Image
-            src={mainSection?.main_image_url || '/images/landing/main-part.png'}
+            src={
+              mainSection?.main_image_url || '/images/landing/main-banner.jpeg'
+            }
             alt="Screen section image"
             width={10000}
             height={10000}
