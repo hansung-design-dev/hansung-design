@@ -635,8 +635,18 @@ export default function BannerDisplayPage({
               const maxBanners = item.max_banner || 0;
 
               // banner_slots에서 적절한 슬롯의 크기 정보 가져오기
+              // 시민게시대(bulletin_board, cultural_board)는 panelSlot(slot_number > 0)의 규격 사용
+              const isCitizenBoard =
+                item.panel_type === 'bulletin_board' ||
+                item.panel_type === 'cultural_board';
               const getSlotSize = () => {
-                if (isTopFixed && slots?.topFixedSlot) {
+                if (isCitizenBoard && slots?.panelSlot) {
+                  // 시민게시대는 포스터 슬롯(slot_number > 0) 규격 사용
+                  return {
+                    width: slots.panelSlot.max_width || 0,
+                    height: slots.panelSlot.max_height || 0,
+                  };
+                } else if (isTopFixed && slots?.topFixedSlot) {
                   return {
                     width: slots.topFixedSlot.max_width || 0,
                     height: slots.topFixedSlot.max_height || 0,

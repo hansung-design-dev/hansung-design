@@ -453,7 +453,16 @@ async function getBannerDisplaysByDistrict(districtName: string) {
         // 일반 구에서는 현수막 슬롯(slot_number > 0)만 조회 (상단광고 제외)
         // slot_number가 1, 2, 3... 등 여러 개일 수 있으므로 합산 필요
         // Supabase 기본 1000행 제한을 우회하기 위해 여러 번 조회 후 합침
-        let allHalfData: typeof halfData = [];
+        let allHalfData: Array<{
+          panel_id: string;
+          district: string;
+          year_month: string;
+          half_period: string;
+          slot_number: number;
+          total_slots: number;
+          available_slots: number;
+          closed_slots: number;
+        }> = [];
         let halfError = null;
         const pageSize = 1000;
         let offset = 0;
@@ -1738,10 +1747,12 @@ async function getUltraFastDistrictsData() {
     // region_id별 기간 데이터 맵 생성
     const periodsByRegion: Record<string, typeof allPeriods> = {};
     (allPeriods || []).forEach(p => {
-      if (!periodsByRegion[p.region_gu_id]) {
-        periodsByRegion[p.region_gu_id] = [];
+      const regionGuId = p.region_gu_id;
+      if (!regionGuId) return;
+      if (!periodsByRegion[regionGuId]) {
+        periodsByRegion[regionGuId] = [];
       }
-      periodsByRegion[p.region_gu_id].push(p);
+      periodsByRegion[regionGuId].push(p);
     });
 
     // 캐시 데이터를 프론트엔드 형식으로 변환

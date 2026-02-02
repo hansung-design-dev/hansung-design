@@ -214,7 +214,7 @@ const ItemList: React.FC<ItemTableProps> = ({
                   <th className="text-left pl-4">게시대 명</th>
                   {isCitizenBoardTab ? (
                     <>
-                      <th className="text-center pl-4">시민게시대 규격</th>
+                      <th className="text-center pl-4">포스터 규격</th>
                       <th className="text-center pl-4">시민게시대 기간</th>
                       <th className="text-center pl-4">중앙광고 규격</th>
                       <th className="text-center pl-4">중앙광고 기간</th>
@@ -341,9 +341,16 @@ const ItemList: React.FC<ItemTableProps> = ({
                                 const priceUnit = (
                                   firstSlot as { price_unit?: string }
                                 ).price_unit;
-                                return priceUnit === '15 days'
-                                  ? '15일'
-                                  : priceUnit || '15일';
+                                // price_unit 한글 변환
+                                const priceUnitMap: Record<string, string> = {
+                                  '15 days': '15일',
+                                  '1 month': '1개월',
+                                  '6 months': '6개월',
+                                  '1 year': '1년',
+                                };
+                                return priceUnit
+                                  ? priceUnitMap[priceUnit] || priceUnit
+                                  : '15일';
                               }
                             }
                             return '15일';
@@ -372,9 +379,16 @@ const ItemList: React.FC<ItemTableProps> = ({
                               const priceUnit = (
                                 centerSlot as { price_unit?: string }
                               ).price_unit;
-                              return priceUnit === '1 month'
-                                ? '1개월'
-                                : priceUnit || '1개월';
+                              // price_unit 한글 변환
+                              const priceUnitMap: Record<string, string> = {
+                                '15 days': '15일',
+                                '1 month': '1개월',
+                                '6 months': '6개월',
+                                '1 year': '1년',
+                              };
+                              return priceUnit
+                                ? priceUnitMap[priceUnit] || priceUnit
+                                : '1개월';
                             }
                             return '1개월';
                           })()}
@@ -573,7 +587,7 @@ const ItemList: React.FC<ItemTableProps> = ({
               {isCitizenBoardTab ? (
                 <>
                   <div className="text-0.875">
-                    시민게시대 규격:{' '}
+                    포스터 규격:{' '}
                     {item.panel_width && item.panel_height
                       ? `${item.panel_width} x ${item.panel_height}`
                       : '-'}
@@ -591,9 +605,16 @@ const ItemList: React.FC<ItemTableProps> = ({
                           const priceUnit = (
                             firstSlot as { price_unit?: string }
                           ).price_unit;
-                          return priceUnit === '15 days'
-                            ? '15일'
-                            : priceUnit || '15일';
+                          // price_unit 한글 변환
+                          const priceUnitMap: Record<string, string> = {
+                            '15 days': '15일',
+                            '1 month': '1개월',
+                            '6 months': '6개월',
+                            '1 year': '1년',
+                          };
+                          return priceUnit
+                            ? priceUnitMap[priceUnit] || priceUnit
+                            : '15일';
                         }
                       }
                       return '15일';
@@ -621,9 +642,16 @@ const ItemList: React.FC<ItemTableProps> = ({
                         const priceUnit = (
                           centerSlot as { price_unit?: string }
                         ).price_unit;
-                        return priceUnit === '1 month'
-                          ? '1개월'
-                          : priceUnit || '1개월';
+                        // price_unit 한글 변환
+                        const priceUnitMap: Record<string, string> = {
+                          '15 days': '15일',
+                          '1 month': '1개월',
+                          '6 months': '6개월',
+                          '1 year': '1년',
+                        };
+                        return priceUnit
+                          ? priceUnitMap[priceUnit] || priceUnit
+                          : '1개월';
                       }
                       return '1개월';
                     })()}
