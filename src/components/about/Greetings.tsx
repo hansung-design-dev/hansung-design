@@ -29,7 +29,7 @@ export default function Greetings() {
           {/* 부제목 */}
           <div className="text-center mb-15">
             <div className="lg:text-[2rem] md:text-[1.5rem] sm:text-[1rem]  text-black font-700">
-              한성도시환경디자인
+              도시환경디자인 한성
               <span className="lg:text-[1.5rem] md:text-[1rem] sm:text-[0.8rem] text-black font-500">
                 입니다.
               </span>
@@ -41,12 +41,12 @@ export default function Greetings() {
           <div className="bg-[#F8F8F8] rounded-[1.25rem] p-14">
             <div className="text-black lg:text-lg md:text-base sm:text-sm leading-relaxed text-center space-y-6">
               <p>
-                도시경관디자인 분야에서{' '}
+                도시환경디자인 분야에서{' '}
                 <br className="sm:inline lg:hidden md:hidden" />
                 수많은 프로젝트를 성공적으로 수행하며, <br />
                 업계 내에서 최고 수준의 전문성과 기술력을
                 <br className="sm:inline lg:hidden md:hidden" /> 인정받아온
-                도시경관디자인 전문기업입니다.
+                도시환경디자인 전문기업입니다.
               </p>
               <p>
                 우리는 단순한 외형의 디자인을 넘어,{' '}
