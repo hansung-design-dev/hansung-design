@@ -1,112 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/src/app/api/supabase';
 
-// 관악구 자체제작/1회 재사용 할인 가격
-const GWANAK_SELF_MADE_REUSE_PRICE = 78000;
-
-interface BannerSlotPricePolicy {
-  price_usage_type?: string;
-  total_price?: number;
-}
-
-interface OrderDetailWithPrice {
-  id: string;
-  price?: number | null;
-  slot_order_quantity?: number;
-  self_made_reuse?: boolean;
-  panels?: {
-    region_gu?: {
-      name?: string;
-    };
-  };
-  panel_slot_usage?: {
-    unit_price?: number;
-    banner_slots?: {
-      banner_slot_price_policy?: BannerSlotPricePolicy[];
-    };
-  };
-}
-
 /**
  * 남은 order_details를 기반으로 총 금액을 재계산
- * 우선순위: 저장된 price > banner_slot_price_policy > unit_price
+ * order_details.price에 저장된 정확한 가격만 사용
  */
-async function recalculateOrderAmount(
-  orderId: string,
-  isPublicInstitution: boolean
-): Promise<number> {
-  // 남은 order_details 조회 (저장된 가격, self_made_reuse, panel 정보 포함)
+async function recalculateOrderAmount(orderId: string): Promise<number> {
   const { data: remainingDetails, error } = await supabase
     .from('order_details')
-    .select(`
-      id,
-      price,
-      slot_order_quantity,
-      self_made_reuse,
-      panels:panel_id (
-        region_gu:region_gu_id (
-          name
-        )
-      ),
-      panel_slot_usage:panel_slot_usage_id (
-        unit_price,
-        banner_slots:banner_slot_id (
-          banner_slot_price_policy (
-            price_usage_type,
-            total_price
-          )
-        )
-      )
-    `)
+    .select('id, price')
     .eq('order_id', orderId);
 
-  if (error || !remainingDetails) {
+  if (error) {
     console.error('[recalculateOrderAmount] order_details 조회 실패:', error);
+    throw new Error('order_details 조회 실패');
+  }
+
+  if (!remainingDetails || remainingDetails.length === 0) {
+    // 남은 항목이 없으면 0원 (전체 취소)
     return 0;
   }
 
   let totalAmount = 0;
-  const preferredPriceUsageType = isPublicInstitution
-    ? 'public_institution'
-    : 'default';
 
-  for (const detail of remainingDetails as OrderDetailWithPrice[]) {
-    const quantity = detail.slot_order_quantity || 1;
-
-    // 1. 저장된 가격이 있으면 우선 사용 (주문 당시 가격)
-    if (detail.price !== null && detail.price !== undefined) {
-      totalAmount += Number(detail.price);
-      continue;
+  for (const detail of remainingDetails) {
+    // order_details.price에 저장된 정확한 가격 사용 (fallback 없음)
+    const savedPrice = Number(detail.price);
+    if (isNaN(savedPrice) || savedPrice <= 0) {
+      console.error('[recalculateOrderAmount] order_detail에 유효한 price 없음:', {
+        detailId: detail.id,
+        price: detail.price,
+      });
+      throw new Error(`order_detail ${detail.id}에 유효한 가격이 없습니다.`);
     }
-
-    // 2. 관악구 + 자체제작/1회 재사용인 경우 할인 가격 적용 (레거시 fallback)
-    const districtName = detail.panels?.region_gu?.name;
-    if (districtName === '관악구' && detail.self_made_reuse) {
-      totalAmount += GWANAK_SELF_MADE_REUSE_PRICE * quantity;
-      continue;
-    }
-
-    // 3. banner_slot_price_policy에서 계산 (레거시 fallback)
-    const policies =
-      detail.panel_slot_usage?.banner_slots?.banner_slot_price_policy || [];
-
-    let selectedPolicy = policies.find(
-      (p) => p.price_usage_type === preferredPriceUsageType
-    );
-
-    if (!selectedPolicy) {
-      selectedPolicy = policies.find((p) => p.price_usage_type === 'default');
-    }
-
-    if (!selectedPolicy && policies.length > 0) {
-      selectedPolicy = policies[0];
-    }
-
-    if (selectedPolicy) {
-      totalAmount += Number(selectedPolicy.total_price || 0) * quantity;
-    } else if (detail.panel_slot_usage?.unit_price) {
-      totalAmount += Number(detail.panel_slot_usage.unit_price) * quantity;
-    }
+    totalAmount += savedPrice;
   }
 
   return totalAmount;
@@ -128,7 +55,7 @@ export async function DELETE(
 
     const { data: detail, error: detailError } = await supabase
       .from('order_details')
-      .select('id, order_id')
+      .select('id, order_id, panel_slot_usage_id, panel_id, display_start_date')
       .eq('id', orderDetailId)
       .single();
 
@@ -143,17 +70,45 @@ export async function DELETE(
       );
     }
 
+    // panel_slot_usage에서 banner_slot_id 조회 (슬롯 복원용)
+    let bannerSlotId: string | null = null;
+    if (detail.panel_slot_usage_id) {
+      const { data: usageData } = await supabase
+        .from('panel_slot_usage')
+        .select('banner_slot_id')
+        .eq('id', detail.panel_slot_usage_id)
+        .single();
+      bannerSlotId = usageData?.banner_slot_id || null;
+    }
+
+    // 기간별 재고 복원을 위해 region_gu_display_period_id 조회
+    let regionGuDisplayPeriodId: string | null = null;
+    if (detail.panel_id && detail.display_start_date) {
+      // panel에서 region_gu_id 조회
+      const { data: panelData } = await supabase
+        .from('panels')
+        .select('region_gu_id')
+        .eq('id', detail.panel_id)
+        .single();
+
+      if (panelData?.region_gu_id) {
+        // display_start_date에 해당하는 region_gu_display_period 찾기
+        const { data: periodData } = await supabase
+          .from('region_gu_display_periods')
+          .select('id')
+          .eq('region_gu_id', panelData.region_gu_id)
+          .lte('period_from', detail.display_start_date)
+          .gte('period_to', detail.display_start_date)
+          .single();
+
+        regionGuDisplayPeriodId = periodData?.id || null;
+      }
+    }
+
     // 주문 및 user_profile 정보 조회 (공공기관 여부 확인용)
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select(`
-        id,
-        order_number,
-        created_at,
-        user_profiles:user_profile_id (
-          is_public_institution
-        )
-      `)
+      .select('id, order_number, created_at')
       .eq('id', detail.order_id)
       .single();
 
@@ -209,10 +164,66 @@ export async function DELETE(
       orderDetailId
     );
 
+    // panel_slot_usage 삭제
+    if (detail.panel_slot_usage_id) {
+      const { error: usageDeleteError } = await supabase
+        .from('panel_slot_usage')
+        .delete()
+        .eq('id', detail.panel_slot_usage_id);
+
+      if (usageDeleteError) {
+        console.error('[order-details DELETE] panel_slot_usage 삭제 실패:', usageDeleteError);
+      } else {
+        console.log('[order-details DELETE] panel_slot_usage 삭제 완료:', detail.panel_slot_usage_id);
+      }
+    }
+
+    // banner_slot_inventory 복원 (is_available = true, is_closed = false)
+    // 기간별로 특정 재고만 복원 (다른 기간의 예약에 영향 주지 않음)
+    if (bannerSlotId) {
+      let inventoryUpdateError;
+
+      if (regionGuDisplayPeriodId) {
+        // 특정 기간의 재고만 복원
+        const result = await supabase
+          .from('banner_slot_inventory')
+          .update({ is_available: true, is_closed: false })
+          .eq('banner_slot_id', bannerSlotId)
+          .eq('region_gu_display_period_id', regionGuDisplayPeriodId);
+        inventoryUpdateError = result.error;
+
+        if (!inventoryUpdateError) {
+          console.log('[order-details DELETE] banner_slot_inventory 복원 완료 (기간별):', {
+            bannerSlotId,
+            regionGuDisplayPeriodId,
+          });
+        }
+      } else {
+        // 기간 정보를 찾지 못한 경우 fallback (모든 기간 복원 - 기존 동작)
+        console.warn('[order-details DELETE] 기간 정보 없음, 전체 복원:', bannerSlotId);
+        const result = await supabase
+          .from('banner_slot_inventory')
+          .update({ is_available: true, is_closed: false })
+          .eq('banner_slot_id', bannerSlotId);
+        inventoryUpdateError = result.error;
+      }
+
+      if (inventoryUpdateError) {
+        console.error('[order-details DELETE] banner_slot_inventory 복원 실패:', inventoryUpdateError);
+      }
+    }
+
     // 결제 금액 재계산 및 업데이트
-    const userProfile = order.user_profiles as { is_public_institution?: boolean } | null;
-    const isPublicInstitution = userProfile?.is_public_institution || false;
-    const newAmount = await recalculateOrderAmount(order.id, isPublicInstitution);
+    let newAmount: number;
+    try {
+      newAmount = await recalculateOrderAmount(order.id);
+    } catch (calcError) {
+      console.error('[order-details DELETE] 금액 재계산 실패:', calcError);
+      return NextResponse.json(
+        { success: false, error: '금액 재계산에 실패했습니다.' },
+        { status: 500 }
+      );
+    }
 
     // orders.total_price 업데이트
     const { error: orderUpdateError } = await supabase
