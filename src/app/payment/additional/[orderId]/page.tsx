@@ -226,8 +226,18 @@ function AdditionalPaymentContent({ orderId }: { orderId: string }) {
 export default function AdditionalPaymentPage({
   params,
 }: {
-  params: { orderId: string };
+  params: Promise<{ orderId: string }>;
 }) {
+  const [orderId, setOrderId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const initParams = async () => {
+      const { orderId: id } = await params;
+      setOrderId(id);
+    };
+    initParams();
+  }, [params]);
+
   return (
     <main className="min-h-screen flex flex-col bg-gray-100">
       <Nav variant="default" className="bg-white" />
@@ -239,7 +249,7 @@ export default function AdditionalPaymentPage({
             </div>
           }
         >
-          <AdditionalPaymentContent orderId={params.orderId} />
+          {orderId && <AdditionalPaymentContent orderId={orderId} />}
         </Suspense>
       </div>
     </main>

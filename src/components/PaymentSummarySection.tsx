@@ -27,7 +27,6 @@ const REFUND_STATUS_LABEL: Record<RefundStatus, string> = {
   processing: '처리 중',
   completed: '완료',
   failed: '실패',
-  cancelled: '취소',
 };
 
 // 추가 결제 상태 라벨
@@ -88,7 +87,7 @@ export default function PaymentSummarySection({ orderId }: PaymentSummarySection
   };
 
   // 데이터가 없거나 환불/추가결제가 없으면 표시하지 않음
-  if (loading || !summary) {
+  if (loading || error || !summary) {
     return null;
   }
 

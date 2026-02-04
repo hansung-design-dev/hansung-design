@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/src/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 import type { Refund } from '@/src/types/refund';
 import type { AdditionalPayment } from '@/src/types/additional-payment';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 interface PaymentSummaryResponse {
   success: boolean;
@@ -30,12 +33,12 @@ interface PaymentSummaryResponse {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { orderId: string } }
+  { params }: { params: Promise<{ orderId: string }> }
 ): Promise<NextResponse<PaymentSummaryResponse>> {
-  const orderId = params.orderId;
+  const { orderId } = await params;
 
   try {
-    const supabase = await createClient();
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     // 1. 주문의 결제 정보 조회
     const { data: payment, error: paymentError } = await supabase
@@ -54,7 +57,7 @@ export async function GET(
     // 2. 환불 목록 조회
     const { data: refunds, error: refundsError } = await supabase
       .from('refunds')
-      .select('id, order_id, refund_amount, refund_status, refund_reason, created_at, processed_at')
+      .select('id, order_id, order_detail_id, refund_amount, refund_method, refund_status, refund_reason, created_at, processed_at')
       .eq('order_id', orderId)
       .order('created_at', { ascending: false });
 
@@ -65,7 +68,7 @@ export async function GET(
     // 3. 추가 결제 목록 조회
     const { data: additionalPayments, error: additionalError } = await supabase
       .from('additional_payments')
-      .select('id, order_id, additional_amount, payment_status, reason, payment_link_url, payment_link_expires_at, created_at, processed_at')
+      .select('id, order_id, order_detail_id, additional_amount, payment_method, payment_status, reason, payment_link_url, payment_link_expires_at, created_at, processed_at')
       .eq('order_id', orderId)
       .order('created_at', { ascending: false });
 
@@ -76,7 +79,9 @@ export async function GET(
     const refundList: Refund[] = (refunds || []).map((r) => ({
       id: r.id,
       order_id: r.order_id,
+      order_detail_id: r.order_detail_id,
       refund_amount: r.refund_amount,
+      refund_method: r.refund_method,
       refund_status: r.refund_status,
       refund_reason: r.refund_reason,
       created_at: r.created_at,
@@ -86,7 +91,9 @@ export async function GET(
     const additionalPaymentList: AdditionalPayment[] = (additionalPayments || []).map((p) => ({
       id: p.id,
       order_id: p.order_id,
+      order_detail_id: p.order_detail_id,
       additional_amount: p.additional_amount,
+      payment_method: p.payment_method,
       payment_status: p.payment_status,
       reason: p.reason,
       payment_link_url: p.payment_link_url,
