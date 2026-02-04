@@ -22,9 +22,9 @@ export default function Navigation({
     <nav className="sticky top-0 z-50 bg-[#302625] shadow-lg mt-10">
       <div className="px-2 sm:px-4 md:px-6 lg:px-8">
         {/* 데스크톱 레이아웃 */}
-        <div className="hidden lg:flex h-16 items-center justify-between">
-          {/* 로고와 회사명 */}
-          <div className="flex items-center flex-shrink-0 h-full py-2">
+        <div className="hidden lg:flex h-16 items-center">
+          {/* 로고 - 왼쪽 */}
+          <div className="flex items-center h-full py-2 flex-shrink-0">
             <Image
               src="/images/company-intro/logo/nav-logo.svg"
               alt="한성디자인 로고"
@@ -34,8 +34,8 @@ export default function Navigation({
             />
           </div>
 
-          {/* 네비게이션 메뉴 */}
-          <div className="flex items-center gap-6 lg:gap-10 xl:gap-16 2xl:gap-20">
+          {/* 네비게이션 메뉴 - 로고 오른쪽부터 화면 끝까지에서 가운데 정렬 */}
+          <div className="flex-1 flex items-center justify-center gap-6 lg:gap-10 xl:gap-16 2xl:gap-20">
             {navItems.map((item) => (
               <button
                 key={item.id}
