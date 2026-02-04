@@ -153,14 +153,14 @@ export default function Performance() {
         <SectionTitle title="실적내역" />
 
         {/* 카드 그리드 */}
-        <div className="grid gap-4 lg:gap-6 md:gap-8 mx-auto place-items-center sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 max-w-6xl">
+        <div className="grid gap-4 lg:gap-4 md:gap-6 mx-auto place-items-center sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 max-w-7xl">
           {performanceData.map((item, index) => (
             <div
               key={index}
-              className="flex lg:w-[14rem] md:w-[14rem] sm:w-[14rem] h-[4rem] sm:h-[4rem] md:h-[3rem] lg:h-[3rem] p-[1rem_0.5rem] sm:p-[1.5rem_0.5rem] md:p-[2rem_0.5rem] lg:p-[2.5rem_0.5rem] flex-col justify-center items-center gap-[0.625rem] bg-white rounded-[1.25rem] shadow-lg"
+              className="flex lg:w-[11rem] md:w-[14rem] sm:w-[14rem] h-[4rem] sm:h-[4rem] md:h-[3rem] lg:h-[3rem] p-[1rem_0.5rem] sm:p-[1.5rem_0.5rem] md:p-[2rem_0.5rem] lg:p-[2.5rem_0.5rem] flex-col justify-center items-center gap-[0.625rem] bg-white rounded-[1.25rem] shadow-lg"
             >
               <div
-                className="text-[1rem] font-700 text-center"
+                className="text-[0.875rem] font-600 text-center break-keep"
                 dangerouslySetInnerHTML={{ __html: item.title }}
               />
               <div className="text-[0.875rem] font-500 text-[#2187FF]">

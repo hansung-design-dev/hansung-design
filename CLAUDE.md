@@ -12,6 +12,7 @@
 
 - Commit messages must be written in English
 - Do not include Claude co-author in commits
+- Do not include "🤖 Generated with [Claude Code]" in commit messages
 
 ---
 
