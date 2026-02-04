@@ -75,6 +75,9 @@ export interface CartItem {
   designDraftId?: string | null;
   // 아이템이 장바구니에 추가된 시간 (밀리초)
   addedAt?: number;
+  // 디자인 관련
+  usePreviousDesign?: boolean; // 이전 디자인 동일
+  selfMadeReuse?: boolean; // 자체제작/1회 재사용 (관악구 할인)
 }
 
 interface CartState {

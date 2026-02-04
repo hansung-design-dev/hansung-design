@@ -698,6 +698,7 @@ export async function POST(request: NextRequest) {
       display_end_date: string;
       design_draft_id: string | null;
       use_previous_design: boolean;
+      self_made_reuse: boolean;
       price: number;
     };
 
@@ -861,6 +862,7 @@ export async function POST(request: NextRequest) {
             display_end_date: displayEndDate,
             design_draft_id: designDraftIdForItem,
             use_previous_design: item.usePreviousDesign || false,
+            self_made_reuse: item.selfMadeReuse || false, // 자체제작/1회 재사용 (관악구 할인)
             price: item.price, // 주문 당시 가격 저장
           } satisfies OrderDetailInsert;
 

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/src/app/api/supabase';
 
+// 관악구 자체제작/1회 재사용 할인 가격
+const GWANAK_SELF_MADE_REUSE_PRICE = 78000;
+
 interface BannerSlotPricePolicy {
   price_usage_type?: string;
   total_price?: number;
@@ -10,6 +13,12 @@ interface OrderDetailWithPrice {
   id: string;
   price?: number | null;
   slot_order_quantity?: number;
+  self_made_reuse?: boolean;
+  panels?: {
+    region_gu?: {
+      name?: string;
+    };
+  };
   panel_slot_usage?: {
     unit_price?: number;
     banner_slots?: {
@@ -26,13 +35,19 @@ async function recalculateOrderAmount(
   orderId: string,
   isPublicInstitution: boolean
 ): Promise<number> {
-  // 남은 order_details 조회 (저장된 가격 및 가격 정책 포함)
+  // 남은 order_details 조회 (저장된 가격, self_made_reuse, panel 정보 포함)
   const { data: remainingDetails, error } = await supabase
     .from('order_details')
     .select(`
       id,
       price,
       slot_order_quantity,
+      self_made_reuse,
+      panels:panel_id (
+        region_gu:region_gu_id (
+          name
+        )
+      ),
       panel_slot_usage:panel_slot_usage_id (
         unit_price,
         banner_slots:banner_slot_id (
@@ -64,7 +79,14 @@ async function recalculateOrderAmount(
       continue;
     }
 
-    // 2. banner_slot_price_policy에서 계산 (레거시 fallback)
+    // 2. 관악구 + 자체제작/1회 재사용인 경우 할인 가격 적용 (레거시 fallback)
+    const districtName = detail.panels?.region_gu?.name;
+    if (districtName === '관악구' && detail.self_made_reuse) {
+      totalAmount += GWANAK_SELF_MADE_REUSE_PRICE * quantity;
+      continue;
+    }
+
+    // 3. banner_slot_price_policy에서 계산 (레거시 fallback)
     const policies =
       detail.panel_slot_usage?.banner_slots?.banner_slot_price_policy || [];
 

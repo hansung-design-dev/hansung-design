@@ -137,6 +137,7 @@ function PaymentPageContent() {
       fileType: string | null;
       emailAddress: string | null;
       usePreviousDesign: boolean;
+      selfMadeReuse: boolean; // 자체제작/1회 재사용 (관악구 할인용)
     };
   }>({});
 
@@ -151,6 +152,7 @@ function PaymentPageContent() {
       fileType: string | null;
       emailAddress: string | null;
       usePreviousDesign: boolean;
+      selfMadeReuse: boolean; // 자체제작/1회 재사용 (관악구 할인용)
     };
   }>({});
 
@@ -466,6 +468,28 @@ function PaymentPageContent() {
       [itemId]: {
         ...prev[itemId],
         usePreviousDesign: isChecked,
+      },
+    }));
+  };
+
+  // 그룹별 자체제작/1회 재사용 체크 핸들러 (관악구 할인용)
+  const handleGroupSelfMadeReuseSelect = (groupKey: string, isChecked: boolean) => {
+    setGroupStates((prev) => ({
+      ...prev,
+      [groupKey]: {
+        ...prev[groupKey],
+        selfMadeReuse: isChecked,
+      },
+    }));
+  };
+
+  // 아이템별 자체제작/1회 재사용 체크 핸들러 (관악구 할인용)
+  const handleItemSelfMadeReuseSelect = (itemId: string, isChecked: boolean) => {
+    setItemStates((prev) => ({
+      ...prev,
+      [itemId]: {
+        ...prev[itemId],
+        selfMadeReuse: isChecked,
       },
     }));
   };
@@ -1920,9 +1944,16 @@ function PaymentPageContent() {
       if (!projectName) {
         projectName = '광고주';
       }
-      const draftDeliveryMethod =
-        groupState?.sendByEmail === true ? 'email' : 'upload';
+      // 이전 디자인/자체제작 사용 여부 확인
+      const useExistingDesign =
+        groupState?.usePreviousDesign === true || groupState?.selfMadeReuse === true;
+      const draftDeliveryMethod = useExistingDesign
+        ? 'existing'
+        : groupState?.sendByEmail === true
+        ? 'email'
+        : 'upload';
       const requiresGroupFileUpload =
+        !useExistingDesign &&
         draftDeliveryMethod === 'upload' &&
         (group.items.length === 1 || bulkApply.fileUpload);
 
@@ -1931,10 +1962,12 @@ function PaymentPageContent() {
         const groupState = groupStates[group.id];
         const itemProjectName =
           itemState?.projectName?.trim() || projectName || item.name || '작업';
-        // 이전 디자인 동일 여부: 아이템별 또는 그룹별 상태 확인
+        // 이전 디자인 동일 여부 (표시용)
         const usePreviousDesign = itemState?.usePreviousDesign || groupState?.usePreviousDesign || false;
-        // 관악구이고 이전 디자인 동일인 경우 할인 가격 적용
-        const finalPrice = (group.district === '관악구' && usePreviousDesign)
+        // 자체제작/1회 재사용 여부 (관악구 할인용)
+        const selfMadeReuse = itemState?.selfMadeReuse || groupState?.selfMadeReuse || false;
+        // 관악구이고 자체제작/1회 재사용인 경우 할인 가격 적용
+        const finalPrice = (group.district === '관악구' && selfMadeReuse)
           ? GWANAK_PREVIOUS_DESIGN_PRICE
           : (item.price || 0);
         return {
@@ -1952,6 +1985,7 @@ function PaymentPageContent() {
           projectName: itemProjectName,
           designDraftId: null as string | null,
           usePreviousDesign,
+          selfMadeReuse,
         };
       });
 
@@ -2247,11 +2281,11 @@ function PaymentPageContent() {
               ? currentUserProfiles
               : currentProfilesFromContext || [];
 
-          // 관악구 이전 디자인 동일 할인 가격 계산
-          const isGwanakPreviousDesign =
+          // 관악구 자체제작/1회 재사용 할인 가격 계산
+          const isGwanakSelfMadeReuse =
             currentTossWidgetData.district === '관악구' &&
-            currentGroupStates[currentTossWidgetData.id]?.usePreviousDesign;
-          const finalTotalPrice = isGwanakPreviousDesign
+            currentGroupStates[currentTossWidgetData.id]?.selfMadeReuse;
+          const finalTotalPrice = isGwanakSelfMadeReuse
             ? currentTossWidgetData.items.length * GWANAK_PREVIOUS_DESIGN_PRICE
             : currentTossWidgetData.totalPrice;
 
@@ -2436,47 +2470,60 @@ function PaymentPageContent() {
               const isBulkFileUpload =
                 currentBulkApply.fileUpload || currentBulkApply.emailMethod;
 
+              // 이전 디자인 동일 또는 자체제작・1회재사용 체크 시 파일 업로드 검증 스킵
+              const useExistingDesign = groupState?.usePreviousDesign === true || groupState?.selfMadeReuse === true;
+
               // 아이템이 1개이거나 일괄적용이 체크된 경우: 그룹 단위로 확인
               // 아이템이 2개 이상이고 일괄적용이 체크되지 않은 경우: 각 아이템별로 확인
               if (itemCount === 1 || isBulkFileUpload) {
-                // 그룹 단위 검증
-                const isEmailSelected = groupState?.sendByEmail === true;
-                const hasFileUploaded = !!groupState?.selectedFile;
+                // 그룹 단위 검증 (이전 디자인/자체제작 사용 시 스킵)
+                if (!useExistingDesign) {
+                  const isEmailSelected = groupState?.sendByEmail === true;
+                  const hasFileUploaded = !!groupState?.selectedFile;
 
-                // 둘 중 하나는 반드시 선택되어야 함
-                if (!isEmailSelected && !hasFileUploaded) {
-                  alert(
-                    '시안 파일을 업로드하거나 "이메일로 파일 보낼게요"를 선택해주세요.'
-                  );
-                  paymentButton.disabled = false;
-                  paymentButton.textContent = '카드/간편결제';
-                  return;
-                }
-              } else {
-                // 아이템별 검증 (아이템이 2개 이상이고 일괄적용이 체크되지 않은 경우)
-                for (const item of currentTossWidgetData.items) {
-                  const itemState = currentItemStates[item.id];
-                  const isEmailSelected = itemState?.sendByEmail === true;
-                  const hasFileUploaded = !!itemState?.selectedFile;
-
-                  // 각 아이템마다 둘 중 하나는 반드시 선택되어야 함
+                  // 둘 중 하나는 반드시 선택되어야 함
                   if (!isEmailSelected && !hasFileUploaded) {
                     alert(
-                      `"${
-                        item.name || item.panel_code || '아이템'
-                      }"의 시안 파일을 업로드하거나 "이메일로 파일 보낼게요"를 선택해주세요.`
+                      '시안 파일을 업로드하거나 "이메일로 파일 보낼게요"를 선택해주세요.'
                     );
                     paymentButton.disabled = false;
                     paymentButton.textContent = '카드/간편결제';
                     return;
                   }
                 }
+              } else {
+                // 아이템별 검증 (아이템이 2개 이상이고 일괄적용이 체크되지 않은 경우)
+                for (const item of currentTossWidgetData.items) {
+                  const itemState = currentItemStates[item.id];
+                  // 아이템별 이전 디자인/자체제작 사용 체크
+                  const itemUseExistingDesign = itemState?.usePreviousDesign === true || itemState?.selfMadeReuse === true;
+
+                  if (!itemUseExistingDesign) {
+                    const isEmailSelected = itemState?.sendByEmail === true;
+                    const hasFileUploaded = !!itemState?.selectedFile;
+
+                    // 각 아이템마다 둘 중 하나는 반드시 선택되어야 함
+                    if (!isEmailSelected && !hasFileUploaded) {
+                      alert(
+                        `"${
+                          item.name || item.panel_code || '아이템'
+                        }"의 시안 파일을 업로드하거나 "이메일로 파일 보낼게요"를 선택해주세요.`
+                      );
+                      paymentButton.disabled = false;
+                      paymentButton.textContent = '카드/간편결제';
+                      return;
+                    }
+                  }
+                }
               }
 
               // 이메일 체크박스가 선택되었으면 'email', 파일이 업로드되었으면 'upload'
+              // 이전 디자인/자체제작 사용 시 'existing' (파일 업로드 불필요)
               // (그룹 단위 또는 아이템별로 이미 검증 완료)
-              const draftDeliveryMethod: 'email' | 'upload' =
-                itemCount === 1 || isBulkFileUpload
+              const draftDeliveryMethod: 'email' | 'upload' | 'existing' =
+                useExistingDesign
+                  ? 'existing'
+                  : itemCount === 1 || isBulkFileUpload
                   ? groupState?.sendByEmail === true
                     ? 'email'
                     : 'upload'
@@ -2487,7 +2534,7 @@ function PaymentPageContent() {
               // 아이템별 draftId 저장 (아이템별인 경우)
               const itemDraftIds: { [itemId: string]: string } = {};
 
-              // 그룹 단위로 파일 업로드가 필요한 경우 처리
+              // 그룹 단위로 파일 업로드가 필요한 경우 처리 (이전 디자인/자체제작 사용 시 스킵)
               if (
                 draftDeliveryMethod === 'upload' &&
                 (itemCount === 1 || isBulkFileUpload)
@@ -3030,10 +3077,12 @@ function PaymentPageContent() {
                 items: currentTossWidgetData.items.map((item) => {
                   const itemState = currentItemStates[item.id];
                   const groupState = currentGroupStates[currentTossWidgetData.id];
-                  // 이전 디자인 동일 여부: 아이템별 또는 그룹별 상태 확인
+                  // 이전 디자인 동일 여부 (표시용)
                   const usePreviousDesign = itemState?.usePreviousDesign || groupState?.usePreviousDesign || false;
-                  // 관악구이고 이전 디자인 동일인 경우 할인 가격 적용
-                  const finalPrice = (currentTossWidgetData.district === '관악구' && usePreviousDesign)
+                  // 자체제작/1회 재사용 여부 (관악구 할인용)
+                  const selfMadeReuse = itemState?.selfMadeReuse || groupState?.selfMadeReuse || false;
+                  // 관악구이고 자체제작/1회 재사용인 경우 할인 가격 적용
+                  const finalPrice = (currentTossWidgetData.district === '관악구' && selfMadeReuse)
                     ? GWANAK_PREVIOUS_DESIGN_PRICE
                     : (item.price || 0);
                   return {
@@ -3056,6 +3105,7 @@ function PaymentPageContent() {
                         ? currentItemStates[item.id]?.projectName || ''
                         : projectName,
                     usePreviousDesign,
+                    selfMadeReuse,
                   };
                 }),
                 userAuthId,
@@ -3297,7 +3347,7 @@ function PaymentPageContent() {
                 orderName: paymentParams.orderName,
                 originalAmount: currentTossWidgetData.totalPrice,
                 finalAmount: finalTotalPrice,
-                isGwanakPreviousDesign,
+                isGwanakSelfMadeReuse,
                 isTestUser,
                 isTestFreePaymentEnabled,
                 hasTossPayments: !!tossPayments,
@@ -3629,12 +3679,34 @@ function PaymentPageContent() {
                           >
                             이전 디자인 동일
                           </label>
-                          {group.district === '관악구' && groupStates[group.id]?.usePreviousDesign && (
-                            <span className="text-xs text-blue-600 font-medium">
-                              (할인 적용)
-                            </span>
-                          )}
                         </div>
+                        {/* 관악구일 때만 자체제작/1회 재사용 체크박스 표시 */}
+                        {group.district === '관악구' && (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              id={`self-made-reuse-${group.id}`}
+                              checked={
+                                groupStates[group.id]?.selfMadeReuse || false
+                              }
+                              onChange={(e) =>
+                                handleGroupSelfMadeReuseSelect(group.id, e.target.checked)
+                              }
+                              className="w-4 h-4"
+                            />
+                            <label
+                              htmlFor={`self-made-reuse-${group.id}`}
+                              className="text-sm text-gray-500"
+                            >
+                              자체제작・1회재사용
+                            </label>
+                            {groupStates[group.id]?.selfMadeReuse && (
+                              <span className="text-xs text-blue-600 font-medium">
+                                (할인 적용)
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -3762,12 +3834,37 @@ function PaymentPageContent() {
                                         >
                                           이전 디자인 동일
                                         </label>
-                                        {item.district === '관악구' && itemState?.usePreviousDesign && (
-                                          <span className="text-xs text-blue-600 font-medium">
-                                            (할인 적용)
-                                          </span>
-                                        )}
                                       </div>
+                                      {/* 관악구일 때만 자체제작/1회 재사용 체크박스 표시 */}
+                                      {item.district === '관악구' && (
+                                        <div className="flex items-center gap-2">
+                                          <input
+                                            type="checkbox"
+                                            id={`self-made-reuse-item-${item.id}`}
+                                            checked={
+                                              itemState?.selfMadeReuse || false
+                                            }
+                                            onChange={(e) =>
+                                              handleItemSelfMadeReuseSelect(
+                                                item.id,
+                                                e.target.checked
+                                              )
+                                            }
+                                            className="w-4 h-4"
+                                          />
+                                          <label
+                                            htmlFor={`self-made-reuse-item-${item.id}`}
+                                            className="text-xs text-gray-500"
+                                          >
+                                            자체제작・1회재사용
+                                          </label>
+                                          {itemState?.selfMadeReuse && (
+                                            <span className="text-xs text-blue-600 font-medium">
+                                              (할인 적용)
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
                                 )}
@@ -3830,8 +3927,8 @@ function PaymentPageContent() {
                         <span>총 결제 금액:</span>
                         <span className="text-blue-700">
                           {(() => {
-                            // 관악구이고 이전 디자인 동일이 체크된 경우 할인 가격 적용
-                            if (group.district === '관악구' && groupStates[group.id]?.usePreviousDesign) {
+                            // 관악구이고 자체제작/1회 재사용이 체크된 경우 할인 가격 적용
+                            if (group.district === '관악구' && groupStates[group.id]?.selfMadeReuse) {
                               const discountedTotal = group.items.length * GWANAK_PREVIOUS_DESIGN_PRICE;
                               return discountedTotal.toLocaleString();
                             }
@@ -3839,9 +3936,9 @@ function PaymentPageContent() {
                           })()} 원
                         </span>
                       </div>
-                      {group.district === '관악구' && groupStates[group.id]?.usePreviousDesign && (
+                      {group.district === '관악구' && groupStates[group.id]?.selfMadeReuse && (
                         <div className="flex justify-between text-xs text-blue-600 mt-1">
-                          <span>할인 적용 (이전 디자인 동일)</span>
+                          <span>할인 적용 (자체제작・1회재사용)</span>
                           <span>-{(group.totalPrice - group.items.length * GWANAK_PREVIOUS_DESIGN_PRICE).toLocaleString()} 원</span>
                         </div>
                       )}
@@ -3897,9 +3994,15 @@ function PaymentPageContent() {
                       });
                     }
 
-                    // 시안 업로드 확인
+                    // 시안 업로드 확인 (이전 디자인/자체제작 사용 시 스킵)
                     let hasFileUploadMethod = false;
-                    if (
+                    const useExistingDesignForButton =
+                      !!groupState?.usePreviousDesign || !!groupState?.selfMadeReuse;
+
+                    if (useExistingDesignForButton) {
+                      // 이전 디자인 또는 자체제작・1회재사용 체크 시 파일 업로드 불필요
+                      hasFileUploadMethod = true;
+                    } else if (
                       itemCount === 1 ||
                       bulkApply.fileUpload ||
                       bulkApply.emailMethod
@@ -3911,8 +4014,10 @@ function PaymentPageContent() {
                       // 아이템 2개 이상이고 시안 일괄적용이 꺼져있을 때
                       hasFileUploadMethod = group.items.every((item) => {
                         const itemState = itemStates[item.id];
+                        const itemUseExisting =
+                          !!itemState?.usePreviousDesign || !!itemState?.selfMadeReuse;
                         return (
-                          !!itemState?.selectedFile || !!itemState?.sendByEmail
+                          itemUseExisting || !!itemState?.selectedFile || !!itemState?.sendByEmail
                         );
                       });
                     }
@@ -4118,9 +4223,9 @@ function PaymentPageContent() {
                 </span>
               </div>
               {(() => {
-                // 관악구 이전 디자인 동일 할인 금액 계산
+                // 관악구 자체제작/1회 재사용 할인 금액 계산
                 const totalDiscount = groupedItems.reduce((sum, group) => {
-                  if (group.district === '관악구' && groupStates[group.id]?.usePreviousDesign) {
+                  if (group.district === '관악구' && groupStates[group.id]?.selfMadeReuse) {
                     const originalTotal = group.totalPrice;
                     const discountedTotal = group.items.length * GWANAK_PREVIOUS_DESIGN_PRICE;
                     return sum + (originalTotal - discountedTotal);
@@ -4133,7 +4238,7 @@ function PaymentPageContent() {
                   <div className="border-t pt-3">
                     {totalDiscount > 0 && (
                       <div className="flex justify-between text-blue-600 mb-2">
-                        <span>할인 적용 (이전 디자인 동일)</span>
+                        <span>할인 적용 (자체제작・1회재사용)</span>
                         <span>-{totalDiscount.toLocaleString()}원</span>
                       </div>
                     )}
@@ -4160,7 +4265,7 @@ function PaymentPageContent() {
         onConfirm={handleBankTransferPayment}
         getDisplayTypeLabel={getDisplayTypeLabel}
         discountedTotalPrice={
-          bankModalGroup && bankModalGroup.district === '관악구' && groupStates[bankModalGroup.id]?.usePreviousDesign
+          bankModalGroup && bankModalGroup.district === '관악구' && groupStates[bankModalGroup.id]?.selfMadeReuse
             ? bankModalGroup.items.length * GWANAK_PREVIOUS_DESIGN_PRICE
             : undefined
         }
@@ -4179,7 +4284,7 @@ function PaymentPageContent() {
         logPaymentDebug={logPaymentDebug}
         openBankTransferModal={openBankTransferModal}
         discountedTotalPrice={
-          tossWidgetData && tossWidgetData.district === '관악구' && groupStates[tossWidgetData.id]?.usePreviousDesign
+          tossWidgetData && tossWidgetData.district === '관악구' && groupStates[tossWidgetData.id]?.selfMadeReuse
             ? tossWidgetData.items.length * GWANAK_PREVIOUS_DESIGN_PRICE
             : undefined
         }
