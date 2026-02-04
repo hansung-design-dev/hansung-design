@@ -551,12 +551,13 @@ export async function POST(request: NextRequest) {
       })),
     });
 
-    // 결제수단이 계좌이체(bank_transfer)인지 확인
+    // 결제수단이 계좌이체(bank_transfer)인지 확인 + 결제수단명 조회
     let isBankTransfer = false;
+    let paymentMethodName: string | null = null;
     if (paymentMethodId) {
       const { data: pm, error: pmError } = await supabase
         .from('payment_methods')
-        .select('id, method_code')
+        .select('id, method_code, name')
         .eq('id', paymentMethodId)
         .single();
 
@@ -564,6 +565,7 @@ export async function POST(request: NextRequest) {
         console.warn('🔍 [주문 생성 API] payment_methods 조회 실패:', pmError);
       } else if (pm) {
         isBankTransfer = pm.method_code === 'bank_transfer';
+        paymentMethodName = pm.name || pm.method_code || null;
       }
     }
 
@@ -632,6 +634,13 @@ export async function POST(request: NextRequest) {
       console.log(
         '🔍 [주문 생성 API] payments 테이블에 결제 정보 생성 시작...'
       );
+      // 입금자명: 전달받은 값이 없으면 주문자 정보에서 추출
+      const finalDepositorName =
+        depositorName ||
+        userProfile?.contact_person_name ||
+        userProfile?.company_name ||
+        null;
+
       const { data: payment, error: paymentError } = await supabase
         .from('payments')
         .insert({
@@ -647,8 +656,10 @@ export async function POST(request: NextRequest) {
           payment_date: isPaid ? new Date().toISOString() : null,
           // 계좌이체는 관리자 승인 여부와 무관하게 최초에는 pending
           admin_approval_status: isPaid ? 'approved' : 'pending',
-          // 계좌이체인 경우 입금자명 저장 (없으면 null)
-          depositor_name: isBankTransfer ? depositorName || null : null,
+          // 입금자명: 항상 저장 (계좌이체가 아니어도)
+          depositor_name: finalDepositorName,
+          // 결제수단명 저장
+          payment_provider: paymentMethodName,
         })
         .select('id, payment_status, amount')
         .single();
