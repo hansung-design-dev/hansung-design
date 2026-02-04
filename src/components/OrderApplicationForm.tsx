@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/src/components/button/button';
 import { applySpecialHalfPeriodFixup } from '@/src/lib/specialHalfPeriodFixup';
+import PaymentSummarySection from '@/src/components/PaymentSummarySection';
 
 type BankAccountInfo = {
   bankName: string;
@@ -46,6 +47,7 @@ type OrderDetailRow = {
 
 type OrderDetailResponse = {
   order: {
+    id?: string;
     created_at?: string;
     projectName?: string;
     user_profiles?: {
@@ -451,6 +453,9 @@ export default function OrderApplicationForm({
             </div>
           </div>
         </div>
+
+        {/* 결제 요약 (환불/추가결제 내역 포함) */}
+        {order.id && <PaymentSummarySection orderId={order.id} />}
 
         {/* 결제수단 / 입금계좌 */}
         <div className="border-t border-gray-200 pt-4 space-y-2 text-sm">

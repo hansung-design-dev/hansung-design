@@ -283,8 +283,33 @@ export async function GET(
       );
     }
 
+    // 관악구 이전 디자인 동일 할인 가격
+    const GWANAK_PREVIOUS_DESIGN_PRICE = 78000;
+
     const getDetailPrice = (detail: OrderDetail): number => {
       const quantity = detail.slot_order_quantity || 1;
+
+      // 확장된 타입 (저장된 가격 및 관악구 할인 정보)
+      const extendedDetail = detail as OrderDetail & {
+        price?: number | null;
+        use_previous_design?: boolean;
+        panels?: { region_gu?: { name?: string | null } | null } | null;
+      };
+
+      // 1. 저장된 가격이 있으면 우선 사용 (주문 당시 가격)
+      if (extendedDetail.price !== null && extendedDetail.price !== undefined) {
+        return Number(extendedDetail.price);
+      }
+
+      // 2. 관악구이고 이전 디자인 동일인 경우 할인 가격 적용 (레거시 fallback)
+      const districtName = extendedDetail.panels?.region_gu?.name;
+      const usePreviousDesign = extendedDetail.use_previous_design === true;
+
+      if (districtName === '관악구' && usePreviousDesign) {
+        return GWANAK_PREVIOUS_DESIGN_PRICE * quantity;
+      }
+
+      // 3. banner_slot_price_policy에서 계산 (레거시 fallback)
       const isPublicInstitution =
         order.user_profiles?.is_public_institution || false;
       const preferredPriceUsageType = isPublicInstitution
@@ -319,7 +344,7 @@ export async function GET(
       return 0;
     };
 
-    // 가격 정보 계산 (각 주문에서 "대표 아이템" 1개의 정책만 사용)
+    // 가격 정보 계산 (모든 아이템의 할인 적용된 가격 합산)
     const calculateOrderPrice = () => {
       // 1) order_details가 없고, 결제 정보만 있는 경우 (상담신청 기반 주문 등)
       if (!orderDetails || orderDetails.length === 0) {
@@ -341,97 +366,19 @@ export async function GET(
         return null;
       }
 
-      // 2) 첫 번째 order_detail 기준으로 banner_slot_price_policy 한 줄만 사용
-      const detail = orderDetails[0] as OrderDetail;
-      const quantity = detail.slot_order_quantity || 1;
-
-      // 사용자 타입 확인 (공공기관 여부)
-      const isPublicInstitution =
-        order.user_profiles?.is_public_institution || false;
-      const preferredPriceUsageType = isPublicInstitution
-        ? 'public_institution'
-        : 'default';
-
-      // banner_slot_price_policy에서 가격 정보 가져오기
-      if (
-        detail.panel_slot_usage?.banner_slots?.banner_slot_price_policy &&
-        detail.panel_slot_usage.banner_slots.banner_slot_price_policy.length > 0
-      ) {
-        const policies =
-          detail.panel_slot_usage.banner_slots.banner_slot_price_policy;
-
-        // 우선순위: 사용자 타입에 맞는 정책 > default > 첫 번째 정책
-        let selectedPolicy = policies.find(
-          (p) => p.price_usage_type === preferredPriceUsageType
-        );
-
-        if (!selectedPolicy) {
-          selectedPolicy = policies.find(
-            (p) => p.price_usage_type === 'default'
-          );
-        }
-
-        if (!selectedPolicy) {
-          selectedPolicy = policies[0];
-        }
-
-        if (selectedPolicy) {
-          const totalPrice = Number(selectedPolicy.total_price || 0) * quantity;
-          const totalTaxPrice =
-            Number(selectedPolicy.tax_price || 0) * quantity;
-          const totalAdvertisingFee =
-            Number(selectedPolicy.advertising_fee || 0) * quantity;
-          const totalRoadUsageFee =
-            Number(selectedPolicy.road_usage_fee || 0) * quantity;
-
-          return {
-            totalPrice,
-            totalTaxPrice,
-            totalAdvertisingFee,
-            totalRoadUsageFee,
-            totalAdministrativeFee: 0,
-            finalPrice: totalPrice,
-          };
-        }
-      }
-
-      // 3) 정책/슬롯 정보가 없고 unit_price만 있는 경우 (하위 호환)
-      if (detail.panel_slot_usage?.unit_price) {
-        const unit = Number(detail.panel_slot_usage.unit_price) * quantity;
-        return {
-          totalPrice: unit,
-          totalTaxPrice: 0,
-          totalAdvertisingFee: unit,
-          totalRoadUsageFee: 0,
-          totalAdministrativeFee: 0,
-          finalPrice: unit,
-        };
-      }
-
-      // 4) 그래도 정책을 찾지 못하면 결제 금액 기준으로 표시
-      const latestPayment =
-        payments && payments.length > 0 ? payments[0] : null;
-
-      if (latestPayment) {
-        const amount = Number(latestPayment.amount || 0);
-        return {
-          totalPrice: amount,
-          totalTaxPrice: 0,
-          totalAdvertisingFee: amount,
-          totalRoadUsageFee: 0,
-          totalAdministrativeFee: 0,
-          finalPrice: amount,
-        };
-      }
+      // 모든 아이템의 할인 적용된 가격 합산
+      const totalPrice = orderDetails.reduce((sum, detail) => {
+        return sum + getDetailPrice(detail as OrderDetail);
+      }, 0);
 
       // 완전한 fallback
       return {
-        totalPrice: 0,
+        totalPrice,
         totalTaxPrice: 0,
-        totalAdvertisingFee: 0,
+        totalAdvertisingFee: totalPrice,
         totalRoadUsageFee: 0,
         totalAdministrativeFee: 0,
-        finalPrice: 0,
+        finalPrice: totalPrice,
       };
     };
 

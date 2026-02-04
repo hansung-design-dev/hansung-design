@@ -23,6 +23,9 @@ import TossPaymentModal from './_components/TossPaymentModal';
 
 const PENDING_PAYMENT_ITEMS_KEY = 'pending_payment_items';
 
+// 관악구 이전 디자인 동일 할인 가격
+const GWANAK_PREVIOUS_DESIGN_PRICE = 78000;
+
 const buildPaymentDebugMetadata = (
   label: string,
   details: Record<string, unknown> = {}
@@ -133,6 +136,7 @@ function PaymentPageContent() {
       fileSize: number | null;
       fileType: string | null;
       emailAddress: string | null;
+      usePreviousDesign: boolean;
     };
   }>({});
 
@@ -146,6 +150,7 @@ function PaymentPageContent() {
       fileSize: number | null;
       fileType: string | null;
       emailAddress: string | null;
+      usePreviousDesign: boolean;
     };
   }>({});
 
@@ -439,6 +444,28 @@ function PaymentPageContent() {
         fileName: null,
         fileSize: null,
         fileType: null,
+      },
+    }));
+  };
+
+  // 그룹별 이전 디자인 동일 체크 핸들러
+  const handleGroupPreviousDesignSelect = (groupKey: string, isChecked: boolean) => {
+    setGroupStates((prev) => ({
+      ...prev,
+      [groupKey]: {
+        ...prev[groupKey],
+        usePreviousDesign: isChecked,
+      },
+    }));
+  };
+
+  // 아이템별 이전 디자인 동일 체크 핸들러
+  const handleItemPreviousDesignSelect = (itemId: string, isChecked: boolean) => {
+    setItemStates((prev) => ({
+      ...prev,
+      [itemId]: {
+        ...prev[itemId],
+        usePreviousDesign: isChecked,
       },
     }));
   };
@@ -1901,12 +1928,19 @@ function PaymentPageContent() {
 
       const itemsForOrder = group.items.map((item) => {
         const itemState = itemStates[item.id];
+        const groupState = groupStates[group.id];
         const itemProjectName =
           itemState?.projectName?.trim() || projectName || item.name || '작업';
+        // 이전 디자인 동일 여부: 아이템별 또는 그룹별 상태 확인
+        const usePreviousDesign = itemState?.usePreviousDesign || groupState?.usePreviousDesign || false;
+        // 관악구이고 이전 디자인 동일인 경우 할인 가격 적용
+        const finalPrice = (group.district === '관악구' && usePreviousDesign)
+          ? GWANAK_PREVIOUS_DESIGN_PRICE
+          : (item.price || 0);
         return {
           id: item.id,
           panel_id: item.panel_id,
-          price: item.price || 0,
+          price: finalPrice,
           quantity: 1,
           halfPeriod: item.halfPeriod,
           selectedYear: item.selectedYear,
@@ -1917,6 +1951,7 @@ function PaymentPageContent() {
             itemState?.sendByEmail === true ? 'email' : 'upload',
           projectName: itemProjectName,
           designDraftId: null as string | null,
+          usePreviousDesign,
         };
       });
 
@@ -2104,10 +2139,12 @@ function PaymentPageContent() {
         orderJson.order?.orderNumber || orderJson.order?.orderId || '';
       const paymentId = `bank_${orderNumber || dateStr}`;
 
+      // 할인 적용된 총액 계산 (관악구 이전 디자인 동일 등)
+      const finalTotalAmount = itemsForOrder.reduce((sum, item) => sum + (item.price || 0), 0);
       window.location.href = `/payment/success?orderId=${encodeURIComponent(
         orderNumber
       )}&paymentId=${encodeURIComponent(paymentId)}&amount=${
-        group.totalPrice
+        finalTotalAmount
       }&status=pending_deposit`;
     } catch (error) {
       console.error('🔍 [계좌이체] exception', error);
@@ -2209,6 +2246,14 @@ function PaymentPageContent() {
             currentUserProfiles.length > 0
               ? currentUserProfiles
               : currentProfilesFromContext || [];
+
+          // 관악구 이전 디자인 동일 할인 가격 계산
+          const isGwanakPreviousDesign =
+            currentTossWidgetData.district === '관악구' &&
+            currentGroupStates[currentTossWidgetData.id]?.usePreviousDesign;
+          const finalTotalPrice = isGwanakPreviousDesign
+            ? currentTossWidgetData.items.length * GWANAK_PREVIOUS_DESIGN_PRICE
+            : currentTossWidgetData.totalPrice;
 
           logPaymentDebug('토스 위젯 초기화 시작', {
             groupId: currentTossWidgetData.id,
@@ -2982,26 +3027,37 @@ function PaymentPageContent() {
               // 결제 정보를 localStorage에 저장 (결제 성공 시 실제 주문 생성에 사용)
               const paymentData = {
                 tempOrderId: finalOrderId,
-                items: currentTossWidgetData.items.map((item) => ({
-                  id: item.id,
-                  panel_id: item.panel_id,
-                  price: item.price || 0,
-                  quantity: 1,
-                  halfPeriod: item.halfPeriod,
-                  selectedYear: item.selectedYear,
-                  selectedMonth: item.selectedMonth,
-                  panel_slot_usage_id: item.panel_slot_usage_id,
-                  panel_slot_snapshot: item.panel_slot_snapshot,
-                  // 아이템별 정보 추가
-                  draftId: itemDraftIds[item.id] || undefined,
-                  designDraftId: itemDraftIds[item.id] || draftId || null,
-                  draftDeliveryMethod:
-                    itemDraftDeliveryMethods[item.id] || draftDeliveryMethod,
-                  projectName:
-                    itemCount >= 2 && !isBulkFileUpload
-                      ? currentItemStates[item.id]?.projectName || ''
-                      : projectName,
-                })),
+                items: currentTossWidgetData.items.map((item) => {
+                  const itemState = currentItemStates[item.id];
+                  const groupState = currentGroupStates[currentTossWidgetData.id];
+                  // 이전 디자인 동일 여부: 아이템별 또는 그룹별 상태 확인
+                  const usePreviousDesign = itemState?.usePreviousDesign || groupState?.usePreviousDesign || false;
+                  // 관악구이고 이전 디자인 동일인 경우 할인 가격 적용
+                  const finalPrice = (currentTossWidgetData.district === '관악구' && usePreviousDesign)
+                    ? GWANAK_PREVIOUS_DESIGN_PRICE
+                    : (item.price || 0);
+                  return {
+                    id: item.id,
+                    panel_id: item.panel_id,
+                    price: finalPrice,
+                    quantity: 1,
+                    halfPeriod: item.halfPeriod,
+                    selectedYear: item.selectedYear,
+                    selectedMonth: item.selectedMonth,
+                    panel_slot_usage_id: item.panel_slot_usage_id,
+                    panel_slot_snapshot: item.panel_slot_snapshot,
+                    // 아이템별 정보 추가
+                    draftId: itemDraftIds[item.id] || undefined,
+                    designDraftId: itemDraftIds[item.id] || draftId || null,
+                    draftDeliveryMethod:
+                      itemDraftDeliveryMethods[item.id] || draftDeliveryMethod,
+                    projectName:
+                      itemCount >= 2 && !isBulkFileUpload
+                        ? currentItemStates[item.id]?.projectName || ''
+                        : projectName,
+                    usePreviousDesign,
+                  };
+                }),
                 userAuthId,
                 userProfileId: finalUserProfileId,
                 draftDeliveryMethod,
@@ -3168,7 +3224,7 @@ function PaymentPageContent() {
                       body: JSON.stringify({
                         paymentKey: testPaymentKey,
                         orderId: finalOrderId,
-                        amount: currentTossWidgetData.totalPrice,
+                        amount: finalTotalPrice,
                         orderData: paymentData,
                       }),
                     }
@@ -3240,7 +3296,8 @@ function PaymentPageContent() {
                 orderId: paymentParams.orderId,
                 orderName: paymentParams.orderName,
                 originalAmount: currentTossWidgetData.totalPrice,
-                finalAmount: currentTossWidgetData.totalPrice,
+                finalAmount: finalTotalPrice,
+                isGwanakPreviousDesign,
                 isTestUser,
                 isTestFreePaymentEnabled,
                 hasTossPayments: !!tossPayments,
@@ -3251,7 +3308,7 @@ function PaymentPageContent() {
               // 통합결제창 방식: tossPayments.requestPayment() 직접 호출
               // 문서: https://docs.tosspayments.com/guides/v2/payment-window/integration
               await tossPayments.requestPayment('CARD', {
-                amount: currentTossWidgetData.totalPrice,
+                amount: finalTotalPrice,
                 orderId: paymentParams.orderId,
                 orderName: paymentParams.orderName,
                 customerName: paymentParams.customerName,
@@ -3554,6 +3611,30 @@ function PaymentPageContent() {
                             banner114@hanmail.net로 시안을 보내주세요.
                           </p>
                         )}
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            id={`previous-design-${group.id}`}
+                            checked={
+                              groupStates[group.id]?.usePreviousDesign || false
+                            }
+                            onChange={(e) =>
+                              handleGroupPreviousDesignSelect(group.id, e.target.checked)
+                            }
+                            className="w-4 h-4"
+                          />
+                          <label
+                            htmlFor={`previous-design-${group.id}`}
+                            className="text-sm text-gray-500"
+                          >
+                            이전 디자인 동일
+                          </label>
+                          {group.district === '관악구' && groupStates[group.id]?.usePreviousDesign && (
+                            <span className="text-xs text-blue-600 font-medium">
+                              (할인 적용)
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -3660,6 +3741,33 @@ function PaymentPageContent() {
                                           보내주세요.
                                         </p>
                                       )}
+                                      <div className="flex items-center gap-2">
+                                        <input
+                                          type="checkbox"
+                                          id={`previous-design-item-${item.id}`}
+                                          checked={
+                                            itemState?.usePreviousDesign || false
+                                          }
+                                          onChange={(e) =>
+                                            handleItemPreviousDesignSelect(
+                                              item.id,
+                                              e.target.checked
+                                            )
+                                          }
+                                          className="w-4 h-4"
+                                        />
+                                        <label
+                                          htmlFor={`previous-design-item-${item.id}`}
+                                          className="text-xs text-gray-500"
+                                        >
+                                          이전 디자인 동일
+                                        </label>
+                                        {item.district === '관악구' && itemState?.usePreviousDesign && (
+                                          <span className="text-xs text-blue-600 font-medium">
+                                            (할인 적용)
+                                          </span>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
                                 )}
@@ -3721,9 +3829,22 @@ function PaymentPageContent() {
                       <div className="flex justify-between font-semibold">
                         <span>총 결제 금액:</span>
                         <span className="text-blue-700">
-                          {group.totalPrice.toLocaleString()} 원
+                          {(() => {
+                            // 관악구이고 이전 디자인 동일이 체크된 경우 할인 가격 적용
+                            if (group.district === '관악구' && groupStates[group.id]?.usePreviousDesign) {
+                              const discountedTotal = group.items.length * GWANAK_PREVIOUS_DESIGN_PRICE;
+                              return discountedTotal.toLocaleString();
+                            }
+                            return group.totalPrice.toLocaleString();
+                          })()} 원
                         </span>
                       </div>
+                      {group.district === '관악구' && groupStates[group.id]?.usePreviousDesign && (
+                        <div className="flex justify-between text-xs text-blue-600 mt-1">
+                          <span>할인 적용 (이전 디자인 동일)</span>
+                          <span>-{(group.totalPrice - group.items.length * GWANAK_PREVIOUS_DESIGN_PRICE).toLocaleString()} 원</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -4017,6 +4138,11 @@ function PaymentPageContent() {
         onClose={closeBankModal}
         onConfirm={handleBankTransferPayment}
         getDisplayTypeLabel={getDisplayTypeLabel}
+        discountedTotalPrice={
+          bankModalGroup && bankModalGroup.district === '관악구' && groupStates[bankModalGroup.id]?.usePreviousDesign
+            ? bankModalGroup.items.length * GWANAK_PREVIOUS_DESIGN_PRICE
+            : undefined
+        }
       />
 
       <TossPaymentModal
@@ -4031,6 +4157,11 @@ function PaymentPageContent() {
         getDisplayTypeLabel={getDisplayTypeLabel}
         logPaymentDebug={logPaymentDebug}
         openBankTransferModal={openBankTransferModal}
+        discountedTotalPrice={
+          tossWidgetData && tossWidgetData.district === '관악구' && groupStates[tossWidgetData.id]?.usePreviousDesign
+            ? tossWidgetData.items.length * GWANAK_PREVIOUS_DESIGN_PRICE
+            : undefined
+        }
       />
 
       {/* 결제 성공 모달 제거 - 토스 위젯에서 직접 처리 */}

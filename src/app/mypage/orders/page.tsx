@@ -1003,6 +1003,20 @@ export default function OrdersPage() {
     payments: Payment[]
   ): DetailPriceInfo => {
     const quantity = detail.slot_order_quantity || 1;
+
+    // 1. 저장된 가격이 있으면 우선 사용 (주문 당시 가격)
+    if (detail.price !== null && detail.price !== undefined) {
+      const storedPrice = Number(detail.price);
+      return {
+        totalPrice: storedPrice,
+        totalTaxPrice: 0,
+        totalAdvertisingFee: storedPrice,
+        totalRoadUsageFee: 0,
+        finalPrice: storedPrice,
+      };
+    }
+
+    // 2. banner_slot_price_policy에서 계산 (레거시 fallback)
     const policies =
       detail.panel_slot_usage?.banner_slots?.banner_slot_price_policy || [];
     const isPublicInstitution =
@@ -1051,6 +1065,7 @@ export default function OrdersPage() {
       };
     }
 
+    // 3. payments.amount 분배 (최후 fallback)
     const paymentAmount = Number(payments?.[0]?.amount ?? 0);
     const totalSlots = allDetails.reduce(
       (sum, current) => sum + (current.slot_order_quantity || 1),

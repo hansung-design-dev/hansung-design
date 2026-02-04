@@ -567,7 +567,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 1. orders 테이블에 주문 생성 (가격 정보 제외)
+    // 1. orders 테이블에 주문 생성 (가격 정보 포함)
     console.log('🔍 [주문 생성 API] orders 테이블에 주문 생성 시작...');
     const orderInsertData: {
       order_number: string;
@@ -576,6 +576,7 @@ export async function POST(request: NextRequest) {
       payment_status: 'completed' | 'pending' | 'pending_deposit';
       order_status: string;
       draft_delivery_method: string;
+      total_price: number;
     } = {
       order_number: orderNumber,
       user_auth_id: userAuthId,
@@ -587,6 +588,7 @@ export async function POST(request: NextRequest) {
         : 'pending',
       order_status: 'pending',
       draft_delivery_method: draftDeliveryMethod || 'upload',
+      total_price: totalPrice,
     };
 
     // user_profile_id가 있으면 추가 (없으면 null 또는 undefined)
@@ -684,6 +686,8 @@ export async function POST(request: NextRequest) {
       display_start_date: string;
       display_end_date: string;
       design_draft_id: string | null;
+      use_previous_design: boolean;
+      price: number;
     };
 
     const orderDetails: OrderDetailInsert[] = [];
@@ -845,7 +849,8 @@ export async function POST(request: NextRequest) {
             display_start_date: displayStartDate,
             display_end_date: displayEndDate,
             design_draft_id: designDraftIdForItem,
-            // half_period 컬럼이 없으므로 제거
+            use_previous_design: item.usePreviousDesign || false,
+            price: item.price, // 주문 당시 가격 저장
           } satisfies OrderDetailInsert;
 
           return orderDetail;

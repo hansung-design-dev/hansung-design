@@ -251,51 +251,130 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 순차적으로 관련 데이터 삭제
+    // 순차적으로 관련 데이터 처리 (삭제 대신 상태 변경으로 환불 추적)
     try {
-      // 1. payments 삭제
-      const { error: paymentsError } = await supabase
-        .from('payments')
-        .delete()
-        .eq('order_id', order.id);
+      // 1. 환불 레코드 생성 (결제가 완료된 경우에만)
+      if (payment && payment.amount > 0) {
+        // 토스 결제가 성공적으로 취소된 경우: 환불 완료 상태로 기록
+        // 그 외(계좌이체 등): 환불 대기 상태로 기록
+        const isTossRefundCompleted =
+          payment.transaction_id &&
+          payment.payment_status === 'completed' &&
+          !isTestFreePayment;
 
-      if (paymentsError) {
-        console.error('Payments deletion error:', paymentsError);
-        return NextResponse.json(
-          { success: false, error: '결제 정보 삭제에 실패했습니다.' },
-          { status: 500 }
-        );
+        const { error: refundError } = await supabase
+          .from('refunds')
+          .insert([
+            {
+              payment_id: payment.id,
+              order_id: order.id,
+              refund_amount: payment.amount,
+              refund_method: isTossRefundCompleted ? 'pg_auto' : 'bank_transfer',
+              refund_status: isTossRefundCompleted ? 'completed' : 'pending',
+              refund_reason: '고객 요청에 의한 전체 주문 취소',
+              processed_at: isTossRefundCompleted ? new Date().toISOString() : null,
+            },
+          ]);
+
+        if (refundError) {
+          console.error('Refund record creation error:', refundError);
+          // 환불 레코드 생성 실패는 치명적이지 않으므로 경고만 표시
+          console.warn('🔍 [주문 취소] ⚠️ 환불 레코드 생성 실패 (주문 취소는 계속 진행):', refundError);
+        } else {
+          console.log('🔍 [주문 취소] ✅ 환불 레코드 생성 완료:', {
+            orderId: order.id,
+            amount: payment.amount,
+            status: isTossRefundCompleted ? 'completed' : 'pending',
+          });
+        }
       }
 
-      // 2. order_details 삭제 (재고 복구는 트리거가 자동 처리)
-      const { error: detailsError } = await supabase
+      // 2. 결제 상태 업데이트 (삭제 대신)
+      if (payment) {
+        const { error: paymentUpdateError } = await supabase
+          .from('payments')
+          .update({
+            payment_status: 'refunded',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', payment.id);
+
+        if (paymentUpdateError) {
+          console.error('Payment status update error:', paymentUpdateError);
+          // 결제 상태 업데이트 실패 시에도 주문 취소는 계속 진행
+          console.warn('🔍 [주문 취소] ⚠️ 결제 상태 업데이트 실패');
+        }
+      }
+
+      // 3. order_details의 인벤토리 복구 (order_details는 삭제하지 않고 유지)
+      // 먼저 order_details에서 panel_slot_usage_id 조회
+      const { data: orderDetails, error: detailsFetchError } = await supabase
         .from('order_details')
-        .delete()
+        .select('id, panel_slot_usage_id')
         .eq('order_id', order.id);
 
-      if (detailsError) {
-        console.error('Order details deletion error:', detailsError);
+      if (detailsFetchError) {
+        console.error('Order details fetch error:', detailsFetchError);
         return NextResponse.json(
-          { success: false, error: '주문 상세 정보 삭제에 실패했습니다.' },
+          { success: false, error: '주문 상세 정보 조회에 실패했습니다.' },
           { status: 500 }
         );
       }
 
-      // 3. orders 삭제
-      const { error: orderDeleteError } = await supabase
+      // 각 order_detail의 슬롯 인벤토리 복구
+      if (orderDetails && orderDetails.length > 0) {
+        for (const detail of orderDetails) {
+          if (detail.panel_slot_usage_id) {
+            // panel_slot_usage에서 banner_slot_id 조회
+            const { data: slotUsage } = await supabase
+              .from('panel_slot_usage')
+              .select('banner_slot_id')
+              .eq('id', detail.panel_slot_usage_id)
+              .single();
+
+            if (slotUsage?.banner_slot_id) {
+              // banner_slot_inventory 복구
+              await supabase
+                .from('banner_slot_inventory')
+                .update({ is_available: true })
+                .eq('banner_slot_id', slotUsage.banner_slot_id);
+
+              console.log('🔍 [주문 취소] 인벤토리 복구:', {
+                orderDetailId: detail.id,
+                bannerSlotId: slotUsage.banner_slot_id,
+              });
+            }
+
+            // panel_slot_usage 비활성화
+            await supabase
+              .from('panel_slot_usage')
+              .update({ is_active: false })
+              .eq('id', detail.panel_slot_usage_id);
+          }
+        }
+      }
+
+      // order_details는 삭제하지 않음 (취소된 주문 내역 확인용)
+
+      // 4. 주문 상태 업데이트 (삭제 대신)
+      const { error: orderUpdateError } = await supabase
         .from('orders')
-        .delete()
+        .update({
+          order_status: 'cancelled',
+          payment_status: 'cancelled',
+          updated_at: new Date().toISOString(),
+        })
         .eq('id', order.id);
 
-      if (orderDeleteError) {
-        console.error('Order deletion error:', orderDeleteError);
+      if (orderUpdateError) {
+        console.error('Order status update error:', orderUpdateError);
         return NextResponse.json(
-          { success: false, error: '주문 삭제에 실패했습니다.' },
+          { success: false, error: '주문 상태 업데이트에 실패했습니다.' },
           { status: 500 }
         );
       }
 
-      // 4. design_drafts 삭제 (orders.design_drafts_id를 통해 연결된 것만)
+      // 5. design_drafts 삭제 (orders.design_drafts_id를 통해 연결된 것만)
       // 먼저 업로드된 파일이 있으면 Storage에서도 삭제
       if (order.design_drafts_id) {
         // design_drafts 정보 조회 (file_url 포함)

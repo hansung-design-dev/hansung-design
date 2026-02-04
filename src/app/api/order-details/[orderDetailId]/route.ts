@@ -8,6 +8,7 @@ interface BannerSlotPricePolicy {
 
 interface OrderDetailWithPrice {
   id: string;
+  price?: number | null;
   slot_order_quantity?: number;
   panel_slot_usage?: {
     unit_price?: number;
@@ -19,16 +20,18 @@ interface OrderDetailWithPrice {
 
 /**
  * 남은 order_details를 기반으로 총 금액을 재계산
+ * 우선순위: 저장된 price > banner_slot_price_policy > unit_price
  */
 async function recalculateOrderAmount(
   orderId: string,
   isPublicInstitution: boolean
 ): Promise<number> {
-  // 남은 order_details 조회 (가격 정책 포함)
+  // 남은 order_details 조회 (저장된 가격 및 가격 정책 포함)
   const { data: remainingDetails, error } = await supabase
     .from('order_details')
     .select(`
       id,
+      price,
       slot_order_quantity,
       panel_slot_usage:panel_slot_usage_id (
         unit_price,
@@ -54,10 +57,17 @@ async function recalculateOrderAmount(
 
   for (const detail of remainingDetails as OrderDetailWithPrice[]) {
     const quantity = detail.slot_order_quantity || 1;
+
+    // 1. 저장된 가격이 있으면 우선 사용 (주문 당시 가격)
+    if (detail.price !== null && detail.price !== undefined) {
+      totalAmount += Number(detail.price);
+      continue;
+    }
+
+    // 2. banner_slot_price_policy에서 계산 (레거시 fallback)
     const policies =
       detail.panel_slot_usage?.banner_slots?.banner_slot_price_policy || [];
 
-    // 우선순위: 사용자 타입에 맞는 정책 > default > 첫 번째 정책
     let selectedPolicy = policies.find(
       (p) => p.price_usage_type === preferredPriceUsageType
     );
@@ -182,6 +192,25 @@ export async function DELETE(
     const isPublicInstitution = userProfile?.is_public_institution || false;
     const newAmount = await recalculateOrderAmount(order.id, isPublicInstitution);
 
+    // orders.total_price 업데이트
+    const { error: orderUpdateError } = await supabase
+      .from('orders')
+      .update({ total_price: newAmount, updated_at: new Date().toISOString() })
+      .eq('id', order.id);
+
+    if (orderUpdateError) {
+      console.error(
+        '[order-details DELETE] orders.total_price 업데이트 실패:',
+        orderUpdateError
+      );
+    } else {
+      console.log(
+        '[order-details DELETE] orders.total_price 업데이트 완료:',
+        order.order_number,
+        newAmount
+      );
+    }
+
     // payments 테이블 업데이트
     const { error: paymentUpdateError } = await supabase
       .from('payments')
@@ -190,7 +219,7 @@ export async function DELETE(
 
     if (paymentUpdateError) {
       console.error(
-        '[order-details DELETE] payments 업데이트 실패:',
+        '[order-details DELETE] payments.amount 업데이트 실패:',
         paymentUpdateError
       );
       // 삭제는 성공했으므로 경고만 로깅

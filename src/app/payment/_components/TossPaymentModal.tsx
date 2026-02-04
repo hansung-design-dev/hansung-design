@@ -12,6 +12,7 @@ type Props = {
   getDisplayTypeLabel: (group: GroupedCartItem) => string;
   logPaymentDebug: (label: string, details?: Record<string, unknown>) => void;
   openBankTransferModal: (group: GroupedCartItem) => void;
+  discountedTotalPrice?: number; // 할인 적용된 가격 (관악구 이전 디자인 동일 등)
 };
 
 export default function TossPaymentModal({
@@ -23,6 +24,7 @@ export default function TossPaymentModal({
   getDisplayTypeLabel,
   logPaymentDebug,
   openBankTransferModal,
+  discountedTotalPrice,
 }: Props) {
   if (!open || !data) return null;
 
@@ -54,6 +56,9 @@ export default function TossPaymentModal({
                   user?.username === testFreePaymentUserId ||
                   user?.id === testFreePaymentUserId;
 
+                // 할인 적용된 가격 사용 (있으면), 없으면 원래 가격
+                const basePrice = discountedTotalPrice ?? data.totalPrice;
+
                 // 디버깅 로그 (기존 동작 유지)
                 console.log('🔍 [토스 위젯] 가격 표시 디버깅:', {
                   isTestFreePaymentEnabled,
@@ -63,11 +68,13 @@ export default function TossPaymentModal({
                   currentUserId: user?.id,
                   isTestUser,
                   originalPrice: data.totalPrice,
+                  discountedTotalPrice,
+                  basePrice,
                   willDisplayZero: isTestFreePaymentEnabled && isTestUser,
                 });
 
                 const displayPrice =
-                  isTestFreePaymentEnabled && isTestUser ? 0 : data.totalPrice;
+                  isTestFreePaymentEnabled && isTestUser ? 0 : basePrice;
                 return displayPrice.toLocaleString();
               })()}
               원

@@ -11,6 +11,7 @@ type Props = {
   onClose: () => void;
   onConfirm: (group: GroupedCartItem, accountInfo: BankAccountInfo) => void;
   getDisplayTypeLabel: (group: GroupedCartItem) => string;
+  discountedTotalPrice?: number; // 할인 적용된 가격 (관악구 이전 디자인 동일 등)
 };
 
 export default function BankTransferModal({
@@ -23,6 +24,7 @@ export default function BankTransferModal({
   onClose,
   onConfirm,
   getDisplayTypeLabel,
+  discountedTotalPrice,
 }: Props) {
   if (!open || !group) return null;
 
@@ -43,7 +45,7 @@ export default function BankTransferModal({
           {group.district} ({getDisplayTypeLabel(group)})
         </p>
         <p className="text-xs text-gray-500 mb-3">
-          {group.name} · 총 금액 {group.totalPrice.toLocaleString()}원
+          {group.name} · 총 금액 {(discountedTotalPrice ?? group.totalPrice).toLocaleString()}원
         </p>
         {loading ? (
           <p className="text-sm text-gray-500 mb-4">
