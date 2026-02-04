@@ -24,13 +24,13 @@ export default function Navigation({
         {/* 데스크톱 레이아웃 */}
         <div className="hidden lg:flex h-16 items-center justify-between">
           {/* 로고와 회사명 */}
-          <div className="flex items-center flex-shrink-0 h-full">
+          <div className="flex items-center flex-shrink-0 h-full py-2">
             <Image
               src="/images/company-intro/logo/nav-logo.svg"
               alt="한성디자인 로고"
               width={400}
               height={400}
-              className="h-[50%] w-auto"
+              className="h-full w-auto"
             />
           </div>
 
