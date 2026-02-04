@@ -1,6 +1,40 @@
 import Image from 'next/image';
 import SectionTitle from './SectionTitle';
 
+// 카카오맵 장소 ID (한성디자인)
+const KAKAO_PLACE_ID = '15626403';
+
+function KakaoMapSection() {
+  const mapEmbedUrl = `https://map.kakao.com/?itemId=${KAKAO_PLACE_ID}`;
+
+  return (
+    <div className="mb-12">
+      <a
+        href={mapEmbedUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block relative w-full h-[400px] md:h-[500px] rounded-lg overflow-hidden group"
+      >
+        {/* 왼쪽 사이드바 숨기기 */}
+        <iframe
+          src={`https://map.kakao.com/?itemId=${KAKAO_PLACE_ID}&output=embeded`}
+          className="absolute top-0 h-full border-0"
+          style={{
+            width: 'calc(100% + 400px)',
+            left: '-400px',
+          }}
+          allowFullScreen
+          loading="lazy"
+          title="한성디자인 위치"
+        />
+        <div className="absolute bottom-4 right-4 bg-white px-4 py-2 rounded-lg shadow-md text-sm text-gray-700 opacity-90 group-hover:opacity-100 transition-opacity z-10">
+          클릭하여 카카오맵에서 보기
+        </div>
+      </a>
+    </div>
+  );
+}
+
 export default function Directions() {
   return (
     <section id="directions" className="py-20">
@@ -8,16 +42,8 @@ export default function Directions() {
         {/* 섹션 제목 */}
         <SectionTitle title="찾아오시는 길" />
 
-        {/* 지도 */}
-        <div className="mb-12">
-          <Image
-            src="/images/company-intro/location/location.png"
-            alt="한성디자인 위치 지도"
-            width={1200}
-            height={600}
-            className="w-full h-auto "
-          />
-        </div>
+        {/* 카카오맵 */}
+        <KakaoMapSection />
 
         {/* 연락처 정보 */}
         <div className="flex flex-col gap-4 pl-10 ">
