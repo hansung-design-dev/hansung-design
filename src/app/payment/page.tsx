@@ -4117,12 +4117,33 @@ function PaymentPageContent() {
                   {finalPriceSummary.taxPrice.toLocaleString()}원
                 </span>
               </div>
-              <div className="border-t pt-3">
-                <div className="flex justify-between text-lg font-bold">
-                  <span>총 결제 금액:</span>
-                  <span>{finalPriceSummary.totalPrice.toLocaleString()}원</span>
-                </div>
-              </div>
+              {(() => {
+                // 관악구 이전 디자인 동일 할인 금액 계산
+                const totalDiscount = groupedItems.reduce((sum, group) => {
+                  if (group.district === '관악구' && groupStates[group.id]?.usePreviousDesign) {
+                    const originalTotal = group.totalPrice;
+                    const discountedTotal = group.items.length * GWANAK_PREVIOUS_DESIGN_PRICE;
+                    return sum + (originalTotal - discountedTotal);
+                  }
+                  return sum;
+                }, 0);
+                const finalTotal = finalPriceSummary.totalPrice - totalDiscount;
+
+                return (
+                  <div className="border-t pt-3">
+                    {totalDiscount > 0 && (
+                      <div className="flex justify-between text-blue-600 mb-2">
+                        <span>할인 적용 (이전 디자인 동일)</span>
+                        <span>-{totalDiscount.toLocaleString()}원</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-lg font-bold">
+                      <span>총 결제 금액:</span>
+                      <span>{finalTotal.toLocaleString()}원</span>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </section>
         </div>
