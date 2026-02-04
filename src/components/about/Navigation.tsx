@@ -22,23 +22,20 @@ export default function Navigation({
     <nav className="sticky top-0 z-50 bg-[#302625] shadow-lg mt-10">
       <div className="px-2 sm:px-4 md:px-6 lg:px-8">
         {/* 데스크톱 레이아웃 */}
-        <div className="hidden  lg:flex  h-16  lg:gap-[10rem] xl:gap-[12rem] 2xl:gap-[15rem]">
+        <div className="hidden lg:flex h-16 items-center justify-between">
           {/* 로고와 회사명 */}
-          <div className="flex items-center space-x-2 xl:space-x-3 flex-shrink-0">
+          <div className="flex items-center flex-shrink-0 h-full">
             <Image
-              src="/images/company-intro/logo/nav-logo.png"
+              src="/images/company-intro/logo/nav-logo.svg"
               alt="한성디자인 로고"
               width={400}
               height={400}
-              className="w-12 h-12 xl:w-14 xl:h-14 2xl:w-16 2xl:h-16"
+              className="h-[50%] w-auto"
             />
-            <span className="text-white text-[1rem] xl:text-[1.2rem] 2xl:text-[1.5rem] font-500">
-              HANSUNG DESIGN
-            </span>
           </div>
 
           {/* 네비게이션 메뉴 */}
-          <div className="flex items-center lg:gap-[6rem] xl:gap-[10rem] 2xl:gap-[12rem]">
+          <div className="flex items-center gap-6 lg:gap-10 xl:gap-16 2xl:gap-20">
             {navItems.map((item) => (
               <button
                 key={item.id}
@@ -61,15 +58,12 @@ export default function Navigation({
           <div className="flex items-center justify-center py-3">
             <div className="flex items-center space-x-2">
               <Image
-                src="/images/company-intro/logo/nav-logo.png"
+                src="/images/company-intro/logo/nav-logo.svg"
                 alt="한성디자인 로고"
                 width={400}
                 height={400}
                 className="w-12 h-12 sm:w-14 sm:h-14"
               />
-              <span className="text-white text-[1rem] sm:text-[1.1rem] font-500">
-                HANSUNG DESIGN
-              </span>
             </div>
           </div>
 
