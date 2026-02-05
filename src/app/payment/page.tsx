@@ -3773,7 +3773,7 @@ function PaymentPageContent() {
                             </label>
                             {groupStates[group.id]?.selfMadeReuse && (
                               <span className="text-xs text-blue-600 font-medium">
-                                (할인 적용)
+                                78,000원
                               </span>
                             )}
                           </div>
@@ -3952,7 +3952,7 @@ function PaymentPageContent() {
                                           </label>
                                           {itemState?.selfMadeReuse && (
                                             <span className="text-xs text-blue-600 font-medium">
-                                              (할인 적용)
+                                              78,000원
                                             </span>
                                           )}
                                         </div>
