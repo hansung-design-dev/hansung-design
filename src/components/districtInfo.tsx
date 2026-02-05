@@ -141,7 +141,7 @@ export default function DistrictInfo({
       {!isLEDDisplay && pricePolicies && pricePolicies.length > 0 && (
         <div className="border-t border-gray-200 pt-2">
           <div className="text-0.875 font-medium text-gray-500 mb-1">
-            가격정보
+            가격정보 (15일 기준)
           </div>
           <PriceInfo
             pricePolicies={pricePolicies}
