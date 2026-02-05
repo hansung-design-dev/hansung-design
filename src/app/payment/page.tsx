@@ -3676,14 +3676,14 @@ function PaymentPageContent() {
                         광고내용
                       </label>
                       <div className="flex-1">
-                        <input
-                          type="text"
+                        <textarea
                           value={groupStates[group.id]?.adContent || ''}
                           onChange={(e) =>
                             handleGroupAdContentChange(group.id, e.target.value)
                           }
-                          className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                          className="w-full border border-gray-300 rounded px-3 py-2 text-sm resize-none"
                           placeholder="광고 내용을 입력하세요"
+                          rows={3}
                         />
                       </div>
                     </div>
@@ -3846,8 +3846,7 @@ function PaymentPageContent() {
                                   <label className="text-xs text-gray-600 font-medium">
                                     광고내용
                                   </label>
-                                  <input
-                                    type="text"
+                                  <textarea
                                     value={itemState?.adContent || ''}
                                     onChange={(e) =>
                                       handleItemAdContentChange(
@@ -3855,8 +3854,9 @@ function PaymentPageContent() {
                                         e.target.value
                                       )
                                     }
-                                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm resize-none"
                                     placeholder="광고 내용을 입력하세요"
+                                    rows={3}
                                   />
                                 </div>
                               )}
