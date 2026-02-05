@@ -130,6 +130,7 @@ function PaymentPageContent() {
   const [groupStates, setGroupStates] = useState<{
     [groupKey: string]: {
       projectName: string;
+      adContent: string;
       selectedFile: File | null;
       sendByEmail: boolean;
       fileName: string | null;
@@ -145,6 +146,7 @@ function PaymentPageContent() {
   const [itemStates, setItemStates] = useState<{
     [itemId: string]: {
       projectName: string;
+      adContent: string;
       selectedFile: File | null;
       sendByEmail: boolean;
       fileName: string | null;
@@ -388,6 +390,16 @@ function PaymentPageContent() {
     }));
   };
 
+  const handleGroupAdContentChange = (groupKey: string, value: string) => {
+    setGroupStates((prev) => ({
+      ...prev,
+      [groupKey]: {
+        ...prev[groupKey],
+        adContent: value,
+      },
+    }));
+  };
+
   const handleGroupFileSelect = (groupKey: string, file: File) => {
     setGroupStates((prev) => ({
       ...prev,
@@ -507,6 +519,17 @@ function PaymentPageContent() {
         fileSize: prev[itemId]?.fileSize || null,
         fileType: prev[itemId]?.fileType || null,
         emailAddress: prev[itemId]?.emailAddress || null,
+      },
+    }));
+  };
+
+  // 아이템별 광고내용 변경 핸들러
+  const handleItemAdContentChange = (itemId: string, value: string) => {
+    setItemStates((prev) => ({
+      ...prev,
+      [itemId]: {
+        ...prev[itemId],
+        adContent: value,
       },
     }));
   };
@@ -1973,6 +1996,8 @@ function PaymentPageContent() {
         const groupState = groupStates[group.id];
         const itemProjectName =
           itemState?.projectName?.trim() || projectName || item.name || '작업';
+        const itemAdContent =
+          itemState?.adContent?.trim() || groupState?.adContent?.trim() || '';
         // 이전 디자인 동일 여부 (표시용)
         const usePreviousDesign = itemState?.usePreviousDesign || groupState?.usePreviousDesign || false;
         // 자체제작/1회 재사용 여부 (관악구 할인용)
@@ -1994,6 +2019,7 @@ function PaymentPageContent() {
           draftDeliveryMethod:
             itemState?.sendByEmail === true ? 'email' : 'upload',
           projectName: itemProjectName,
+          adContent: itemAdContent,
           designDraftId: null as string | null,
           usePreviousDesign,
           selfMadeReuse,
@@ -2590,6 +2616,10 @@ function PaymentPageContent() {
                   );
                   uploadFormData.append('projectName', projectName);
                   uploadFormData.append(
+                    'adContent',
+                    groupState.adContent || ''
+                  );
+                  uploadFormData.append(
                     'draftDeliveryMethod',
                     draftDeliveryMethod
                   );
@@ -2598,6 +2628,7 @@ function PaymentPageContent() {
                     hasFile: !!groupState.selectedFile,
                     userProfileId: currentTossWidgetData.user_profile_id,
                     projectName,
+                    adContent: groupState.adContent,
                     draftDeliveryMethod,
                   });
 
@@ -2662,6 +2693,7 @@ function PaymentPageContent() {
                   const itemState = currentItemStates[item.id];
                   // 정확한 값만 사용 (기본값 사용 안 함)
                   const itemProjectName = itemState?.projectName || '';
+                  const itemAdContent = itemState?.adContent || '';
 
                   // 파일이 업로드된 아이템만 처리 (이메일 체크박스가 선택된 아이템은 건너뜀)
                   if (itemState?.selectedFile && !itemState?.sendByEmail) {
@@ -2684,6 +2716,7 @@ function PaymentPageContent() {
                         currentTossWidgetData.user_profile_id
                       );
                       uploadFormData.append('projectName', itemProjectName);
+                      uploadFormData.append('adContent', itemAdContent);
                       uploadFormData.append('draftDeliveryMethod', 'upload');
 
                       console.log(
@@ -3635,6 +3668,28 @@ function PaymentPageContent() {
                   </div>
                 )}
 
+                {/* 그룹 단위 광고내용 - 아이템 1개이거나 작업이름 일괄적용이 체크되었을 때 */}
+                {(itemCount === 1 || bulkApply.projectName) && (
+                  <div className="mb-4">
+                    <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
+                      <label className="w-full sm:w-[8rem] text-gray-600 font-medium text-sm">
+                        광고내용
+                      </label>
+                      <div className="flex-1">
+                        <input
+                          type="text"
+                          value={groupStates[group.id]?.adContent || ''}
+                          onChange={(e) =>
+                            handleGroupAdContentChange(group.id, e.target.value)
+                          }
+                          className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                          placeholder="광고 내용을 입력하세요"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* 그룹 단위 시안 업로드 - 아이템 1개이거나 시안 일괄적용이 체크되었을 때 */}
                 {(itemCount === 1 ||
                   bulkApply.fileUpload ||
@@ -3781,6 +3836,27 @@ function PaymentPageContent() {
                                     }
                                     className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                                     placeholder="작업 이름을 입력하세요"
+                                  />
+                                </div>
+                              )}
+
+                              {/* 아이템별 광고내용 - 작업이름 일괄적용이 체크되지 않았을 때만 표시 */}
+                              {!bulkApply.projectName && (
+                                <div className="flex flex-col gap-2">
+                                  <label className="text-xs text-gray-600 font-medium">
+                                    광고내용
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={itemState?.adContent || ''}
+                                    onChange={(e) =>
+                                      handleItemAdContentChange(
+                                        item.id,
+                                        e.target.value
+                                      )
+                                    }
+                                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                                    placeholder="광고 내용을 입력하세요"
                                   />
                                 </div>
                               )}

@@ -4,6 +4,7 @@ export interface EnsureDesignDraftOptions {
   existingDraftId?: string | null;
   userProfileId?: string | null;
   projectName?: string | null;
+  adContent?: string | null;
   orderNumber?: string;
   panelId?: string;
   itemLabel?: string;
@@ -17,6 +18,7 @@ export async function ensureDesignDraftForOrderItem(
     existingDraftId,
     userProfileId,
     projectName,
+    adContent,
     orderNumber,
     panelId,
     itemLabel,
@@ -48,6 +50,7 @@ export async function ensureDesignDraftForOrderItem(
     console.log('🔍 [designDrafts helper] 시안 자동 생성 시작:', {
       userProfileId,
       projectName: normalizedProjectName,
+      adContent,
       orderNumber,
       panelId,
       itemLabel,
@@ -60,6 +63,7 @@ export async function ensureDesignDraftForOrderItem(
         user_profile_id: userProfileId,
         draft_category: 'initial',
         project_name: normalizedProjectName,
+        ad_content: adContent || undefined,
         notes: notes || undefined,
       })
       .select('id')

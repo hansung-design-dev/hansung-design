@@ -187,6 +187,7 @@ export async function GET(request: NextRequest) {
           design_draft:design_draft_id (
             id,
             project_name,
+            ad_content,
             file_name,
             file_url,
             is_approved
@@ -835,6 +836,7 @@ export async function POST(request: NextRequest) {
             item.name ||
             '프로젝트명 없음' ||
             '프로젝트명 없음';
+          const adContentForItem = item.adContent?.trim() || '';
           const itemDraftDeliveryMethod =
             item.draftDeliveryMethod || draftDeliveryMethod || 'upload';
           const designDraftIdForItem =
@@ -843,6 +845,7 @@ export async function POST(request: NextRequest) {
               ? await ensureDesignDraftForOrderItem({
                   userProfileId: userProfile.id,
                   projectName: projectNameForItem,
+                  adContent: adContentForItem,
                   orderNumber,
                   panelId: item.panel_id,
                   itemLabel: item.name || item.panel_id,

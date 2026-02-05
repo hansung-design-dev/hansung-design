@@ -12,6 +12,7 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File | null;
     const userProfileId = formData.get('userProfileId') as string | null;
     const projectName = (formData.get('projectName') as string | null) || '';
+    const adContent = (formData.get('adContent') as string | null) || '';
     const draftDeliveryMethod =
       (formData.get('draftDeliveryMethod') as string | null) || 'upload';
 
@@ -98,6 +99,7 @@ export async function POST(request: NextRequest) {
       fileType: file.type,
       userProfileId,
       projectName,
+      adContent,
       draftDeliveryMethod,
     });
 
@@ -155,6 +157,7 @@ export async function POST(request: NextRequest) {
         user_profile_id: userProfileId,
         draft_category: 'initial',
         project_name: projectName,
+        ad_content: adContent || null,
         file_name: file.name,
         file_url: fileUrl,
         file_extension: file.name.split('.').pop(),

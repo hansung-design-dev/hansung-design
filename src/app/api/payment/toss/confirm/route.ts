@@ -13,6 +13,7 @@ interface OrderItem extends CartItem {
   quantity: number;
   design_draft_id?: string | null;
   projectName?: string;
+  adContent?: string;
   draftDeliveryMethod?: string | null;
 }
 
@@ -292,6 +293,7 @@ async function createOrderAfterPayment(
       item.name ||
       '프로젝트명 없음' ||
       '프로젝트명 없음';
+    const adContentForItem = item.adContent?.trim() || '';
     const itemDraftDeliveryMethod =
       item.draftDeliveryMethod || draftDeliveryMethod || 'upload';
     const designDraftIdForItem =
@@ -300,6 +302,7 @@ async function createOrderAfterPayment(
         ? await ensureDesignDraftForOrderItem({
             userProfileId: userProfile.id,
             projectName: projectNameForItem,
+            adContent: adContentForItem,
             orderNumber: order.order_number,
             panelId: item.panel_id,
             itemLabel: item.name || item.panel_id,

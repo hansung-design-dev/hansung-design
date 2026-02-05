@@ -181,6 +181,7 @@ CREATE TABLE public.design_drafts (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   project_name text,
+  ad_content text,
   CONSTRAINT design_drafts_pkey PRIMARY KEY (id),
   CONSTRAINT design_drafts_user_profile_id_fkey FOREIGN KEY (user_profile_id) REFERENCES public.user_profiles(id),
   CONSTRAINT design_drafts_admin_profile_id_fkey FOREIGN KEY (admin_profile_id) REFERENCES public.admin_profiles(id)
