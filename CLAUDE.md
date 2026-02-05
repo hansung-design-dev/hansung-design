@@ -13,6 +13,7 @@
 - Commit messages must be written in English
 - Do not include Claude co-author in commits
 - Do not include "🤖 Generated with [Claude Code]" in commit messages
+- **커밋 전 반드시 `npm run build`로 빌드 성공 여부를 확인할 것**
 
 ---
 
