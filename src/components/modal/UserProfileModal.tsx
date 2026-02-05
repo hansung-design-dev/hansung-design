@@ -1148,7 +1148,7 @@ export default function UserProfileModal({
                     }
                     className="mr-2"
                   />
-                  기업용 (승인 필요, 일반가격)
+                  기업용 (일반가격)
                 </label>
                 <p className="text-xs text-gray-500">
                   개인용은 체크하지 않으시면 됩니다.

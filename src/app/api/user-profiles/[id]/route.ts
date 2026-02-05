@@ -93,12 +93,11 @@ export async function PUT(
         .eq('is_default', true);
     }
 
-    // 승인 리셋 정책(보수적으로):
-    // - 행정용/기업용인 경우, 유형 변경 또는 사업자등록증 변경이 있으면 다시 승인받도록 is_approved=false로 리셋
+    // 승인 리셋 정책: 행정용(is_public_institution)인 경우만 적용
+    // 기업용(is_company)은 승인 프로세스가 제거됨 - 일반 결제 가능
     const shouldResetApproval =
-      (Boolean(is_public_institution) || Boolean(is_company)) &&
+      Boolean(is_public_institution) &&
       (Boolean(existing.is_public_institution) !== Boolean(is_public_institution) ||
-        Boolean(existing.is_company) !== Boolean(is_company) ||
         String(existing.business_registration_file ?? '') !==
           String(business_registration_file ?? ''));
 

@@ -1109,14 +1109,13 @@ function CartContent() {
         return;
       }
 
-      // 공공기관/기업용 아이템이 있는지 확인
+      // 공공기관용 아이템이 있는지 확인 (기업용은 승인 불필요 - 일반 결제)
       const hasPublicInstitutionItems = selectedCartItems.some(
         (item) => item.is_public_institution
       );
-      const hasCompanyItems = selectedCartItems.some((item) => item.is_company);
 
-      // 공공기관/기업용인 경우 어드민 승인 요청
-      if (hasPublicInstitutionItems || hasCompanyItems) {
+      // 공공기관용인 경우에만 어드민 승인 요청 (기업용은 일반 결제)
+      if (hasPublicInstitutionItems) {
         await handleAdminApprovalRequest(selectedCartItems);
         return;
       }
@@ -2171,8 +2170,7 @@ function CartContent() {
               onClick={handlePayment}
               disabled={cartSummary.hasMixedUserTypes}
             >
-              {cartSummary.hasCompanyItems ||
-              cartSummary.hasPublicInstitutionItems
+              {cartSummary.hasPublicInstitutionItems
                 ? '결제대기 신청하기'
                 : `총 ${cartSummary.quantity}건 결제하기`}
             </Button>

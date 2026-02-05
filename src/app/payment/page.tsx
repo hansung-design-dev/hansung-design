@@ -1915,6 +1915,7 @@ function PaymentPageContent() {
     group: GroupedCartItem,
     account: BankAccountInfo
   ) => {
+    console.log('🔍🔍🔍 handleBankTransferPayment 호출됨!', { groupId: group.id });
     if (isBankTransferProcessing) return;
     setIsBankTransferProcessing(true);
     logPaymentDebug('계좌이체 결제 시작', {
@@ -1956,6 +1957,16 @@ function PaymentPageContent() {
         !useExistingDesign &&
         draftDeliveryMethod === 'upload' &&
         (group.items.length === 1 || bulkApply.fileUpload);
+
+      console.log('🔍 [계좌이체] 파일업로드 검증:', {
+        useExistingDesign,
+        usePreviousDesign: groupState?.usePreviousDesign,
+        selfMadeReuse: groupState?.selfMadeReuse,
+        draftDeliveryMethod,
+        requiresGroupFileUpload,
+        hasSelectedFile: !!groupState?.selectedFile,
+        groupId: group.id,
+      });
 
       const itemsForOrder = group.items.map((item) => {
         const itemState = itemStates[item.id];
@@ -2022,7 +2033,13 @@ function PaymentPageContent() {
       let draftId: string | undefined;
       const itemDraftIds: Record<string, string> = {};
 
+      console.log('🔍🔍🔍 requiresGroupFileUpload 체크 직전:', {
+        requiresGroupFileUpload,
+        useExistingDesign,
+        hasSelectedFile: !!groupState?.selectedFile,
+      });
       if (requiresGroupFileUpload) {
+        console.log('🔍🔍🔍 파일 업로드 필요! selectedFile:', groupState?.selectedFile);
         if (!groupState?.selectedFile) {
           alert('시안 파일을 선택해주세요.');
           return;
@@ -2400,15 +2417,14 @@ function PaymentPageContent() {
                 ) || null;
 
               if (selectedProfile) {
-                const isDiscountProfile =
-                  !!selectedProfile.is_public_institution ||
-                  !!selectedProfile.is_company;
+                // 행정용(공공기관)인데 승인되지 않은 프로필은 결제 불가
+                // 기업용(is_company)은 승인 프로세스 제거됨 - 일반 결제 가능
+                const isPublicInstitution = !!selectedProfile.is_public_institution;
                 const isApprovedProfile = !!selectedProfile.is_approved;
 
-                // 행정용/기업용인데 승인되지 않은 프로필은 결제 불가
-                if (isDiscountProfile && !isApprovedProfile) {
+                if (isPublicInstitution && !isApprovedProfile) {
                   alert(
-                    '행정용/기업용 프로필은 관리자 승인 후에만 할인된 가격으로 결제할 수 있습니다.\n프로필 승인 상태를 확인하시거나 기본 프로필로 다시 주문해주세요.'
+                    '행정용 프로필은 관리자 승인 후에만 할인된 가격으로 결제할 수 있습니다.\n프로필 승인 상태를 확인하시거나 기본 프로필로 다시 주문해주세요.'
                   );
                   paymentButton.disabled = false;
                   paymentButton.textContent = '카드/간편결제';

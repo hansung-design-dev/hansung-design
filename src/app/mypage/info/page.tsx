@@ -377,22 +377,25 @@ export default function UserInfoPage() {
                                     </span>
                                   )}
                                 </div>
-                                <div className="flex items-center gap-2 text-xs">
-                                  <span
-                                    className={`flex items-center gap-1 px-2 py-0.5 rounded-full border ${
-                                      profile.is_approved
-                                        ? 'border-green-500 bg-green-50 text-green-700'
-                                        : 'border-red-500 bg-red-50 text-red-600'
-                                    }`}
-                                  >
-                                    <span className="w-3 h-3 flex items-center justify-center rounded-full border text-[10px] leading-none">
-                                      {profile.is_approved ? '✓' : ' '}
+                                {/* 승인 상태 배지 - 행정용(공공기관)인 경우에만 표시 */}
+                                {profile.is_public_institution && (
+                                  <div className="flex items-center gap-2 text-xs">
+                                    <span
+                                      className={`flex items-center gap-1 px-2 py-0.5 rounded-full border ${
+                                        profile.is_approved
+                                          ? 'border-green-500 bg-green-50 text-green-700'
+                                          : 'border-red-500 bg-red-50 text-red-600'
+                                      }`}
+                                    >
+                                      <span className="w-3 h-3 flex items-center justify-center rounded-full border text-[10px] leading-none">
+                                        {profile.is_approved ? '✓' : ' '}
+                                      </span>
+                                      {profile.is_approved
+                                        ? '승인됨'
+                                        : '승인대기'}
                                     </span>
-                                    {profile.is_approved
-                                      ? '승인됨'
-                                      : '승인대기'}
-                                  </span>
-                                </div>
+                                  </div>
+                                )}
                                 <div className="text-1 md:text-1.25">
                                   {profile.profile_title}
                                 </div>
