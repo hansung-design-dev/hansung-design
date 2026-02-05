@@ -85,6 +85,7 @@ interface OrderDetail {
   design_draft?: {
     id: string;
     project_name?: string;
+    ad_content?: string;
     file_name?: string;
     file_url?: string;
     is_approved?: boolean;
@@ -214,6 +215,10 @@ interface DisplayItem {
   orderDetailId?: string; // 연결된 order_detail ID
   order?: Order; // 전체 주문 정보
   requiresManualPayment?: boolean;
+  orderDate?: string; // 신청일
+  companyName?: string; // 업체명
+  adContent?: string; // 광고내용
+  quantity?: number; // 수량
 }
 
 interface OrderCardData {
@@ -726,6 +731,23 @@ export default function OrdersPage() {
           slotNumber
         );
 
+        // 신청일 포맷 (YYYY-MM-DD)
+        const orderDate = order.created_at
+          ? new Date(order.created_at).toISOString().split('T')[0]
+          : '-';
+
+        // 업체명
+        const companyName = order.user_profiles?.company_name || '-';
+
+        // 광고내용 (design_draft에서 가져오기)
+        const adContent = item.design_draft?.ad_content || '';
+
+        // 수량 (전체 order_details의 slot_order_quantity 합산)
+        const quantity = orderDetails.reduce(
+          (sum, detail) => sum + (detail.slot_order_quantity || 1),
+          0
+        );
+
         displayItems.push({
           id: rowNumber,
           title: boardLabel,
@@ -745,6 +767,10 @@ export default function OrdersPage() {
           productType,
           order: order,
           requiresManualPayment: manualPaymentRequired,
+          orderDate,
+          companyName,
+          adContent,
+          quantity,
         });
       } else {
         // 상담신청 기반 등 order_details가 없는 주문도 목록에 표시
@@ -773,6 +799,14 @@ export default function OrdersPage() {
           panelAddress
         );
 
+        // 신청일 포맷 (YYYY-MM-DD)
+        const orderDate = order.created_at
+          ? new Date(order.created_at).toISOString().split('T')[0]
+          : '-';
+
+        // 업체명
+        const companyName = order.user_profiles?.company_name || '-';
+
         displayItems.push({
           id: rowNumber,
           title: boardLabel,
@@ -788,6 +822,10 @@ export default function OrdersPage() {
             inquiryProductType: inquiry?.product_type,
           }),
           requiresManualPayment: manualPaymentRequired,
+          orderDate,
+          companyName,
+          adContent: '', // 상담신청 주문은 광고내용 없음
+          quantity: 0, // 상담신청 주문은 order_details가 없으므로 0
         });
       }
     });

@@ -78,6 +78,9 @@ interface ListItem {
   order?: any; // 전체 주문 정보
   orderDetailId?: string;
   requiresManualPayment?: boolean;
+  orderDate?: string; // 신청일
+  companyName?: string; // 업체명
+  adContent?: string; // 광고내용
 }
 
 const statusColorMap: Record<string, string> = {
@@ -257,7 +260,7 @@ const OrderItemList: React.FC<ItemTableProps> = ({
 
       {/* 주문내역이 없을 때 */}
       {items.length === 0 && (
-        <div className="text-center py-20 text-gray-500 text-1.25">
+        <div className="text-center py-20 text-gray-500 text-sm">
           주문내역이 없습니다
         </div>
       )}
@@ -267,24 +270,30 @@ const OrderItemList: React.FC<ItemTableProps> = ({
         <>
           {/* ✅ 데스크탑/tablet 이상: table로 표시 */}
           <div className="overflow-x-auto hidden lg:block">
-            <table className="w-full table-fixed border-collapse border-t border-gray-200 text-1.25 font-500">
+            <table className="w-full table-fixed border-collapse border-t border-gray-200 text-sm">
               <colgroup>
                 {showCheckbox && <col className="w-[3.5rem]" />}
+                <col className="w-[5%]" />
+                <col className="w-[9%]" />
                 <col className="w-[7%]" />
-                <col className="w-[45%] xl:w-[40%]" />
-                <col className="w-[13%]" />
-                <col className="w-[13%]" />
-                <col className="w-[12%]" />
-                <col className="w-[12%]" />
+                <col className="w-[11%]" />
+                <col className="w-[18%]" />
+                <col className="w-[6%]" />
                 <col className="w-[10%]" />
+                <col className="w-[8%]" />
+                <col className="w-[8%]" />
+                <col className="w-[8%]" />
               </colgroup>
               {showHeader && (
                 <thead>
-                  <tr className="border-b-solid border-b-1 border-gray-300 h-[3rem] text-gray-2 text-1.25">
+                  <tr className="border-b-solid border-b-1 border-gray-300 h-[3rem] text-gray-500 text-sm font-medium">
                     {showCheckbox && <th className="text-center">선택</th>}
                     <th className="text-center">No</th>
-                    <th className="text-left pl-10">게시대 명</th>
+                    <th className="text-center">신청일</th>
                     <th className="text-center">행정구</th>
+                    <th className="text-center">업체명</th>
+                    <th className="text-center">광고내용</th>
+                    <th className="text-center">수량</th>
                     <th className="text-center">상품유형</th>
                     <th className="text-center">마감여부</th>
                     <th className="text-center">결제여부</th>
@@ -315,34 +324,35 @@ const OrderItemList: React.FC<ItemTableProps> = ({
                         />
                       </td>
                     )}
-                    <td className="text-center text-1.125 font-500">
+                    <td className="text-center">
                       {item.id}
                     </td>
-                    <td className="text-left pl-10 text-1.125 font-500 lg:whitespace-normal">
-                      <span className="font-medium text-black">
-                        {item.title?.replace(/^\s*\d+\.\s*/, '')}
-                        <br className="line-height-1" />
-                        {item.subtitle && (
-                          <span className="ml-1 text-gray-500 text-0.875">
-                            파일제목: {item.subtitle}
-                          </span>
-                        )}
-                      </span>
+                    <td className="text-center">
+                      {item.orderDate || '-'}
                     </td>
-                    <td className="text-center text-1.125 font-500">
+                    <td className="text-center">
                       {item.location}
                     </td>
-                    <td className="text-center text-1.125 font-500">
+                    <td className="text-center truncate px-2" title={item.companyName}>
+                      {item.companyName || '-'}
+                    </td>
+                    <td className="text-center truncate px-2" title={item.adContent}>
+                      {item.adContent || '-'}
+                    </td>
+                    <td className="text-center">
+                      {item.quantity ?? 0}
+                    </td>
+                    <td className="text-center">
                       {item.productType}
                     </td>
                     <td
-                      className={`text-center font-semibold text-1.125 font-500 ${getStatusClass(
+                      className={`text-center font-semibold ${getStatusClass(
                         item.status
                       )}`}
                     >
                       {item.status}
                     </td>
-                    <td className="text-center text-1 font-500">
+                    <td className="text-center">
                       {item.paymentStatus || '-'}
                     </td>
                     <td className="text-center">
@@ -368,7 +378,7 @@ const OrderItemList: React.FC<ItemTableProps> = ({
                 {/* 확장된 상세 정보 표시 */}
                 {expandedItemId && expandedContent && (
                   <tr>
-                    <td colSpan={showCheckbox ? 8 : 7} className="p-0">
+                    <td colSpan={showCheckbox ? 11 : 10} className="p-0">
                       <div>{expandedContent}</div>
                     </td>
                   </tr>
@@ -379,7 +389,7 @@ const OrderItemList: React.FC<ItemTableProps> = ({
                   length: ITEMS_PER_PAGE - paginatedItems.length,
                 }).map((_, i) => (
                   <tr key={`empty-${i}`} className="h-[3.5rem]">
-                    <td colSpan={showCheckbox ? 8 : 7} />
+                    <td colSpan={showCheckbox ? 11 : 10} />
                   </tr>
                 ))}
               </tbody>
@@ -409,29 +419,38 @@ const OrderItemList: React.FC<ItemTableProps> = ({
                   }
                 }}
               >
-                <div className="font-medium text-black text-1.25 font-500">
+                <div className="font-medium text-black text-sm">
                   {item.title}
                 </div>
-                {item.subtitle && (
-                  <div className="text-gray-500">{item.subtitle}</div>
-                )}
-                <div className="text-1.25 font-500">
-                  행정동: {item.location}
+                <div className="text-sm text-gray-600">
+                  신청일: {item.orderDate || '-'}
                 </div>
-                <div className="text-1.25 font-500">
+                <div className="text-sm">
+                  행정구: {item.location}
+                </div>
+                <div className="text-sm">
+                  업체명: {item.companyName || '-'}
+                </div>
+                {item.adContent && (
+                  <div className="text-sm">
+                    광고내용: {item.adContent}
+                  </div>
+                )}
+                <div className="text-sm">
+                  수량: {item.quantity ?? 0}
+                </div>
+                <div className="text-sm">
                   상품유형: {item.productType}
                 </div>
-                <div className="text-1.25 font-500">
+                <div className="text-sm">
                   마감여부:&nbsp;
                   <span
-                    className={`text-1.25 font-500 ${getStatusClass(
-                      item.status
-                    )} font-medium`}
+                    className={`${getStatusClass(item.status)} font-medium`}
                   >
                     {item.status}
                   </span>
                 </div>
-                <div className="text-1.25 font-500">
+                <div className="text-sm">
                   결제여부: {item.paymentStatus || '-'}
                 </div>
                 <div className="flex gap-2 mt-2">
@@ -481,8 +500,8 @@ const OrderItemList: React.FC<ItemTableProps> = ({
               <button
                 key={num}
                 onClick={() => setPage(num)}
-                className={`w-7 h-7 flex items-center justify-center text-1.25 font-500 rounded ${
-                  page === num ? 'text-black' : 'text-gray-14'
+                className={`w-7 h-7 flex items-center justify-center text-sm rounded ${
+                  page === num ? 'text-black font-medium' : 'text-gray-400'
                 }`}
               >
                 {num}
