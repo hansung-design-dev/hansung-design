@@ -4035,10 +4035,10 @@ function PaymentPageContent() {
                               htmlFor={`mapo-free-install-${group.id}`}
                               className="text-sm text-gray-500"
                             >
-                              자체제작・설치・철거 0원 (무료)
+                              자체제작・설치・철거: 0원
                             </label>
                             {groupStates[group.id]?.mapoFreeInstall && (
-                              <span className="text-xs text-green-600 font-medium">
+                              <span className="text-xs text-green-600 font-medium ml-1">
                                 무료
                               </span>
                             )}
@@ -4244,10 +4244,10 @@ function PaymentPageContent() {
                                             htmlFor={`mapo-free-install-item-${item.id}`}
                                             className="text-xs text-gray-500"
                                           >
-                                            자체제작・설치・철거 0원 (무료)
+                                            자체제작・설치・철거: 0원
                                           </label>
                                           {itemState?.mapoFreeInstall && (
-                                            <span className="text-xs text-green-600 font-medium">
+                                            <span className="text-xs text-green-600 font-medium ml-1">
                                               무료
                                             </span>
                                           )}
@@ -4659,11 +4659,11 @@ function PaymentPageContent() {
                 if (!hasCheckedMapoFreeInstall || !notices || notices.length === 0) return null;
 
                 return notices.map((notice, idx) => (
-                  <div key={`mapo-free-${district}-${idx}`} className="bg-green-50 p-4 rounded-lg border border-green-200 mt-4">
-                    <h4 className="font-semibold text-green-800 mb-3">
+                  <div key={`mapo-free-${district}-${idx}`} className="bg-gray-50 p-4 rounded-lg border border-gray-200 mt-4">
+                    <h4 className="font-semibold text-gray-800 mb-3">
                       {notice.title} ({district})
                     </h4>
-                    <ul className="text-sm text-green-700 space-y-2">
+                    <ul className="text-sm text-gray-700 space-y-2">
                       {notice.items.map((item: { text: string; important: boolean } | string, itemIdx: number) => {
                         const text = typeof item === 'string' ? item : item.text;
                         const important = typeof item === 'string' ? false : item.important;

@@ -20,6 +20,9 @@ export interface UserProfile {
   is_default: boolean;
   is_public_institution?: boolean;
   is_company?: boolean;
+  is_approved?: boolean;
+  rejection_reason?: string | null;
+  approved_at?: string | null;
   created_at: string;
   is_phone_verified?: boolean;
   phone_verified_at?: string | null;
@@ -849,9 +852,25 @@ export default function UserProfileModal({
                           {profile.profile_title}
                           {/* 사용자 유형 태그 */}
                           {profile.is_public_institution && (
-                            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                              행정용
-                            </span>
+                            <>
+                              <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                                행정용
+                              </span>
+                              {/* 승인 상태 배지 */}
+                              {profile.is_approved ? (
+                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                  승인됨
+                                </span>
+                              ) : profile.rejection_reason ? (
+                                <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded" title={profile.rejection_reason}>
+                                  거절됨
+                                </span>
+                              ) : (
+                                <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+                                  승인 대기
+                                </span>
+                              )}
+                            </>
                           )}
                           {profile.is_company && (
                             <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded">
