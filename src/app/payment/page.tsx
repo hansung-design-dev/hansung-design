@@ -179,6 +179,16 @@ function PaymentPageContent() {
   const [isBankTransferProcessing, setIsBankTransferProcessing] =
     useState(false);
 
+  // 자체제작 유의사항 (관악구 등 구별 공지사항)
+  const [selfMadeNotices, setSelfMadeNotices] = useState<{
+    [district: string]: { title: string; items: { text: string; important: boolean }[] }[];
+  }>({});
+
+  // 일반 유의사항 (구별 공통 공지사항 - 항상 표시)
+  const [generalNotices, setGeneralNotices] = useState<{
+    [district: string]: { title: string; items: { text: string; important: boolean }[] }[];
+  }>({});
+
   // 토스 위젯 상태
   const [tossWidgetOpen, setTossWidgetOpen] = useState(false);
   const [tossWidgetData, setTossWidgetData] = useState<GroupedCartItem | null>(
@@ -813,6 +823,76 @@ function PaymentPageContent() {
       }));
     }
   }, [userProfiles, selectedItems, searchParams, projectName]);
+
+  // 자체제작 유의사항 조회 (관악구 등 해당 구가 있을 때)
+  useEffect(() => {
+    const fetchSelfMadeNotices = async () => {
+      // groupedItems에서 유니크한 구 목록 추출
+      const districts = [...new Set(groupedItems.map((g) => g.district))];
+
+      for (const district of districts) {
+        // 이미 조회한 구는 스킵
+        if (selfMadeNotices[district]) continue;
+
+        try {
+          const res = await fetch(
+            `/api/region-gu-notices?district=${encodeURIComponent(district)}&noticeType=self_made`
+          );
+          const data = await res.json();
+
+          if (data.success && data.data && data.data.length > 0) {
+            setSelfMadeNotices((prev) => ({
+              ...prev,
+              [district]: data.data.map((n: { title: string; items: { text: string; important: boolean }[] }) => ({
+                title: n.title,
+                items: n.items,
+              })),
+            }));
+          }
+        } catch (error) {
+          console.error(`Error fetching self_made notices for ${district}:`, error);
+        }
+      }
+    };
+
+    if (groupedItems.length > 0) {
+      fetchSelfMadeNotices();
+    }
+  }, [groupedItems, selfMadeNotices]);
+
+  // 일반 유의사항 조회 (구별 공통 공지사항 - 항상 표시)
+  useEffect(() => {
+    const fetchGeneralNotices = async () => {
+      const districts = [...new Set(groupedItems.map((g) => g.district))];
+
+      for (const district of districts) {
+        if (generalNotices[district]) continue;
+
+        try {
+          const res = await fetch(
+            `/api/region-gu-notices?district=${encodeURIComponent(district)}&noticeType=general`
+          );
+          const data = await res.json();
+
+          if (data.success && data.data && data.data.length > 0) {
+            setGeneralNotices((prev) => ({
+              ...prev,
+              [district]: data.data.map((n: { title: string; items: { text: string; important: boolean }[] }) => ({
+                title: n.title,
+                items: n.items,
+              })),
+            }));
+          }
+        } catch (error) {
+          console.error(`Error fetching general notices for ${district}:`, error);
+        }
+      }
+    };
+
+    if (groupedItems.length > 0) {
+      fetchGeneralNotices();
+    }
+  }, [groupedItems, generalNotices]);
 
   // 묶음 결제를 위한 아이템 그룹화 함수 (useCallback으로 안정화)
   const groupItemsByDistrict = useCallback(
@@ -4257,6 +4337,72 @@ function PaymentPageContent() {
                   </li>
                 </ul>
               </div>
+
+              {/* 일반 유의사항 (구별 공통 - 항상 표시) */}
+              {Object.entries(generalNotices).map(([district, notices]) => {
+                // 해당 구가 장바구니에 있는 경우에만 표시
+                const hasDistrict = groupedItems.some((g) => g.district === district);
+                if (!hasDistrict || !notices || notices.length === 0) return null;
+
+                return notices.map((notice, idx) => (
+                  <div key={`general-${district}-${idx}`} className="bg-gray-50 p-4 rounded-lg border border-gray-200 mt-4">
+                    <h4 className="font-semibold text-gray-800 mb-3">
+                      {notice.title} ({district})
+                    </h4>
+                    <ul className="text-sm text-gray-700 space-y-2">
+                      {notice.items.map((item: { text: string; important: boolean } | string, itemIdx: number) => {
+                        const text = typeof item === 'string' ? item : item.text;
+                        const important = typeof item === 'string' ? false : item.important;
+                        return (
+                          <li
+                            key={itemIdx}
+                            style={{
+                              color: important ? '#dc2626' : undefined,
+                              fontWeight: important ? 600 : undefined
+                            }}
+                          >
+                            {text}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                ));
+              })}
+
+              {/* 자체제작 유의사항 (구별) */}
+              {Object.entries(selfMadeNotices).map(([district, notices]) => {
+                // 해당 구에서 자체제작이 체크된 경우에만 표시
+                const hasCheckedSelfMade = groupedItems.some(
+                  (g) => g.district === district && groupStates[g.id]?.selfMadeReuse
+                );
+                if (!hasCheckedSelfMade || !notices || notices.length === 0) return null;
+
+                return notices.map((notice, idx) => (
+                  <div key={`${district}-${idx}`} className="bg-gray-50 p-4 rounded-lg border border-gray-200 mt-4">
+                    <h4 className="font-semibold text-gray-800 mb-3">
+                      {notice.title} ({district})
+                    </h4>
+                    <ul className="text-sm text-gray-700 space-y-2">
+                      {notice.items.map((item: { text: string; important: boolean } | string, itemIdx: number) => {
+                        const text = typeof item === 'string' ? item : item.text;
+                        const important = typeof item === 'string' ? false : item.important;
+                        return (
+                          <li
+                            key={itemIdx}
+                            style={{
+                              color: important ? '#dc2626' : undefined,
+                              fontWeight: important ? 600 : undefined
+                            }}
+                          >
+                            {text}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                ));
+              })}
 
               <div className="flex items-start gap-2">
                 <input

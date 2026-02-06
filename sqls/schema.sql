@@ -896,3 +896,18 @@ section_type_enum	main, banner_display_part, led_display_part, public_design_par
 page_type_enum	landing, banner_display, led_display, public_design, digital_signage	
 
 public_design_category_enum	banner_improvement, env_improvement, public_design, ect
+
+-- region_gu_notices: 구별 유의사항/공지사항 관리 테이블
+CREATE TABLE public.region_gu_notices (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  region_gu_id uuid NOT NULL,
+  notice_type text NOT NULL,
+  title text NOT NULL,
+  items text[] NOT NULL DEFAULT '{}',
+  is_active boolean DEFAULT true,
+  display_order integer DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT region_gu_notices_pkey PRIMARY KEY (id),
+  CONSTRAINT region_gu_notices_region_gu_id_fkey FOREIGN KEY (region_gu_id) REFERENCES public.region_gu(id) ON DELETE CASCADE
+);
