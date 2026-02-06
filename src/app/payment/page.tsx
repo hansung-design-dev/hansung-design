@@ -139,6 +139,7 @@ function PaymentPageContent() {
       emailAddress: string | null;
       usePreviousDesign: boolean;
       selfMadeReuse: boolean; // 자체제작/1회 재사용 (관악구 할인용)
+      mapoFreeInstall: boolean; // 마포구 저단형 무료 설치 (행정용)
     };
   }>({});
 
@@ -155,6 +156,7 @@ function PaymentPageContent() {
       emailAddress: string | null;
       usePreviousDesign: boolean;
       selfMadeReuse: boolean; // 자체제작/1회 재사용 (관악구 할인용)
+      mapoFreeInstall: boolean; // 마포구 저단형 무료 설치 (행정용)
     };
   }>({});
 
@@ -186,6 +188,11 @@ function PaymentPageContent() {
 
   // 일반 유의사항 (구별 공통 공지사항 - 항상 표시)
   const [generalNotices, setGeneralNotices] = useState<{
+    [district: string]: { title: string; items: { text: string; important: boolean }[] }[];
+  }>({});
+
+  // 마포구 저단형 무료 설치 유의사항 (행정용)
+  const [mapoFreeInstallNotices, setMapoFreeInstallNotices] = useState<{
     [district: string]: { title: string; items: { text: string; important: boolean }[] }[];
   }>({});
 
@@ -512,6 +519,28 @@ function PaymentPageContent() {
       [itemId]: {
         ...prev[itemId],
         selfMadeReuse: isChecked,
+      },
+    }));
+  };
+
+  // 그룹별 마포구 저단형 무료 설치 체크 핸들러 (행정용)
+  const handleGroupMapoFreeInstallSelect = (groupKey: string, isChecked: boolean) => {
+    setGroupStates((prev) => ({
+      ...prev,
+      [groupKey]: {
+        ...prev[groupKey],
+        mapoFreeInstall: isChecked,
+      },
+    }));
+  };
+
+  // 아이템별 마포구 저단형 무료 설치 체크 핸들러 (행정용)
+  const handleItemMapoFreeInstallSelect = (itemId: string, isChecked: boolean) => {
+    setItemStates((prev) => ({
+      ...prev,
+      [itemId]: {
+        ...prev[itemId],
+        mapoFreeInstall: isChecked,
       },
     }));
   };
@@ -893,6 +922,38 @@ function PaymentPageContent() {
       fetchGeneralNotices();
     }
   }, [groupedItems, generalNotices]);
+
+  // 마포구 저단형 무료 설치 유의사항 조회 (행정용)
+  useEffect(() => {
+    const fetchMapoFreeInstallNotices = async () => {
+      // 마포구만 조회
+      const hasMapo = groupedItems.some((g) => g.district === '마포구');
+      if (!hasMapo || mapoFreeInstallNotices['마포구']) return;
+
+      try {
+        const res = await fetch(
+          `/api/region-gu-notices?district=${encodeURIComponent('마포구')}&noticeType=mapo_free_install`
+        );
+        const data = await res.json();
+
+        if (data.success && data.data && data.data.length > 0) {
+          setMapoFreeInstallNotices((prev) => ({
+            ...prev,
+            ['마포구']: data.data.map((n: { title: string; items: { text: string; important: boolean }[] }) => ({
+              title: n.title,
+              items: n.items,
+            })),
+          }));
+        }
+      } catch (error) {
+        console.error('Error fetching mapo_free_install notices:', error);
+      }
+    };
+
+    if (groupedItems.length > 0) {
+      fetchMapoFreeInstallNotices();
+    }
+  }, [groupedItems, mapoFreeInstallNotices]);
 
   // 묶음 결제를 위한 아이템 그룹화 함수 (useCallback으로 안정화)
   const groupItemsByDistrict = useCallback(
@@ -2082,10 +2143,18 @@ function PaymentPageContent() {
         const usePreviousDesign = itemState?.usePreviousDesign || groupState?.usePreviousDesign || false;
         // 자체제작/1회 재사용 여부 (관악구 할인용)
         const selfMadeReuse = itemState?.selfMadeReuse || groupState?.selfMadeReuse || false;
-        // 관악구이고 자체제작/1회 재사용인 경우 할인 가격 적용
-        const finalPrice = (group.district === '관악구' && selfMadeReuse)
-          ? GWANAK_PREVIOUS_DESIGN_PRICE
-          : (item.price || 0);
+        // 마포구 저단형 무료 설치 여부 (행정용)
+        const mapoFreeInstall = itemState?.mapoFreeInstall || groupState?.mapoFreeInstall || false;
+        const isMapoFreeEligible = group.district === '마포구' &&
+                                   group.panel_type === 'lower_panel' &&
+                                   group.is_public_institution === true &&
+                                   mapoFreeInstall;
+        // 가격 결정 (마포구 무료 > 관악구 할인 > 원가)
+        const finalPrice = isMapoFreeEligible
+          ? 0
+          : (group.district === '관악구' && selfMadeReuse)
+            ? GWANAK_PREVIOUS_DESIGN_PRICE
+            : (item.price || 0);
         return {
           id: item.id,
           panel_id: item.panel_id,
@@ -2103,6 +2172,7 @@ function PaymentPageContent() {
           designDraftId: null as string | null,
           usePreviousDesign,
           selfMadeReuse,
+          mapoFreeInstall,
         };
       });
 
@@ -2355,6 +2425,86 @@ function PaymentPageContent() {
   // }
 
   // handleSingleGroupPayment 함수 제거 - 바로 토스 위젯 사용
+
+  // 마포구 저단형 무료 주문 처리 함수 (행정용)
+  const handleMapoFreeOrder = async (group: GroupedCartItem) => {
+    try {
+      const groupState = groupStates[group.id];
+
+      // 아이템 정보 수집
+      const itemsForOrder = group.items.map((item) => {
+        const itemState = itemStates[item.id];
+        const itemProjectName =
+          itemState?.projectName?.trim() || groupState?.projectName?.trim() || projectName || item.name || '작업';
+        const itemAdContent =
+          itemState?.adContent?.trim() || groupState?.adContent?.trim() || '';
+        const usePreviousDesign = itemState?.usePreviousDesign || groupState?.usePreviousDesign || false;
+        const selfMadeReuse = itemState?.selfMadeReuse || groupState?.selfMadeReuse || false;
+        const mapoFreeInstall = itemState?.mapoFreeInstall || groupState?.mapoFreeInstall || false;
+
+        return {
+          id: item.id,
+          panel_id: item.panel_id,
+          price: 0, // 무료
+          quantity: 1,
+          halfPeriod: item.halfPeriod,
+          selectedYear: item.selectedYear,
+          selectedMonth: item.selectedMonth,
+          panel_slot_usage_id: item.panel_slot_usage_id,
+          panel_slot_snapshot: item.panel_slot_snapshot,
+          projectName: itemProjectName,
+          adContent: itemAdContent,
+          usePreviousDesign,
+          selfMadeReuse,
+          mapoFreeInstall,
+          draftDeliveryMethod: itemState?.sendByEmail === true ? 'email' : 'upload',
+          designDraftId: null as string | null,
+        };
+      });
+
+      // 결제수단 조회 (무료결제)
+      const paymentMethodRes = await fetch('/api/payment/methods?code=free');
+      const paymentMethodJson = await paymentMethodRes.json();
+      const paymentMethodId = paymentMethodJson.data?.id;
+
+      // 임시 주문번호 생성
+      const tempOrderId = `FREE-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+
+      // 주문 API 호출
+      const orderRes = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tempOrderId,
+          items: itemsForOrder,
+          userAuthId: user?.id,
+          userProfileId: group.user_profile_id,
+          paymentMethodId,
+          totalAmount: 0,
+          paymentStatus: 'completed', // 무료이므로 바로 완료
+          district: group.district,
+          displayType: group.type,
+          taxInvoiceRequested: false,
+        }),
+      });
+
+      if (orderRes.ok) {
+        const orderData = await orderRes.json();
+        // 장바구니에서 아이템 제거
+        group.items.forEach((item) => {
+          cartDispatch({ type: 'REMOVE_ITEM', id: item.id });
+        });
+        // 주문 완료 페이지로 이동
+        window.location.href = `/mypage/orders/${orderData.orderNumber}`;
+      } else {
+        const errorData = await orderRes.json();
+        throw new Error(errorData.message || '주문 생성에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('마포구 무료 주문 처리 실패:', error);
+      alert('주문 처리 중 오류가 발생했습니다.');
+    }
+  };
 
   // 토스 위젯 열기 함수
   const openTossWidget = (group: GroupedCartItem) => {
@@ -3210,10 +3360,18 @@ function PaymentPageContent() {
                   const usePreviousDesign = itemState?.usePreviousDesign || groupState?.usePreviousDesign || false;
                   // 자체제작/1회 재사용 여부 (관악구 할인용)
                   const selfMadeReuse = itemState?.selfMadeReuse || groupState?.selfMadeReuse || false;
-                  // 관악구이고 자체제작/1회 재사용인 경우 할인 가격 적용
-                  const finalPrice = (currentTossWidgetData.district === '관악구' && selfMadeReuse)
-                    ? GWANAK_PREVIOUS_DESIGN_PRICE
-                    : (item.price || 0);
+                  // 마포구 저단형 무료 설치 여부 (행정용)
+                  const mapoFreeInstall = itemState?.mapoFreeInstall || groupState?.mapoFreeInstall || false;
+                  const isMapoFreeEligible = currentTossWidgetData.district === '마포구' &&
+                                             currentTossWidgetData.panel_type === 'lower_panel' &&
+                                             currentTossWidgetData.is_public_institution === true &&
+                                             mapoFreeInstall;
+                  // 가격 결정 (마포구 무료 > 관악구 할인 > 원가)
+                  const finalPrice = isMapoFreeEligible
+                    ? 0
+                    : (currentTossWidgetData.district === '관악구' && selfMadeReuse)
+                      ? GWANAK_PREVIOUS_DESIGN_PRICE
+                      : (item.price || 0);
                   return {
                     id: item.id,
                     panel_id: item.panel_id,
@@ -3235,6 +3393,7 @@ function PaymentPageContent() {
                         : projectName,
                     usePreviousDesign,
                     selfMadeReuse,
+                    mapoFreeInstall,
                   };
                 }),
                 userAuthId,
@@ -3858,6 +4017,33 @@ function PaymentPageContent() {
                             )}
                           </div>
                         )}
+                        {/* 마포구 저단형 + 행정용일 때 자체제작・설치 0원 체크박스 표시 */}
+                        {group.district === '마포구' && group.panel_type === 'lower_panel' && group.is_public_institution && (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              id={`mapo-free-install-${group.id}`}
+                              checked={
+                                groupStates[group.id]?.mapoFreeInstall || false
+                              }
+                              onChange={(e) =>
+                                handleGroupMapoFreeInstallSelect(group.id, e.target.checked)
+                              }
+                              className="w-4 h-4"
+                            />
+                            <label
+                              htmlFor={`mapo-free-install-${group.id}`}
+                              className="text-sm text-gray-500"
+                            >
+                              자체제작・설치・철거 0원 (무료)
+                            </label>
+                            {groupStates[group.id]?.mapoFreeInstall && (
+                              <span className="text-xs text-green-600 font-medium">
+                                무료
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -4037,6 +4223,36 @@ function PaymentPageContent() {
                                           )}
                                         </div>
                                       )}
+                                      {/* 마포구 저단형 + 행정용일 때 자체제작・설치 0원 체크박스 표시 */}
+                                      {item.district === '마포구' && group.panel_type === 'lower_panel' && group.is_public_institution && (
+                                        <div className="flex items-center gap-2">
+                                          <input
+                                            type="checkbox"
+                                            id={`mapo-free-install-item-${item.id}`}
+                                            checked={
+                                              itemState?.mapoFreeInstall || false
+                                            }
+                                            onChange={(e) =>
+                                              handleItemMapoFreeInstallSelect(
+                                                item.id,
+                                                e.target.checked
+                                              )
+                                            }
+                                            className="w-4 h-4"
+                                          />
+                                          <label
+                                            htmlFor={`mapo-free-install-item-${item.id}`}
+                                            className="text-xs text-gray-500"
+                                          >
+                                            자체제작・설치・철거 0원 (무료)
+                                          </label>
+                                          {itemState?.mapoFreeInstall && (
+                                            <span className="text-xs text-green-600 font-medium">
+                                              무료
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
                                 )}
@@ -4099,6 +4315,15 @@ function PaymentPageContent() {
                         <span>총 결제 금액:</span>
                         <span className="text-blue-700">
                           {(() => {
+                            // 마포구 저단형 무료 설치 확인 (행정용)
+                            const isMapoFreeEligible =
+                              group.district === '마포구' &&
+                              group.panel_type === 'lower_panel' &&
+                              group.is_public_institution === true &&
+                              groupStates[group.id]?.mapoFreeInstall;
+                            if (isMapoFreeEligible) {
+                              return '0';
+                            }
                             // 관악구이고 자체제작/1회 재사용이 체크된 경우 할인 가격 적용
                             if (group.district === '관악구' && groupStates[group.id]?.selfMadeReuse) {
                               const discountedTotal = group.items.length * GWANAK_PREVIOUS_DESIGN_PRICE;
@@ -4108,6 +4333,13 @@ function PaymentPageContent() {
                           })()} 원
                         </span>
                       </div>
+                      {/* 마포구 저단형 무료 설치 적용 메시지 */}
+                      {group.district === '마포구' && group.panel_type === 'lower_panel' && group.is_public_institution && groupStates[group.id]?.mapoFreeInstall && (
+                        <div className="flex justify-between text-xs text-green-600 mt-1">
+                          <span>무료 적용 (자체제작・설치・철거)</span>
+                          <span>-{group.totalPrice.toLocaleString()} 원</span>
+                        </div>
+                      )}
                       {group.district === '관악구' && groupStates[group.id]?.selfMadeReuse && (
                         <div className="flex justify-between text-xs text-blue-600 mt-1">
                           <span>할인 적용 (자체제작・1회재사용)</span>
@@ -4199,24 +4431,35 @@ function PaymentPageContent() {
                     const isButtonEnabled =
                       hasProjectName && hasFileUploadMethod && hasAgreedToTerms;
 
+                    // 마포구 저단형 무료 설치 확인 (행정용)
+                    const isMapoFreeEligible =
+                      group.district === '마포구' &&
+                      group.panel_type === 'lower_panel' &&
+                      group.is_public_institution === true &&
+                      groupStates[group.id]?.mapoFreeInstall;
+
                     return (
                       <>
                         <Button
-                          onClick={() => openTossWidget(group)}
+                          onClick={() => isMapoFreeEligible ? handleMapoFreeOrder(group) : openTossWidget(group)}
                           disabled={!isButtonEnabled}
                           className={`w-full py-2 rounded-lg border ${
-                            group.name?.includes('남은구')
-                              ? 'border-pink-600'
-                              : 'border-blue-600'
+                            isMapoFreeEligible
+                              ? 'border-green-600'
+                              : group.name?.includes('남은구')
+                                ? 'border-pink-600'
+                                : 'border-blue-600'
                           } ${
                             isButtonEnabled
-                              ? group.name?.includes('남은구')
-                                ? 'bg-pink-600 text-white hover:bg-pink-700'
-                                : 'bg-blue-600 text-white hover:bg-blue-700'
+                              ? isMapoFreeEligible
+                                ? 'bg-green-600 text-white hover:bg-green-700'
+                                : group.name?.includes('남은구')
+                                  ? 'bg-pink-600 text-white hover:bg-pink-700'
+                                  : 'bg-blue-600 text-white hover:bg-blue-700'
                               : 'bg-gray-400 text-gray-600 cursor-not-allowed'
                           }`}
                         >
-                          {group.name} 결제하기
+                          {group.name} {isMapoFreeEligible ? '주문하기 (무료)' : '결제하기'}
                         </Button>
 
                         {!isButtonEnabled && (
@@ -4404,6 +4647,43 @@ function PaymentPageContent() {
                 ));
               })}
 
+              {/* 마포구 저단형 무료 설치 유의사항 (행정용) */}
+              {Object.entries(mapoFreeInstallNotices).map(([district, notices]) => {
+                // 마포구 저단형 무료 설치가 체크된 경우에만 표시
+                const hasCheckedMapoFreeInstall = groupedItems.some(
+                  (g) => g.district === district &&
+                         g.panel_type === 'lower_panel' &&
+                         g.is_public_institution === true &&
+                         groupStates[g.id]?.mapoFreeInstall
+                );
+                if (!hasCheckedMapoFreeInstall || !notices || notices.length === 0) return null;
+
+                return notices.map((notice, idx) => (
+                  <div key={`mapo-free-${district}-${idx}`} className="bg-green-50 p-4 rounded-lg border border-green-200 mt-4">
+                    <h4 className="font-semibold text-green-800 mb-3">
+                      {notice.title} ({district})
+                    </h4>
+                    <ul className="text-sm text-green-700 space-y-2">
+                      {notice.items.map((item: { text: string; important: boolean } | string, itemIdx: number) => {
+                        const text = typeof item === 'string' ? item : item.text;
+                        const important = typeof item === 'string' ? false : item.important;
+                        return (
+                          <li
+                            key={itemIdx}
+                            style={{
+                              color: important ? '#dc2626' : undefined,
+                              fontWeight: important ? 600 : undefined
+                            }}
+                          >
+                            {text}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                ));
+              })}
+
               <div className="flex items-start gap-2">
                 <input
                   type="checkbox"
@@ -4461,8 +4741,20 @@ function PaymentPageContent() {
                 </span>
               </div>
               {(() => {
+                // 마포구 저단형 무료 설치 금액 계산 (행정용)
+                const mapoFreeDiscount = groupedItems.reduce((sum, group) => {
+                  const isMapoFreeEligible =
+                    group.district === '마포구' &&
+                    group.panel_type === 'lower_panel' &&
+                    group.is_public_institution === true &&
+                    groupStates[group.id]?.mapoFreeInstall;
+                  if (isMapoFreeEligible) {
+                    return sum + group.totalPrice;
+                  }
+                  return sum;
+                }, 0);
                 // 관악구 자체제작/1회 재사용 할인 금액 계산
-                const totalDiscount = groupedItems.reduce((sum, group) => {
+                const gwanakDiscount = groupedItems.reduce((sum, group) => {
                   if (group.district === '관악구' && groupStates[group.id]?.selfMadeReuse) {
                     const originalTotal = group.totalPrice;
                     const discountedTotal = group.items.length * GWANAK_PREVIOUS_DESIGN_PRICE;
@@ -4470,14 +4762,21 @@ function PaymentPageContent() {
                   }
                   return sum;
                 }, 0);
+                const totalDiscount = mapoFreeDiscount + gwanakDiscount;
                 const finalTotal = finalPriceSummary.totalPrice - totalDiscount;
 
                 return (
                   <div className="border-t pt-3">
-                    {totalDiscount > 0 && (
+                    {mapoFreeDiscount > 0 && (
+                      <div className="flex justify-between text-green-600 mb-2">
+                        <span>무료 적용 (자체제작・설치・철거)</span>
+                        <span>-{mapoFreeDiscount.toLocaleString()}원</span>
+                      </div>
+                    )}
+                    {gwanakDiscount > 0 && (
                       <div className="flex justify-between text-blue-600 mb-2">
                         <span>할인 적용 (자체제작・1회재사용)</span>
-                        <span>-{totalDiscount.toLocaleString()}원</span>
+                        <span>-{gwanakDiscount.toLocaleString()}원</span>
                       </div>
                     )}
                     <div className="flex justify-between text-lg font-bold">

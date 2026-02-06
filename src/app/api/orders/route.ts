@@ -700,6 +700,7 @@ export async function POST(request: NextRequest) {
       design_draft_id: string | null;
       use_previous_design: boolean;
       self_made_reuse: boolean;
+      mapo_free_install: boolean;
       price: number;
     };
 
@@ -866,6 +867,7 @@ export async function POST(request: NextRequest) {
             design_draft_id: designDraftIdForItem,
             use_previous_design: item.usePreviousDesign || false,
             self_made_reuse: item.selfMadeReuse || false, // 자체제작/1회 재사용 (관악구 할인)
+            mapo_free_install: item.mapoFreeInstall || false, // 마포구 저단형 무료 설치 (행정용)
             price: item.price, // 주문 당시 가격 저장
           } satisfies OrderDetailInsert;
 
