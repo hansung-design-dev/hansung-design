@@ -480,3 +480,60 @@ export async function GET(
     );
   }
 }
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ orderNumber: string }> }
+) {
+  try {
+    const { orderNumber } = await params;
+    const body = await request.json();
+    const { depositorName } = body;
+
+    if (!depositorName || typeof depositorName !== 'string') {
+      return NextResponse.json(
+        { success: false, error: '입금자명이 필요합니다.' },
+        { status: 400 }
+      );
+    }
+
+    // 주문 조회
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .select('id')
+      .eq('order_number', orderNumber)
+      .single();
+
+    if (orderError || !order) {
+      return NextResponse.json(
+        { success: false, error: '주문을 찾을 수 없습니다.' },
+        { status: 404 }
+      );
+    }
+
+    // payments 테이블에서 해당 주문의 결제 정보 업데이트
+    const { error: updateError } = await supabase
+      .from('payments')
+      .update({ depositor_name: depositorName })
+      .eq('order_id', order.id);
+
+    if (updateError) {
+      console.error('Payment update error:', updateError);
+      return NextResponse.json(
+        { success: false, error: '입금자명 업데이트에 실패했습니다.' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: '입금자명이 업데이트되었습니다.',
+    });
+  } catch (error) {
+    console.error('Order PATCH API error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}

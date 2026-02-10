@@ -12,6 +12,9 @@ import {
 
 export const runtime = 'nodejs';
 
+// 콜백에서 조회할 쿠키 prefix (callback/route.ts의 COOKIE_PREFIX와 일치해야 함)
+const COOKIE_PREFIX = 'nice_auth_key_';
+
 export async function GET(request: NextRequest) {
   try {
     // #region agent log
@@ -179,6 +182,26 @@ export async function GET(request: NextRequest) {
       encDataSample: encData.slice(0, 20),
     });
 
+    // 응답 생성 헬퍼 (쿠키 설정 포함)
+    const createResponse = (body: Record<string, unknown>) => {
+      const response = NextResponse.json(body);
+      // dev/테스트용 fallback (HMR/재기동 시 in-memory store 유실 대비)
+      response.cookies.set({
+        name: `${COOKIE_PREFIX}${tokenVersionId}`,
+        value: JSON.stringify({
+          key,
+          iv,
+          hmacKey,
+          expiresAt: Date.now() + 15 * 60 * 1000,
+        }),
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 15 * 60,
+      });
+      return response;
+    };
+
     // Optional debug: 성공 응답에 egress ip 포함 (기본 응답 형태는 유지)
     const wantsDebug = request.nextUrl.searchParams.get('debug') === '1';
     if (isNiceDebugEnabled() && wantsDebug) {
@@ -196,7 +219,7 @@ export async function GET(request: NextRequest) {
           registeredReturnUrl,
         }),
       };
-      return NextResponse.json({
+      return createResponse({
         tokenVersionId: tokenVersionId,
         encData,
         integrityValue,
@@ -205,7 +228,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    return NextResponse.json({
+    return createResponse({
       tokenVersionId: tokenVersionId,
       encData,
       integrityValue,

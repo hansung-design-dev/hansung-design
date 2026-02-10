@@ -48,6 +48,7 @@ type OrderDetailRow = {
 type OrderDetailResponse = {
   order: {
     id?: string;
+    order_number?: string;
     created_at?: string;
     projectName?: string;
     user_profiles?: {
@@ -159,7 +160,38 @@ export default function OrderApplicationForm({
   const phone =
     order.user_profiles?.phone || data.customerInfo?.phone || '전화번호 없음';
   const email = order.user_profiles?.email || '-';
-  const depositorName = latestPayment?.depositor_name || '-';
+  const initialDepositorName = latestPayment?.depositor_name || '-';
+
+  const [isEditingDepositor, setIsEditingDepositor] = useState(false);
+  const [depositorName, setDepositorName] = useState(initialDepositorName);
+  const [isSavingDepositor, setIsSavingDepositor] = useState(false);
+
+  const handleSaveDepositorName = async () => {
+    const orderNumber = order.order_number;
+    if (!orderNumber) {
+      alert('주문 번호를 찾을 수 없습니다.');
+      return;
+    }
+
+    setIsSavingDepositor(true);
+    try {
+      const res = await fetch(`/api/orders/${orderNumber}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ depositorName }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        alert(json.error || '입금자명 저장에 실패했습니다.');
+        return;
+      }
+      setIsEditingDepositor(false);
+    } catch {
+      alert('입금자명 저장 중 오류가 발생했습니다.');
+    } finally {
+      setIsSavingDepositor(false);
+    }
+  };
 
   const adContent =
     order.projectName ||
@@ -272,7 +304,47 @@ export default function OrderApplicationForm({
                 입금자명
               </div>
               <div className="border-b border-gray-300 px-3 py-2">
-                {depositorName}
+                {isEditingDepositor ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={depositorName}
+                      onChange={(e) => setDepositorName(e.target.value)}
+                      className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      disabled={isSavingDepositor}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSaveDepositorName}
+                      disabled={isSavingDepositor}
+                      className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      {isSavingDepositor ? '저장중...' : '저장'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDepositorName(initialDepositorName);
+                        setIsEditingDepositor(false);
+                      }}
+                      disabled={isSavingDepositor}
+                      className="px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50"
+                    >
+                      취소
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span>{depositorName}</span>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingDepositor(true)}
+                      className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200"
+                    >
+                      변경
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="bg-gray-50 border-b border-r border-gray-300 px-3 py-2 font-medium">

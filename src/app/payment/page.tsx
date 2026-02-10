@@ -180,6 +180,7 @@ function PaymentPageContent() {
   const [bankModalError, setBankModalError] = useState<string | null>(null);
   const [isBankTransferProcessing, setIsBankTransferProcessing] =
     useState(false);
+  const [depositorName, setDepositorName] = useState('');
 
   // 자체제작 유의사항 (관악구 등 구별 공지사항)
   const [selfMadeNotices, setSelfMadeNotices] = useState<{
@@ -2029,6 +2030,8 @@ function PaymentPageContent() {
     setBankModalGroup(group);
     setBankModalLoading(true);
     setBankModalOpen(true);
+    // 입금자명 기본값 설정
+    setDepositorName(user?.name || group.contact_person_name || '');
     logPaymentDebug('계좌이체 모달 열기 시도', {
       groupId: group.id,
       district: group.district,
@@ -2198,14 +2201,6 @@ function PaymentPageContent() {
         paymentMethodPayload: paymentMethodJson,
       });
 
-      const today = new Date();
-      const dateStr = `${today.getFullYear()}${String(
-        today.getMonth() + 1
-      ).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
-      const baseName =
-        user?.username || user?.name || group.contact_person_name || '고객';
-      const depositorName = `${baseName}_${dateStr}`;
-
       let draftId: string | undefined;
       const itemDraftIds: Record<string, string> = {};
 
@@ -2364,6 +2359,10 @@ function PaymentPageContent() {
       }
       const orderNumber =
         orderJson.order?.orderNumber || orderJson.order?.orderId || '';
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}${String(
+        today.getMonth() + 1
+      ).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
       const paymentId = `bank_${orderNumber || dateStr}`;
 
       // 할인 적용된 총액 계산 (관악구 이전 디자인 동일 등)
@@ -4806,6 +4805,8 @@ function PaymentPageContent() {
             ? bankModalGroup.items.length * GWANAK_PREVIOUS_DESIGN_PRICE
             : undefined
         }
+        depositorName={depositorName}
+        onDepositorNameChange={setDepositorName}
       />
 
       <TossPaymentModal

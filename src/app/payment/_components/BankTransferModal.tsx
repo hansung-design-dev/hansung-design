@@ -12,6 +12,8 @@ type Props = {
   onConfirm: (group: GroupedCartItem, accountInfo: BankAccountInfo) => void;
   getDisplayTypeLabel: (group: GroupedCartItem) => string;
   discountedTotalPrice?: number; // 할인 적용된 가격 (관악구 이전 디자인 동일 등)
+  depositorName: string;
+  onDepositorNameChange: (name: string) => void;
 };
 
 export default function BankTransferModal({
@@ -25,6 +27,8 @@ export default function BankTransferModal({
   onConfirm,
   getDisplayTypeLabel,
   discountedTotalPrice,
+  depositorName,
+  onDepositorNameChange,
 }: Props) {
   if (!open || !group) return null;
 
@@ -54,7 +58,7 @@ export default function BankTransferModal({
         ) : error ? (
           <p className="text-sm text-red-600 mb-4">{error}</p>
         ) : accountInfo ? (
-          <div className="space-y-2 mb-4">
+          <div className="space-y-2 mb-4 overflow-hidden pl-1">
             <div className="text-sm text-gray-600">
               프로젝트명:{' '}
               <span className="font-medium text-gray-800">{group.name}</span>
@@ -82,6 +86,19 @@ export default function BankTransferModal({
               <span className="font-medium text-gray-800">
                 {accountInfo.owner}
               </span>
+            </div>
+            <div className="text-sm text-gray-600">
+              <label htmlFor="depositorName" className="block mb-1">
+                입금자명:
+              </label>
+              <input
+                id="depositorName"
+                type="text"
+                value={depositorName}
+                onChange={(e) => onDepositorNameChange(e.target.value)}
+                className="w-11/12 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="입금자명을 입력하세요"
+              />
             </div>
             <p className="text-xs text-gray-500">
               입금 확인 후 주문이 자동으로 결제완료 처리됩니다.
