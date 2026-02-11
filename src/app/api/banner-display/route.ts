@@ -1386,7 +1386,7 @@ async function getPricePoliciesByPanelType(
                 } else if (policy.price_usage_type === 'self_install') {
                   pricePolicies.push({
                     ...policy,
-                    displayName: '자체제작',
+                    displayName: '자체제작・1회재사용',
                   });
                 }
               });
@@ -1434,7 +1434,7 @@ async function getPricePoliciesByPanelType(
           break;
 
         case '마포구':
-          // 마포구: panel_type = multi_panel 상업용,행정용 / panel_type = lower_panel 저단형상업용,저단형행정용
+          // 마포구: panel_type = multi_panel 상업용(패널형),행정용(패널형) / panel_type = lower_panel 저단형상업용(현수막),저단형행정용(현수막)
           panelData.forEach((panel) => {
             panel.banner_slots?.forEach((slot) => {
               slot.banner_slot_price_policy?.forEach((policy) => {
@@ -1442,24 +1442,24 @@ async function getPricePoliciesByPanelType(
                   if (policy.price_usage_type === 'default') {
                     pricePolicies.push({
                       ...policy,
-                      displayName: '상업용',
+                      displayName: '상업용(패널형)',
                     });
                   } else if (policy.price_usage_type === 'public_institution') {
                     pricePolicies.push({
                       ...policy,
-                      displayName: '행정용',
+                      displayName: '행정용(패널형)',
                     });
                   }
                 } else if (panel.panel_type === 'lower_panel') {
                   if (policy.price_usage_type === 'default') {
                     pricePolicies.push({
                       ...policy,
-                      displayName: '저단형상업용',
+                      displayName: '저단형상업용(현수막)',
                     });
                   } else if (policy.price_usage_type === 'public_institution') {
                     pricePolicies.push({
                       ...policy,
-                      displayName: '저단형행정용',
+                      displayName: '저단형행정용(현수막)',
                     });
                   }
                 }
@@ -1755,35 +1755,13 @@ async function getUltraFastDistrictsData() {
       periodsByRegion[regionGuId].push(p);
     });
 
-    // 캐시 데이터를 프론트엔드 형식으로 변환
-    const processedDistricts = (cacheData || []).map((item) => {
-      // 가격 정책 파싱 (한글로 받아서 프론트엔드에서 표시)
-      const basePricePolicies = item.price_summary
-        ? item.price_summary
-            .split(', ')
-            .map((priceStr: string) => {
-              // "상업용: 100000원" 형태에서 가격 추출
-              const priceMatch = priceStr.match(/(.+):\s*(\d+)원/);
-              if (priceMatch) {
-                const [, displayName, priceStr] = priceMatch;
-                return {
-                  id: `cache_${displayName}`,
-                  price_usage_type: 'default' as const, // 임시값
-                  tax_price: 0,
-                  road_usage_fee: 0,
-                  advertising_fee: 0,
-                  total_price: parseInt(priceStr) || 0,
-                  displayName: displayName.trim(), // 한글 표시명 추가
-                };
-              }
-              return null;
-            })
-            .filter(Boolean) // null 값 제거
-        : [];
-
-      // 현수막 게시대: 송파구, 용산구는 현수막게시대(가격표기)와 상단광고(상담신청) 분리
-      // 다른 구들은 기존 가격정책 그대로 사용
-      const pricePolicies = basePricePolicies;
+    // 캐시 데이터를 프론트엔드 형식으로 변환 (가격은 실시간 조회)
+    const processedDistricts = await Promise.all((cacheData || []).map(async (item) => {
+      // 가격 정책: 실시간 조회 (어드민 변경 즉시 반영)
+      const pricePolicies = await getPricePoliciesByPanelType(
+        item.region_id,
+        item.region_name
+      );
 
       // 기간 정보 - 실시간 데이터 사용 (period 필드 기준으로 매핑)
       let periodData = null;
@@ -1847,7 +1825,7 @@ async function getUltraFastDistrictsData() {
         bank_accounts: bankData,
         pricePolicies: pricePolicies,
       };
-    });
+    }));
 
     // 카운트 정보 (캐시에 포함됨)
     const countMap: Record<string, number> = {};
@@ -2438,27 +2416,11 @@ async function getDistrictDataFromCache(districtName: string) {
       );
     }
 
-    // 가격 정책 정보 변환
-    const pricePolicies = cacheData.price_summary
-      ? cacheData.price_summary
-          .split(', ')
-          .map((priceStr: string, index: number) => {
-            const [displayName, price] = priceStr.split(': ');
-            if (displayName && price) {
-              return {
-                id: `cache_${index}_${cacheData.region_id}`,
-                price_usage_type: 'default' as const,
-                tax_price: 0,
-                road_usage_fee: 0,
-                advertising_fee: 0,
-                total_price: parseInt(price) || 0,
-                displayName: displayName.trim(),
-              };
-            }
-            return null;
-          })
-          .filter(Boolean)
-      : [];
+    // 가격 정책: 실시간 조회 (어드민 변경 즉시 반영)
+    const pricePolicies = await getPricePoliciesByPanelType(
+      cacheData.region_id,
+      cacheData.region_name
+    );
 
     // 기간 정보는 캐시에서 가져오지 않고 직접 Supabase에서 실시간으로 가져오기
     let periodData = null;
