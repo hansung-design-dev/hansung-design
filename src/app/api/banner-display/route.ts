@@ -1081,24 +1081,11 @@ async function getAllDistrictsData() {
       phone_number: region.phone_number,
       display_type_id: region.display_type_id,
       is_active: region.is_active,
+      display_order: region.display_order ?? 999,
     }));
 
-    // 3. 구별 카드 순서 변경: 관악구, 마포구, 서대문구, 송파구, 용산구, 강북구 순서로 정렬
-    const sortedRegions = regions.sort((a, b) => {
-      const orderMap: Record<string, number> = {
-        관악구: 1,
-        마포구: 2,
-        서대문구: 3,
-        송파구: 4,
-        용산구: 5,
-        강북구: 6,
-      };
-
-      const orderA = orderMap[a.name] || 999;
-      const orderB = orderMap[b.name] || 999;
-
-      return orderA - orderB;
-    });
+    // 3. 구별 카드 순서 변경: region_gu.display_order 기준 정렬
+    const sortedRegions = regions.sort((a, b) => a.display_order - b.display_order);
 
     // console.log('🔍 Active regions found:', sortedRegions?.length || 0);
 
@@ -1557,6 +1544,18 @@ async function getPricePoliciesByPanelType(
             p.displayName === policy.displayName &&
             p.total_price === policy.total_price
         )
+    );
+
+    // 가격 표시 순서 고정
+    const priceDisplayOrder: Record<string, number> = {
+      '상업용': 1, '상업용(패널형)': 1, '상업용(저단형)': 2,
+      '상업용(현수막)': 2, '행정용': 3, '행정용(패널형)': 3,
+      '행정용(현수막)': 4, '저단형상업용(현수막)': 5,
+      '저단형행정용(현수막)': 6, '자체제작・1회재사용': 7,
+      '상단광고: 상담문의': 10,
+    };
+    uniquePolicies.sort((a, b) =>
+      (priceDisplayOrder[a.displayName] ?? 999) - (priceDisplayOrder[b.displayName] ?? 999)
     );
 
     console.log(`🔍 ${regionName} 최종 가격 정책:`, uniquePolicies);
